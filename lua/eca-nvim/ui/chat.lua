@@ -11,9 +11,14 @@ function Chat.new(config)
       auto_focus_mode = config.auto_focus_mode or true,
       auto_follow_cursor = config.auto_follow_cursor or true,
       auto_insert_mode = config.auto_insert_mode or true,
+      -- TODO remove headers
       headers = config.headers or {
-        user = '## User ',     -- Header to use for user questions
-        assistant = '## ECA ', -- Header to use for AI answers
+        user = '',  -- Header to use for user questions
+        assistant = '', -- Header to use for AI answers
+      },
+      prefixes = config.prefixes or {
+        user = '> ',
+        assistant = '',
       },
       highlight_headers = true,
       separator = config.separator or '---',
@@ -23,8 +28,8 @@ function Chat.new(config)
         height = 0.4,          -- fractional height of parent, or absolute height in rows when > 1
       },
     },
-    header_ns = vim.api.nvim_create_namespace('eca-chat-headers'),
-    input_header_ns = vim.api.nvim_create_namespace('eca-chat-input-header'),
+    messages_ns = vim.api.nvim_create_namespace('eca-chat-messages'),
+    prompt_ns = vim.api.nvim_create_namespace('eca-chat-prompt'),
     messages = {},
     winnr = nil,
     input_winnr = nil,
@@ -216,7 +221,7 @@ end
 
 function Chat:render()
   self:validate()
-  vim.api.nvim_buf_clear_namespace(self.bufnr, self.header_ns, 0, -1)
+  vim.api.nvim_buf_clear_namespace(self.bufnr, self.messages_ns, 0, -1)
   local lines = vim.api.nvim_buf_get_lines(self.bufnr, 0, -1, false)
 
   local new_messages = {}
@@ -284,14 +289,11 @@ function Chat:add_message(message, replace)
       or (message.id and current_message.id ~= message.id)
 
   if is_new then
-    local header = self.config.headers[message.role]
-    if current_message then
-      header = '\n' .. header
-    end
+    local prefix = self.config.prefixes[message.role]
 
     table.insert(self.messages, message)
-    self:append(header .. '(' .. message.id .. ')' .. self.config.separator .. '\n\n')
-    self:append(message.content)
+    self:append('\n')
+    self:append(prefix .. message.content)
   elseif replace and current_message then
     -- Replace the content of the current message
     self:render()
