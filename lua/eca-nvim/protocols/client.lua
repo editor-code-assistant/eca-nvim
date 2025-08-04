@@ -71,7 +71,7 @@ function Client:request(request)
 
   local callback = request.callback
 
-  if callback and type(callback) ~= 'function' then
+  if not callback or type(callback) ~= 'function' then
     callback = function(...) end
   end
 
@@ -82,6 +82,17 @@ function Client:request(request)
   end
 
   return true, request_id
+end
+
+function Client:stop()
+  if not self.connection or not self.connection.terminate then
+    return true, nil
+  end
+
+  self.connection.terminate()
+  self.connection = nil
+
+  return true, nil
 end
 
 return Client

@@ -1,12 +1,11 @@
--- Initial implementation of the Chat window
--- mostly based on CopilotChat.nvim at: https://github.com/CopilotC-Nvim/CopilotChat.nvim/blob/72ac912877a55ea6c61d803dee38704c9e7c255c/lua/CopilotChat/ui/chat.lua
-
 local Chat = {}
 
 function Chat.new(config)
   local instance = {
     name = 'eca-chat',
+    input_name = 'eca-input',
     bufnr = nil,
+    input_bufnr = nil,
     config = {
       auto_follow_cursor = config.auto_follow_cursor or true,
       auto_insert_mode = config.auto_insert_mode or true,
@@ -17,14 +16,15 @@ function Chat.new(config)
       highlight_headers = true,
       separator = config.separator or '---',
       window = config.window or {
-        layout = 'vertical', -- 'vertical' or 'horizontal'
-        width = 0.4,         -- fractional width of parent, or absolute width in columns when > 1
-        height = 0.4,        -- fractional height of parent, or absolute height in rows when > 1
+        layout = 'horizontal', -- 'vertical' or 'horizontal'
+        width = 0.4,           -- fractional width of parent, or absolute width in columns when > 1
+        height = 0.4,          -- fractional height of parent, or absolute height in rows when > 1
       },
     },
     header_ns = vim.api.nvim_create_namespace('eca-chat-headers'),
     messages = {},
     winnr = nil,
+    input_winnr = nil,
   }
 
   setmetatable(instance, { __index = Chat })
@@ -35,7 +35,10 @@ end
 function Chat.open(config)
   local chat = Chat.new(config)
 
+  chat:create_input_buffer()
   chat:create_buffer()
+
+  chat:input_window()
   chat:window()
 
   return chat
@@ -43,6 +46,9 @@ end
 
 function Chat:create_buffer()
   self.bufnr = vim.api.nvim_create_buf(false, true)
+
+  vim.bo[self.bufnr].syntax = 'markdown'
+  vim.bo[self.bufnr].textwidth = 0
 
   vim.bo[self.bufnr].filetype = self.name
   vim.bo[self.bufnr].modifiable = false
@@ -52,49 +58,53 @@ function Chat:create_buffer()
   return self.bufnr
 end
 
+function Chat:create_input_buffer()
+  self.input_bufnr = vim.api.nvim_create_buf(false, true)
+  vim.bo[self.input_bufnr].filetype = self.input_name
+  vim.bo[self.input_bufnr].modifiable = true
+  vim.api.nvim_buf_set_name(self.input_bufnr, self.input_name)
+  return self.input_bufnr
+end
+
+function Chat:set_input_name(name)
+  if not name or type(name) ~= "string" then return end
+
+  name = vim.trim(name)
+
+  self.input_name = name
+  if self.input_bufnr and vim.api.nvim_buf_is_valid(self.input_bufnr) then
+    vim.api.nvim_buf_set_name(self.input_bufnr, name)
+  end
+end
+
 function Chat:window()
   if self:visible() then
     return
   end
 
-  local window = self.config.window or {}
-  local layout = self.config.window.layout
+  local window = { height = 0.9 }
 
-  local width = window.width > 1 and window.width or math.floor(vim.o.columns * window.width)
   local height = window.height > 1 and window.height or math.floor(vim.o.lines * window.height)
 
-  if layout == 'vertical' then
-    local orig = vim.api.nvim_get_current_win()
-    local cmd = 'vsplit'
 
-    if width ~= 0 then
-      cmd = width .. cmd
-    end
+  local orig = vim.api.nvim_get_current_win()
+  local cmd = 'split'
 
-    if vim.api.nvim_get_option_value('splitright', {}) then
-      cmd = 'botright ' .. cmd
-    else
-      cmd = 'topleft ' .. cmd
-    end
-
-    vim.cmd(cmd)
-    self.winnr = vim.api.nvim_get_current_win()
-    vim.api.nvim_set_current_win(orig)
-  elseif layout == 'horizontal' then
-    local orig = vim.api.nvim_get_current_win()
-    local cmd = 'split'
-    if height ~= 0 then
-      cmd = height .. cmd
-    end
-    if vim.api.nvim_get_option_value('splitbelow', {}) then
-      cmd = 'botright ' .. cmd
-    else
-      cmd = 'topleft ' .. cmd
-    end
-    vim.cmd(cmd)
-    self.winnr = vim.api.nvim_get_current_win()
-    vim.api.nvim_set_current_win(orig)
+  if height ~= 0 then
+    cmd = height .. cmd
   end
+
+  -- if vim.api.nvim_get_option_value('splitbelow', {}) then
+  --   cmd = 'botright ' .. cmd
+  -- else
+  --   cmd = 'topleft ' .. cmd
+  -- end
+
+  vim.api.nvim_set_current_win(self.input_winnr)
+  vim.cmd(cmd)
+
+  self.winnr = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(orig)
 
   vim.wo[self.winnr].wrap = true
   vim.wo[self.winnr].linebreak = true
@@ -105,6 +115,48 @@ function Chat:window()
 
   vim.api.nvim_win_set_buf(self.winnr, self.bufnr)
   self:render()
+end
+
+function Chat:input_window()
+  if self:input_visible(self.input_winnr, self.input_bufnr) then
+    return
+  end
+
+  local window = self.config.window or {}
+
+  local width = window.width > 1 and window.width or math.floor(vim.o.columns * window.width)
+
+  local orig = vim.api.nvim_get_current_win()
+  local cmd = 'vsplit'
+
+  if width ~= 0 then
+    cmd = width .. cmd
+  end
+
+  if vim.api.nvim_get_option_value('splitright', {}) then
+    cmd = 'botright ' .. cmd
+  else
+    cmd = 'topleft ' .. cmd
+  end
+
+  vim.cmd(cmd)
+
+  self.input_winnr = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(orig)
+
+  vim.wo[self.input_winnr].wrap = true
+  vim.wo[self.input_winnr].linebreak = true
+  vim.wo[self.input_winnr].cursorline = true
+  vim.wo[self.input_winnr].conceallevel = 2
+  vim.wo[self.input_winnr].foldlevel = 99
+  vim.wo[self.input_winnr].foldcolumn = '0'
+
+  vim.api.nvim_win_set_buf(self.input_winnr, self.input_bufnr)
+end
+
+function Chat:input_visible(winnr, bufnr)
+  return winnr and vim.api.nvim_win_is_valid(winnr) and vim.api.nvim_win_get_buf(winnr) == bufnr
+      or false
 end
 
 function Chat:visible()
@@ -142,7 +194,7 @@ function Chat:render()
             table.concat(
               vim.list_slice(lines, current_message.section.start_line, current_message.section.end_line),
               '\n'
-            )
+           )
           )
         end
 
@@ -319,6 +371,28 @@ function Chat:get_closest_message(role)
   end
 
   return closest_message
+end
+
+function Chat:close()
+  if self.winnr and vim.api.nvim_win_is_valid(self.winnr) then
+    vim.api.nvim_win_close(self.winnr, true)
+    self.winnr = nil
+  end
+
+  if self.input_winnr and vim.api.nvim_win_is_valid(self.input_winnr) then
+    vim.api.nvim_win_close(self.input_winnr, true)
+    self.input_winnr = nil
+  end
+
+  if self.bufnr and vim.api.nvim_buf_is_valid(self.bufnr) then
+    vim.api.nvim_buf_delete(self.bufnr, { force = true })
+    self.bufnr = nil
+  end
+
+  if self.input_bufnr and vim.api.nvim_buf_is_valid(self.input_bufnr) then
+    vim.api.nvim_buf_delete(self.input_bufnr, { force = true })
+    self.input_bufnr = nil
+  end
 end
 
 return Chat

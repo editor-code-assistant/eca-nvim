@@ -53,7 +53,7 @@ function Handler:init(set_submit_prompt_keymaps)
       return
     end
 
-    set_submit_prompt_keymaps(function() self:send_request() end)
+    set_submit_prompt_keymaps(function(text) self:send_request(text) end)
 
     done()
   end)
@@ -71,14 +71,6 @@ end
 function Handler:on_finished()
   self.executor:run(function(done)
     self.chat:append('\n')
-
-    self.chat:add_message({
-      id = self.executor:index(),
-      role = "user",
-      content = '',
-    })
-
-    self.chat:unlock()
     done()
   end)
 end
@@ -114,11 +106,8 @@ function Handler:setup(ok, welcome_message)
       return
     end
 
-    local model_ok, model_err = self.eca:set_model('gpt-4.1')
-
-    if not model_ok then
-      self.logger.error('Setup error: ' .. model_err)
-      return
+    if self.eca.current_model then
+      self.chat:set_input_name(self.eca.current_model)
     end
 
     local initialized_ok, initialized_request = self.eca:initialized()
@@ -135,62 +124,47 @@ function Handler:setup(ok, welcome_message)
       return
     end
 
-    self.chat:lock()
-
     self.chat:add_message({
       id = self.executor:index(),
       role = 'assistant',
       content = welcome_message,
     })
 
-    self.chat:add_message({
-      id = self.executor:index(),
-      role = 'user',
-      content = '',
-    })
-
-    self.chat:unlock()
     done()
   end)
 end
 
-function Handler:send_request()
+function Handler:send_request(text)
   self.executor:run(function(done)
-    local message = self.chat:get_closest_message('user')
+    -- local message = self.chat:get_closest_message('user')
 
-    if not message or not message.content or type(message.content) ~= 'string' then
+    if not text or type(text) ~= 'string' then
       self.logger.error('No user message found to send.')
       return
     end
 
+    local index = self.executor:index()
+
     local prompt_ok, prompt_request = self.eca:prompt(
-      message.content,
+      text,
       {
         chat_id = 1,
-        request_id = self.executor:index()
+        request_id = index
       },
       function(err)
-        self.chat:lock()
+        self.chat:add_message({
+          id = self.executor:index(),
+          role = 'user',
+          content = text,
+        })
 
         self.chat:append('\n')
 
         self.chat:add_message({
-          id = self.executor:index(),
+          id = index,
           role = "assistant",
           content = err and err.message or '',
         })
-
-        if err then
-          self.chat:append('\n')
-
-          self.chat:add_message({
-            id = self.executor:index(),
-            role = 'user',
-            content = '',
-          })
-
-          self.chat:unlock()
-        end
       end
     )
 
@@ -207,6 +181,68 @@ function Handler:send_request()
 
     done()
   end)
+end
+
+function Handler:stop()
+  local shutdown_ok, shutdown_request = self.eca:shutdown()
+
+  if not shutdown_ok then
+    self.logger.error('Failed to create shutdown request: ' .. shutdown_request)
+  end
+
+  local request_ok, request_err = self.client:request(shutdown_request)
+
+  if not request_ok then
+    self.logger.error('Failed to send shutdown request: ' .. request_err)
+  end
+
+  local exit_ok, exit_request = self.eca:exit()
+
+  if not exit_ok then
+    self.logger.error('Failed to create exit request: ' .. exit_request)
+  end
+
+  local notify_ok = self.client:notify(exit_request)
+
+  if not notify_ok then
+    self.logger.error('Failed to send exit notification')
+  end
+
+  if self.client then
+    self.client:stop()
+  end
+
+  if self.chat then
+    self.chat:close()
+  end
+end
+
+function Handler:select_model()
+  if not (self.eca and self.eca.models) then
+    self.logger.error('ECA models not available.')
+    return
+  end
+
+  if not self.chat or not self.chat.set_input_name then
+    self.logger.error('Chat UI does not support name changing.')
+    return
+  end
+
+  vim.ui.select(
+    self.eca.models,
+    { prompt = 'ECA Select a model:' },
+    function(selected_model)
+      if not selected_model then return end
+
+      local ok, err = self.eca:set_model(selected_model)
+
+      if not ok then
+        self.logger.error('Failed to set model: ' .. err)
+        return
+      end
+
+      self.chat:set_input_name(selected_model)
+    end)
 end
 
 return Handler

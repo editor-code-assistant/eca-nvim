@@ -69,18 +69,31 @@ Installation instructions using other package managers are TODO. Please note tha
 To start the `eca-nvim` plugin, run the following command in Neovim:
 
 ```lua
-:lua require('eca-nvim').run()
+:EcaChat
 ```
 
 This command will:
 1. Install `eca` within the plugin directory if it's not already present
 2. Start the ECA server using the default Java command (`/usr/bin/java`)
 3. Open a chat window for interaction
-4. Press `<CR>` (Enter) in Normal mode to submit your message
 
-By default, the plugin uses Java at `/usr/bin/java`. If your Java installation is in a different location, you can [configure it](docs/configuration.md).
+> **Note:** By default, the plugin uses Java at `/usr/bin/java`. If your Java installation is in a different location, you can [configure it](docs/configuration.md).
 
-**Note:** The initial download process can introduce UI lag since asynchronous handling is not yet implemented. In case of issues, you can manually download eca.
+In the chat window, type your message and press `<CR>` (Enter) in Normal mode to submit, or `<C-s>` in Insert mode.
+
+---
+
+To change the model, run:
+
+```
+:EcaModel
+```
+
+To see logs (if enabled in configuration):
+
+```
+:EcaLogs
+```
 
 ## Contribution
 

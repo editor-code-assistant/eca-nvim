@@ -46,14 +46,38 @@ function M.run()
 
   local handler = Handler.new(eca, chat, client, executor, logger)
 
+  for _, winnr in ipairs({ chat.winnr, chat.input_winnr }) do
+    vim.api.nvim_create_autocmd("WinClosed", {
+      pattern = tostring(winnr),
+      callback = function()
+        handler:stop()
+      end,
+    })
+  end
+
+  vim.api.nvim_create_user_command("EcaModel", function()
+    handler:select_model()
+  end, {})
+
   local function set_submit_prompt_keymap(callback)
-    vim.keymap.set(
-      'n', '<CR>', callback,
-      { buffer = chat.bufnr, nowait = true, desc = 'ECA Submit Prompt' }
-    )
+    local function handle_input()
+      local lines = vim.api.nvim_buf_get_lines(chat.input_bufnr, 0, -1, false)
+      local text = table.concat(lines, "\n")
+
+      callback(text)
+
+      vim.api.nvim_buf_set_lines(chat.input_bufnr, 0, -1, false, {})
+    end
+
+    vim.keymap.set('n', '<CR>', handle_input, { buffer = chat.input_bufnr, nowait = true })
+    vim.keymap.set('i', '<C-s>', handle_input, { buffer = chat.input_bufnr, nowait = true })
   end
 
   handler:init(set_submit_prompt_keymap)
 end
+
+vim.api.nvim_create_user_command("EcaChat", function()
+  M.run()
+end, {})
 
 return M

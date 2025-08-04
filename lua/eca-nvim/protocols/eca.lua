@@ -202,4 +202,17 @@ function ECA:prompt(text, opts, callback)
   }
 end
 
+function ECA:shutdown()
+  return true, {
+    method = 'shutdown',
+    params = {},
+  }
+end
+
+function ECA:exit()
+  return true, {
+    method = 'exit',
+  }
+end
+
 return ECA
