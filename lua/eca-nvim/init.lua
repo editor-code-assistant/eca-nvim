@@ -1,5 +1,6 @@
 local Handler  = require('eca-nvim.handler')
 local Chat     = require('eca-nvim.ui.chat')
+local select   = require('eca-nvim.ui.select')
 local Client   = require('eca-nvim.protocols.client')
 local ECA      = require('eca-nvim.protocols.eca')
 local Executor = require('eca-nvim.protocols.executor')
@@ -32,10 +33,17 @@ function M.run()
     spawn_args = {}
   end
 
-  local eca      = ECA.new()
-  local chat     = Chat.open({})
-  local client   = Client.new { server = { cmd = start_command, args = spawn_args } }
-  local executor = Executor.new()
+  local protocols = {
+    eca      = ECA.new(),
+    client   = Client.new({ server = { cmd = start_command, args = spawn_args } }),
+    executor = Executor.new(),
+  }
+
+  local ui = {
+    chat = Chat.open({}),
+    select = select,
+  }
+
   local logger   = log.get_logger(config.get('log'))
 
   if logger and type(logger.filepath) == "string" and logger.filepath ~= "" then
@@ -44,9 +52,10 @@ function M.run()
     end, {})
   end
 
-  local handler = Handler.new(eca, chat, client, executor, logger)
+  local handler = Handler.new(protocols, ui, logger)
+  handler:start()
 
-  for _, winnr in ipairs({ chat.winnr, chat.input_winnr }) do
+  for _, winnr in ipairs({ ui.chat.winnr, ui.chat.input_winnr }) do
     vim.api.nvim_create_autocmd("WinClosed", {
       pattern = tostring(winnr),
       callback = function()
@@ -59,21 +68,25 @@ function M.run()
     handler:select_model()
   end, {})
 
-  local function set_submit_prompt_keymap(callback)
+  vim.api.nvim_create_user_command("EcaBehavior", function()
+    handler:select_behavior()
+  end, {})
+
+  local function set_submit_prompt_keymap()
     local function handle_input()
-      local lines = vim.api.nvim_buf_get_lines(chat.input_bufnr, 0, -1, false)
+      local lines = vim.api.nvim_buf_get_lines(ui.chat.input_bufnr, 0, -1, false)
       local text = table.concat(lines, "\n")
 
-      callback(text)
+      handler:send_request(text)
 
-      vim.api.nvim_buf_set_lines(chat.input_bufnr, 0, -1, false, {})
+      vim.api.nvim_buf_set_lines(ui.chat.input_bufnr, 0, -1, false, {})
     end
 
-    vim.keymap.set('n', '<CR>', handle_input, { buffer = chat.input_bufnr, nowait = true })
-    vim.keymap.set('i', '<C-s>', handle_input, { buffer = chat.input_bufnr, nowait = true })
+    vim.keymap.set('n', '<CR>', handle_input, { buffer = ui.chat.input_bufnr, nowait = true })
+    vim.keymap.set('i', '<C-s>', handle_input, { buffer = ui.chat.input_bufnr, nowait = true })
   end
 
-  handler:init(set_submit_prompt_keymap)
+  set_submit_prompt_keymap()
 end
 
 vim.api.nvim_create_user_command("EcaChat", function()

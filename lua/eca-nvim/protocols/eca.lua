@@ -3,7 +3,9 @@ local ECA = {}
 function ECA.new()
   local instance = {
     current_model = nil,
-    models = {}
+    models = {},
+    current_behavior = nil,
+    behaviors = {},
   }
 
   setmetatable(instance, { __index = ECA })
@@ -52,6 +54,13 @@ function ECA:init(opts)
         return
       end
 
+      ok, error = self:set_behaviors(response.chatBehaviors, response.chatDefaultBehavior)
+
+      if not ok then
+        callback(false, error)
+        return
+      end
+
       callback(true, response.chatWelcomeMessage)
     end
   }
@@ -61,6 +70,37 @@ function ECA:initialized()
   return true, {
     method = 'initialized'
   }
+end
+
+function ECA:set_behaviors(behaviors, default)
+  if not behaviors or type(behaviors) ~= 'table' then
+    return false, 'Failed to set_behaviors: Please provide a table of behavior names.'
+  end
+
+  self.behaviors = behaviors
+
+  local ok, error = self:set_behavior(default)
+
+  if not ok then
+    return false, error
+  end
+
+  return true, behaviors
+end
+
+function ECA:set_behavior(behavior)
+  if not behavior or type(behavior) ~= 'string' then
+    return false, 'Failed to set_behavior: Invalid behavior name'
+  end
+
+  if not vim.tbl_contains(self.behaviors, behavior) then
+    return false,
+        'Failed to set_behavior: Behavior "' ..
+        behavior .. '" is not available. Available behaviors: ' .. vim.inspect(self.behaviors)
+  end
+
+  self.current_behavior = behavior
+  return true, nil
 end
 
 function ECA:set_models(models, default)
@@ -196,7 +236,7 @@ function ECA:prompt(text, opts, callback)
       requestId = opts.request_id,
       message = text,
       model = self.current_model,
-      behavior = 'chat',
+      behavior = self.current_behavior,
     },
     callback = callback,
   }

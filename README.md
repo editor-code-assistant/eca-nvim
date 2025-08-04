@@ -89,6 +89,12 @@ To change the model, run:
 :EcaModel
 ```
 
+To change the assistant's behavior, run:
+
+```
+:EcaBehavior
+```
+
 To see logs (if enabled in configuration):
 
 ```

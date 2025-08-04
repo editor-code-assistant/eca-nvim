@@ -3,10 +3,12 @@ local Chat = {}
 function Chat.new(config)
   local instance = {
     name = 'eca-chat',
-    input_name = 'eca-input',
+    input_name = 'model',
+    input_filetype = 'behavior',
     bufnr = nil,
     input_bufnr = nil,
     config = {
+      auto_focus_mode = config.auto_focus_mode or true,
       auto_follow_cursor = config.auto_follow_cursor or true,
       auto_insert_mode = config.auto_insert_mode or true,
       headers = config.headers or {
@@ -22,14 +24,43 @@ function Chat.new(config)
       },
     },
     header_ns = vim.api.nvim_create_namespace('eca-chat-headers'),
+    input_header_ns = vim.api.nvim_create_namespace('eca-chat-input-header'),
     messages = {},
     winnr = nil,
     input_winnr = nil,
+    last_win = nil,
   }
 
   setmetatable(instance, { __index = Chat })
 
   return instance
+end
+
+function Chat:setup_focus_autocmd()
+  if not self.config.auto_focus_mode then
+    return
+  end
+
+  local group = vim.api.nvim_create_augroup('ECAChatFocus', { clear = true })
+
+  vim.api.nvim_create_autocmd('WinEnter', {
+    callback = function()
+      local cur_win = vim.api.nvim_get_current_win()
+
+      if cur_win == self.winnr and self.last_win ~= self.input_winnr then
+        if self.input_winnr and vim.api.nvim_win_is_valid(self.input_winnr) then
+          vim.api.nvim_set_current_win(self.input_winnr)
+          if self.config.auto_insert_mode then
+            vim.cmd("startinsert")
+          end
+        end
+      end
+
+      self.last_win = vim.api.nvim_get_current_win()
+    end,
+    group = group,
+    pattern = '*',
+  })
 end
 
 function Chat.open(config)
@@ -40,6 +71,8 @@ function Chat.open(config)
 
   chat:input_window()
   chat:window()
+
+  chat:setup_focus_autocmd()
 
   return chat
 end
@@ -60,9 +93,15 @@ end
 
 function Chat:create_input_buffer()
   self.input_bufnr = vim.api.nvim_create_buf(false, true)
-  vim.bo[self.input_bufnr].filetype = self.input_name
+
+  vim.bo[self.input_bufnr].syntax = 'markdown'
+  vim.bo[self.input_bufnr].textwidth = 0
+
+  vim.bo[self.input_bufnr].filetype = self.input_filetype
   vim.bo[self.input_bufnr].modifiable = true
+
   vim.api.nvim_buf_set_name(self.input_bufnr, self.input_name)
+
   return self.input_bufnr
 end
 
@@ -74,6 +113,17 @@ function Chat:set_input_name(name)
   self.input_name = name
   if self.input_bufnr and vim.api.nvim_buf_is_valid(self.input_bufnr) then
     vim.api.nvim_buf_set_name(self.input_bufnr, name)
+  end
+end
+
+function Chat:set_input_filetype(filetype)
+  if not filetype or type(filetype) ~= "string" then return end
+
+  filetype = vim.trim(filetype)
+
+  self.input_filetype = filetype
+  if self.input_bufnr and vim.api.nvim_buf_is_valid(self.input_bufnr) then
+    vim.bo[self.input_bufnr].filetype = filetype
   end
 end
 
@@ -93,12 +143,6 @@ function Chat:window()
   if height ~= 0 then
     cmd = height .. cmd
   end
-
-  -- if vim.api.nvim_get_option_value('splitbelow', {}) then
-  --   cmd = 'botright ' .. cmd
-  -- else
-  --   cmd = 'topleft ' .. cmd
-  -- end
 
   vim.api.nvim_set_current_win(self.input_winnr)
   vim.cmd(cmd)
@@ -194,7 +238,7 @@ function Chat:render()
             table.concat(
               vim.list_slice(lines, current_message.section.start_line, current_message.section.end_line),
               '\n'
-           )
+            )
           )
         end
 
