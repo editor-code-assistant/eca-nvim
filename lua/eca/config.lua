@@ -23,7 +23,7 @@ M._defaults = {
   behaviour = {
     auto_set_keymaps = true,
     auto_focus_sidebar = true,
-    auto_start_server = true, -- Automatically start server on setup
+    auto_start_server = false, -- Automatically start server on setup
     auto_download = true, -- Automatically download server if not found
     show_status_updates = true, -- Show status updates in notifications
   },

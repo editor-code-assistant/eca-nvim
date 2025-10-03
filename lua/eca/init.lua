@@ -245,10 +245,12 @@ function M.setup(opts)
   M.state = require("eca.state").new()
   M.server = Server.new()
   M.mediator = require("eca.mediator").new(M.server, M.state)
-  -- Start server automatically in background
-  vim.defer_fn(function()
-    M.server:start()
-  end, 100) -- Small delay to ensure everything is loaded
+
+  if Config.behaviour and Config.behaviour.auto_start_server then
+    vim.defer_fn(function()
+      M.server:start()
+    end, 100) -- Small delay to ensure everything is loaded
+  end
 
   M.did_setup = true
 end
