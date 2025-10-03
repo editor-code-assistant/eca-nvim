@@ -100,8 +100,6 @@ end
 function M:start(opts)
   opts = opts or { initialize = true }
 
-  local custom_path = Config.server_path or ""
-
   local this_file = debug.getinfo(1, "S").source:sub(2)
   local proj_root = vim.fn.fnamemodify(this_file, ":p:h:h:h")
   local script_path = proj_root .. "/scripts/server_path.lua"
@@ -112,7 +110,9 @@ function M:start(opts)
     nvim_exe = "nvim"
   end
 
-  local cmd = { nvim_exe, "-l", script_path, custom_path }
+  local lua_cmd = string.format("lua ServerPath.run(%s)", Config.server_path or "")
+
+  local cmd = { nvim_exe, "--headless", "--noplugin", "-u", script_path, "-c", lua_cmd }
 
   vim.system(cmd, { text = true }, function(out)
     if out.code ~= 0 then

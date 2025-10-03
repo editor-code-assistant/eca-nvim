@@ -1,16 +1,23 @@
-local PathFinder = require("eca.path_finder")
+local ServerPath = {}
 
-local custom_path = _G.arg[1] or ""
-local path_finder = PathFinder:new()
-local path
+-- Export module
+_G.ServerPath = ServerPath
 
-local ok, err = pcall(function()
-  path = path_finder:find(custom_path)
-end)
+ServerPath.run = function(custom_path)
+  local path_finder = require("eca.path_finder"):new()
+  local path
 
-if not ok then
-  io.stderr:write(tostring(err))
-  os.exit(1)
+  local ok, err = pcall(function()
+    path = path_finder:find(custom_path)
+  end)
+
+  if not ok then
+    io.stderr:write(tostring(err))
+    os.exit(1)
+  end
+
+  io.stdout:write(tostring(path))
+  os.exit(0)
 end
 
-io.stdout:write(path)
+return ServerPath
