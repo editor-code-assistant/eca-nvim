@@ -346,4 +346,34 @@ function M.setup()
   Logger.debug("ECA commands registered")
 end
 
+vim.api.nvim_create_user_command("EcaChatSelectModel", function()
+  local state = require("eca.state"):new()
+  local models = state.config.models.list
+
+  vim.ui.select(models, {
+    prompt = "Select ECA Chat Model:",
+  }, function(choice)
+    if choice then
+      state:update_selected_model(choice)
+    end
+  end)
+end, {
+  desc = "Select Current ECA Chat model",
+})
+
+vim.api.nvim_create_user_command("EcaChatSelectBehavior", function()
+  local state = require("eca.state"):new()
+  local behaviors = state.config.behaviors.list
+
+  vim.ui.select(behaviors, {
+    prompt = "Select ECA Chat Behavior:",
+  }, function(choice)
+    if choice then
+      state:update_selected_behavior(choice)
+    end
+  end)
+end, {
+  desc = "Select Current ECA Chat behavior",
+})
+
 return M
