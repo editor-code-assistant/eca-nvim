@@ -41,7 +41,13 @@ T["server"] = MiniTest.new_set()
 T["server"]["start"] = function()
   child.lua("_G.server.start({cmd = {'fake'}})")
   eq(child.lua_get("_G.server.process"), vim.NIL)
-  child.lua("_G.server:start()")
+  child.lua([[ 
+    _G.server:start()
+    _G.server_started = vim.wait(5000, function()
+      return _G.server and _G.server:is_running()
+    end, 50)
+  ]])
+  eq(child.lua_get("_G.server_started"), true)
   eq(child.lua_get("_G.server:is_running()"), true)
 end
 
@@ -80,6 +86,14 @@ T["server"]["initialize"] = function()
     end
     child.lua("_G.method = " .. vim.inspect(test_case.method))
     child.lua("_G.server:start({initialize = false})")
+    -- Wait for async server start
+    child.lua([[ 
+      _G.server_started = vim.wait(5000, function()
+        return _G.server and _G.server:is_running()
+      end, 50)
+    ]])
+    eq(child.lua_get("_G.server_started"), true)
+
     child.lua_func(function()
       _G.server:send_request(_G.method, {}, function(err, result)
         _G.err = err
