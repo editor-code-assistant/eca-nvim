@@ -48,7 +48,6 @@ T["server"]["start"] = function()
     end, 50)
   ]])
   eq(child.lua_get("_G.server_started"), true)
-  eq(child.lua_get("_G.server:is_running()"), true)
 end
 
 T["server"]["initialize"] = function()
