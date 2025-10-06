@@ -110,7 +110,7 @@ function M:start(opts)
     nvim_exe = "nvim"
   end
 
-  local lua_cmd = string.format("lua ServerPath.run(%s)", Config.server_path or "")
+  local lua_cmd = string.format("lua ServerPath.run(%s)", Utils.lua_quote(Config.options.server_path) or "")
 
   local cmd = { nvim_exe, "--headless", "--noplugin", "-u", script_path, "-c", lua_cmd }
 

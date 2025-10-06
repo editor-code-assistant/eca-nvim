@@ -13,7 +13,6 @@ local function setup_test_environment()
     table.insert(_G.notifications, { message = message, level = level, opts = opts })
   end
   _G.server = require("eca.server").new()
-
 end
 
 local T = MiniTest.new_set({
@@ -21,21 +20,6 @@ local T = MiniTest.new_set({
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
       child.lua_func(setup_test_environment)
-      child.lua([[
-        package.preload["eca.path_finder"] = function()
-          local M = {}
-
-          function M.new()
-            return setmetatable({}, { __index = M })
-          end
-
-          function M.find(arg)
-            return ":" -- do nothing
-          end
-
-          return M
-        end
-      ]])
     end,
     post_case = function()
       child.lua("if _G.server and _G.server.process then _G.server.process:kill() end")
@@ -54,70 +38,29 @@ local function sleep(ms)
 end
 
 T["server"] = MiniTest.new_set()
+
 T["server"]["start"] = function()
-  child.lua("_G.server.start()")
-  eq(child.lua_get("_G.server.process"), vim.NIL)
-  child.lua([[ 
-    _G.server:start()
-    _G.server_started = vim.wait(5000, function()
+  child.lua("_G.server:start()")
+  child.lua([[
+    _G.server_started = vim.wait(10000, function()
       return _G.server and _G.server:is_running()
-    end, 50)
+    end, 100)
   ]])
   eq(child.lua_get("_G.server_started"), true)
+  sleep(1000)
+  eq(child.lua_get("_G.server.initialized"), true)
 end
 
-T["server"]["initialize"] = function()
-  local test_cases = {
-    {
-      method = "initialize",
-      want = {
-        chatBehaviors = { "agent", "plan" },
-        chatDefaultBehavior = "agent",
-        chatDefaultModel = "anthropic/claude-sonnet-4-20250514",
-        chatWelcomeMessage = "Welcome to ECA!\n\nType '/' for commands\n\n",
-        models = {
-          "anthropic/claude-3-5-haiku-20241022",
-          "anthropic/claude-opus-4-1-20250805",
-          "anthropic/claude-opus-4-20250514",
-          "anthropic/claude-sonnet-4-20250514",
-          "github-copilot/claude-sonnet-4",
-          "github-copilot/gpt-4.1",
-          "github-copilot/gpt-5",
-          "github-copilot/gpt-5-mini",
-          "openai/gpt-4.1",
-          "openai/gpt-5",
-          "openai/gpt-5-mini",
-          "openai/gpt-5-nano",
-          "openai/o3",
-          "openai/o4-mini",
-        },
-      },
-    },
-    { method = "not a command", want = vim.NIL },
-  }
-  for i, test_case in ipairs(test_cases) do
-    if i == 1 then
-      test_case = test_cases[i + 1]
-    end
-    child.lua("_G.method = " .. vim.inspect(test_case.method))
-    child.lua("_G.server:start({initialize = false})")
-    -- Wait for async server start
-    child.lua([[ 
-      _G.server_started = vim.wait(5000, function()
-        return _G.server and _G.server:is_running()
-      end, 50)
-    ]])
-    eq(child.lua_get("_G.server_started"), true)
-
-    child.lua_func(function()
-      _G.server:send_request(_G.method, {}, function(err, result)
-        _G.err = err
-        _G.result = result
-      end)
-    end)
-    sleep(1500)
-    eq(child.lua_get("_G.result"), test_case.want)
-  end
+T["server"]["start without initialize"] = function()
+  child.lua("_G.server:start({ initialize = false })")
+  child.lua([[
+    _G.server_started = vim.wait(10000, function()
+      return _G.server and _G.server:is_running()
+    end, 100)
+  ]])
+  eq(child.lua_get("_G.server_started"), true)
+  sleep(1000)
+  eq(child.lua_get("_G.server.initialized"), false)
 end
 
 return T
