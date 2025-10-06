@@ -13,6 +13,7 @@ local function setup_test_environment()
     table.insert(_G.notifications, { message = message, level = level, opts = opts })
   end
   _G.server = require("eca.server").new()
+
 end
 
 local T = MiniTest.new_set({
@@ -20,6 +21,21 @@ local T = MiniTest.new_set({
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
       child.lua_func(setup_test_environment)
+      child.lua([[
+        package.preload["eca.path_finder"] = function()
+          local M = {}
+
+          function M.new()
+            return setmetatable({}, { __index = M })
+          end
+
+          function M.find(arg)
+            return ":" -- do nothing
+          end
+
+          return M
+        end
+      ]])
     end,
     post_case = function()
       child.lua("if _G.server and _G.server.process then _G.server.process:kill() end")
@@ -39,7 +55,7 @@ end
 
 T["server"] = MiniTest.new_set()
 T["server"]["start"] = function()
-  child.lua("_G.server.start({cmd = {'fake'}})")
+  child.lua("_G.server.start()")
   eq(child.lua_get("_G.server.process"), vim.NIL)
   child.lua([[ 
     _G.server:start()
