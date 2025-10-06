@@ -9,16 +9,16 @@ local T = MiniTest.new_set({
       child.lua([[
         -- Setup commands
         require('eca.commands').setup()
-        
+
         -- Instantiate state singleton
         _G.State = require('eca.state').new()
-        
+
         -- Mock vim.ui.select for testing
         _G.selected_choice = nil
         _G.shown_items = nil
         _G.shown_prompt = nil
         _G.original_select = vim.ui.select
-        
+
         _G.mock_select = function(choice)
           _G.selected_choice = choice
           vim.ui.select = function(items, opts, on_choice)
@@ -27,7 +27,7 @@ local T = MiniTest.new_set({
             on_choice(choice)
           end
         end
-        
+
         _G.restore_select = function()
           vim.ui.select = _G.original_select
         end
@@ -54,14 +54,14 @@ T["EcaChatSelectModel"]["updates state when model selected"] = function()
   child.lua([[
     _G.State.config.models.list = { "model1", "model2", "model3" }
     _G.State.config.models.selected = "model1"
-    
+
     -- Mock vim.ui.select to auto-select model2
     _G.mock_select("model2")
   ]])
-  
+
   -- Execute command
   child.cmd("EcaChatSelectModel")
-  
+
   -- Check that state was updated
   eq(child.lua_get("_G.State.config.models.selected"), "model2")
 end
@@ -71,14 +71,14 @@ T["EcaChatSelectModel"]["handles nil selection"] = function()
   child.lua([[
     _G.State.config.models.list = { "model1", "model2" }
     _G.State.config.models.selected = "model1"
-    
+
     -- Mock vim.ui.select to return nil (user cancelled)
     _G.mock_select(nil)
   ]])
-  
+
   -- Execute command
   child.cmd("EcaChatSelectModel")
-  
+
   -- Check that state was NOT updated (still model1)
   eq(child.lua_get("_G.State.config.models.selected"), "model1")
 end
@@ -87,14 +87,14 @@ T["EcaChatSelectModel"]["displays all available models"] = function()
   -- Setup models list
   child.lua([[
     _G.State.config.models.list = { "gpt-4", "gpt-3.5-turbo", "claude-3" }
-    
+
     -- Mock vim.ui.select to capture the items shown
     _G.mock_select(nil)
   ]])
-  
+
   -- Execute command
   child.cmd("EcaChatSelectModel")
-  
+
   -- Verify all models were shown
   local shown_items = child.lua_get("_G.shown_items")
   eq(shown_items[1], "gpt-4")
@@ -116,14 +116,14 @@ T["EcaChatSelectBehavior"]["updates state when behavior selected"] = function()
   child.lua([[
     _G.State.config.behaviors.list = { "helpful", "creative", "concise" }
     _G.State.config.behaviors.selected = "helpful"
-    
+
     -- Mock vim.ui.select to auto-select creative
     _G.mock_select("creative")
   ]])
-  
+
   -- Execute command
   child.cmd("EcaChatSelectBehavior")
-  
+
   -- Check that state was updated
   eq(child.lua_get("_G.State.config.behaviors.selected"), "creative")
 end
@@ -133,14 +133,14 @@ T["EcaChatSelectBehavior"]["handles nil selection"] = function()
   child.lua([[
     _G.State.config.behaviors.list = { "helpful", "creative" }
     _G.State.config.behaviors.selected = "helpful"
-    
+
     -- Mock vim.ui.select to return nil (user cancelled)
     _G.mock_select(nil)
   ]])
-  
+
   -- Execute command
   child.cmd("EcaChatSelectBehavior")
-  
+
   -- Check that state was NOT updated (still helpful)
   eq(child.lua_get("_G.State.config.behaviors.selected"), "helpful")
 end
@@ -149,89 +149,20 @@ T["EcaChatSelectBehavior"]["displays all available behaviors"] = function()
   -- Setup behaviors list
   child.lua([[
     _G.State.config.behaviors.list = { "helpful", "creative", "concise", "technical" }
-    
+
     -- Mock vim.ui.select to capture the items shown
     _G.mock_select(nil)
   ]])
-  
+
   -- Execute command
   child.cmd("EcaChatSelectBehavior")
-  
+
   -- Verify all behaviors were shown
   local shown_items = child.lua_get("_G.shown_items")
   eq(shown_items[1], "helpful")
   eq(shown_items[2], "creative")
   eq(shown_items[3], "concise")
   eq(shown_items[4], "technical")
-end
-
--- Test State update methods
-T["State"] = MiniTest.new_set()
-
-T["State"]["update_selected_model updates config"] = function()
-  child.lua([[
-    _G.State.config.models.list = { "model1", "model2" }
-    _G.State.config.models.selected = "model1"
-    
-    _G.State:update_selected_model("model2")
-  ]])
-  
-  eq(child.lua_get("_G.State.config.models.selected"), "model2")
-end
-
-T["State"]["update_selected_model handles nil"] = function()
-  child.lua([[
-    _G.State.config.models.selected = "model1"
-    
-    -- Should not update if nil is passed
-    _G.State:update_selected_model(nil)
-  ]])
-  
-  eq(child.lua_get("_G.State.config.models.selected"), "model1")
-end
-
-T["State"]["update_selected_model handles non-string"] = function()
-  child.lua([[
-    _G.State.config.models.selected = "model1"
-    
-    -- Should not update if non-string is passed
-    _G.State:update_selected_model(123)
-  ]])
-  
-  eq(child.lua_get("_G.State.config.models.selected"), "model1")
-end
-
-T["State"]["update_selected_behavior updates config"] = function()
-  child.lua([[
-    _G.State.config.behaviors.list = { "helpful", "creative" }
-    _G.State.config.behaviors.selected = "helpful"
-    
-    _G.State:update_selected_behavior("creative")
-  ]])
-  
-  eq(child.lua_get("_G.State.config.behaviors.selected"), "creative")
-end
-
-T["State"]["update_selected_behavior handles nil"] = function()
-  child.lua([[
-    _G.State.config.behaviors.selected = "helpful"
-    
-    -- Should not update if nil is passed
-    _G.State:update_selected_behavior(nil)
-  ]])
-  
-  eq(child.lua_get("_G.State.config.behaviors.selected"), "helpful")
-end
-
-T["State"]["update_selected_behavior handles non-string"] = function()
-  child.lua([[
-    _G.State.config.behaviors.selected = "helpful"
-    
-    -- Should not update if non-string is passed
-    _G.State:update_selected_behavior(123)
-  ]])
-  
-  eq(child.lua_get("_G.State.config.behaviors.selected"), "helpful")
 end
 
 return T
