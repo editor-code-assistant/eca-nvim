@@ -32,7 +32,7 @@ function H.keymaps()
     require("eca.api").focus()
   end, { noremap = true })
 
-  if Config.behaviour.auto_set_keymaps then
+  if Config.behavior and Config.behavior.auto_set_keymaps then
     Utils.safe_keymap_set({ "n", "v" }, Config.mappings.chat, function()
       require("eca.api").chat()
     end, { desc = "eca: open chat" })
@@ -246,7 +246,7 @@ function M.setup(opts)
   M.server = Server.new()
   M.mediator = require("eca.mediator").new(M.server, M.state)
 
-  if Config.behaviour and Config.behaviour.auto_start_server then
+  if Config.behavior and Config.behavior.auto_start_server then
     vim.defer_fn(function()
       M.server:start()
     end, 100) -- Small delay to ensure everything is loaded

@@ -17,7 +17,7 @@ return {
         file = "", -- Empty string uses default path
         max_file_size_mb = 10,
       },
-      behaviour = {
+      behavior = {
         auto_set_keymaps = true,
         auto_focus_sidebar = true,
       },
