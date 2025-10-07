@@ -21,7 +21,7 @@ require("eca").setup({
   usage_string_format = "{messageCost} / {sessionCost}",
 
   -- === BEHAVIOR ===
-  behaviour = {
+  behavior = {
     -- Set keymaps automatically
     auto_set_keymaps = true,
 
@@ -114,7 +114,7 @@ require("eca").setup({
 ### Minimalist
 ```lua
 require("eca").setup({
-  behaviour = { show_status_updates = false },
+  behavior = { show_status_updates = false },
   windows = { width = 30 },
   chat = {
     headers = {
@@ -128,7 +128,7 @@ require("eca").setup({
 ### Visual/UX focused
 ```lua
 require("eca").setup({
-  behaviour = { auto_focus_sidebar = true },
+  behavior = { auto_focus_sidebar = true },
   windows = {
     width = 50,
     wrap = true,
@@ -149,7 +149,7 @@ require("eca").setup({
 require("eca").setup({
   debug = true,
   server_args = "--log-level debug",
-  behaviour = {
+  behavior = {
     auto_start_server = true,
     show_status_updates = true,
   },
@@ -164,7 +164,7 @@ require("eca").setup({
 ### Performance-oriented
 ```lua
 require("eca").setup({
-  behaviour = {
+  behavior = {
     auto_focus_sidebar = false,
     show_status_updates = false,
   },

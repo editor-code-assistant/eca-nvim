@@ -20,7 +20,7 @@ M._defaults = {
     file = "",
     max_file_size_mb = 10, -- Maximum log file size in MB before warning
   },
-  behaviour = {
+  behavior = {
     auto_set_keymaps = true,
     auto_focus_sidebar = true,
     auto_start_server = false, -- Automatically start server on setup
