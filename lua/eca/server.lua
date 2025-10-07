@@ -110,7 +110,7 @@ function M:start(opts)
     nvim_exe = "nvim"
   end
 
-  local lua_cmd = string.format("lua ServerPath.run(%s)", Utils.lua_quote(Config.server_path) or "")
+  local lua_cmd = string.format("lua ServerPath.run(%s)", Utils.lua_quote(Config.server_path or ""))
 
   local cmd = { nvim_exe, "--headless", "--noplugin", "--clean", "-u", script_path, "-c", lua_cmd }
 
@@ -253,12 +253,6 @@ end
 ---@param params table
 ---@param callback? function
 function M:send_request(method, params, callback)
-  if not self:is_running() then
-    Logger.error("ECA server is not running")
-    if callback then
-      callback("Server not running", nil)
-    end
-  end
   local id = self:get_next_id()
   local message = {
     jsonrpc = "2.0",
@@ -272,6 +266,15 @@ function M:send_request(method, params, callback)
 
   local json = vim.json.encode(message)
   table.insert(self.messages, { content = json, content_length = #json })
+
+  if not self:is_running() then
+    Logger.error("ECA server is not running")
+    if callback then
+      callback("Server not running", nil)
+    end
+    return
+  end
+
   local content = string.format("Content-Length: %d\r\n\r\n%s", #json, json)
   self.process:write(content)
 end

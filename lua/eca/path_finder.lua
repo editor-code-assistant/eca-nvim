@@ -187,12 +187,10 @@ end
 function M:find(custom_path)
   -- Check for custom server path first
   if custom_path and custom_path:gsub("%s+", "") ~= "" then
-    if Utils.file_exists(custom_path) then
-      Logger.debug("Using custom server path: " .. custom_path)
-      return custom_path
-    else
-      Logger.notify("Custom server path does not exist: " .. custom_path, vim.log.levels.WARN)
+    if not Utils.file_exists(custom_path) then
+      error("Custom server path does not exist: " .. custom_path)
     end
+    return custom_path
   end
 
   local server_path = self:_get_extension_server_path()
