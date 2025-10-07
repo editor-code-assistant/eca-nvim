@@ -3,9 +3,6 @@ local ServerPath = {}
 -- Setup if headless
 if #vim.api.nvim_list_uis() == 0 then
   _G.ServerPath = ServerPath
-  vim.cmd([[let &rtp.=','.getcwd()]])
-  vim.cmd('set rtp+=deps/nui.nvim')
-  vim.cmd('set rtp+=deps/eca-nvim')
   vim.o.swapfile = false
   vim.o.backup = false
   vim.o.writebackup = false
