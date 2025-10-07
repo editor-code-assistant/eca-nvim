@@ -11,6 +11,11 @@ local M = {}
 function M.chat(opts)
   opts = opts or {}
   local eca = require("eca")
+
+  if not M.is_server_running() then
+    M.start_server()
+  end
+
   eca.open_sidebar(opts)
 end
 
