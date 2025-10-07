@@ -1,6 +1,5 @@
 local uv = vim.uv or vim.loop
 local Utils = require("eca.utils")
-local Config = require("eca.config")
 local Logger = require("eca.logger")
 
 ---@class eca.PathFinder
