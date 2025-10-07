@@ -1,6 +1,5 @@
 local uv = vim.uv or vim.loop
 local Utils = require("eca.utils")
-local Config = require("eca.config")
 local Logger = require("eca.logger")
 
 ---@class eca.PathFinder
@@ -100,7 +99,7 @@ function M:_write_version_file(version)
     file:write(version)
     file:close()
   else
-    Logger.notify("Could not write version file: " .. self._version_file, vim.log.levels.WARN)
+    Logger.warn("Could not write version file: " .. self._version_file)
   end
 end
 
@@ -136,7 +135,7 @@ function M:_download_latest_server(server_path, version)
 
   local download_path = self._cache_dir .. "/" .. artifact_name
 
-  Logger.notify("Downloading latest ECA server version from: " .. download_url, vim.log.levels.INFO)
+  Logger.debug("Downloading latest ECA server version from: " .. download_url)
 
   -- Ensure cache directory exists
   vim.fn.mkdir(self._cache_dir, "p")
@@ -150,8 +149,7 @@ function M:_download_latest_server(server_path, version)
 
   local download_result = os.execute(download_cmd)
   if download_result ~= 0 then
-    Logger.notify("Failed to download ECA server from: " .. download_url, vim.log.levels.ERROR)
-    return false
+    error("Failed to download ECA server from: " .. download_url)
   end
 
   -- Extract if it's a zip file
@@ -161,8 +159,7 @@ function M:_download_latest_server(server_path, version)
 
     local extract_result = os.execute(extract_cmd)
     if extract_result ~= 0 then
-      Logger.notify("Failed to extract ECA server", vim.log.levels.ERROR)
-      return false
+      error("Failed to extract ECA server")
     end
 
     -- Remove the zip file after extraction
@@ -170,33 +167,30 @@ function M:_download_latest_server(server_path, version)
   end
 
   -- Make executable (if not Windows)
-  if not vim.loop.os_uname().sysname:lower():match("windows") then
+  if not uv.os_uname().sysname:lower():match("windows") then
     os.execute("chmod +x " .. vim.fn.shellescape(server_path))
   end
 
   if not Utils.file_exists(server_path) then
-    Logger.notify("ECA server binary not found after download and extraction", vim.log.levels.ERROR)
-    return false
+    error("ECA server binary not found after download and extraction")
   end
 
   -- Write version file
   self:_write_version_file(version)
 
-  Logger.notify("ECA server downloaded successfully", vim.log.levels.INFO)
+  Logger.debug("ECA server downloaded successfully")
+
   return true
 end
 
 ---@return string
-function M:find()
+function M:find(custom_path)
   -- Check for custom server path first
-  local custom_path = Config.server_path
   if custom_path and custom_path:gsub("%s+", "") ~= "" then
-    if Utils.file_exists(custom_path) then
-      Logger.debug("Using custom server path: " .. custom_path)
-      return custom_path
-    else
-      Logger.notify("Custom server path does not exist: " .. custom_path, vim.log.levels.WARN)
+    if not Utils.file_exists(custom_path) then
+      error("Custom server path does not exist: " .. custom_path)
     end
+    return custom_path
   end
 
   local server_path = self:_get_extension_server_path()
@@ -215,13 +209,18 @@ function M:find()
   -- Download if server doesn't exist or version is outdated
   if not server_exists or (latest_version and current_version ~= latest_version) then
     if not latest_version then
-      Logger.notify("Could not check for latest version, using existing server", vim.log.levels.WARN)
+      Logger.warn("Could not check for latest version, using existing server")
       return server_path
     end
 
-    local success = self:_download_latest_server(server_path, latest_version)
-    if not success then
-      error("Failed to download ECA server")
+    local success
+
+    local ok, err = pcall(function()
+      success = self:_download_latest_server(server_path, latest_version)
+    end)
+
+    if not ok or not success then
+      error((err and tostring(err)) or "Failed to download ECA server")
     end
   end
 
