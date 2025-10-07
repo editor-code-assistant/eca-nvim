@@ -29,7 +29,7 @@ require("eca").setup({
     auto_focus_sidebar = true,
 
     -- Start server automatically
-    auto_start_server = true,
+    auto_start_server = false,
 
     -- Download server automatically if not found
     auto_download = true,

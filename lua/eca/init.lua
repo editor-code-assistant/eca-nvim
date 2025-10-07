@@ -32,7 +32,7 @@ function H.keymaps()
     require("eca.api").focus()
   end, { noremap = true })
 
-  if Config.behavior.auto_set_keymaps then
+  if Config.behavior and Config.behavior.auto_set_keymaps then
     Utils.safe_keymap_set({ "n", "v" }, Config.mappings.chat, function()
       require("eca.api").chat()
     end, { desc = "eca: open chat" })
