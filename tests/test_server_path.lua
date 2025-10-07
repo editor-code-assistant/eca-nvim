@@ -9,7 +9,6 @@ local function setup_test_environment()
       "nvim",
       "--headless",
       "--noplugin",
-      "--clean",
       "--cmd",
       [[lua package.preload["eca.path_finder"] = function()
         local M = {}

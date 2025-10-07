@@ -112,7 +112,7 @@ function M:start(opts)
 
   local lua_cmd = string.format("lua ServerPath.run(%s)", Utils.lua_quote(Config.server_path or ""))
 
-  local cmd = { nvim_exe, "--headless", "--noplugin", "--clean", "-u", script_path, "-c", lua_cmd }
+  local cmd = { nvim_exe, "--headless", "--noplugin", "-u", script_path, "-c", lua_cmd }
 
   vim.system(cmd, { text = true }, function(out)
     if out.code ~= 0 then
