@@ -2,36 +2,43 @@ local MiniTest = require("mini.test")
 local eq = MiniTest.expect.equality
 local child = MiniTest.new_child_neovim()
 
+local function setup_test_environment()
+  -- Setup commands
+  require('eca.commands').setup()
+
+  -- Initialize everything
+  _G.Server = require('eca.server').new()
+  _G.State = require('eca.state').new()
+  _G.Mediator = require('eca.mediator').new(_G.Server, _G.State)
+  _G.Sidebar = require('eca.sidebar').new(1, _G.Mediator)
+  _G.Eca = require('eca')
+  _G.Eca.current = { sidebar = _G.Sidebar }
+
+  -- Mock vim.ui.select for testing
+  _G.selected_choice = nil
+  _G.shown_items = nil
+  _G.shown_prompt = nil
+  _G.original_select = vim.ui.select
+
+  _G.mock_select = function(choice)
+    _G.selected_choice = choice
+    vim.ui.select = function(items, opts, on_choice)
+      _G.shown_items = items
+      _G.shown_prompt = opts.prompt
+      on_choice(choice)
+    end
+  end
+
+  _G.restore_select = function()
+    vim.ui.select = _G.original_select
+  end
+end
+
 local T = MiniTest.new_set({
   hooks = {
     pre_case = function()
       child.restart({ "-u", "scripts/minimal_init.lua" })
-      child.lua([[
-        -- Setup commands
-        require('eca.commands').setup()
-
-        -- Instantiate state singleton
-        _G.State = require('eca.state').new()
-
-        -- Mock vim.ui.select for testing
-        _G.selected_choice = nil
-        _G.shown_items = nil
-        _G.shown_prompt = nil
-        _G.original_select = vim.ui.select
-
-        _G.mock_select = function(choice)
-          _G.selected_choice = choice
-          vim.ui.select = function(items, opts, on_choice)
-            _G.shown_items = items
-            _G.shown_prompt = opts.prompt
-            on_choice(choice)
-          end
-        end
-
-        _G.restore_select = function()
-          vim.ui.select = _G.original_select
-        end
-      ]])
+      child.lua_func(setup_test_environment)
     end,
     post_case = function()
       child.lua([[_G.restore_select()]])
