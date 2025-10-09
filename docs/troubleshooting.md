@@ -36,7 +36,7 @@ Solutions:
 Symptoms: `<leader>ec` doesn't open chat
 
 Solutions:
-- Ensure `behavior.auto_set_keymaps = true`
+- Ensure `behaviour.auto_set_keymaps = true`
 - Confirm your `<leader>` key (default: `\`)
 - Configure shortcuts manually:
 
@@ -61,5 +61,5 @@ Symptoms: Lag when typing, slow responses
 
 Solutions:
 - Reduce window width: `windows.width = 25`
-- Disable visual updates: `behavior.show_status_updates = false`
+- Disable visual updates: `behaviour.show_status_updates = false`
 - Use the minimalist configuration preset
