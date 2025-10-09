@@ -1223,7 +1223,7 @@ function M:_update_welcome_content()
   local cfg_msg = (cfg.message and cfg.message ~= "" and cfg.message) or nil
   local welcome_message = cfg_msg or (self.mediator and self.mediator:welcome_message() or nil)
 
-  local lines = { "Waiting for server to start..." }
+  local lines = { "Waiting for welcome message from ECA server..." }
 
   if welcome_message and welcome_message ~= "" then
     lines = Utils.split_lines(welcome_message)
@@ -1279,8 +1279,6 @@ function M:_send_message(message)
     requestId = tostring(os.time()),
     message = message,
     contexts = contexts or {},
-    model = self.mediator:selected_model(),
-    behavior = self.mediator:selected_behavior(),
   }, function(err, result)
     if err then
       print("err is " .. err)

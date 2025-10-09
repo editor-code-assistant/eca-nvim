@@ -168,7 +168,7 @@ end
 function State:_update_usage(usage)
   self.usage = {
     tokens = {
-      limit = (usage.limit and usage.limit.context) or self.usage.tokens.limit,
+      limit = (usage.limit and usage.limit.output) or self.usage.tokens.limit,
       session = usage.sessionTokens or self.usage.tokens.session,
     },
     costs = {
@@ -195,30 +195,6 @@ function State:_update_tools(tool)
 
   vim.schedule(function()
     require("eca.observer").notify({ type = "state/updated", content = { tools = vim.deepcopy(self.tools) } })
-  end)
-end
-
-function State:update_selected_model(model)
-  if not model or type(model) ~= "string" then
-    return
-  end
-
-  self.config.models.selected = model
-
-  vim.schedule(function()
-    require("eca.observer").notify({ type = "state/updated", content = { config = vim.deepcopy(self.config) } })
-  end)
-end
-
-function State:update_selected_behavior(behavior)
-  if not behavior or type(behavior) ~= "string" then
-    return
-  end
-
-  self.config.behaviors.selected = behavior
-
-  vim.schedule(function()
-    require("eca.observer").notify({ type = "state/updated", content = { config = vim.deepcopy(self.config) } })
   end)
 end
 

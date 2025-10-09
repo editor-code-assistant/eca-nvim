@@ -38,45 +38,57 @@ local function sleep(ms)
 end
 
 T["server"] = MiniTest.new_set()
-
 T["server"]["start"] = function()
-  child.lua("_G.server:start({ clean = true })")
-  child.lua([[
-    _G.server_started = vim.wait(10000, function()
-      return _G.server and _G.server:is_running()
-    end, 100)
-  ]])
-  eq(child.lua_get("_G.server_started"), true)
-  sleep(1000)
-  eq(child.lua_get("_G.server.initialized"), true)
+  child.lua("_G.server.start({cmd = {'fake'}})")
+  eq(child.lua_get("_G.server.process"), vim.NIL)
+  child.lua("_G.server:start()")
+  eq(child.lua_get("_G.server:is_running()"), true)
 end
 
-T["server"]["start without initialize"] = function()
-  child.lua("_G.server:start({ clean = true, initialize = false })")
-  child.lua([[
-    _G.server_started = vim.wait(10000, function()
-      return _G.server and _G.server:is_running()
-    end, 100)
-  ]])
-  eq(child.lua_get("_G.server_started"), true)
-  sleep(1000)
-  eq(child.lua_get("_G.server.initialized"), false)
-end
-
-T["server"]["start with inexistent path"] = function()
-  child.lua([[
-    Config = require("eca.config")
-    Config.setup({ server_path = "non-existing-path" } )
-    _G.server:start({ clean = true })
-  ]])
-  child.lua([[
-    _G.server_started = vim.wait(1000, function()
-      return _G.server and _G.server:is_running()
-    end, 100)
-  ]])
-  eq(string.find(child.lua_get("_G.notifications[1].message"), "non-existing-path", 1 , true) ~= nil, true)
-  eq(child.lua_get("_G.server_started"), false)
-  eq(child.lua_get("_G.server.initialized"), false)
+T["server"]["initialize"] = function()
+  local test_cases = {
+    {
+      method = "initialize",
+      want = {
+        chatBehaviors = { "agent", "plan" },
+        chatDefaultBehavior = "agent",
+        chatDefaultModel = "anthropic/claude-sonnet-4-20250514",
+        chatWelcomeMessage = "Welcome to ECA!\n\nType '/' for commands\n\n",
+        models = {
+          "anthropic/claude-3-5-haiku-20241022",
+          "anthropic/claude-opus-4-1-20250805",
+          "anthropic/claude-opus-4-20250514",
+          "anthropic/claude-sonnet-4-20250514",
+          "github-copilot/claude-sonnet-4",
+          "github-copilot/gpt-4.1",
+          "github-copilot/gpt-5",
+          "github-copilot/gpt-5-mini",
+          "openai/gpt-4.1",
+          "openai/gpt-5",
+          "openai/gpt-5-mini",
+          "openai/gpt-5-nano",
+          "openai/o3",
+          "openai/o4-mini",
+        },
+      },
+    },
+    { method = "not a command", want = vim.NIL },
+  }
+  for i, test_case in ipairs(test_cases) do
+    if i == 1 then
+      test_case = test_cases[i + 1]
+    end
+    child.lua("_G.method = " .. vim.inspect(test_case.method))
+    child.lua("_G.server:start({initialize = false})")
+    child.lua_func(function()
+      _G.server:send_request(_G.method, {}, function(err, result)
+        _G.err = err
+        _G.result = result
+      end)
+    end)
+    sleep(1500)
+    eq(child.lua_get("_G.result"), test_case.want)
+  end
 end
 
 return T

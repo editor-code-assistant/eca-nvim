@@ -97,7 +97,7 @@ T["updates via observer notifications"]["updates usage on usage content"] = func
     method = 'chat/contentReceived',
     params = { content = {
       type = 'usage',
-      limit = { context = 1024 },
+      limit = { output = 1024 },
       sessionTokens = 256,
       lastMessageCost = '0.42',
       sessionCost = '3.14',
@@ -182,74 +182,6 @@ T["updates via observer notifications"]["updates tools on tool/serverUpdated"] =
     return type(m) == 'table' and m.type == 'state/updated' and type(m.content) == 'table' and m.content.tools ~= nil
   end) ]])
   eq(#updates >= 1, true)
-end
-
-T["update selected model and behavior"] = MiniTest.new_set()
-
-T["update selected model and behavior"]["update_selected_model updates config"] = function()
-  child.lua([[
-    _G.State.config.models.list = { "model1", "model2" }
-    _G.State.config.models.selected = "model1"
-
-    _G.State:update_selected_model("model2")
-  ]])
-
-  eq(child.lua_get("_G.State.config.models.selected"), "model2")
-end
-
-T["update selected model and behavior"]["update_selected_model handles nil"] = function()
-  child.lua([[
-    _G.State.config.models.selected = "model1"
-
-    -- Should not update if nil is passed
-    _G.State:update_selected_model(nil)
-  ]])
-
-  eq(child.lua_get("_G.State.config.models.selected"), "model1")
-end
-
-T["update selected model and behavior"]["update_selected_model handles non-string"] = function()
-  child.lua([[
-    _G.State.config.models.selected = "model1"
-
-    -- Should not update if non-string is passed
-    _G.State:update_selected_model(123)
-  ]])
-
-  eq(child.lua_get("_G.State.config.models.selected"), "model1")
-end
-
-T["update selected model and behavior"]["update_selected_behavior updates config"] = function()
-  child.lua([[
-    _G.State.config.behaviors.list = { "helpful", "creative" }
-    _G.State.config.behaviors.selected = "helpful"
-
-    _G.State:update_selected_behavior("creative")
-  ]])
-
-  eq(child.lua_get("_G.State.config.behaviors.selected"), "creative")
-end
-
-T["update selected model and behavior"]["update_selected_behavior handles nil"] = function()
-  child.lua([[
-    _G.State.config.behaviors.selected = "helpful"
-
-    -- Should not update if nil is passed
-    _G.State:update_selected_behavior(nil)
-  ]])
-
-  eq(child.lua_get("_G.State.config.behaviors.selected"), "helpful")
-end
-
-T["update selected model and behavior"]["update_selected_behavior handles non-string"] = function()
-  child.lua([[
-    _G.State.config.behaviors.selected = "helpful"
-
-    -- Should not update if non-string is passed
-    _G.State:update_selected_behavior(123)
-  ]])
-
-  eq(child.lua_get("_G.State.config.behaviors.selected"), "helpful")
 end
 
 return T

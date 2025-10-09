@@ -118,11 +118,4 @@ function M.constants()
   return CONSTANTS
 end
 
----@param str string
----@return string
-function M.lua_quote(str)
-  -- Escape backslashes and double quotes for Lua string literal
-  return '"' .. tostring(str):gsub('\\', '\\\\'):gsub('"', '\\"') .. '"'
-end
-
 return M
