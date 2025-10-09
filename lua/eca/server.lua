@@ -98,7 +98,7 @@ end
 ---in testing
 ---@param opts? eca.ServerStartOpts
 function M:start(opts)
-  opts = opts or { initialize = true }
+  opts = vim.tbl_deep_extend("force", { initialize = true }, opts or {})
 
   local this_file = debug.getinfo(1, "S").source:sub(2)
   local proj_root = vim.fn.fnamemodify(this_file, ":p:h:h:h")
@@ -112,7 +112,7 @@ function M:start(opts)
 
   local lua_cmd = string.format("lua ServerPath.run(%s)", Utils.lua_quote(Config.server_path or ""))
 
-  local cmd = { nvim_exe, "--headless", "--noplugin", "-u", script_path, "-c", lua_cmd }
+  local cmd = { nvim_exe, "--headless", "--noplugin", (opts.clean and " --clean" or ""), "-u", script_path, "-c", lua_cmd }
 
   vim.system(cmd, { text = true }, function(out)
     if out.code ~= 0 then

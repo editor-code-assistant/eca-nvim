@@ -40,7 +40,7 @@ end
 T["server"] = MiniTest.new_set()
 
 T["server"]["start"] = function()
-  child.lua("_G.server:start()")
+  child.lua("_G.server:start({ clean = true })")
   child.lua([[
     _G.server_started = vim.wait(10000, function()
       return _G.server and _G.server:is_running()
@@ -52,7 +52,7 @@ T["server"]["start"] = function()
 end
 
 T["server"]["start without initialize"] = function()
-  child.lua("_G.server:start({ initialize = false })")
+  child.lua("_G.server:start({ clean = true, initialize = false })")
   child.lua([[
     _G.server_started = vim.wait(10000, function()
       return _G.server and _G.server:is_running()
@@ -67,7 +67,7 @@ T["server"]["start with inexistent path"] = function()
   child.lua([[
     Config = require("eca.config")
     Config.setup({ server_path = "non-existing-path" } )
-    _G.server:start()
+    _G.server:start({ clean = true })
   ]])
   child.lua([[
     _G.server_started = vim.wait(1000, function()
