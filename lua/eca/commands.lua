@@ -343,50 +343,6 @@ function M.setup()
     desc = "Emergency fix for treesitter issues in ECA chat",
   })
 
-  vim.api.nvim_create_user_command("EcaChatSelectModel", function()
-    local eca = require("eca")
-
-    if not eca or not eca.current or not eca.current.sidebar then
-      Logger.notify("No active ECA sidebar found", vim.log.levels.WARN)
-      return
-    end
-
-    local chat = eca.current.sidebar
-    local models = chat.mediator:models()
-
-    vim.ui.select(models, {
-      prompt = "Select ECA Chat Model:",
-    }, function(choice)
-      if choice then
-        chat.mediator:update_selected_model(choice)
-      end
-    end)
-  end, {
-    desc = "Select current ECA Chat model",
-  })
-
-  vim.api.nvim_create_user_command("EcaChatSelectBehavior", function()
-    local eca = require("eca")
-
-    if not eca or not eca.current or not eca.current.sidebar then
-      Logger.notify("No active ECA sidebar found", vim.log.levels.WARN)
-      return
-    end
-
-    local chat = eca.current.sidebar
-    local behaviors = chat.mediator:behaviors()
-
-    vim.ui.select(behaviors, {
-      prompt = "Select ECA Chat Behavior:",
-    }, function(choice)
-      if choice then
-        chat.mediator:update_selected_behavior(choice)
-      end
-    end)
-  end, {
-    desc = "Select current ECA Chat behavior",
-  })
-
   Logger.debug("ECA commands registered")
 end
 

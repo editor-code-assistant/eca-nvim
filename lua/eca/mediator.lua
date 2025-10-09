@@ -26,28 +26,12 @@ function mediator:send(method, params, callback)
   self.server:send_request(method, params, callback)
 end
 
-function mediator:behaviors()
-  return self.state.config.behaviors.list
-end
-
 function mediator:selected_behavior()
   return self.state.config.behaviors.selected
 end
 
-function mediator:update_selected_behavior(behavior)
-  self.state:update_selected_behavior(behavior)
-end
-
-function mediator:models()
-  return self.state.config.models.list
-end
-
 function mediator:selected_model()
   return self.state.config.models.selected
-end
-
-function mediator:update_selected_model(model)
-  self.state:update_selected_model(model)
 end
 
 function mediator:tokens_session()

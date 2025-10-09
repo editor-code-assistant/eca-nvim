@@ -1279,8 +1279,6 @@ function M:_send_message(message)
     requestId = tostring(os.time()),
     message = message,
     contexts = contexts or {},
-    model = self.mediator:selected_model(),
-    behavior = self.mediator:selected_behavior(),
   }, function(err, result)
     if err then
       print("err is " .. err)

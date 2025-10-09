@@ -3,19 +3,9 @@ local ServerPath = {}
 -- Setup if headless
 if #vim.api.nvim_list_uis() == 0 then
   _G.ServerPath = ServerPath
-
-  -- hijack to make server tests work on CI using --clean mode
-  local eca_available = pcall(require, "eca")
-  if not eca_available then
-    vim.cmd([[let &rtp.=','.getcwd()]])
-    vim.cmd('set rtp+=deps/nui.nvim')
-    vim.cmd('set rtp+=deps/eca-nvim')
-  end
-
   vim.o.swapfile = false
   vim.o.backup = false
   vim.o.writebackup = false
-
   require("eca").setup({})
 end
 
