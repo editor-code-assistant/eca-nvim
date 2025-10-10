@@ -17,6 +17,7 @@
 ---@field status string
 ---
 ---@class eca.State
+---@field id string?
 ---@field status eca.StateStatus
 ---@field config eca.StateConfig
 ---@field usage eca.StateUsage
@@ -26,6 +27,7 @@ local State = {}
 ---@return eca.State
 function State._new()
   local instance = setmetatable({
+    id = nil,
     status = {
       state = "idle",
       text = "Idle",
@@ -97,6 +99,10 @@ function State:_chat_content_received(message)
 
   if not message.params.content or not message.params.content.type then
     return
+  end
+
+  if message.params.chatId and message.params.chatId ~= self.id then
+    self.id = message.params.chatId
   end
 
   local content = message.params.content
