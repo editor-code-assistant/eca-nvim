@@ -116,8 +116,7 @@ function M:_run(server_path, opts)
     ---@param out vim.SystemCompleted
     on_exit = function(out)
       if out.code ~= 0 then
-        require("eca.logger").notify(string.format("Server exited with status code %d", out.code), vim.log.levels
-        .ERROR)
+        require("eca.logger").notify(string.format("Server exited with status code %d", out.code), vim.log.levels.ERROR)
       end
     end,
   })
