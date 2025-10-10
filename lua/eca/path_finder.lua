@@ -1,5 +1,6 @@
 local uv = vim.uv or vim.loop
 local Utils = require("eca.utils")
+local Config = require("eca.config")
 local Logger = require("eca.logger")
 
 ---@class eca.PathFinder
@@ -184,15 +185,7 @@ function M:_download_latest_server(server_path, version)
 end
 
 ---@return string
-function M:find(custom_path)
-  -- Check for custom server path first
-  if custom_path and custom_path:gsub("%s+", "") ~= "" then
-    if not Utils.file_exists(custom_path) then
-      error("Custom server path does not exist: " .. custom_path)
-    end
-    return custom_path
-  end
-
+function M:find()
   local server_path = self:_get_extension_server_path()
   local latest_version = self:_get_latest_version()
   local current_version = self:_read_version_file()

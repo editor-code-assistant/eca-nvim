@@ -40,7 +40,7 @@ end
 T["server"] = MiniTest.new_set()
 
 T["server"]["start"] = function()
-  child.lua("_G.server:start({ clean = true })")
+  child.lua("_G.server:start()")
   child.lua([[
     _G.server_started = vim.wait(10000, function()
       return _G.server and _G.server:is_running()
@@ -52,7 +52,7 @@ T["server"]["start"] = function()
 end
 
 T["server"]["start without initialize"] = function()
-  child.lua("_G.server:start({ clean = true, initialize = false })")
+  child.lua("_G.server:start({ initialize = false })")
   child.lua([[
     _G.server_started = vim.wait(10000, function()
       return _G.server and _G.server:is_running()
@@ -65,18 +65,20 @@ end
 
 T["server"]["start with inexistent path"] = function()
   child.lua([[
-    Config = require("eca.config")
-    Config.setup({ server_path = "non-existing-path" } )
-    _G.server:start({ clean = true })
+    _G.config = require("eca.config")
+    _G.config.setup({ server_path = "non-existing-path" })
+    _G.server:start()
   ]])
   child.lua([[
     _G.server_started = vim.wait(1000, function()
       return _G.server and _G.server:is_running()
     end, 100)
   ]])
-  eq(string.find(child.lua_get("_G.notifications[1].message"), "non-existing-path", 1 , true) ~= nil, true)
+
   eq(child.lua_get("_G.server_started"), false)
+  sleep(1000)
   eq(child.lua_get("_G.server.initialized"), false)
+  eq(string.find(child.lua_get("_G.notifications[1].message"), "non-existing-path", 1 , true) ~= nil, true)
 end
 
 return T

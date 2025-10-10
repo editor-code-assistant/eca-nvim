@@ -97,8 +97,75 @@ end
 ---@field initialize boolean Send the initialize message to ECA on startup, used
 ---in testing
 ---@param opts? eca.ServerStartOpts
+function M:_run(server_path, opts)
+  Logger.debug("Starting ECA server: " .. server_path)
+
+  local args = { server_path, "server" }
+
+  if Config.server_args and Config.server_args ~= "" then
+    vim.list_extend(args, vim.split(Config.server_args, " "))
+  end
+
+  opts = vim.tbl_deep_extend("keep", opts, {
+    cmd = args,
+    text = true,
+    cwd = self.cwd,
+    stdin = true,
+    stdout = on_stdout(self),
+    stderr = on_stderr,
+    ---@param out vim.SystemCompleted
+    on_exit = function(out)
+      if out.code ~= 0 then
+        require("eca.logger").notify(string.format("Server exited with status code %d", out.code), vim.log.levels
+        .ERROR)
+      end
+    end,
+  })
+
+  local started, process_or_err = pcall(vim.system, opts.cmd, {
+    cwd = opts.cwd,
+    text = opts.text,
+    stdin = opts.stdin,
+    stdout = opts.stdout,
+    stderr = opts.stderr,
+  }, opts.on_exit)
+
+  if not started then
+    self.process = nil
+    Logger.notify(vim.inspect(process_or_err), vim.log.levels.ERROR)
+    return
+  end
+
+  self.process = process_or_err
+  if self.on_start then
+    self.on_start(process_or_err.pid)
+  end
+
+  if opts.initialize then
+    self:initialize()
+  end
+end
+
+---@class eca.ServerStartOpts: vim.SystemOpts
+---@field cmd string[] The command to pass to vim.system
+---@field on_exit fun(out: vim.SystemCompleted) callback to pass to vim.system
+---@field initialize boolean Send the initialize message to ECA on startup, used
+---in testing
+---@param opts? eca.ServerStartOpts
 function M:start(opts)
   opts = vim.tbl_deep_extend("force", { initialize = true }, opts or {})
+
+  -- Check for custom server path first
+  local custom_path = Config.server_path
+  if custom_path and custom_path:gsub("%s+", "") ~= "" then
+    if not Utils.file_exists(custom_path) then
+      Logger.notify("Custom server path does not exist: " .. custom_path, vim.log.levels.ERROR)
+      return
+    end
+
+    self:_run(custom_path, opts)
+    return
+  end
 
   local this_file = debug.getinfo(1, "S").source:sub(2)
   local proj_root = vim.fn.fnamemodify(this_file, ":p:h:h:h")
@@ -110,9 +177,7 @@ function M:start(opts)
     nvim_exe = "nvim"
   end
 
-  local lua_cmd = string.format("lua ServerPath.run(%s)", Utils.lua_quote(Config.server_path or ""))
-
-  local cmd = { nvim_exe, "--headless", "--noplugin", (opts.clean and " --clean" or ""), "-u", script_path, "-c", lua_cmd }
+  local cmd = { nvim_exe, "--headless", "-S", script_path }
 
   vim.system(cmd, { text = true }, function(out)
     if out.code ~= 0 then
@@ -123,52 +188,7 @@ function M:start(opts)
     local stdout_lines = Utils.split_lines(out.stdout)
     local server_path = stdout_lines[#stdout_lines]
 
-    Logger.debug("Starting ECA server: " .. server_path)
-
-    local args = { server_path, "server" }
-
-    if Config.server_args and Config.server_args ~= "" then
-      vim.list_extend(args, vim.split(Config.server_args, " "))
-    end
-
-    opts = vim.tbl_deep_extend("keep", opts, {
-      cmd = args,
-      text = true,
-      cwd = self.cwd,
-      stdin = true,
-      stdout = on_stdout(self),
-      stderr = on_stderr,
-      ---@param output vim.SystemCompleted
-      on_exit = function(output)
-        if output.code ~= 0 then
-          require("eca.logger").notify(string.format("Server exited with status code %d", output.code), vim.log.levels
-          .ERROR)
-        end
-      end,
-    })
-
-    local started, process_or_err = pcall(vim.system, opts.cmd, {
-      cwd = opts.cwd,
-      text = opts.text,
-      stdin = opts.stdin,
-      stdout = opts.stdout,
-      stderr = opts.stderr,
-    }, opts.on_exit)
-
-    if not started then
-      self.process = nil
-      Logger.notify(vim.inspect(process_or_err), vim.log.levels.ERROR)
-      return
-    end
-
-    self.process = process_or_err
-    if self.on_start then
-      self.on_start(process_or_err.pid)
-    end
-
-    if opts.initialize then
-      self:initialize()
-    end
+    self:_run(server_path, opts)
   end)
 end
 

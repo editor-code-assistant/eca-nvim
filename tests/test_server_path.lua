@@ -8,26 +8,35 @@ local function setup_test_environment()
     return {
       "nvim",
       "--headless",
-      "--noplugin",
-      "--clean",
       "--cmd",
-      [[lua package.preload["eca.path_finder"] = function()
-        local M = {}
-        function M.new()
-          return setmetatable({}, { __index = M })
+      string.format([[lua
+        package.preload["eca.config"] = function()
+          local M = {}
+          M.server_path = %q
+          return M
         end
-        function M:find(custom_path)
-          if custom_path == "error" then
-            error("custom-server-path-error")
+      ]], custom_path or ""),
+      "--cmd",
+      [[lua
+        package.preload["eca.path_finder"] = function()
+          local M = {}
+          function M.new()
+            return setmetatable({}, { __index = M })
           end
-          return (custom_path ~= "" and custom_path) or "no-custom-server-path"
+          function M:find()
+            Config = require("eca.config")
+            local custom_path = Config.server_path
+
+            if custom_path == "error" then
+              error("custom-server-path-error")
+            end
+            return (custom_path ~= "" and custom_path) or "no-custom-server-path"
+          end
+          return M
         end
-        return M
-      end]],
-      "-u",
+      ]],
+      "-S",
       "scripts/server_path.lua",
-      "-c",
-      string.format("lua ServerPath.run(%s)", Utils.lua_quote(custom_path or "")),
     }
   end
 end
