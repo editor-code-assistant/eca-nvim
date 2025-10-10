@@ -53,7 +53,7 @@ Advanced setup example:
   opts = {
     debug = false,
     server_path = "",
-    behaviour = {
+    behavior = {
       auto_set_keymaps = true,
       auto_focus_sidebar = true,
     },
