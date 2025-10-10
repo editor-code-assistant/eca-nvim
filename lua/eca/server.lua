@@ -1,6 +1,5 @@
 local Utils = require("eca.utils")
 local Config = require("eca.config")
-local PathFinder = require("eca.path_finder")
 local Logger = require("eca.logger")
 
 ---@class eca.Server
@@ -13,8 +12,9 @@ local Logger = require("eca.logger")
 ---@field on_stop function Callback when the server stops
 ---Called when a notification is received(message without an ID)
 ---@field on_notification fun(server: eca.Server, message: table)
----@field private path_finder eca.PathFinder Server path finder
 ---@field pending_requests {id: fun(err, data)} -- outgoing requests with callbacks
+---@field cwd string Current working directory for the server process
+---@field workspace_folders {name: string, uri: string}[] Workspace folders to send on initialize
 local M = {}
 
 ---@param opts? table
@@ -22,7 +22,7 @@ local M = {}
 function M.new(opts)
   opts = vim.tbl_extend("keep", opts or {}, {
     on_start = function(pid)
-      require("eca.logger").notify("Started server with pid " .. pid, vim.log.levels.INFO)
+      require("eca.logger").debug("Started server with pid " .. pid)
     end,
     on_initialize = function()
       require("eca.logger").notify("Server ready to receive messages", vim.log.levels.INFO)
@@ -37,7 +37,13 @@ function M.new(opts)
         require("eca.observer").notify(message)
       end)
     end,
-    path_finder = PathFinder:new(),
+    cwd = vim.fn.getcwd(),
+    workspace_folders = {
+      {
+        name = vim.fn.fnamemodify(Utils.get_project_root(), ":t"),
+        uri = "file://" .. Utils.get_project_root(),
+      },
+    },
   })
 
   return setmetatable({
@@ -46,11 +52,12 @@ function M.new(opts)
     on_initialize = opts.on_initialize,
     on_stop = opts.on_stop,
     on_notification = opts.on_notification,
-    path_finder = opts.path_finder,
     messages = {},
     pending_requests = {},
     initialized = false,
     next_id = 0,
+    cwd = opts.cwd,
+    workspace_folders = opts.workspace_folders,
   }, { __index = M })
 end
 
@@ -90,22 +97,11 @@ end
 ---@field initialize boolean Send the initialize message to ECA on startup, used
 ---in testing
 ---@param opts? eca.ServerStartOpts
-function M:start(opts)
-  opts = opts or { initialize = true }
-
-  local server_path
-  local ok, path_finder_error = pcall(function()
-    server_path = self.path_finder:find()
-  end)
-
-  if not ok or not server_path then
-    Logger.notify("Could not find or download ECA server" .. tostring(path_finder_error), vim.log.levels.ERROR)
-    return
-  end
-
+function M:_run(server_path, opts)
   Logger.debug("Starting ECA server: " .. server_path)
 
   local args = { server_path, "server" }
+
   if Config.server_args and Config.server_args ~= "" then
     vim.list_extend(args, vim.split(Config.server_args, " "))
   end
@@ -113,7 +109,7 @@ function M:start(opts)
   opts = vim.tbl_deep_extend("keep", opts, {
     cmd = args,
     text = true,
-    cwd = vim.fn.getcwd(),
+    cwd = self.cwd,
     stdin = true,
     stdout = on_stdout(self),
     stderr = on_stderr,
@@ -149,14 +145,53 @@ function M:start(opts)
   end
 end
 
-function M:initialize()
-  local workspace_folders = {
-    {
-      name = vim.fn.fnamemodify(Utils.get_project_root(), ":t"),
-      uri = "file://" .. Utils.get_project_root(),
-    },
-  }
+---@class eca.ServerStartOpts: vim.SystemOpts
+---@field cmd string[] The command to pass to vim.system
+---@field on_exit fun(out: vim.SystemCompleted) callback to pass to vim.system
+---@field initialize boolean Send the initialize message to ECA on startup, used
+---in testing
+---@param opts? eca.ServerStartOpts
+function M:start(opts)
+  opts = vim.tbl_deep_extend("force", { initialize = true }, opts or {})
 
+  -- Check for custom server path first
+  local custom_path = Config.server_path
+  if custom_path and custom_path:gsub("%s+", "") ~= "" then
+    if not Utils.file_exists(custom_path) then
+      Logger.notify("Custom server path does not exist: " .. custom_path, vim.log.levels.ERROR)
+      return
+    end
+
+    self:_run(custom_path, opts)
+    return
+  end
+
+  local this_file = debug.getinfo(1, "S").source:sub(2)
+  local proj_root = vim.fn.fnamemodify(this_file, ":p:h:h:h")
+  local script_path = proj_root .. "/scripts/server_path.lua"
+
+  local nvim_exe = vim.fn.exepath("nvim")
+
+  if not nvim_exe or nvim_exe == "" then
+    nvim_exe = "nvim"
+  end
+
+  local cmd = { nvim_exe, "--headless", "-S", script_path }
+
+  vim.system(cmd, { text = true }, function(out)
+    if out.code ~= 0 then
+      Logger.notify(out.stderr, vim.log.levels.ERROR)
+      return
+    end
+
+    local stdout_lines = Utils.split_lines(out.stdout)
+    local server_path = stdout_lines[#stdout_lines]
+
+    self:_run(server_path, opts)
+  end)
+end
+
+function M:initialize()
   self:send_request("initialize", {
     processId = vim.fn.getpid(),
     clientInfo = {
@@ -168,7 +203,7 @@ function M:initialize()
         chat = true,
       },
     },
-    workspaceFolders = workspace_folders,
+    workspaceFolders = vim.deepcopy(self.workspace_folders),
   }, function(err, _)
     if err then
       Logger.notify("Could not initialize server: " .. err, vim.log.levels.ERROR)
@@ -237,12 +272,6 @@ end
 ---@param params table
 ---@param callback? function
 function M:send_request(method, params, callback)
-  if not self:is_running() then
-    Logger.error("ECA server is not running")
-    if callback then
-      callback("Server not running", nil)
-    end
-  end
   local id = self:get_next_id()
   local message = {
     jsonrpc = "2.0",
@@ -256,6 +285,15 @@ function M:send_request(method, params, callback)
 
   local json = vim.json.encode(message)
   table.insert(self.messages, { content = json, content_length = #json })
+
+  if not self:is_running() then
+    Logger.error("ECA server is not running")
+    if callback then
+      callback("Server not running", nil)
+    end
+    return
+  end
+
   local content = string.format("Content-Length: %d\r\n\r\n%s", #json, json)
   self.process:write(content)
 end
