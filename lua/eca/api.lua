@@ -153,11 +153,11 @@ function M.add_selection_context()
     -- Create context object
     local context = {
       type = "file",
-      path = context_path,
-      lines_range = {
+      path = current_file,
+      linesRange = {
         start = start_line,
-        End = end_line
-      }
+        ["end"] = end_line, -- end is a reserved word in Lua
+      },
     }
 
     -- Get current sidebar and add context

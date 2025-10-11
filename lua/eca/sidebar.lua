@@ -1132,6 +1132,10 @@ function M:_update_contexts_display()
     for i, context in ipairs(self._contexts) do
       local name = context.type == "repoMap" and "repoMap" or vim.fn.fnamemodify(context.path, ":t") -- Get filename only
 
+      if context.linesRange and context.linesRange.start and context.linesRange["end"] then
+        name = string.format("%s:%d-%d", name, context.linesRange.start, context.linesRange["end"])
+      end
+
       -- Create context reference with @ prefix like eca-emacs
       local ref = "@" .. name
       table.insert(context_refs, ref)
