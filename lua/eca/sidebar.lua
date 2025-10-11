@@ -1275,7 +1275,7 @@ function M:_send_message(message)
 
   local contexts = self:get_contexts()
   self.mediator:send("chat/prompt", {
-    chatId = self.id,
+    chatId = self.mediator:id(),
     requestId = tostring(os.time()),
     message = message,
     contexts = contexts or {},

@@ -86,4 +86,8 @@ function mediator:mcps()
   return mcps
 end
 
+function mediator:id()
+  return self.state and self.state.id
+end
+
 return mediator
