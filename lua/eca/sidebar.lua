@@ -1287,9 +1287,8 @@ function M:_send_message(message)
     behavior = self.mediator:selected_behavior(),
   }, function(err, result)
     if err then
-      print("err is " .. err)
-      Logger.error("Failed to send message to ECA server: " .. err)
-      self:_add_message("assistant", "❌ **Error**: Failed to send message to ECA server: " .. err)
+      Logger.error("Failed to send message to ECA server: " .. vim.inspect(err))
+      self:_add_message("assistant", "❌ **Error**: Failed to send message to ECA server: " .. vim.inspect(err))
       return
     end
     -- Response will come through server notification handler
