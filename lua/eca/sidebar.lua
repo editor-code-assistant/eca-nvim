@@ -18,9 +18,6 @@ local Split = require("nui.split")
 ---@field private _current_tool_call table Current tool call being accumulated
 ---@field private _is_tool_call_streaming boolean Whether we're currently receiving a streaming tool call
 ---@field private _force_welcome boolean Whether to force show welcome content on next open
----@field private _contexts table Active contexts for this chat session
----@field private _selected_code table Current selected code for display
----@field private _todos table List of active todos
 ---@field private _current_status string Current processing status message
 ---@field private _augroup integer Autocmd group ID
 ---@field private _response_start_time number Timestamp when streaming started
@@ -54,9 +51,6 @@ function M.new(id, mediator)
   instance._current_tool_call = nil
   instance._is_tool_call_streaming = false
   instance._force_welcome = false
-  instance._contexts = {}
-  instance._selected_code = nil
-  instance._todos = {}
   instance._current_status = ""
   instance._augroup = vim.api.nvim_create_augroup("eca_sidebar_" .. id, { clear = true })
   instance._response_start_time = 0
@@ -190,9 +184,6 @@ function M:reset()
   self._current_tool_call = nil
   self._is_tool_call_streaming = false
   self._force_welcome = false
-  self._contexts = {}
-  self._selected_code = nil
-  self._todos = {}
   self._current_status = ""
   self._welcome_message_applied = false
 end
@@ -226,20 +217,12 @@ function M:_create_containers()
   -- Calculate dynamic heights using existing methods
   local input_height = Config.windows.input.height
   local usage_height = 1
-  local status_height = 1
-  local contexts_height = self:get_contexts_height()
-  local selected_code_height = self:get_selected_code_height()
-  local todos_height = self:get_todos_height()
   local original_chat_height = self:get_chat_height()
   local chat_height = original_chat_height
   local config_height = 1
 
   -- Validate total height to prevent "Not enough room" error
   local total_height = chat_height
-    + selected_code_height
-    + todos_height
-    + status_height
-    + contexts_height
     + input_height
     + usage_height
     + config_height
@@ -278,7 +261,7 @@ function M:_create_containers()
     winfixwidth = false,
   }
 
-  -- 1. Create and mount main chat container first
+  --  Create and mount main chat container first
   self.containers.chat = Split({
     relative = "editor",
     position = "right",
@@ -299,7 +282,7 @@ function M:_create_containers()
   local current_winid = self.containers.chat.winid
   Logger.debug("Mounted container: chat (winid: " .. current_winid .. ")")
 
-  --2. Create config container in top of chat
+  -- Create config container in top of chat
   self.containers.config = Split({
     relative = {
       type = "win",
@@ -318,72 +301,7 @@ function M:_create_containers()
   self:_setup_container_events(self.containers.config, "config")
   Logger.debug("Mounted container: config (winid: " .. self.containers.config.winid .. ")")
 
-  -- 3. Create selected_code container (conditional)
-  if selected_code_height > 0 then
-    self.containers.selected_code = Split({
-      relative = {
-        type = "win",
-        winid = current_winid,
-      },
-      position = "bottom",
-      size = { height = selected_code_height },
-      buf_options = vim.tbl_deep_extend("force", base_buf_options, {
-        modifiable = false,
-        filetype = self._selected_code and self._selected_code.filetype or "text",
-      }),
-      win_options = vim.tbl_deep_extend("force", base_win_options, {
-        winhighlight = "Normal:Visual",
-      }),
-    })
-    self.containers.selected_code:mount()
-    self:_setup_container_events(self.containers.selected_code, "selected_code")
-    current_winid = self.containers.selected_code.winid
-    Logger.debug("Mounted container: selected_code (winid: " .. current_winid .. ")")
-  end
-
-  -- 4. Create todos container (conditional)
-  if todos_height > 0 then
-    self.containers.todos = Split({
-      relative = {
-        type = "win",
-        winid = current_winid,
-      },
-      position = "bottom",
-      size = { height = todos_height },
-      buf_options = vim.tbl_deep_extend("force", base_buf_options, {
-        modifiable = false,
-      }),
-      win_options = vim.tbl_deep_extend("force", base_win_options, {
-        winhighlight = "Normal:DiffAdd",
-      }),
-    })
-    self.containers.todos:mount()
-    self:_setup_container_events(self.containers.todos, "todos")
-    current_winid = self.containers.todos.winid
-    Logger.debug("Mounted container: todos (winid: " .. current_winid .. ")")
-  end
-
-  -- 5. Create contexts container between chat and input
-  self.containers.contexts = Split({
-    relative = {
-      type = "win",
-      winid = current_winid,
-    },
-    position = "bottom",
-    size = { height = contexts_height },
-    buf_options = vim.tbl_deep_extend("force", base_buf_options, {
-      modifiable = false,
-    }),
-    win_options = vim.tbl_deep_extend("force", base_win_options, {
-      winhighlight = "Normal:Comment",
-    }),
-  })
-  self.containers.contexts:mount()
-  self:_setup_container_events(self.containers.contexts, "contexts")
-  current_winid = self.containers.contexts.winid
-  Logger.debug("Mounted container: contexts (winid: " .. current_winid .. ")")
-
-  --6. Create input container (always present)
+  -- Create input container (always present)
   self.containers.input = Split({
     relative = {
       type = "win",
@@ -404,7 +322,7 @@ function M:_create_containers()
   current_winid = self.containers.input.winid
   Logger.debug("Mounted container: input (winid: " .. current_winid .. ")")
 
-  -- 7. Create usage container (always present) - moved to bottom
+  -- Create usage container (always present) - moved to bottom
   self.containers.usage = Split({
     relative = {
       type = "win",
@@ -427,12 +345,8 @@ function M:_create_containers()
 
   Logger.debug(
     string.format(
-      "Created containers: contexts=%d, chat=%d, selected_code=%s, todos=%s, status=%d, input=%d, usage=%d, config=%d",
-      contexts_height,
+      "Created containers: chat=%d, input=%d, usage=%d, config=%d",
       chat_height,
-      selected_code_height > 0 and tostring(selected_code_height) or "hidden",
-      todos_height > 0 and tostring(todos_height) or "hidden",
-      status_height,
       input_height,
       usage_height,
       config_height
@@ -445,12 +359,8 @@ end
 ---@param name string
 function M:_setup_container_events(container, name)
   -- Setup container-specific keymaps
-  if name == "todos" then
-    self:_setup_todos_keymaps(container)
-  elseif name == "input" then
+  if name == "input" then
     self:_setup_input_keymaps(container)
-  elseif name == "status" then
-    -- No special keymaps for status container (read-only)
   end
 end
 
@@ -461,33 +371,6 @@ function M:_handle_container_closed(name)
   if self.containers[name] then
     self.containers[name].winid = nil
   end
-end
-
----@private
----@param container NuiSplit
-function M:_setup_todos_keymaps(container)
-  -- Setup keymaps for todos container
-  container:map("n", "<Space>", function()
-    local line = vim.api.nvim_win_get_cursor(container.winid)[1]
-    if line > 0 then
-      local header_offset = Config.windows.sidebar_header.enabled and 1 or 0
-      local todo_index = line - header_offset
-      if todo_index > 0 and todo_index <= #self._todos then
-        self:toggle_todo(todo_index)
-      end
-    end
-  end, { noremap = true, silent = true })
-
-  container:map("n", "<Enter>", function()
-    local line = vim.api.nvim_win_get_cursor(container.winid)[1]
-    if line > 0 then
-      local header_offset = Config.windows.sidebar_header.enabled and 1 or 0
-      local todo_index = line - header_offset
-      if todo_index > 0 and todo_index <= #self._todos then
-        self:toggle_todo(todo_index)
-      end
-    end
-  end, { noremap = true, silent = true })
 end
 
 ---@private
@@ -511,11 +394,7 @@ function M:_update_container_sizes()
 
   -- Recalculate heights
   local new_heights = {
-    contexts = self:get_contexts_height(),
     chat = self:get_chat_height(),
-    selected_code = self:get_selected_code_height(),
-    todos = self:get_todos_height(),
-    status = 1,
     input = Config.windows.input.height,
     usage = 1,
   }
@@ -531,49 +410,10 @@ function M:_update_container_sizes()
   end
 end
 
--- Include all the height calculation methods from the original sidebar
-function M:get_selected_code_height()
-  if not self._selected_code or not Config.selected_code.enabled then
-    return 0
-  end
-
-  local lines = vim.split(self._selected_code.content or "", "\n")
-  local content_lines = #lines
-  local header_lines = Config.windows.sidebar_header.enabled and 1 or 0
-
-  return math.min(Config.selected_code.max_height, content_lines + header_lines + 1)
-end
-
-function M:get_todos_height()
-  if #self._todos == 0 or not Config.todos.enabled then
-    return 0
-  end
-
-  local header_lines = Config.windows.sidebar_header.enabled and 1 or 0
-  local todo_lines = math.min(#self._todos, Config.todos.max_height - header_lines)
-
-  return math.min(Config.todos.max_height, todo_lines + header_lines)
-end
-
-function M:get_contexts_height()
-  if #self._contexts == 0 then
-    return 1 -- Always show at least "No contexts"
-  end
-
-  local header_lines = 1 -- "📂 Contexts (N):"
-  local bubble_lines = 1 -- All bubbles on same line as requested
-
-  return header_lines + bubble_lines
-end
-
 function M:get_chat_height()
   local total_height = vim.o.lines - vim.o.cmdheight - 1
   local input_height = Config.windows.input.height
   local usage_height = 1
-  local status_height = 1
-  local contexts_height = self:get_contexts_height()
-  local selected_code_height = self:get_selected_code_height()
-  local todos_height = self:get_todos_height()
   local config_height = 1
 
   return math.max(
@@ -581,112 +421,9 @@ function M:get_chat_height()
     total_height
       - input_height
       - usage_height
-      - status_height
-      - contexts_height
-      - selected_code_height
-      - todos_height
       - WINDOW_MARGIN
       - config_height
   )
-end
-
--- Include all the context/todo/selected_code management methods from original sidebar
--- (These will be copied from the original implementation)
-
----@param context table Context object with type, path, content
-function M:add_context(context)
-  -- Check if context already exists (by path)
-  for i, existing in ipairs(self._contexts) do
-    if existing.path == context.path then
-      -- Update existing context
-      self._contexts[i] = context
-      self:_update_contexts_display()
-      Logger.info("Updated context: " .. context.path)
-      return
-    end
-  end
-
-  -- Add new context
-  table.insert(self._contexts, context)
-  self:_update_contexts_display()
-  Logger.info("Added context: " .. context.path .. " (" .. #self._contexts .. " total)")
-end
-
----@param path string Path to remove from contexts
-function M:remove_context(path)
-  for i, context in ipairs(self._contexts) do
-    if context.path == path then
-      table.remove(self._contexts, i)
-      self:_update_contexts_display()
-      Logger.info("Removed context: " .. path)
-      return true
-    end
-  end
-  Logger.warn("Context not found: " .. path)
-  return false
-end
-
----@return table List of active contexts
-function M:get_contexts()
-  return vim.deepcopy(self._contexts)
-end
-
----@return integer Number of active contexts
-function M:get_context_count()
-  return #self._contexts
-end
-
-function M:clear_contexts()
-  local count = #self._contexts
-  self._contexts = {}
-  self:_update_contexts_display()
-  Logger.info("Cleared " .. count .. " contexts")
-end
-
----@param code table Selected code object with filepath, content, start_line, end_line
-function M:set_selected_code(code)
-  self._selected_code = code
-  self:_update_selected_code_display()
-  Logger.info("Selected code updated: " .. (code and code.filepath or "none"))
-end
-
-function M:clear_selected_code()
-  self._selected_code = nil
-  self:_update_selected_code_display()
-  Logger.info("Selected code cleared")
-end
-
----@param todo table Todo object with content, status ("pending", "completed")
-function M:add_todo(todo)
-  table.insert(self._todos, todo)
-  self:_update_todos_display()
-  Logger.info("Added TODO: " .. todo.content)
-end
-
----@param index integer Index of todo to toggle
-function M:toggle_todo(index)
-  if index <= 0 or index > #self._todos then
-    Logger.warn("Invalid TODO index: " .. index)
-    return false
-  end
-
-  local todo = self._todos[index]
-  todo.status = todo.status == "completed" and "pending" or "completed"
-  self:_update_todos_display()
-  Logger.info("Toggled TODO " .. index .. ": " .. todo.content)
-  return true
-end
-
-function M:clear_todos()
-  local count = #self._todos
-  self._todos = {}
-  self:_update_todos_display()
-  Logger.info("Cleared " .. count .. " TODOs")
-end
-
----@return table List of active todos
-function M:get_todos()
-  return vim.deepcopy(self._todos)
 end
 
 -- Placeholder methods for the display and setup functions
@@ -694,16 +431,7 @@ end
 
 function M:_setup_containers()
   -- Setup each container's content and behavior
-  self:_setup_contexts_container()
   self:_setup_chat_container()
-
-  if self.containers.selected_code then
-    self:_setup_selected_code_container()
-  end
-
-  if self.containers.todos then
-    self:_setup_todos_container()
-  end
 
   self:_update_config_display()
   self:_setup_input_container()
@@ -714,10 +442,7 @@ end
 
 function M:_refresh_container_content()
   -- Refresh content without full setup
-  if self.containers.contexts then
-    self:_update_contexts_display()
-  end
-
+  -- Update chat header with mediator contexts
   if self.containers.chat then
     self:_set_welcome_content()
   end
@@ -726,16 +451,8 @@ function M:_refresh_container_content()
     self:_update_config_display()
   end
 
-  if self.containers.selected_code then
-    self:_update_selected_code_display()
-  end
-
-  if self.containers.todos then
-    self:_update_todos_display()
-  end
-
   if self.containers.input then
-    self:_add_input_line()
+    self:_update_input_display()
   end
 
   if self.containers.usage then
@@ -744,6 +461,10 @@ function M:_refresh_container_content()
 end
 
 function M:_handle_state_updated(state)
+  if state.contexts then
+    self:_update_input_display()
+  end
+
   if state.usage or state.status then
     self:_update_usage_info()
   end
@@ -772,7 +493,7 @@ function M:_setup_chat_container()
   -- Disable treesitter initially to prevent highlighting errors during setup
   vim.api.nvim_set_option_value("syntax", "off", { buf = chat.bufnr })
 
-  -- Set initial content first
+  -- Set initial content after the header
   self:_set_welcome_content()
 
   -- Set filetype to markdown for syntax highlighting
@@ -782,41 +503,6 @@ function M:_setup_chat_container()
       vim.api.nvim_set_option_value("syntax", "on", { buf = chat.bufnr })
     end
   end, 200)
-end
-
-function M:_setup_selected_code_container()
-  local container = self.containers.selected_code
-  if not container then
-    return
-  end
-
-  -- Set initial content
-  self:_update_selected_code_display()
-
-  -- Set filetype based on the selected code's language
-  if self._selected_code and self._selected_code.filetype then
-    vim.api.nvim_set_option_value("filetype", self._selected_code.filetype, { buf = container.bufnr })
-  end
-end
-
-function M:_setup_todos_container()
-  local container = self.containers.todos
-  if not container then
-    return
-  end
-
-  -- Set initial content
-  self:_update_todos_display()
-end
-
-function M:_setup_contexts_container()
-  local contexts = self.containers.contexts
-  if not contexts then
-    return
-  end
-
-  -- Set initial contexts display
-  self:_update_contexts_display()
 end
 
 function M:_setup_usage_container()
@@ -836,7 +522,7 @@ function M:_setup_input_container()
   end
 
   -- Set initial input prompt
-  self:_add_input_line()
+  self:_update_input_display()
 end
 
 -- Placeholder methods that need to be implemented
@@ -874,42 +560,90 @@ function M:_set_welcome_content()
   end
 
   self:_update_welcome_content()
-
-  -- Auto-add repoMap context if enabled and not already present
-  if Config.options.context.auto_repo_map then
-    -- Check if repoMap already exists
-    local has_repo_map = false
-    for _, context in ipairs(self._contexts) do
-      if context.type == "repoMap" then
-        has_repo_map = true
-        break
-      end
-    end
-
-    if not has_repo_map then
-      self:add_context({
-        type = "repoMap",
-        path = "repoMap",
-        content = "Repository structure and code mapping for better project understanding",
-      })
-      Logger.debug("Auto-added repoMap context on welcome")
-    end
-  end
 end
 
-function M:_add_input_line()
+function M:_update_input_display()
   return vim.schedule(function()
     local input = self.containers.input
     if not input then
       return
     end
 
-    local prefix = Config.windows.input.prefix or "> "
-    vim.api.nvim_buf_set_lines(input.bufnr, 0, -1, false, { prefix })
+    local contexts = (self.mediator and self.mediator:contexts()) or {}
+    local contexts_name = {}
 
-    -- Set cursor to end of line
+    if #contexts > 0 then
+      for _, context in ipairs(contexts) do
+        local path = context.data.path
+
+        if not path or path == "" then
+          break
+        end
+
+        local name = vim.fn.fnamemodify(path, ":t")
+        local lines_range = context.data.lines_range
+
+        if lines_range and lines_range.line_start and lines_range.line_end then
+          name = string.format("%s:%d-%d", name, lines_range.line_start, lines_range.line_end)
+        end
+
+        table.insert(contexts_name, name .. " ")
+      end
+    end
+
+    local placeholder_line = "@"
+    for _ = 1, #contexts_name do
+      placeholder_line = placeholder_line .. "@"
+    end
+
+    -- Get existing lines to preserve user input (lines after the header)
+    local existing_lines = vim.api.nvim_buf_get_lines(input.bufnr, 1, -1, false)
+
+    vim.api.nvim_buf_set_lines(input.bufnr, 0, -1, false, { placeholder_line, "" })
+
+    if not self.extmarks.contexts then
+      self.extmarks.contexts = {
+        _ns = vim.api.nvim_create_namespace('extmarks_contexts'),
+      }
+    end
+
+    if not self.extmarks.contexts._id then
+      self.extmarks.contexts._id = {}
+    end
+
+    for i, context_name in ipairs(contexts_name) do
+      self.extmarks.contexts._id[i] = vim.api.nvim_buf_set_extmark(
+    input.bufnr,
+        self.extmarks.contexts._ns,
+        0,
+        i,
+        vim.tbl_extend("force", { virt_text = { { context_name, "Comment" } }, virt_text_pos = "inline", hl_mode = "replace" }, { id = self.extmarks.contexts._id[i] })
+      )
+    end
+
+    local prefix = Config.windows.input.prefix or "> "
+
+    if not self.extmarks.prefix then
+      self.extmarks.prefix = {
+        _ns = vim.api.nvim_create_namespace('extmarks_prefix'),
+      }
+    end
+
+    if #existing_lines > 0 then
+      vim.api.nvim_buf_set_lines(input.bufnr, 1, 1 + #existing_lines, false, existing_lines)
+    end
+
+    self.extmarks.prefix._id = vim.api.nvim_buf_set_extmark(
+      input.bufnr,
+      self.extmarks.prefix._ns,
+      1,
+      0,
+      vim.tbl_extend("force", { virt_text = { { prefix, "Normal" } }, virt_text_pos = "inline", right_gravity = false }, { id = self.extmarks.prefix._id })
+    )
+
+    -- Set cursor to end of prefix line
     if vim.api.nvim_win_is_valid(input.winid) then
-      vim.api.nvim_win_set_cursor(input.winid, { 1, #prefix })
+      vim.api.nvim_win_set_cursor(input.winid, { 2, #prefix })
     end
   end)
 end
@@ -928,13 +662,15 @@ function M:_focus_input()
       local lines = vim.api.nvim_buf_get_lines(input.bufnr, 0, -1, false)
       local prefix = Config.windows.input.prefix or "> "
 
-      if #lines > 0 then
-        local first_line = lines[1] or ""
-        local cursor_col = math.max(#prefix, #first_line)
-        vim.api.nvim_win_set_cursor(input.winid, { 1, cursor_col })
-      else
-        self:_add_input_line()
+      -- Ensure there is at least a header and a prefix line
+      if #lines < 2 then
+        self:_update_input_display()
+        lines = vim.api.nvim_buf_get_lines(input.bufnr, 0, -1, false)
       end
+
+      -- Place cursor on the prefix line (line 2), after the prefix
+      local cursor_col = #prefix
+      vim.api.nvim_win_set_cursor(input.winid, { 2, cursor_col })
 
       -- Enter insert mode
       local mode = vim.api.nvim_get_mode().mode
@@ -952,17 +688,18 @@ function M:_handle_input()
   end
 
   local lines = vim.api.nvim_buf_get_lines(input.bufnr, 0, -1, false)
-  if #lines == 0 then
+  if #lines < 2 then
     return
   end
 
-  -- Process input (remove prefix, concatenate lines)
+  -- Process input: ignore first line (contexts header) and use second line onwards as input
   local message_lines = {}
   local prefix = Config.windows.input.prefix or "> "
 
-  for _, line in ipairs(lines) do
+  for i = 2, #lines do
+    local line = lines[i]
     local content = line
-    if vim.startswith(line, prefix) then
+    if i == 2 and vim.startswith(line, prefix) then
       content = line:sub(#prefix + 1)
     end
     if content ~= "" then
@@ -975,92 +712,12 @@ function M:_handle_input()
     return
   end
 
-  -- Clear input
-  vim.api.nvim_buf_set_lines(input.bufnr, 0, -1, false, {})
-
   -- Send message
   self:_send_message(message)
 
   -- Add new input line and focus
-  self:_add_input_line()
+  self:_update_input_display()
   self:_focus_input()
-end
-
--- Placeholder for the other display update methods
-function M:_update_selected_code_display()
-  -- Implementation would be similar to original but use nui container
-  local container = self.containers.selected_code
-  if not container or not vim.api.nvim_buf_is_valid(container.bufnr) then
-    return
-  end
-
-  local lines = {}
-
-  if not self._selected_code then
-    lines = { "📝 No code selected" }
-  else
-    -- Add header if enabled
-    local filename = vim.fn.fnamemodify(self._selected_code.filepath or "unknown", ":t")
-    local line_info = ""
-    if self._selected_code.start_line and self._selected_code.end_line then
-      line_info = string.format(" (lines %d-%d)", self._selected_code.start_line, self._selected_code.end_line)
-    end
-    local header_text = "📝 " .. filename .. line_info
-    local header_lines = self:_render_header("selected_code", header_text)
-    for _, line in ipairs(header_lines) do
-      table.insert(lines, line)
-    end
-
-    -- Add code content
-    local code_lines = vim.split(self._selected_code.content or "", "\n")
-    for _, line in ipairs(code_lines) do
-      table.insert(lines, line)
-    end
-  end
-
-  -- Update the buffer
-  vim.api.nvim_set_option_value("modifiable", true, { buf = container.bufnr })
-  vim.api.nvim_buf_set_lines(container.bufnr, 0, -1, false, lines)
-  vim.api.nvim_set_option_value("modifiable", false, { buf = container.bufnr })
-end
-
-function M:_update_todos_display()
-  -- Similar implementation for todos...
-  local container = self.containers.todos
-  if not container or not vim.api.nvim_buf_is_valid(container.bufnr) then
-    return
-  end
-
-  local lines = {}
-
-  if #self._todos == 0 then
-    lines = { "✅ No active TODOs" }
-  else
-    -- Add header if enabled
-    local completed_count = 0
-    for _, todo in ipairs(self._todos) do
-      if todo.status == "completed" then
-        completed_count = completed_count + 1
-      end
-    end
-    local header_text = string.format("✅ Tasks (%d/%d completed)", completed_count, #self._todos)
-    local header_lines = self:_render_header("todos", header_text)
-    for _, line in ipairs(header_lines) do
-      table.insert(lines, line)
-    end
-
-    -- Add todos
-    for i, todo in ipairs(self._todos) do
-      local checkbox = todo.status == "completed" and "[x]" or "[ ]"
-      local line = string.format("%d. %s %s", i, checkbox, todo.content)
-      table.insert(lines, line)
-    end
-  end
-
-  -- Update the buffer
-  vim.api.nvim_set_option_value("modifiable", true, { buf = container.bufnr })
-  vim.api.nvim_buf_set_lines(container.bufnr, 0, -1, false, lines)
-  vim.api.nvim_set_option_value("modifiable", false, { buf = container.bufnr })
 end
 
 function M:_update_config_display()
@@ -1088,14 +745,12 @@ function M:_update_config_display()
   end
 
   local texts = {
-    { "model:",    "Comment" }, { model, "Normal" }, { "\t" },
+    { "model:",    "Comment" }, { model, "Normal" }, { " " },
     { "behavior:", "Comment" }, { behavior, "Normal" }, { " " },
     { "mcps:", "Comment" }, { tostring(vim.tbl_count(mcps)), mcps_hl },
   }
 
-  local virt_opts = { virt_text = texts, hl_mode = "combine" }
-
-  self.extmarks = self.extmarks or {}
+  local virt_opts = { virt_text = texts, virt_text_pos = "overlay", hl_mode = "combine" }
 
   if not self.extmarks.config then
     self.extmarks.config = {
@@ -1114,42 +769,6 @@ function M:_update_config_display()
     -1,
     vim.tbl_extend("force", virt_opts, { id = self.extmarks.config._id })
   )
-end
-
-function M:_update_contexts_display()
-  -- Similar implementation for contexts...
-  local contexts = self.containers.contexts
-  if not contexts or not vim.api.nvim_buf_is_valid(contexts.bufnr) then
-    return
-  end
-
-  local lines = {}
-
-  if #self._contexts > 0 then
-    -- Create context references with @ prefix (eca-emacs style)
-    local context_refs = {}
-
-    for i, context in ipairs(self._contexts) do
-      local name = context.type == "repoMap" and "repoMap" or vim.fn.fnamemodify(context.path, ":t") -- Get filename only
-
-      if context.linesRange and context.linesRange.start and context.linesRange["end"] then
-        name = string.format("%s:%d-%d", name, context.linesRange.start, context.linesRange["end"])
-      end
-
-      -- Create context reference with @ prefix like eca-emacs
-      local ref = "@" .. name
-      table.insert(context_refs, ref)
-    end
-
-    -- Add all context references to a single line
-    local contexts_line = table.concat(context_refs, " ")
-    table.insert(lines, contexts_line)
-  end
-
-  -- Update the buffer
-  vim.api.nvim_set_option_value("modifiable", true, { buf = contexts.bufnr })
-  vim.api.nvim_buf_set_lines(contexts.bufnr, 0, -1, false, lines)
-  vim.api.nvim_set_option_value("modifiable", false, { buf = contexts.bufnr })
 end
 
 function M:_update_usage_info()
@@ -1292,7 +911,7 @@ function M:_send_message(message)
       return
     end
     -- Response will come through server notification handler
-    self:_add_input_line()
+    self:_update_input_display()
 
     self:handle_chat_content_received(result.params)
   end)
@@ -1323,7 +942,7 @@ function M:handle_chat_content_received(params)
   elseif content.type == "progress" then
     if content.state == "finished" then
       self:_finalize_streaming_response()
-      self:_add_input_line()
+      self:_update_input_display()
     end
   elseif content.type == "toolCallPrepare" then
     self:_finalize_streaming_response()
