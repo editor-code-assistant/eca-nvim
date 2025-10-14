@@ -442,7 +442,6 @@ end
 
 function M:_refresh_container_content()
   -- Refresh content without full setup
-  -- Update chat header with mediator contexts
   if self.containers.chat then
     self:_set_welcome_content()
   end
@@ -493,7 +492,7 @@ function M:_setup_chat_container()
   -- Disable treesitter initially to prevent highlighting errors during setup
   vim.api.nvim_set_option_value("syntax", "off", { buf = chat.bufnr })
 
-  -- Set initial content after the header
+  -- Set initial content first
   self:_set_welcome_content()
 
   -- Set filetype to markdown for syntax highlighting
