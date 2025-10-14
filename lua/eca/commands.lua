@@ -351,7 +351,7 @@ function M.setup()
       return
     end
 
-    local chat = eca.current.sidebar
+    local chat = eca.get()
     local models = chat.mediator:models()
 
     vim.ui.select(models, {
@@ -373,7 +373,7 @@ function M.setup()
       return
     end
 
-    local chat = eca.current.sidebar
+    local chat = eca.get()
     local behaviors = chat.mediator:behaviors()
 
     vim.ui.select(behaviors, {

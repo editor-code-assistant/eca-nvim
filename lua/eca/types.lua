@@ -84,3 +84,21 @@
 ---@field sessionTokens number
 ---@field messageCost? string
 ---@field sessionCost? string
+
+---@class eca.ContextCursor
+---@field path string
+---@field position { position_start: { line: number , character: number }, position_end: { line: number , character: number } }
+
+---@class eca.ContextDirectory
+---@field path string
+
+---@class eca.ContextFile
+---@field path string
+---@field lines_range { line_start: number, line_end: number }
+
+---@class eca.ContextWeb
+---@field path string
+
+---@class eca.Context
+---@field type 'cursor'|'directory'|'file'|'web'
+---@field data eca.ContextCursor|eca.ContextDirectory|eca.ContextFile|eca.ContextWeb

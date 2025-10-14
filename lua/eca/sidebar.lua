@@ -1277,7 +1277,7 @@ function M:_send_message(message)
   -- Add user message to chat
   self:_add_message("user", message)
 
-  local contexts = self:get_contexts()
+  local contexts = self.mediator:contexts()
   self.mediator:send("chat/prompt", {
     chatId = self.mediator:id(),
     requestId = tostring(os.time()),
