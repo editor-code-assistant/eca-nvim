@@ -276,6 +276,7 @@ function State:remove_context(context)
     if ctx.type == context.type and vim.deep_equal(ctx.data, context.data) then
       table.remove(self.contexts, i)
       self:_update_contexts()
+      break
     end
   end
 end

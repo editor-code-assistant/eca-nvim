@@ -201,12 +201,12 @@ function mediator:add_context(context)
   self.state:add_context(context)
 end
 
-function mediator:remove_context(name)
+function mediator:remove_context(context)
   if not self.state then
     return
   end
 
-  self.state:remove_context(name)
+  self.state:remove_context(context)
 end
 
 function mediator:clear_contexts()

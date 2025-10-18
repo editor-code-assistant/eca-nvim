@@ -23,6 +23,8 @@ local Split = require("nui.split")
 ---@field private _response_start_time number Timestamp when streaming started
 ---@field private _max_response_length number Maximum allowed response length
 ---@field private _headers table Table of headers for the chat
+---@field private _welcome_message_applied boolean Whether the welcome message has been applied
+---@field private _contexts_placeholder_line string Placeholder line for contexts in input
 
 local M = {}
 M.__index = M
@@ -60,6 +62,7 @@ function M.new(id, mediator)
     assistant = (Config.chat and Config.chat.headers and Config.chat.headers.assistant) or "",
   }
   instance._welcome_message_applied = false
+  instance._contexts_placeholder_line = ""
 
   require("eca.observer").subscribe("sidebar-" .. id, function(message)
     instance:handle_chat_content(message)
@@ -186,6 +189,7 @@ function M:reset()
   self._force_welcome = false
   self._current_status = ""
   self._welcome_message_applied = false
+  self._contexts_placeholder_line = ""
 end
 
 function M:new_chat()
@@ -360,6 +364,7 @@ end
 function M:_setup_container_events(container, name)
   -- Setup container-specific keymaps
   if name == "input" then
+    self:_setup_input_events(container)
     self:_setup_input_keymaps(container)
   end
 end
@@ -371,6 +376,58 @@ function M:_handle_container_closed(name)
   if self.containers[name] then
     self.containers[name].winid = nil
   end
+end
+
+---@private
+---@param container NuiSplit
+function M:_setup_input_events(container)
+  -- prevent contexts line or input prefix from being deleted
+  vim.api.nvim_buf_attach(container.bufnr, false, {
+    on_lines = function(_, buf, _changedtick, first, _last, _new_last, _bytecount)
+      if first ~= 0 and first ~= 1 then
+        return
+      end
+
+      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
+      -- restore input line if deleted
+      if first == 1 and #lines < 2 then
+        self:_update_input_display()
+        return
+      end
+
+      -- first line (contexts) was changed
+      if first == 0 then
+        local contexts_line = lines[1]
+
+        -- if contexts line is deleted, clear all contexts
+        if not contexts_line or contexts_line == "" then
+          self.mediator:clear_contexts()
+          return
+        end
+
+        -- contexts line was modified
+        if contexts_line ~= self._contexts_placeholder_line then
+
+          -- if contexts line is shorter than placeholder, a context was removed
+          if #contexts_line < #self._contexts_placeholder_line then
+            local contexts = self.mediator:contexts()
+
+            local row, col = unpack(vim.api.nvim_win_get_cursor(container.winid))
+            local context = contexts[col+1]
+
+            if row == 1 and context then
+              self.mediator:remove_context(context)
+              return
+            end
+          end
+
+          self:_update_input_display()
+          return
+        end
+      end
+    end
+  })
 end
 
 ---@private
@@ -561,7 +618,7 @@ function M:_set_welcome_content()
   self:_update_welcome_content()
 end
 
-function M:_update_input_display()
+function M:_update_input_display(opts)
   return vim.schedule(function()
     local input = self.containers.input
     if not input then
@@ -590,15 +647,22 @@ function M:_update_input_display()
       end
     end
 
-    local placeholder_line = "@"
+    local old_contexts_placeholder_line = self._contexts_placeholder_line
+
+    self._contexts_placeholder_line = "@"
     for _ = 1, #contexts_name do
-      placeholder_line = placeholder_line .. "@"
+      self._contexts_placeholder_line = self._contexts_placeholder_line .. "@"
     end
 
     -- Get existing lines to preserve user input (lines after the header)
-    local existing_lines = vim.api.nvim_buf_get_lines(input.bufnr, 1, -1, false)
+    local existing_lines = vim.api.nvim_buf_get_lines(input.bufnr, 0, -1, false)
 
-    vim.api.nvim_buf_set_lines(input.bufnr, 0, -1, false, { placeholder_line, "" })
+    -- If first line is the contexts placeholder, remove it from existing lines
+    if existing_lines and #existing_lines > 1 and (existing_lines[1] == "" or existing_lines[1] == old_contexts_placeholder_line or existing_lines[1] == self._contexts_placeholder_line) then
+      table.remove(existing_lines, 1)
+    end
+
+    vim.api.nvim_buf_set_lines(input.bufnr, 0, -1, false, { self._contexts_placeholder_line, "" })
 
     if not self.extmarks.contexts then
       self.extmarks.contexts = {
@@ -628,7 +692,9 @@ function M:_update_input_display()
       }
     end
 
-    if #existing_lines > 0 then
+    local clear = opts and opts.clear
+
+    if #existing_lines > 0 and not clear then
       vim.api.nvim_buf_set_lines(input.bufnr, 1, 1 + #existing_lines, false, existing_lines)
     end
 
@@ -640,9 +706,12 @@ function M:_update_input_display()
       vim.tbl_extend("force", { virt_text = { { prefix, "Normal" } }, virt_text_pos = "inline", right_gravity = false }, { id = self.extmarks.prefix._id })
     )
 
-    -- Set cursor to end of prefix line
+    -- Set cursor to end of input line
     if vim.api.nvim_win_is_valid(input.winid) then
-      vim.api.nvim_win_set_cursor(input.winid, { 2, #prefix })
+      local row = 1 + (not clear and existing_lines and #existing_lines > 0 and #existing_lines or 1)
+      local col = #prefix + (not clear and existing_lines and #existing_lines > 0  and #existing_lines[#existing_lines] or 0)
+
+      vim.api.nvim_win_set_cursor(input.winid, { row, col })
     end
   end)
 end
@@ -715,7 +784,7 @@ function M:_handle_input()
   self:_send_message(message)
 
   -- Add new input line and focus
-  self:_update_input_display()
+  self:_update_input_display({ clear = true })
   self:_focus_input()
 end
 
@@ -832,7 +901,7 @@ function M:_update_usage_info()
 end
 
 function M:_update_welcome_content()
-  if self._welcome_applied then
+  if self._welcome_message_applied then
     return
   end
 
@@ -858,11 +927,11 @@ function M:_update_welcome_content()
       end
     end
 
-    self._welcome_applied = true
+    self._welcome_message_applied = true
   end
 
   table.insert(lines, "")
-  Logger.debug("Setting welcome content for chat (welcome applied: " .. tostring(self._welcome_applied) .. ")")
+  Logger.debug("Setting welcome content for chat (welcome applied: " .. tostring(self._welcome_message_applied) .. ")")
   vim.api.nvim_buf_set_lines(chat.bufnr, 0, -1, false, lines)
 end
 
