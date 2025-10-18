@@ -388,28 +388,50 @@ function M:_setup_input_events(container)
         return
       end
 
-      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      vim.schedule(function()
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-      -- restore input line if deleted
-      if first == 1 and #lines < 2 then
-        self:_update_input_display()
-        return
-      end
+        -- handle empty buffer
+        if not lines or #lines < 1 then
+          self:_update_input_display()
+          return
+        end
 
-      -- first line (contexts) was changed
-      if first == 0 then
-        local contexts_line = lines[1]
+        local prefix_extmark = self.extmarks.prefix or nil
+        local contexts_extmark = self.extmarks.contexts or nil
 
-        -- if contexts line is deleted, clear all contexts
-        if not contexts_line or contexts_line == "" then
+        if not prefix_extmark or not contexts_extmark then
+          return
+        end
+
+        local prefix_ns = prefix_extmark._ns or nil
+        local prefix_id = prefix_extmark._id and prefix_extmark._id[1] or nil
+
+        if not prefix_ns or not prefix_id then
+          return
+        end
+
+        local prefix_row = unpack(vim.api.nvim_buf_get_extmark_by_id(buf, prefix_ns, prefix_id, {}))
+        local contexts_row = 0
+
+        -- If both are in the same row, contexts_row was deleted
+        if prefix_row == contexts_row then
           self.mediator:clear_contexts()
           return
         end
 
-        -- contexts line was modified
-        if contexts_line ~= self._contexts_placeholder_line then
+        local prefix_line = lines[prefix_row + 1] or nil
+        local contexts_line = lines[contexts_row + 1] or nil
+        local contexts_placeholder_line = self._contexts_placeholder_line or ""
 
-          -- if contexts line is shorter than placeholder, a context was removed
+        -- prefix line missing, restore
+        if not prefix_line and contexts_line == contexts_placeholder_line then
+          self:_update_input_display()
+          return
+        end
+
+        if contexts_line ~= contexts_placeholder_line then
+          -- a context was removed
           if #contexts_line < #self._contexts_placeholder_line then
             local contexts = self.mediator:contexts()
 
@@ -425,7 +447,7 @@ function M:_setup_input_events(container)
           self:_update_input_display()
           return
         end
-      end
+      end)
     end
   })
 end
@@ -654,13 +676,19 @@ function M:_update_input_display(opts)
       self._contexts_placeholder_line = self._contexts_placeholder_line .. "@"
     end
 
-    -- Get existing lines to preserve user input (lines after the header)
-    local existing_lines = vim.api.nvim_buf_get_lines(input.bufnr, 0, -1, false)
 
-    -- If first line is the contexts placeholder, remove it from existing lines
-    if existing_lines and #existing_lines > 1 and (existing_lines[1] == "" or existing_lines[1] == old_contexts_placeholder_line or existing_lines[1] == self._contexts_placeholder_line) then
-      table.remove(existing_lines, 1)
+    local prefix_extmark = self.extmarks.prefix or nil
+    local prefix_ns = prefix_extmark and prefix_extmark._ns or nil
+    local prefix_id = prefix_extmark and prefix_extmark._id and prefix_extmark._id[1] or nil
+    local prefix_row = 1
+
+    if prefix_ns and prefix_id then
+      local prefix_mark = vim.api.nvim_buf_get_extmark_by_id(input.bufnr, prefix_ns, prefix_id, {})
+      prefix_row = prefix_mark and #prefix_mark > 0 and prefix_mark[1] or 1
     end
+
+    -- Get existing lines to preserve user input (lines after the header)
+    local existing_lines = vim.api.nvim_buf_get_lines(input.bufnr, prefix_row, -1, false)
 
     vim.api.nvim_buf_set_lines(input.bufnr, 0, -1, false, { self._contexts_placeholder_line, "" })
 
@@ -698,13 +726,21 @@ function M:_update_input_display(opts)
       vim.api.nvim_buf_set_lines(input.bufnr, 1, 1 + #existing_lines, false, existing_lines)
     end
 
-    self.extmarks.prefix._id = vim.api.nvim_buf_set_extmark(
+    if not self.extmarks.prefix._id then
+      self.extmarks.prefix._id = {}
+    end
+
+    self.extmarks.prefix._id[1] = vim.api.nvim_buf_set_extmark(
       input.bufnr,
       self.extmarks.prefix._ns,
       1,
       0,
-      vim.tbl_extend("force", { virt_text = { { prefix, "Normal" } }, virt_text_pos = "inline", right_gravity = false }, { id = self.extmarks.prefix._id })
+      vim.tbl_extend("force", { virt_text = { { prefix, "Normal" } }, virt_text_pos = "inline", right_gravity = false }, { id = self.extmarks.prefix._id[1] })
     )
+
+    -- local prefix_mark = vim.api.nvim_buf_get_extmark_by_id(input.bufnr, self.extmarks.prefix._ns, self.extmarks.prefix._id[1], { details = true })
+    -- local prefix_mark = opts and opts.prefix_mark or {}
+    -- vim.notify(vim.inspect(prefix_mark), vim.log.levels.DEBUG)
 
     -- Set cursor to end of input line
     if vim.api.nvim_win_is_valid(input.winid) then
@@ -730,23 +766,26 @@ function M:_focus_input()
       local lines = vim.api.nvim_buf_get_lines(input.bufnr, 0, -1, false)
       local prefix = Config.windows.input.prefix or "> "
 
+      local row = 2
+      local col = #prefix
+
       -- Ensure there is at least a header and a prefix line
       if #lines < 2 then
-        self:_update_input_display()
-        lines = vim.api.nvim_buf_get_lines(input.bufnr, 0, -1, false)
+        row = 1
+        col = 0
       end
 
-      -- Place cursor on the prefix line (line 2), after the prefix
-      local cursor_col = #prefix
-      vim.api.nvim_win_set_cursor(input.winid, { 2, cursor_col })
+      vim.api.nvim_win_set_cursor(input.winid, { row, col })
 
       -- Enter insert mode
-      local mode = vim.api.nvim_get_mode().mode
-      if mode == "n" then
-        vim.cmd("startinsert!")
+      if Config.windows and Config.windows.edit and Config.windows.edit.start_insert then
+        local mode = vim.api.nvim_get_mode().mode
+        if mode == "n" then
+          vim.cmd("startinsert!")
+        end
       end
     end
-  end, 50)
+  end, 100)
 end
 
 function M:_handle_input()
