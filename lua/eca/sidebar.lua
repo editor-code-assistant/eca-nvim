@@ -8,6 +8,7 @@ local Split = require("nui.split")
 ---@class eca.Sidebar
 ---@field public id integer The tab ID
 ---@field public containers table<string, NuiSplit> The nui containers
+---@field public extmarks table The extmarks for various UI elements
 ---@field mediator eca.Mediator mediator to send server requests to
 ---@field private _initialized boolean Whether the sidebar has been initialized
 ---@field private _current_response_buffer string Buffer for accumulating streaming response
@@ -411,18 +412,31 @@ function M:_setup_input_events(container)
           return
         end
 
-        local prefix_row = unpack(vim.api.nvim_buf_get_extmark_by_id(buf, prefix_ns, prefix_id, {}))
+        local prefix_mark = vim.api.nvim_buf_get_extmark_by_id(buf, prefix_ns, prefix_id, {})
+        local prefix_row = unpack(prefix_mark)
         local contexts_row = 0
-
-        -- If both are in the same row, contexts_row was deleted
-        if prefix_row == contexts_row then
-          self.mediator:clear_contexts()
-          return
-        end
 
         local prefix_line = lines[prefix_row + 1] or nil
         local contexts_line = lines[contexts_row + 1] or nil
         local contexts_placeholder_line = self._contexts_placeholder_line or ""
+
+        -- Logger.test(lines)
+        -- Logger.test("first line changed: " .. first)
+        -- Logger.test(prefix_mark)
+
+        if prefix_row == contexts_row then
+          -- prefix line missing, restore
+          if contexts_line == contexts_placeholder_line then
+           -- Logger.test("prefix line missing, restore")
+            self:_update_input_display()
+            return
+          end
+
+          -- we can consider that contexts were deleted
+          -- Logger.test("contexts cleared")
+          self.mediator:clear_contexts()
+          return
+        end
 
         -- prefix line missing, restore
         if not prefix_line and contexts_line == contexts_placeholder_line then
@@ -669,13 +683,10 @@ function M:_update_input_display(opts)
       end
     end
 
-    local old_contexts_placeholder_line = self._contexts_placeholder_line
-
     self._contexts_placeholder_line = "@"
     for _ = 1, #contexts_name do
       self._contexts_placeholder_line = self._contexts_placeholder_line .. "@"
     end
-
 
     local prefix_extmark = self.extmarks.prefix or nil
     local prefix_ns = prefix_extmark and prefix_extmark._ns or nil
@@ -701,6 +712,8 @@ function M:_update_input_display(opts)
     if not self.extmarks.contexts._id then
       self.extmarks.contexts._id = {}
     end
+
+    vim.api.nvim_buf_clear_namespace(input.bufnr, self.extmarks.contexts._ns, 0, -1)
 
     for i, context_name in ipairs(contexts_name) do
       self.extmarks.contexts._id[i] = vim.api.nvim_buf_set_extmark(
@@ -737,10 +750,6 @@ function M:_update_input_display(opts)
       0,
       vim.tbl_extend("force", { virt_text = { { prefix, "Normal" } }, virt_text_pos = "inline", right_gravity = false }, { id = self.extmarks.prefix._id[1] })
     )
-
-    -- local prefix_mark = vim.api.nvim_buf_get_extmark_by_id(input.bufnr, self.extmarks.prefix._ns, self.extmarks.prefix._id[1], { details = true })
-    -- local prefix_mark = opts and opts.prefix_mark or {}
-    -- vim.notify(vim.inspect(prefix_mark), vim.log.levels.DEBUG)
 
     -- Set cursor to end of input line
     if vim.api.nvim_win_is_valid(input.winid) then
