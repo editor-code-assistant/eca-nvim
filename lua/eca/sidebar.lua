@@ -13,7 +13,6 @@ local Split = require("nui.split")
 ---@field private _initialized boolean Whether the sidebar has been initialized
 ---@field private _current_response_buffer string Buffer for accumulating streaming response
 ---@field private _is_streaming boolean Whether we're currently receiving a streaming response
----@field private _last_assistant_line integer Line number of the last assistant message
 ---@field private _usage_info string Current usage information
 ---@field private _last_user_message string Last user message to avoid duplicates
 ---@field private _current_tool_call table Current tool call being accumulated
@@ -48,7 +47,6 @@ function M.new(id, mediator)
   instance._initialized = false
   instance._current_response_buffer = ""
   instance._is_streaming = false
-  instance._last_assistant_line = 0
   instance._usage_info = ""
   instance._last_user_message = ""
   instance._current_tool_call = nil
@@ -182,7 +180,6 @@ function M:reset()
   self._initialized = false
   self._is_streaming = false
   self._current_response_buffer = ""
-  self._last_assistant_line = 0
   self._usage_info = ""
   self._last_user_message = ""
   self._current_tool_call = nil
@@ -456,6 +453,20 @@ function M:_setup_input_events(container)
               self.mediator:remove_context(context)
               return
             end
+          end
+
+          -- contexts line modified, restore
+          if #contexts_line >  #self._contexts_placeholder_line then
+            local placeholders = vim.split(contexts_line, "@", { plain = true, trimempty = false })
+
+            vim.notify("placeholders: " .. vim.inspect(placeholders), vim.log.levels.DEBUG)
+
+            if #placeholders[#placeholders] < 1 then
+              self:_update_input_display()
+              return
+            end
+
+            return
           end
 
           self:_update_input_display()
@@ -1146,7 +1157,6 @@ function M:_handle_streaming_text(text)
 
     -- Add assistant placeholder and track its start line
     self:_add_message("assistant", "")
-    self._last_assistant_line = start_line
 
     -- Track placeholder with an extmark independent of header content
     self.extmarks = self.extmarks or {}
@@ -1176,8 +1186,8 @@ end
 ---@param content string
 function M:_update_streaming_message(content)
   local chat = self.containers.chat
-  if not chat or self._last_assistant_line == 0 then
-    Logger.notify("Cannot update - no chat or no assistant line", vim.log.levels.ERROR)
+  if not chat then
+    Logger.debug("DEBUG: Cannot update - no chat")
     return
   end
 
@@ -1201,7 +1211,7 @@ function M:_update_streaming_message(content)
     local content_lines = Utils.split_lines(content)
 
     -- Resolve assistant start line using extmark if available
-    local start_line = self._last_assistant_line
+    local start_line = 0
     if self.extmarks and self.extmarks.assistant and self.extmarks.assistant._id then
       local pos = vim.api.nvim_buf_get_extmark_by_id(chat.bufnr, self.extmarks.assistant._ns, self.extmarks.assistant._id, {})
       if pos and pos[1] then
@@ -1209,7 +1219,7 @@ function M:_update_streaming_message(content)
       end
     end
 
-    Logger.debug("DEBUG: Assistant line: " .. tostring(self._last_assistant_line) .. ", start_line: " .. tostring(start_line))
+    Logger.debug("DEBUG: Start Line: " .. tostring(start_line))
     Logger.debug("DEBUG: Content lines: " .. #content_lines)
 
     -- Replace assistant content directly
@@ -1312,7 +1322,6 @@ function M:_add_message(role, content)
     -- Auto-scroll to bottom after adding new message
     self:_scroll_to_bottom()
   end)
-  self._last_assistant_line = self:_get_last_message_line()
 end
 
 function M:_finalize_streaming_response()
@@ -1322,7 +1331,6 @@ function M:_finalize_streaming_response()
 
     self._is_streaming = false
     self._current_response_buffer = ""
-    self._last_assistant_line = 0
     self._response_start_time = 0
 
     -- Clear assistant placeholder tracking extmark
@@ -1361,32 +1369,6 @@ function M:_scroll_to_bottom()
       end)
     end
   end, 10) -- Reduced delay for faster streaming response
-end
-
-function M:_get_last_message_line()
-  local chat = self.containers.chat
-  if not chat then
-    return 0
-  end
-
-  local lines = vim.api.nvim_buf_get_lines(chat.bufnr, 0, -1, false)
-  local assistant_header_lines = Utils.split_lines(self._headers.assistant)
-  local assistant_header = ""
-
-  for i = #assistant_header_lines, 1, -1 do
-    if assistant_header_lines[i] and assistant_header_lines[i] ~= "" then
-      assistant_header = assistant_header_lines[i]
-      break
-    end
-  end
-
-  for i = #lines, 1, -1 do
-    local line = lines[i]
-    if line and line:sub(1, #assistant_header) == assistant_header then
-      return i
-    end
-  end
-  return 0
 end
 
 ---@param bufnr integer
