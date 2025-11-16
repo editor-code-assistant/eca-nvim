@@ -78,6 +78,10 @@ function M.resolve_completion_item(completion_item, callback)
     if context_item.type == "file" then
       completion_item.documentation = documentation(context_item, 20)
     end
+    vim.api.nvim_exec_autocmds("User", {
+      pattern = { "EcaChatContextUpdated" },
+      data = completion_item.data.context_item,
+    })
     callback(completion_item)
   end
 end

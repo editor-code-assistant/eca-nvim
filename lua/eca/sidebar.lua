@@ -62,6 +62,7 @@ function M.new(id, mediator)
   }
   instance._welcome_message_applied = false
   instance._contexts_placeholder_line = ""
+  instance._contexts_to_resolve = {}
 
   require("eca.observer").subscribe("sidebar-" .. id, function(message)
     instance:handle_chat_content(message)
@@ -188,6 +189,7 @@ function M:reset()
   self._current_status = ""
   self._welcome_message_applied = false
   self._contexts_placeholder_line = ""
+  self._contexts_to_resolve = {}
 end
 
 function M:new_chat()
@@ -379,14 +381,26 @@ end
 ---@private
 ---@param container NuiSplit
 function M:_setup_input_events(container)
+  vim.api.nvim_create_autocmd("User", {
+    pattern = { "EcaChatContextUpdated" },
+    callback = function(event)
+      local context_to_resolve = {
+        path = event.data.path,
+        name = vim.fn.fnamemodify(event.data.path, ":.")
+      }
+
+      table.insert(self._contexts_to_resolve, context_to_resolve)
+    end,
+  })
+
   -- prevent contexts line or input prefix from being deleted
   vim.api.nvim_buf_attach(container.bufnr, false, {
     on_lines = function(_, buf, _changedtick, first, _last, _new_last, _bytecount)
-      if first ~= 0 and first ~= 1 then
-        return
-      end
-
       vim.schedule(function()
+        if first ~= 0 and first ~= 1 then
+          return
+        end
+
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
         -- handle empty buffer
@@ -416,10 +430,6 @@ function M:_setup_input_events(container)
         local prefix_line = lines[prefix_row + 1] or nil
         local contexts_line = lines[contexts_row + 1] or nil
         local contexts_placeholder_line = self._contexts_placeholder_line or ""
-
-        -- Logger.test(lines)
-        -- Logger.test("first line changed: " .. first)
-        -- Logger.test(prefix_mark)
 
         if prefix_row == contexts_row then
           -- prefix line missing, restore
@@ -459,12 +469,13 @@ function M:_setup_input_events(container)
           if #contexts_line >  #self._contexts_placeholder_line then
             local placeholders = vim.split(contexts_line, "@", { plain = true, trimempty = false })
 
-            vim.notify("placeholders: " .. vim.inspect(placeholders), vim.log.levels.DEBUG)
-
             if #placeholders[#placeholders] < 1 then
               self:_update_input_display()
               return
             end
+
+            vim.notify("Contexts line: " .. contexts_line, vim.log.levels.DEBUG)
+            vim.notify("Contexts to resolve: " .. vim.inspect(self._contexts_to_resolve), vim.log.levels.DEBUG)
 
             return
           end
