@@ -12,6 +12,7 @@ local function setup_test_environment()
   _G.Mediator = require('eca.mediator').new(_G.Server, _G.State)
   _G.Sidebar = require('eca.sidebar').new(1, _G.Mediator)
   _G.Eca = require('eca')
+  _G.Eca.sidebars[1] = _G.Sidebar
   _G.Eca.current = { sidebar = _G.Sidebar }
 
   -- Mock vim.ui.select for testing

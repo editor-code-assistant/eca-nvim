@@ -345,13 +345,13 @@ function M.setup()
 
   vim.api.nvim_create_user_command("EcaChatSelectModel", function()
     local eca = require("eca")
+    local chat = eca.get()
 
-    if not eca or not eca.current or not eca.current.sidebar then
-      Logger.notify("No active ECA sidebar found", vim.log.levels.WARN)
+    if not chat or not chat.mediator then
+      Logger.notify("No active ECA chat found", vim.log.levels.WARN)
       return
     end
 
-    local chat = eca.get()
     local models = chat.mediator:models()
 
     vim.ui.select(models, {
@@ -367,13 +367,13 @@ function M.setup()
 
   vim.api.nvim_create_user_command("EcaChatSelectBehavior", function()
     local eca = require("eca")
+    local chat = eca.get()
 
-    if not eca or not eca.current or not eca.current.sidebar then
-      Logger.notify("No active ECA sidebar found", vim.log.levels.WARN)
+    if not chat or not chat.mediator then
+      Logger.notify("No active ECA chat found", vim.log.levels.WARN)
       return
     end
 
-    local chat = eca.get()
     local behaviors = chat.mediator:behaviors()
 
     vim.ui.select(behaviors, {
