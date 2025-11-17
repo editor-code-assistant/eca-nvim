@@ -78,11 +78,21 @@ function M.resolve_completion_item(completion_item, callback)
     if context_item.type == "file" then
       completion_item.documentation = documentation(context_item, 20)
     end
+    callback(completion_item)
+  end
+end
+
+---Executed after the item was selected
+---@param completion_item lsp.CompletionItem
+---@param callback fun(any)
+function M.execute(completion_item, callback)
+  if completion_item.data then
     vim.api.nvim_exec_autocmds("User", {
-      pattern = { "EcaChatContextUpdated" },
+      pattern = { "CompletionItemSelected" },
       data = completion_item.data.context_item,
     })
     callback(completion_item)
   end
 end
+
 return M

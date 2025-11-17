@@ -73,4 +73,11 @@ function source:resolve(item, callback)
   require("eca.completion.context").resolve_completion_item(item, callback)
 end
 
+---Executed after the item was selected
+---@param item lsp.CompletionItem
+---@param callback fun(any)
+function source:execute(item, callback)
+  require("eca.completion.context").execute(item, callback)
+end
+
 return source

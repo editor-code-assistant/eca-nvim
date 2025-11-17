@@ -62,7 +62,7 @@ function M.new(id, mediator)
   }
   instance._welcome_message_applied = false
   instance._contexts_placeholder_line = ""
-  instance._contexts_to_resolve = {}
+  instance._contexts = {}
 
   require("eca.observer").subscribe("sidebar-" .. id, function(message)
     instance:handle_chat_content(message)
@@ -189,7 +189,7 @@ function M:reset()
   self._current_status = ""
   self._welcome_message_applied = false
   self._contexts_placeholder_line = ""
-  self._contexts_to_resolve = {}
+  self._contexts = {}
 end
 
 function M:new_chat()
@@ -382,18 +382,25 @@ end
 ---@param container NuiSplit
 function M:_setup_input_events(container)
   vim.api.nvim_create_autocmd("User", {
-    pattern = { "EcaChatContextUpdated" },
+    pattern = { "CompletionItemSelected" },
     callback = function(event)
-      local context_to_resolve = {
-        path = event.data.path,
-        name = vim.fn.fnamemodify(event.data.path, ":.")
-      }
+      if not event.data or not event.data.path or not event.data.type then
+        return
+      end
 
-      table.insert(self._contexts_to_resolve, context_to_resolve)
+      if self._contexts then
+        self._contexts.to_add = {
+          name = vim.fn.fnamemodify(event.data.path, ":."),
+          type = event.data.type,
+          data = {
+            path = event.data.path
+          }
+        }
+      end
     end,
   })
 
-  -- prevent contexts line or input prefix from being deleted
+  -- contexts area and input handler
   vim.api.nvim_buf_attach(container.bufnr, false, {
     on_lines = function(_, buf, _changedtick, first, _last, _new_last, _bytecount)
       vim.schedule(function()
@@ -434,13 +441,11 @@ function M:_setup_input_events(container)
         if prefix_row == contexts_row then
           -- prefix line missing, restore
           if contexts_line == contexts_placeholder_line then
-           -- Logger.test("prefix line missing, restore")
             self:_update_input_display()
             return
           end
 
           -- we can consider that contexts were deleted
-          -- Logger.test("contexts cleared")
           self.mediator:clear_contexts()
           return
         end
@@ -450,6 +455,14 @@ function M:_setup_input_events(container)
           self:_update_input_display()
           return
         end
+
+        -- something wrong, restore
+        if prefix_row - contexts_row ~= 1 then
+          self:_update_input_display()
+          return
+        end
+
+        local context_to_add = self._contexts.to_add or {}
 
         if contexts_line ~= contexts_placeholder_line then
           -- a context was removed
@@ -465,17 +478,15 @@ function M:_setup_input_events(container)
             end
           end
 
-          -- contexts line modified, restore
-          if #contexts_line >  #self._contexts_placeholder_line then
-            local placeholders = vim.split(contexts_line, "@", { plain = true, trimempty = false })
+          -- contexts line modified
+          if #contexts_line > #self._contexts_placeholder_line then
+            local placeholders = vim.split(contexts_line, "@", { plain = true, trimempty = true })
 
-            if #placeholders[#placeholders] < 1 then
-              self:_update_input_display()
-              return
+            for i = 1, #placeholders do
+              if context_to_add.name and context_to_add.name == placeholders[i] then
+                self.mediator:add_context(context_to_add)
+              end
             end
-
-            vim.notify("Contexts line: " .. contexts_line, vim.log.levels.DEBUG)
-            vim.notify("Contexts to resolve: " .. vim.inspect(self._contexts_to_resolve), vim.log.levels.DEBUG)
 
             return
           end
