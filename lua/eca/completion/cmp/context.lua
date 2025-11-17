@@ -7,13 +7,13 @@ local function as_completion_item(context)
   ---@diagnostic disable-next-line: missing-fields
   local item = {}
   if context.type == "file" then
-    item.label = string.format("@%s", vim.fn.fnamemodify(context.path, ":."))
+    item.label = vim.fn.fnamemodify(context.path, ":.")
     item.kind = cmp.lsp.CompletionItemKind.File
     item.data = {
       context_item = context,
     }
   elseif context.type == "directory" then
-    item.label = string.format("@%s", vim.fn.fnamemodify(context.path, ":."))
+    item.label = vim.fn.fnamemodify(context.path, ":.")
     item.kind = cmp.lsp.CompletionItemKind.Folder
   elseif context.type == "web" then
     item.label = context.url
@@ -40,7 +40,7 @@ function source.new()
 end
 
 function source:get_trigger_characters()
-  return { "@" }
+  return { "@", "#" }
 end
 
 function source:get_keyword_pattern()

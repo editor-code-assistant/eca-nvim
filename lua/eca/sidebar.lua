@@ -384,16 +384,16 @@ function M:_setup_input_events(container)
   vim.api.nvim_create_autocmd("User", {
     pattern = { "CompletionItemSelected" },
     callback = function(event)
-      if not event.data or not event.data.path or not event.data.type then
+      if not event.data or not event.data.context_item or not event.data.label then
         return
       end
 
       if self._contexts then
         self._contexts.to_add = {
-          name = vim.fn.fnamemodify(event.data.path, ":."),
-          type = event.data.type,
+          name = event.data.label,
+          type = event.data.context_item.type,
           data = {
-            path = event.data.path
+            path = event.data.context_item.path
           }
         }
       end
@@ -404,10 +404,6 @@ function M:_setup_input_events(container)
   vim.api.nvim_buf_attach(container.bufnr, false, {
     on_lines = function(_, buf, _changedtick, first, _last, _new_last, _bytecount)
       vim.schedule(function()
-        if first ~= 0 and first ~= 1 then
-          return
-        end
-
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
         -- handle empty buffer
@@ -431,7 +427,10 @@ function M:_setup_input_events(container)
         end
 
         local prefix_mark = vim.api.nvim_buf_get_extmark_by_id(buf, prefix_ns, prefix_id, {})
-        local prefix_row = unpack(prefix_mark)
+        local prefix_row = 1
+        if prefix_mark and type(prefix_mark) == "table" and prefix_mark[1] ~= nil then
+          prefix_row = tonumber(prefix_mark[1]) or 1
+        end
         local contexts_row = 0
 
         local prefix_line = lines[prefix_row + 1] or nil
@@ -485,6 +484,7 @@ function M:_setup_input_events(container)
             for i = 1, #placeholders do
               if context_to_add.name and context_to_add.name == placeholders[i] then
                 self.mediator:add_context(context_to_add)
+                self._contexts.to_add = {}
               end
             end
 
@@ -494,6 +494,7 @@ function M:_setup_input_events(container)
           self:_update_input_display()
           return
         end
+
       end)
     end
   })
@@ -750,7 +751,7 @@ function M:_update_input_display(opts)
 
     for i, context_name in ipairs(contexts_name) do
       self.extmarks.contexts._id[i] = vim.api.nvim_buf_set_extmark(
-    input.bufnr,
+        input.bufnr,
         self.extmarks.contexts._ns,
         0,
         i,

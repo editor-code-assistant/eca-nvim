@@ -7,7 +7,7 @@ function M.get_query(cursor_line, cursor_position)
   local before_cursor = cursor_line:sub(1, cursor_position.col)
   ---@type string[]
   local matches = {}
-  local it = before_cursor:gmatch("@([%w%./_\\%-~]*)")
+  local it = before_cursor:gmatch("[@#]([%w%./_\\%-~]*)")
   for match in it do
     table.insert(matches, match)
   end
@@ -18,20 +18,32 @@ end
 ---@param as_completion_item fun(eca.ChatContext): lsp.CompletionItem
 ---@param callback fun(resp: {items: lsp.CompletionItem[], isIncomplete?: boolean, is_incomplete_forward?: boolean, is_incomplete_backward?: boolean})
 function M.get_completion_candidates(query, as_completion_item, callback)
-  local server = require("eca").server
-  server:send_request("chat/queryContext", { query = query }, function(err, result)
-    if err then
-      callback({ items = {} })
-      return
-    end
+  local eca = require("eca")
+  local chat = eca.get()
 
-    if result and result.contexts then
-      local items = vim.iter(result.contexts):map(as_completion_item):totable()
-      callback({ items = items })
-    else
-      callback({ items = {} })
-    end
-  end)
+  if not chat or not chat.mediator then
+    Logger.notify("No active ECA sidebar", vim.log.levels.WARN)
+    return
+  end
+
+  chat.mediator:send("chat/queryContext", {
+      chatId = chat.mediator:id(),
+      query = query,
+      contexts = chat.mediator:contexts() or {},
+    },
+    function(err, result)
+      if err then
+        callback({ items = {} })
+        return
+      end
+
+      if result and result.contexts then
+        local items = vim.iter(result.contexts):map(as_completion_item):totable()
+        callback({ items = items })
+      else
+        callback({ items = {} })
+      end
+    end)
 end
 
 --- Taken from https://github.com/hrsh7th/cmp-path/blob/9a16c8e5d0be845f1d1b64a0331b155a9fe6db4d/lua/cmp_path/init.lua
@@ -89,7 +101,10 @@ function M.execute(completion_item, callback)
   if completion_item.data then
     vim.api.nvim_exec_autocmds("User", {
       pattern = { "CompletionItemSelected" },
-      data = completion_item.data.context_item,
+      data = {
+        context_item = completion_item.data.context_item,
+        label = completion_item.label,
+      }
     })
     callback(completion_item)
   end

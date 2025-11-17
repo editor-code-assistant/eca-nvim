@@ -111,16 +111,30 @@ function mediator:send(method, params, callback)
     require("eca.logger").notify("Server is not rnning, please start the server", vim.log.levels.WARN)
   end
 
-  local contexts = {}
+  if params.contexts then
+    local contexts = {}
 
-  for _, context in pairs(params.contexts) do
-    local adapted = context_adapter(context)
-    if adapted then
-      table.insert(contexts, adapted)
+    for _, context in pairs(params.contexts) do
+      local adapted = context_adapter(context)
+      if adapted then
+        table.insert(contexts, adapted)
+      end
     end
+
+    params.contexts = contexts
   end
 
-  params.contexts = contexts
+  if params.message and type(params.message) == "string" then
+    local message = params.message:gsub("([@#])([%w%._%-%/]+)", function(prefix, path)
+      -- expand ~
+      if path:sub(1,1) == "~" then
+        path = vim.fn.expand(path)
+      end
+      return prefix .. vim.fn.fnamemodify(path, ":p")
+    end)
+
+    params.message = message
+  end
 
   self.server:send_request(method, params, callback)
 end
