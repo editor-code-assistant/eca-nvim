@@ -124,18 +124,6 @@ function mediator:send(method, params, callback)
     params.contexts = contexts
   end
 
-  if params.message and type(params.message) == "string" then
-    local message = params.message:gsub("([@#])([%w%._%-%/]+)", function(prefix, path)
-      -- expand ~
-      if path:sub(1,1) == "~" then
-        path = vim.fn.expand(path)
-      end
-      return prefix .. vim.fn.fnamemodify(path, ":p")
-    end)
-
-    params.message = message
-  end
-
   self.server:send_request(method, params, callback)
 end
 

@@ -1038,13 +1038,26 @@ end
 
 ---@param message string
 function M:_send_message(message)
-  Logger.debug("Sending message: " .. message)
-
-  -- Store the last user message to avoid duplication
-  self._last_user_message = message
+  if not message or not type(message) == "string" then
+    Logger.error("Cannot send empty message")
+    return
+  end
 
   -- Add user message to chat
   self:_add_message("user", message)
+
+  local replaced = message:gsub("([@#])([%w%._%-%/]+)", function(prefix, path)
+    -- expand ~
+    if path:sub(1,1) == "~" then
+      path = vim.fn.expand(path)
+    end
+    return prefix .. vim.fn.fnamemodify(path, ":p")
+  end)
+
+  message = replaced
+
+  -- Store the last user message to avoid duplication
+  self._last_user_message = message
 
   local contexts = self.mediator:contexts()
   self.mediator:send("chat/prompt", {
@@ -1158,6 +1171,7 @@ function M:_handle_streaming_text(text)
     Logger.debug("Ignoring empty text response")
     return
   end
+
   Logger.debug("Received text chunk: '" .. text:sub(1, 50) .. (text:len() > 50 and "..." or "") .. "'")
 
   if vim.trim(text) == vim.trim(self._last_user_message) then
