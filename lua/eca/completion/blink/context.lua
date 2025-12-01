@@ -20,7 +20,7 @@ end
 
 -- (Optional) Non-alphanumeric characters that trigger the source
 function source:get_trigger_characters()
-  return { "@" }
+  return { "@", "#" }
 end
 
 ---@param context eca.ChatContext
@@ -31,13 +31,13 @@ local function as_completion_item(context)
   ---@diagnostic disable-next-line: missing-fields
   local item = {}
   if context.type == "file" then
-    item.label = string.format("@%s", vim.fn.fnamemodify(context.path, ":."))
+    item.label = vim.fn.fnamemodify(context.path, ":.")
     item.kind = kinds.File
     item.data = {
       context_item = context,
     }
   elseif context.type == "directory" then
-    item.label = string.format("@%s", vim.fn.fnamemodify(context.path, ":."))
+    item.label = vim.fn.fnamemodify(context.path, ":.")
     item.kind = kinds.Folder
   elseif context.type == "web" then
     item.label = context.url
@@ -71,6 +71,13 @@ end
 ---@param callback fun(any)
 function source:resolve(item, callback)
   require("eca.completion.context").resolve_completion_item(item, callback)
+end
+
+---Executed after the item was selected
+---@param item lsp.CompletionItem
+---@param callback fun(any)
+function source:execute(item, callback)
+  require("eca.completion.context").execute(item, callback)
 end
 
 return source

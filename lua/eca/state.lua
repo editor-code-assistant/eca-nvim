@@ -22,6 +22,7 @@
 ---@field config eca.StateConfig
 ---@field usage eca.StateUsage
 ---@field tools table<string, eca.StateTool>
+---@field contexts eca.Context[]
 local State = {}
 
 ---@return eca.State
@@ -56,6 +57,7 @@ function State._new()
       },
     },
     tools = {},
+    contexts = {},
   }, { __index = State })
 
   local handlers = {
@@ -226,6 +228,62 @@ function State:update_selected_behavior(behavior)
   vim.schedule(function()
     require("eca.observer").notify({ type = "state/updated", content = { config = vim.deepcopy(self.config) } })
   end)
+end
+
+function State:_update_contexts()
+  vim.schedule(function()
+    require("eca.observer").notify({ type = "state/updated", content = { contexts = vim.deepcopy(self.contexts) } })
+  end)
+end
+
+function State:add_context(context)
+  if not context or type(context) ~= "table" then
+    return
+  end
+
+  if not context.type or not context.data then
+    return
+  end
+
+  -- avoid duplicates
+  for _, ctx in ipairs(self.contexts) do
+    if ctx.type == context.type and vim.deep_equal(ctx.data, context.data) then
+      return
+    end
+  end
+
+  -- if is 'cursor' type and exists 'cursor' in contexts, replace
+  if context.type == "cursor" then
+    for i, ctx in ipairs(self.contexts) do
+      if ctx.type == "cursor" then
+        self.contexts[i] = context
+        self:_update_contexts()
+        return
+      end
+    end
+  end
+
+  table.insert(self.contexts, context)
+  self:_update_contexts()
+end
+
+function State:remove_context(context)
+  if not context or type(context) ~= "table" then
+    return
+  end
+
+  for i, ctx in ipairs(self.contexts) do
+    if ctx.type == context.type and vim.deep_equal(ctx.data, context.data) then
+      table.remove(self.contexts, i)
+      self:_update_contexts()
+      break
+    end
+  end
+end
+
+function State:clear_contexts()
+  self.contexts = {}
+  self:_update_contexts()
 end
 
 return State
