@@ -7,6 +7,7 @@ local M = {}
 local CONSTANTS = {
   SIDEBAR_FILETYPE = "Eca",
   SIDEBAR_BUFFER_NAME = "__ECA__",
+  CONTEXT_TRIGGER_REGEX = "[@#]([%w%./_\\%-~]*)",
 }
 
 ---@param bufnr integer
