@@ -11,6 +11,7 @@ return {
       -- Default configuration
       server_path = "",
       server_args = "",
+      usage_string_format = "{messageCost} / {sessionCost}",
       log = {
         display = "split", -- "split" or "popup"
         level = vim.log.levels.INFO,
@@ -20,6 +21,9 @@ return {
       behavior = {
         auto_set_keymaps = true,
         auto_focus_sidebar = true,
+        auto_start_server = false,
+        auto_download = true,
+        show_status_updates = true,
       },
       mappings = {
         chat = "<leader>ec",
@@ -35,16 +39,31 @@ return {
   },
   cmd = {
     "EcaChat",
-    "EcaToggle", 
+    "EcaToggle",
     "EcaFocus",
     "EcaClose",
     "EcaAddFile",
+    "EcaChatAddFile",
+    "EcaRemoveContext",
+    "EcaChatRemoveFile",
     "EcaAddSelection",
+    "EcaChatAddSelection",
+    "EcaChatAddUrl",
+    "EcaListContexts",
+    "EcaChatListContexts",
+    "EcaClearContexts",
+    "EcaChatClearContexts",
     "EcaServerStart",
     "EcaServerStop",
     "EcaServerRestart",
-    "EcaServerStatus",
+    "EcaServerMessages",
     "EcaSend",
     "EcaLogs",
+    "EcaDebugWidth",
+    "EcaRedownload",
+    "EcaStopResponse",
+    "EcaFixTreesitter",
+    "EcaChatSelectModel",
+    "EcaChatSelectBehavior",
   },
 }
