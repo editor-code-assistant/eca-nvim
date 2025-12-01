@@ -108,7 +108,7 @@ function mediator:send(method, params, callback)
     if callback then
       callback("Server is not running, please start the server", nil)
     end
-    require("eca.logger").notify("Server is not rnning, please start the server", vim.log.levels.WARN)
+    require("eca.logger").notify("Server is not running, please start the server", vim.log.levels.WARN)
   end
 
   if params.contexts then
