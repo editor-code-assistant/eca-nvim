@@ -108,7 +108,7 @@ function M.setup()
   })
 
   vim.api.nvim_create_user_command("EcaListContexts", function()
-    Logger.notify("EcaListContexts is deprecated. Use EcaChatListContexts instead.")
+    Logger.notify("EcaListContexts is deprecated. Use EcaChatListContexts instead.", vim.log.levels.WARN)
 
     require("eca.api").list_contexts()
   end, {
@@ -122,7 +122,7 @@ function M.setup()
   })
 
   vim.api.nvim_create_user_command("EcaClearContexts", function()
-    Logger.notify("EcaClearContexts is deprecated. Use EcaChatClearContexts instead.")
+    Logger.notify("EcaClearContexts is deprecated. Use EcaChatClearContexts instead.", vim.log.levels.WARN)
 
     require("eca.api").clear_contexts()
   end, {
