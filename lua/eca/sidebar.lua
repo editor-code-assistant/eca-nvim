@@ -797,8 +797,8 @@ function M:_update_input_display(opts)
 
     -- Set cursor to end of input line
     if vim.api.nvim_win_is_valid(input.winid) then
-      local row = 1 + (not clear and existing_lines and #existing_lines > 0 and #existing_lines or 1)
-      local col = #prefix + (not clear and existing_lines and #existing_lines > 0  and #existing_lines[#existing_lines] or 0)
+      local row = 1 + ((not clear and existing_lines and #existing_lines > 0) and #existing_lines or 1)
+      local col = #prefix + ((not clear and existing_lines and #existing_lines > 0)  and #existing_lines[#existing_lines] or 0)
 
       vim.api.nvim_win_set_cursor(input.winid, { row, col })
     end
@@ -1048,7 +1048,7 @@ end
 
 ---@param message string
 function M:_send_message(message)
-  if not message or not type(message) == "string" then
+  if not message or type(message) ~= "string" then
     Logger.error("Cannot send empty message")
     return
   end
@@ -1056,9 +1056,9 @@ function M:_send_message(message)
   -- Add user message to chat
   self:_add_message("user", message)
 
-  local replaced = message:gsub("([@#])([%w%._%-%/]+)", function(prefix, path)
+  local replaced = message:gsub("([@#])([%w%._%-%/\\]+)", function(prefix, path)
     -- expand ~
-    if path:sub(1,1) == "~" then
+    if vim.startswith(path, "~") then
       path = vim.fn.expand(path)
     end
     return prefix .. vim.fn.fnamemodify(path, ":p")
