@@ -107,6 +107,23 @@ function M.setup()
     range = true,
   })
 
+  vim.api.nvim_create_user_command("EcaChatAddUrl", function()
+    vim.ui.input({ prompt = "Enter URL to add as context: " }, function(input)
+      if not input or input == "" then
+        return
+      end
+
+      local url = vim.fn.trim(input)
+      if url == "" then
+        return
+      end
+
+      require("eca.api").add_web_context(url)
+    end)
+  end, {
+    desc = "Add URL as web context to ECA",
+  })
+
   vim.api.nvim_create_user_command("EcaListContexts", function()
     Logger.notify("EcaListContexts is deprecated. Use EcaChatListContexts instead.", vim.log.levels.WARN)
 

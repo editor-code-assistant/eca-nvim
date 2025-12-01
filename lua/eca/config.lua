@@ -66,6 +66,7 @@ M._defaults = {
     input = {
       prefix = "> ",
       height = 8, -- Height of the input window
+      web_context_max_len = 20, -- Maximum length for web context names in input
     },
     edit = {
       border = "rounded",

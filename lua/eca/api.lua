@@ -156,6 +156,34 @@ function M.add_directory_context(directory_path)
   Logger.info("Directory context added: " .. vim.inspect(context))
 end
 
+---@param url string
+function M.add_web_context(url)
+  Logger.info("Adding web context: " .. url)
+  local eca = require("eca")
+
+  if not eca.server or not eca.server:is_running() then
+    Logger.notify("ECA server is not running", vim.log.levels.ERROR)
+    return
+  end
+
+  local chat = eca.get()
+
+  if not chat or not chat.mediator then
+    Logger.notify("No active ECA Chat to add context", vim.log.levels.WARN)
+    return
+  end
+
+  local context = {
+    type = "web",
+    data = {
+      path = url,
+    },
+  }
+
+  chat.mediator:add_context(context)
+  Logger.info("Web context added: " .. vim.inspect(context))
+end
+
 function M.add_current_file_context()
   local current_file = vim.api.nvim_buf_get_name(0)
   if current_file and current_file ~= "" then

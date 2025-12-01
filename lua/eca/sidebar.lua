@@ -706,7 +706,17 @@ function M:_update_input_display(opts)
           break
         end
 
-        local name = vim.fn.fnamemodify(path, ":t")
+        local name
+        if context.type == "web" then
+          name = path
+          local max_len = (Config.windows and Config.windows.input and Config.windows.input.web_context_max_len) or 20
+          if #name > max_len then
+            name = string.sub(name, 1, max_len - 3) .. "..."
+          end
+        else
+          name = vim.fn.fnamemodify(path, ":t")
+        end
+
         local lines_range = context.data.lines_range
 
         if lines_range and lines_range.line_start and lines_range.line_end then
