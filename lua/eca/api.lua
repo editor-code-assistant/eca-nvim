@@ -97,6 +97,36 @@ function M.add_file_context(file_path)
   Logger.info("File context added: " .. vim.inspect(context))
 end
 
+function M.remove_file_context(path)
+  local eca = require("eca")
+  local chat = eca.get()
+
+  if not chat or not chat.mediator then
+    Logger.notify("No active ECA Chat", vim.log.levels.WARN)
+    return
+  end
+
+  -- Create context object
+  local context = {
+    type = "file",
+    data = {
+      path = path,
+    }
+  }
+
+  Logger.info("Removing context: " .. vim.inspect(context))
+  chat.mediator:remove_context(context)
+end
+
+function M.remove_current_file_context()
+  local current_file = vim.api.nvim_buf_get_name(0)
+  if current_file and current_file ~= "" then
+    M.remove_file_context(current_file)
+  else
+    Logger.notify("No current file to remove as context", vim.log.levels.WARN)
+  end
+end
+
 ---@param directory_path string
 function M.add_directory_context(directory_path)
   Logger.info("Adding directory context: " .. directory_path)
@@ -218,50 +248,6 @@ function M.clear_contexts()
   Logger.info("Cleared all contexts")
 end
 
-function M.remove_context(path)
-  local eca = require("eca")
-  local chat = eca.get()
-
-  if not chat or not chat.mediator then
-    Logger.notify("No active ECA Chat", vim.log.levels.WARN)
-    return
-  end
-
-  chat.mediator:remove_context(path)
-  Logger.info("Context removed: " .. path)
-end
-
-function M.add_repo_map_context()
-  local eca = require("eca")
-  local sidebar = eca.get()
-  if not sidebar then
-    Logger.info("Opening ECA sidebar to add repoMap context...")
-    M.chat()
-    sidebar = eca.get()
-  end
-
-  if sidebar then
-    -- Check if repoMap already exists
-    local contexts = sidebar:get_contexts()
-    for _, context in ipairs(contexts) do
-      if context.type == "repoMap" then
-        Logger.notify("RepoMap context already added", vim.log.levels.INFO)
-        return
-      end
-    end
-
-    -- Add repoMap context
-    sidebar:add_context({
-      type = "repoMap",
-      path = "repoMap",
-      content = "Repository structure and code mapping for better project understanding",
-    })
-    Logger.info("Added repoMap context")
-  else
-    Logger.notify("Failed to create ECA sidebar", vim.log.levels.ERROR)
-  end
-end
-
 ---@return boolean
 function M.is_server_running()
   local eca = require("eca")
@@ -297,105 +283,6 @@ function M.server_status()
     return eca.server:status()
   else
     return "Not initialized"
-  end
-end
-
--- ===== Selected Code Management =====
-
-function M.show_selected_code()
-  local eca = require("eca")
-  local sidebar = eca.get()
-  if sidebar then
-    local selected_code = sidebar._selected_code
-    if selected_code then
-      Logger.notify(
-        "Selected code: "
-          .. selected_code.filepath
-          .. " (lines "
-          .. (selected_code.start_line or "?")
-          .. "-"
-          .. (selected_code.end_line or "?")
-          .. ")",
-        vim.log.levels.INFO
-      )
-    else
-      Logger.notify("No code currently selected", vim.log.levels.INFO)
-    end
-  else
-    Logger.notify("ECA sidebar not available", vim.log.levels.WARN)
-  end
-end
-
-function M.clear_selected_code()
-  local eca = require("eca")
-  local sidebar = eca.get()
-  if sidebar then
-    sidebar:clear_selected_code()
-  else
-    Logger.notify("ECA sidebar not available", vim.log.levels.WARN)
-  end
-end
-
--- ===== TODOs Management =====
-
-function M.add_todo(content)
-  local eca = require("eca")
-  local sidebar = eca.get()
-  if not sidebar then
-    Logger.info("Opening ECA sidebar to add TODO...")
-    M.chat()
-    sidebar = eca.get()
-  end
-
-  if sidebar then
-    local todo = {
-      content = content,
-      status = "pending",
-    }
-    sidebar:add_todo(todo)
-  else
-    Logger.notify("Failed to create ECA sidebar", vim.log.levels.ERROR)
-  end
-end
-
-function M.list_todos()
-  local eca = require("eca")
-  local sidebar = eca.get()
-  if sidebar then
-    local todos = sidebar:get_todos()
-    if #todos == 0 then
-      Logger.notify("No active TODOs", vim.log.levels.INFO)
-      return
-    end
-
-    Logger.notify("Active TODOs:", vim.log.levels.INFO)
-    for i, todo in ipairs(todos) do
-      local status_icon = todo.status == "completed" and "✓" or "○"
-      Logger.notify(string.format("%d. %s %s", i, status_icon, todo.content), vim.log.levels.INFO)
-    end
-  else
-    Logger.notify("ECA sidebar not available", vim.log.levels.WARN)
-  end
-end
-
-function M.toggle_todo(index)
-  local eca = require("eca")
-  local sidebar = eca.get()
-  if sidebar then
-    return sidebar:toggle_todo(index)
-  else
-    Logger.notify("ECA sidebar not available", vim.log.levels.WARN)
-    return false
-  end
-end
-
-function M.clear_todos()
-  local eca = require("eca")
-  local sidebar = eca.get()
-  if sidebar then
-    sidebar:clear_todos()
-  else
-    Logger.notify("ECA sidebar not available", vim.log.levels.WARN)
   end
 end
 
