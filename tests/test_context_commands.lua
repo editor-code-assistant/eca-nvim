@@ -65,6 +65,15 @@ local function setup_test_environment()
         _G.original_logger_notify(msg, level, opts)
       end
     end
+
+    -- Stub vim.ui.input so we can simulate user input in tests
+    vim.ui = vim.ui or {}
+    _G.__test_next_input = nil
+    vim.ui.input = function(opts, on_confirm)
+      if on_confirm then
+        on_confirm(_G.__test_next_input)
+      end
+    end
   ]])
 end
 
@@ -254,6 +263,67 @@ T["EcaAddSelection"]["shows deprecation notice when called"] = function()
   eq(#notifications > 0, true)
   eq(notifications[1].message, "EcaAddSelection is deprecated. Use EcaChatAddSelection instead.")
   eq(notifications[1].level, child.lua_get("vim.log.levels.WARN"))
+end
+
+T["EcaChatAddUrl"] = MiniTest.new_set()
+
+T["EcaChatAddUrl"]["command is registered"] = function()
+  local commands = child.lua_get("vim.api.nvim_get_commands({})")
+  eq(type(commands.EcaChatAddUrl), "table")
+  eq(commands.EcaChatAddUrl.name, "EcaChatAddUrl")
+end
+
+T["EcaChatAddUrl"]["adds web context and truncates name based on config"] = function()
+  -- Use a small max length to make truncation easy to assert on
+  child.lua([[require('eca.config').override({
+    windows = {
+      input = {
+        web_context_max_len = 10,
+      },
+    },
+  })]])
+
+  local long_url = "https://example.com/some/really/long/path"
+
+  -- Provide the URL for the stubbed vim.ui.input
+  child.lua(string.format("_G.__test_next_input = %q", long_url))
+
+  eq(contexts_count(), 0)
+
+  child.cmd("EcaChatAddUrl")
+  flush(200)
+
+  local contexts = get_contexts()
+  eq(#contexts, 1)
+  eq(contexts[1].type, "web")
+  eq(contexts[1].data.path, long_url)
+
+  -- Ensure the context name shown in the input buffer is truncated
+  child.lua([[
+    local eca = require('eca')
+    local sidebar = eca.current.sidebar
+    if not sidebar or not sidebar.containers or not sidebar.containers.input then
+      _G.__test_displayed_context = nil
+      return
+    end
+    local input = sidebar.containers.input
+    local ns = vim.api.nvim_create_namespace('extmarks_contexts')
+    local marks = vim.api.nvim_buf_get_extmarks(input.bufnr, ns, 0, -1, { details = true })
+    if not marks or #marks == 0 then
+      _G.__test_displayed_context = nil
+      return
+    end
+    local details = marks[1][4]
+    if not details or not details.virt_text or #details.virt_text == 0 then
+      _G.__test_displayed_context = nil
+      return
+    end
+    _G.__test_displayed_context = details.virt_text[1][1]
+  ]])
+
+  local displayed = child.lua_get("_G.__test_displayed_context")
+  local expected = long_url:sub(1, 7) .. "... "
+  eq(displayed, expected)
 end
 
 T["EcaChatListContexts"] = MiniTest.new_set()
