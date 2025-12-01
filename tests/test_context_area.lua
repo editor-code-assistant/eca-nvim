@@ -95,9 +95,9 @@ local function flush(ms)
   child.api.nvim_eval("1")
 end
 
-T["contexts area"] = MiniTest.new_set()
+T["context area"] = MiniTest.new_set()
 
-T["contexts area"]["deletes all lines"] = function()
+T["context area"]["deletes all lines"] = function()
   flush()
 
   local initial = child.lua_get("_G.get_state()")
@@ -118,7 +118,7 @@ T["contexts area"]["deletes all lines"] = function()
   eq(result.contexts, {})
 end
 
-T["contexts area"]["deletes the contexts line"] = function()
+T["context area"]["deletes the contexts line"] = function()
   flush()
 
   local initial = child.lua_get("_G.get_state()")
@@ -139,7 +139,7 @@ T["contexts area"]["deletes the contexts line"] = function()
   eq(result.contexts, {})
 end
 
-T["contexts area"]["deletes the input line"] = function()
+T["context area"]["deletes the input line"] = function()
   flush()
 
   local initial = child.lua_get("_G.get_state()")
@@ -160,7 +160,7 @@ T["contexts area"]["deletes the input line"] = function()
   eq(result.contexts, {})
 end
 
-T["contexts area"]["keep input text when deleting contexts line"] = function()
+T["context area"]["keep input text when deleting contexts line"] = function()
   flush()
 
   local input_text = "text*in<>the > input#preFIX 123456 lIne"
@@ -188,7 +188,7 @@ T["contexts area"]["keep input text when deleting contexts line"] = function()
   eq(result.contexts, {})
 end
 
-T["contexts area"]["keep multiple lines text input when removing the first context"] = function()
+T["context area"]["keep multiple lines text input when removing the first context"] = function()
   flush()
 
   local input_text_first_line = "text*in<>the > input#preFIX 123456 lIne"
@@ -227,7 +227,7 @@ T["contexts area"]["keep multiple lines text input when removing the first conte
   eq(result.contexts, {})
 end
 
-T["contexts area"]["remove all contexts when deleting the contexts line"] = function()
+T["context area"]["remove all contexts when deleting the contexts line"] = function()
   flush()
 
   local input_text_first_line = "text*in<>the > input#preFIX 123456 lIne"
@@ -263,7 +263,7 @@ T["contexts area"]["remove all contexts when deleting the contexts line"] = func
   eq(result.contexts, {})
 end
 
-T["contexts area"]["remove one specific context when multiple contexts are present"] = function()
+T["context area"]["remove one specific context when multiple contexts are present"] = function()
   flush()
 
   local input_text_first_line = "text*in<>the > input#preFIX 123456 lIne"
@@ -303,7 +303,7 @@ T["contexts area"]["remove one specific context when multiple contexts are prese
   eq(result.contexts, { "sidebar.lua ", "server.lua " })
 end
 
-T["contexts area"]["remove contexts one by one in an arbitrary order while preserving input"] = function()
+T["context area"]["remove contexts one by one in an arbitrary order while preserving input"] = function()
   flush()
 
   local input_text_first_line = "text*in<>the > input#preFIX 123456 lIne"
@@ -382,6 +382,59 @@ T["contexts area"]["remove contexts one by one in an arbitrary order while prese
   eq(result_4.lines, { "@", input_text_first_line, input_text_second_line, "", input_text_fourth_line })
   eq(result_4.cursor, { 5, #input_text_fourth_line })
   eq(result_4.contexts, {})
+end
+
+T["context area"]["displays filename in context area and expands path in sent message"] = function()
+  flush()
+
+  local rel_path = "lua/eca/sidebar.lua"
+  local abs_path = child.lua_get("vim.fn.fnamemodify(..., ':p')", { rel_path })
+  local tail = child.lua_get("vim.fn.fnamemodify(..., ':t')", { rel_path }) .. " "
+
+  -- Add a context with relative path; context area should show only the
+  -- filename (tail), not the full path.
+  child.lua([[_G.add_contexts({
+    { type = 'file', data = { path = 'lua/eca/sidebar.lua' } },
+  })]])
+
+  flush()
+
+  local state = child.lua_get("_G.get_state()")
+
+  -- Contexts in the area should use the tail of the path
+  eq(state.contexts, { tail })
+
+  -- Mock server on mediator so we don't start a real process. Capture
+  -- the last request instead of sending anything.
+  child.lua([[
+    _G.last_request = nil
+    _G.Mediator.server = {
+      is_running = function()
+        return true
+      end,
+      send_request = function(_, method, params, callback)
+        _G.last_request = { method = method, params = params }
+        if callback then
+          callback(nil, {})
+        end
+      end,
+    }
+  ]])
+
+  -- Send a message that references the same relative path using the
+  -- @path shorthand. Sidebar should expand it to an absolute path
+  -- before sending to the (mocked) server.
+  child.lua("_G.Sidebar:_send_message('please check @' .. '" .. rel_path .. "')")
+
+  local req = child.lua_get("_G.last_request")
+  eq(req.method, "chat/prompt")
+
+  local msg = req.params.message
+  local expected = "please check @" .. abs_path
+
+  -- Message sent to the server must contain the absolute path and no
+  -- longer contain the original relative path.
+  eq(msg, expected)
 end
 
 return T
