@@ -424,6 +424,65 @@ function M.setup()
     desc = "Select current ECA Chat behavior",
   })
 
+  vim.api.nvim_create_user_command("EcaServerTools", function()
+    local has_snacks, snacks = pcall(require, "snacks")
+    if not has_snacks then
+      Logger.notify("snacks.nvim is not available", vim.log.levels.ERROR)
+      return
+    end
+
+    snacks.picker(
+      ---@type snacks.picker.Config
+      {
+        source = "eca tools",
+        finder = function(_, _)
+          ---@type snacks.picker.finder.Item[]
+          local items = {}
+          local eca = require("eca")
+          if not eca or not eca.state then
+            Logger.notify("ECA state is not available", vim.log.levels.ERROR)
+            return items
+          end
+
+          local tools = eca.state.tools or {}
+          if not tools or vim.tbl_isempty(tools) then
+            Logger.notify("No tools registered in server state", vim.log.levels.INFO)
+            return items
+          end
+
+          -- Collect and sort tool names for stable ordering
+          local names = vim.tbl_keys(tools)
+          table.sort(names)
+
+          for _, name in ipairs(names) do
+            local tool = tools[name] or {}
+            local type_ = tool.type or "unknown"
+            local status = tool.status or "unknown"
+
+            table.insert(items, {
+              text = name,
+              idx = name,
+              preview = {
+                text = vim.inspect(tool),
+                ft = "lua",
+              },
+            })
+          end
+
+          return items
+        end,
+        preview = "preview",
+        format = "text",
+        confirm = function(self, item, _)
+          vim.fn.setreg("", item.preview.text)
+          self:close()
+        end,
+      }
+    )
+  end, {
+    desc = "Display ECA server tools (yank preview on confirm)",
+  })
+
   Logger.debug("ECA commands registered")
 end
 
