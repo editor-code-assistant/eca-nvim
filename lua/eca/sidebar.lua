@@ -1146,7 +1146,7 @@ function M:handle_chat_content_received(params)
     -- Show the accumulated tool call
     self:_display_tool_call(content)
   elseif content.type == "toolCalled" then
-    local tool_text = (content.summary or "Tool call")
+    local tool_text = self:_tool_call_text(content)
 
     -- Add diff to current tool call if present in toolCalled content
     if self._current_tool_call and content.details then
@@ -1528,14 +1528,36 @@ function M:_handle_tool_call_prepare(content)
   end
 end
 
+function M:_tool_call_text(content)
+  if content.summary and content.summary ~= "" then
+    return content.summary
+  end
+
+  if self._current_tool_call.summary and self._current_tool_call.summary ~= "" then
+    return self._current_tool_call.summary
+  end
+
+  if content.name and content.name ~= "" then
+    return content.name
+  end
+
+  if self._current_tool_call.name and self._current_tool_call.name ~= "" then
+    return self._current_tool_call.name
+  end
+
+  return "Tool call"
+end
+
 function M:_display_tool_call(content)
   if not self._is_tool_call_streaming or not self._current_tool_call then
     return nil
   end
 
+  local tool_name = self:_tool_call_text(content)
+
   local diff = ""
-  local tool_text = "🔧 " .. (content.summary or self._current_tool_call.summary or "Tool call")
-  local tool_log = string.format("**Tool Call**: %s", self._current_tool_call.name or "unknown")
+  local tool_text = "🔧 " .. tool_name
+  local tool_log = string.format("**Tool Call**: %s", tool_name or "unknown")
 
   if self._current_tool_call.arguments and self._current_tool_call.arguments ~= "" then
     tool_log = tool_log .. "\n```json\n" .. self._current_tool_call.arguments .. "\n```"
