@@ -193,15 +193,37 @@ function M.setup()
           end
 
           for msg in vim.iter(eca.server.messages) do
-            local decoded = vim.json.decode(msg.content)
-            table.insert(items, {
-              text = decoded.method,
-              idx = decoded.id,
-              preview = {
-                text = vim.inspect(decoded),
-                ft = "lua",
-              },
-            })
+            local ok, decoded = pcall(vim.json.decode, msg.content)
+            if ok and type(decoded) == "table" then
+              local parts = {}
+
+              if msg.direction then
+                table.insert(parts, string.format("[%s]", tostring(msg.direction)))
+              end
+
+              if decoded.method then
+                table.insert(parts, tostring(decoded.method))
+              end
+
+              if decoded.id ~= nil then
+                table.insert(parts, string.format("#%s", tostring(decoded.id)))
+              end
+
+              local text = table.concat(parts, " ")
+              if text == "" then
+                -- Fallback to a compact JSON representation so matcher always has a string
+                text = vim.json.encode(decoded)
+              end
+
+              table.insert(items, {
+                text = text,
+                idx = decoded.id or msg.id or (#items + 1),
+                preview = {
+                  text = vim.inspect(decoded),
+                  ft = "lua",
+                },
+              })
+            end
           end
           return items
         end,
