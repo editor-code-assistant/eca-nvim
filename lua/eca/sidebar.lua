@@ -890,24 +890,42 @@ function M:_update_config_display()
   local behavior = self.mediator:selected_behavior() or "unknown"
   local mcps = self.mediator:mcps()
 
-  local mcps_hl = "Normal"
+  local registered_count = vim.tbl_count(mcps)
+  local starting_count = 0
+  local running_count = 0
+  local has_failed = false
 
   for _, mcp in pairs(mcps) do
     if mcp.status == "starting" then
-      mcps_hl = "Comment"
-      break
+      starting_count = starting_count + 1
+    elseif mcp.status == "running" then
+      running_count = running_count + 1
     end
 
     if mcp.status == "failed" then
-      mcps_hl = "Exception"
-      break
+      has_failed = true
     end
+  end
+
+  -- Active MCPs include both starting and running
+  local active_count = starting_count + running_count
+
+  -- While any MCP is still starting, dim the active count
+  local active_hl = "Normal"
+  if starting_count > 0 then
+    active_hl = "Comment"
+  end
+
+  local registered_hl = "Normal"
+  if has_failed then
+    registered_hl = "Exception" -- highlight registered count in red when any MCP failed
   end
 
   local texts = {
     { "model:",    "Comment" }, { model, "Normal" }, { " " },
     { "behavior:", "Comment" }, { behavior, "Normal" }, { " " },
-    { "mcps:", "Comment" }, { tostring(vim.tbl_count(mcps)), mcps_hl },
+    { "mcps:", "Comment" }, { tostring(active_count), active_hl }, { "/", "Comment" },
+    { tostring(registered_count), registered_hl },
   }
 
   local virt_opts = { virt_text = texts, virt_text_pos = "overlay", hl_mode = "combine" }
