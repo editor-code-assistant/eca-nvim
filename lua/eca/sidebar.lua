@@ -944,6 +944,9 @@ function M:_update_config_display()
   local registered_hl = "Normal"
   if has_failed then
     registered_hl = "Exception" -- highlight registered count in red when any MCP failed
+  elseif active_hl == "Comment" then
+    -- While MCPs are still starting, dim the total count as well
+    registered_hl = "Comment"
   end
 
   local texts = {
