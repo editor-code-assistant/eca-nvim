@@ -73,6 +73,15 @@ M._defaults = {
       start_insert = true, -- Start insert mode when opening the edit window
     },
   },
+  icons = {
+    tool_call = {
+      success = "✅",   -- Shown when a tool call succeeds
+      error = "❌",     -- Shown when a tool call fails
+      running = "⏳",   -- Shown while a tool call is running / has no final status yet
+      expanded = "▲",   -- Arrow when the tool call details are expanded
+      collapsed = "▶",  -- Arrow when the tool call details are collapsed
+    },
+  },
 }
 
 ---@type eca.Config

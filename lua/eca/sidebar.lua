@@ -35,6 +35,18 @@ local WINDOW_MARGIN = 3 -- Additional margin for window borders and spacing
 local UI_ELEMENTS_HEIGHT = 2 -- Reserve space for statusline and tabline
 local SAFETY_MARGIN = 2 -- Extra margin to prevent "Not enough room" errors
 
+-- Tool call icons (can be overridden via Config.icons.tool_call)
+local function get_tool_call_icons()
+  local icons_cfg = (Config.icons and Config.icons.tool_call) or {}
+  return {
+    success = icons_cfg.success or "✅",
+    error = icons_cfg.error or "❌",
+    running = icons_cfg.running or "⏳",
+    expanded = icons_cfg.expanded or "▲",
+    collapsed = icons_cfg.collapsed or "▶",
+  }
+end
+
 ---@param id integer Tab ID
 ---@param mediator eca.Mediator
 ---@return eca.Sidebar
@@ -63,6 +75,7 @@ function M.new(id, mediator)
   instance._welcome_message_applied = false
   instance._contexts_placeholder_line = ""
   instance._contexts = {}
+  instance._tool_calls = {}
 
   require("eca.observer").subscribe("sidebar-" .. id, function(message)
     instance:handle_chat_content(message)
@@ -190,6 +203,7 @@ function M:reset()
   self._welcome_message_applied = false
   self._contexts_placeholder_line = ""
   self._contexts = {}
+  self._tool_calls = {}
 end
 
 function M:new_chat()
@@ -366,6 +380,8 @@ function M:_setup_container_events(container, name)
   if name == "input" then
     self:_setup_input_events(container)
     self:_setup_input_keymaps(container)
+  elseif name == "chat" then
+    self:_setup_chat_keymaps(container)
   end
 end
 
@@ -510,6 +526,15 @@ function M:_setup_input_keymaps(container)
 
   container:map("i", "<C-s>", function()
     self:_handle_input()
+  end, { noremap = true, silent = true })
+end
+
+---@private
+---@param container NuiSplit
+function M:_setup_chat_keymaps(container)
+  -- Toggle tool call details when pressing <CR> on a tool call line
+  container:map("n", "<CR>", function()
+    self:_toggle_tool_call_at_cursor()
   end, { noremap = true, silent = true })
 end
 
@@ -1153,7 +1178,7 @@ function M:handle_chat_content_received(params)
       self._current_tool_call.details = content.details
     end
 
-    -- Show the tool result
+    -- Show the tool result in logs only
     local tool_log = string.format("**Tool Result**: %s", content.name or "unknown")
     if content.outputs and #content.outputs > 0 then
       for _, output in ipairs(content.outputs) do
@@ -1164,17 +1189,58 @@ function M:handle_chat_content_received(params)
     end
     Logger.debug(tool_log)
 
-    local tool_text_completed = "✅ "
-
+    -- Determine completion status icon (configurable)
+    local icons = get_tool_call_icons()
+    local status_icon = icons.success
     if content.error then
-      tool_text_completed = "❌ "
+      status_icon = icons.error
     end
 
-    local tool_text_running = "🔧 " .. tool_text
-    tool_text_completed = tool_text_completed .. tool_text
+    -- Ensure tool calls table exists
+    self._tool_calls = self._tool_calls or {}
 
-    if tool_text == nil or not self:_replace_text(tool_text_running, tool_text_completed) then
-      self:_add_message("assistant", tool_text_completed)
+    -- Try to find an existing tool call entry for this id
+    local call = self:_find_tool_call_by_id(content.id)
+
+    if call then
+      -- Update details and status for an existing call
+      if content.details then
+        call.details = content.details
+        call.details_lines = self:_build_tool_call_details_lines(call.arguments, call.details)
+        call.details_line_count = call.details_lines and #call.details_lines or 0
+      end
+
+      call.status = status_icon
+      call.title = tool_text or call.title
+
+      -- Update the header line to move the checkmark/error icon to the end
+      self:_update_tool_call_header_line(call)
+    else
+      -- Create a new entry for tool calls that didn't have a running phase
+      local details = content.details or {}
+      local arguments = self._current_tool_call and self._current_tool_call.arguments or ""
+      local details_lines = self:_build_tool_call_details_lines(arguments, details)
+
+      call = {
+        id = content.id,
+        title = tool_text or (content.name or "Tool call"),
+        header_line = nil,
+        expanded = false,
+        status = status_icon,
+        arguments = arguments,
+        details = details,
+        details_lines = details_lines,
+        details_line_count = details_lines and #details_lines or 0,
+      }
+
+      local chat = self.containers.chat
+      if chat and vim.api.nvim_buf_is_valid(chat.bufnr) then
+        local before_line_count = vim.api.nvim_buf_line_count(chat.bufnr)
+        local header_text = self:_build_tool_call_header_text(call)
+        self:_add_message("assistant", header_text)
+        call.header_line = before_line_count + 1
+        table.insert(self._tool_calls, call)
+      end
     end
 
     -- Clean up tool call state
@@ -1503,6 +1569,7 @@ function M:_handle_tool_call_prepare(content)
   if not self._is_tool_call_streaming then
     self._is_tool_call_streaming = true
     self._current_tool_call = {
+      id = content.id,
       name = "",
       summary = "",
       arguments = "",
@@ -1511,6 +1578,10 @@ function M:_handle_tool_call_prepare(content)
   end
 
   -- Accumulate tool call data
+  if content.id then
+    self._current_tool_call.id = content.id
+  end
+
   if content.name then
     self._current_tool_call.name = content.name
   end
@@ -1533,7 +1604,7 @@ function M:_tool_call_text(content)
     return content.summary
   end
 
-  if self._current_tool_call.summary and self._current_tool_call.summary ~= "" then
+  if self._current_tool_call and self._current_tool_call.summary and self._current_tool_call.summary ~= "" then
     return self._current_tool_call.summary
   end
 
@@ -1541,7 +1612,7 @@ function M:_tool_call_text(content)
     return content.name
   end
 
-  if self._current_tool_call.name and self._current_tool_call.name ~= "" then
+  if self._current_tool_call and self._current_tool_call.name and self._current_tool_call.name ~= "" then
     return self._current_tool_call.name
   end
 
@@ -1553,10 +1624,12 @@ function M:_display_tool_call(content)
     return nil
   end
 
-  local tool_name = self:_tool_call_text(content)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return nil
+  end
 
-  local diff = ""
-  local tool_text = "🔧 " .. tool_name
+  local tool_name = self:_tool_call_text(content)
   local tool_log = string.format("**Tool Call**: %s", tool_name or "unknown")
 
   if self._current_tool_call.arguments and self._current_tool_call.arguments ~= "" then
@@ -1564,16 +1637,250 @@ function M:_display_tool_call(content)
   end
 
   if self._current_tool_call.details and self._current_tool_call.details.diff then
-    diff = "\n\n**Diff**:\n```diff\n" .. self._current_tool_call.details.diff .. "\n```"
+    tool_log = tool_log .. "\n\n**Diff**:\n```diff\n" .. self._current_tool_call.details.diff .. "\n```"
   end
 
-  Logger.debug(tool_log .. diff)
-  self:_add_message("assistant", tool_text .. diff)
+  Logger.debug(tool_log)
+
+  -- Ensure tool calls table exists
+  self._tool_calls = self._tool_calls or {}
+
+  -- Try to find an existing entry for this tool call
+  local existing_call = nil
+  if self._current_tool_call.id then
+    existing_call = self:_find_tool_call_by_id(self._current_tool_call.id)
+  end
+
+  -- Build details lines from current state
+  local details_lines = self:_build_tool_call_details_lines(self._current_tool_call.arguments, self._current_tool_call.details)
+
+  if existing_call then
+    -- Update details for existing call (do not add another header)
+    existing_call.arguments = self._current_tool_call.arguments or existing_call.arguments
+    existing_call.details = self._current_tool_call.details or existing_call.details
+    existing_call.details_lines = details_lines
+    existing_call.details_line_count = #details_lines
+    return
+  end
+
+  -- Create a new tool call entry and header (collapsed by default)
+  local header_title = tool_name or "Tool call"
+  local call = {
+    id = self._current_tool_call.id or content.id,
+    title = header_title,
+    header_line = nil,
+    expanded = false,
+    status = nil,
+    arguments = self._current_tool_call.arguments or "",
+    details = self._current_tool_call.details or {},
+    details_lines = details_lines,
+    details_line_count = #details_lines,
+  }
+
+  local before_line_count = vim.api.nvim_buf_line_count(chat.bufnr)
+  local header_text = self:_build_tool_call_header_text(call)
+  self:_add_message("assistant", header_text)
+  call.header_line = before_line_count + 1
+
+  table.insert(self._tool_calls, call)
 end
 
 function M:_finalize_tool_call()
   self._current_tool_call = nil
   self._is_tool_call_streaming = false
+end
+
+-- Find existing tool call entry by id
+function M:_find_tool_call_by_id(id)
+  if not self._tool_calls or not id then
+    return nil
+  end
+
+  for _, call in ipairs(self._tool_calls) do
+    if call.id == id then
+      return call
+    end
+  end
+
+  return nil
+end
+
+-- Find the tool call that owns a given buffer line
+function M:_find_tool_call_for_line(line)
+  if not self._tool_calls then
+    return nil
+  end
+
+  for _, call in ipairs(self._tool_calls) do
+    if call.header_line then
+      local start_line = call.header_line
+      local details_count = call.details_lines and #call.details_lines or 0
+      local end_line = start_line + (call.expanded and details_count or 0)
+      if line >= start_line and line <= end_line then
+        return call
+      end
+    end
+  end
+
+  return nil
+end
+
+-- Build the header text for a tool call like: "▶ summary ⏳" (or "▶ summary ✅" / "▶ summary ❌")
+function M:_build_tool_call_header_text(call)
+  local title = call.title or "Tool call"
+  local icons = get_tool_call_icons()
+  local arrow = call.expanded and icons.expanded or icons.collapsed
+  local status = call.status or icons.running
+  local parts = { arrow, title, status }
+
+  return table.concat(parts, " ")
+end
+
+-- Build the detail lines (arguments + diff) for a tool call
+function M:_build_tool_call_details_lines(arguments, details)
+  local lines = {}
+
+  if arguments and arguments ~= "" then
+    table.insert(lines, "```json")
+    for _, line in ipairs(Utils.split_lines(arguments)) do
+      table.insert(lines, line)
+    end
+    table.insert(lines, "```")
+    table.insert(lines, "")
+  end
+
+  local diff = details and details.diff or nil
+  if diff and diff ~= "" then
+    table.insert(lines, "Diff:")
+    table.insert(lines, "```diff")
+    for _, line in ipairs(Utils.split_lines(diff)) do
+      table.insert(lines, line)
+    end
+    table.insert(lines, "```")
+    table.insert(lines, "")
+  end
+
+  return lines
+end
+
+-- Update the visual header line for a tool call
+function M:_update_tool_call_header_line(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) or not call.header_line then
+    return
+  end
+
+  local header_text = self:_build_tool_call_header_text(call)
+
+  self:_safe_buffer_update(chat.bufnr, function()
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line - 1, call.header_line, false, { header_text })
+  end)
+end
+
+-- Adjust header_line for tool calls that come after the given one
+function M:_adjust_tool_call_lines(changed_call, delta)
+  if not self._tool_calls or delta == 0 then
+    return
+  end
+
+  for _, call in ipairs(self._tool_calls) do
+    if call ~= changed_call and call.header_line and changed_call.header_line and call.header_line > changed_call.header_line then
+      call.header_line = call.header_line + delta
+    end
+  end
+end
+
+-- Expand a tool call, inserting its details below the header
+function M:_expand_tool_call(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if call.expanded then
+    return
+  end
+
+  call.details_lines = call.details_lines or self:_build_tool_call_details_lines(call.arguments, call.details)
+  local count = call.details_lines and #call.details_lines or 0
+  if count == 0 then
+    return
+  end
+
+  self:_safe_buffer_update(chat.bufnr, function()
+    -- Insert details immediately after the header (before the following blank line)
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line, false, call.details_lines)
+  end)
+
+  call.expanded = true
+
+  -- Shift subsequent tool call header lines down
+  self:_adjust_tool_call_lines(call, count)
+
+  -- Update header arrow
+  self:_update_tool_call_header_line(call)
+
+  -- Move cursor to show the full details block
+  if chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    local last_line = call.header_line + count
+    vim.api.nvim_win_set_cursor(chat.winid, { last_line, 0 })
+    vim.api.nvim_win_call(chat.winid, function()
+      vim.cmd("normal! zb")
+    end)
+  end
+end
+
+-- Collapse a tool call, removing its details from the buffer
+function M:_collapse_tool_call(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if not call.expanded then
+    return
+  end
+
+  local count = call.details_lines and #call.details_lines or 0
+  if count == 0 then
+    call.expanded = false
+    self:_update_tool_call_header_line(call)
+    return
+  end
+
+  self:_safe_buffer_update(chat.bufnr, function()
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line + count, false, {})
+  end)
+
+  call.expanded = false
+
+  -- Shift subsequent tool call header lines back up
+  self:_adjust_tool_call_lines(call, -count)
+
+  -- Update header arrow
+  self:_update_tool_call_header_line(call)
+end
+
+-- Toggle tool call details at the current cursor position in the chat window
+function M:_toggle_tool_call_at_cursor()
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_win_is_valid(chat.winid) then
+    return
+  end
+
+  local cursor = vim.api.nvim_win_get_cursor(chat.winid)
+  local line = cursor[1]
+
+  local call = self:_find_tool_call_for_line(line)
+  if not call then
+    return
+  end
+
+  if call.expanded then
+    self:_collapse_tool_call(call)
+  else
+    self:_expand_tool_call(call)
+  end
 end
 
 ---@param target string
