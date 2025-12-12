@@ -2013,14 +2013,13 @@ function M:_handle_reason_text(content)
   -- Accumulate raw reasoning text
   call.arguments = (call.arguments or "") .. content.text
 
-  -- Build markdown quote block for the reasoning body
+  -- Build plain text block for the reasoning body (no markdown quote prefix)
   call.arguments_lines = {}
 
   local lines = Utils.split_lines(call.arguments or "")
   for _, line in ipairs(lines) do
     line = line ~= "" and line or " "
-    -- Prefix each line with markdown blockquote
-    table.insert(call.arguments_lines, "> " .. line)
+    table.insert(call.arguments_lines, line)
   end
 
   -- Trailing blank line for spacing

@@ -59,7 +59,7 @@ M._defaults = {
         success = "✅",   -- Shown when a tool call succeeds
         error = "❌",     -- Shown when a tool call fails
         running = "⏳",   -- Shown while a tool call is running / has no final status yet
-        expanded = "▲",   -- Arrow when the tool call details are expanded
+        expanded = "▼",   -- Arrow when the tool call details are expanded
         collapsed = "▶",  -- Arrow when the tool call details are collapsed
       },
       diff = {
