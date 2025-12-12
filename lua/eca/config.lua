@@ -82,6 +82,10 @@ M._defaults = {
       collapsed = "▶",  -- Arrow when the tool call details are collapsed
     },
   },
+  tool_call = {
+    ---@type string
+    diff_label = "view diff", -- Label used for tool call diffs
+  },
 }
 
 ---@type eca.Config

@@ -47,6 +47,12 @@ local function get_tool_call_icons()
   }
 end
 
+-- Label used for tool call diffs ([+ label] / [- label])
+local function get_tool_call_diff_label()
+  local cfg = Config.tool_call or {}
+  return cfg.diff_label or "view diff"
+end
+
 ---@param id integer Tab ID
 ---@param mediator eca.Mediator
 ---@return eca.Sidebar
@@ -1209,8 +1215,16 @@ function M:handle_chat_content_received(params)
       -- Update details and status for an existing call
       if content.details then
         call.details = content.details
-        call.details_lines = self:_build_tool_call_details_lines(call.arguments, call.details)
-        call.details_line_count = call.details_lines and #call.details_lines or 0
+        call.has_diff = self:_has_details_diff(call.details)
+        call.arguments_lines = self:_build_tool_call_arguments_lines(call.arguments)
+        call.diff_lines = self:_build_tool_call_diff_lines(call.details)
+        call.details_lines = nil
+        call.details_line_count = 0
+
+        -- If this call now has a diff and doesn't yet have a label line, add it
+        if call.has_diff and not call.label_line and not call.expanded then
+          self:_insert_tool_call_diff_label_line(call)
+        end
       end
 
       call.status = status_icon
@@ -1222,18 +1236,26 @@ function M:handle_chat_content_received(params)
       -- Create a new entry for tool calls that didn't have a running phase
       local details = content.details or {}
       local arguments = self._current_tool_call and self._current_tool_call.arguments or ""
-      local details_lines = self:_build_tool_call_details_lines(arguments, details)
+      local arguments_lines = self:_build_tool_call_arguments_lines(arguments)
+      local diff_lines = self:_build_tool_call_diff_lines(details)
+      local has_diff = self:_has_details_diff(details)
 
       call = {
         id = content.id,
         title = tool_text or (content.name or "Tool call"),
         header_line = nil,
-        expanded = false,
+        expanded = false, -- controls argument visibility
+        diff_expanded = false, -- controls diff visibility
         status = status_icon,
         arguments = arguments,
         details = details,
-        details_lines = details_lines,
-        details_line_count = details_lines and #details_lines or 0,
+        has_diff = has_diff,
+        label_line = nil,
+        -- Separate storage for arguments vs diff so each can be toggled independently
+        arguments_lines = arguments_lines,
+        diff_lines = diff_lines,
+        details_lines = nil,
+        details_line_count = 0,
       }
 
       local chat = self.containers.chat
@@ -1242,6 +1264,11 @@ function M:handle_chat_content_received(params)
         local header_text = self:_build_tool_call_header_text(call)
         self:_add_message("assistant", header_text)
         call.header_line = before_line_count + 1
+
+        if call.has_diff then
+          self:_insert_tool_call_diff_label_line(call)
+        end
+
         table.insert(self._tool_calls, call)
       end
     end
@@ -1654,15 +1681,31 @@ function M:_display_tool_call(content)
     existing_call = self:_find_tool_call_by_id(self._current_tool_call.id)
   end
 
-  -- Build details lines from current state
-  local details_lines = self:_build_tool_call_details_lines(self._current_tool_call.arguments, self._current_tool_call.details)
+  -- Build detail lines from current state (arguments and diff are controlled separately)
+  local arguments_lines = self:_build_tool_call_arguments_lines(self._current_tool_call.arguments)
+  local diff_lines = self:_build_tool_call_diff_lines(self._current_tool_call.details)
+  local has_diff = self:_has_details_diff(self._current_tool_call.details)
 
   if existing_call then
     -- Update details for existing call (do not add another header)
     existing_call.arguments = self._current_tool_call.arguments or existing_call.arguments
     existing_call.details = self._current_tool_call.details or existing_call.details
-    existing_call.details_lines = details_lines
-    existing_call.details_line_count = #details_lines
+    existing_call.has_diff = has_diff
+    existing_call.arguments_lines = arguments_lines
+    existing_call.diff_lines = diff_lines
+    existing_call.details_lines = nil
+    existing_call.details_line_count = 0
+
+    -- Reset diff visibility when we get new diff content
+    if not has_diff then
+      existing_call.diff_expanded = false
+    end
+
+    -- If this call now has a diff and doesn't yet have a label line, add it
+    if has_diff and not existing_call.label_line and not existing_call.expanded then
+      self:_insert_tool_call_diff_label_line(existing_call)
+    end
+
     return
   end
 
@@ -1672,18 +1715,28 @@ function M:_display_tool_call(content)
     id = self._current_tool_call.id or content.id,
     title = header_title,
     header_line = nil,
-    expanded = false,
+    expanded = false, -- controls argument visibility
+    diff_expanded = false, -- controls diff visibility
     status = nil,
     arguments = self._current_tool_call.arguments or "",
     details = self._current_tool_call.details or {},
-    details_lines = details_lines,
-    details_line_count = #details_lines,
+    has_diff = has_diff,
+    label_line = nil,
+    -- Store arguments and diff lines separately so they can be toggled independently
+    arguments_lines = arguments_lines,
+    diff_lines = diff_lines,
+    details_lines = nil,
+    details_line_count = 0,
   }
 
   local before_line_count = vim.api.nvim_buf_line_count(chat.bufnr)
   local header_text = self:_build_tool_call_header_text(call)
   self:_add_message("assistant", header_text)
   call.header_line = before_line_count + 1
+
+  if call.has_diff then
+    self:_insert_tool_call_diff_label_line(call)
+  end
 
   table.insert(self._tool_calls, call)
 end
@@ -1717,8 +1770,26 @@ function M:_find_tool_call_for_line(line)
   for _, call in ipairs(self._tool_calls) do
     if call.header_line then
       local start_line = call.header_line
-      local details_count = call.details_lines and #call.details_lines or 0
-      local end_line = start_line + (call.expanded and details_count or 0)
+      local end_line = start_line
+
+      -- Include argument block when expanded
+      local arg_count = call.arguments_lines and #call.arguments_lines or 0
+      if call.expanded and arg_count > 0 then
+        end_line = end_line + arg_count
+      end
+
+      -- Include label line and optional diff block when present
+      if call.has_diff and call.label_line then
+        local label_end = call.label_line
+        local diff_count = call.diff_lines and #call.diff_lines or 0
+        if call.diff_expanded and diff_count > 0 then
+          label_end = label_end + diff_count
+        end
+        if label_end > end_line then
+          end_line = label_end
+        end
+      end
+
       if line >= start_line and line <= end_line then
         return call
       end
@@ -1739,8 +1810,8 @@ function M:_build_tool_call_header_text(call)
   return table.concat(parts, " ")
 end
 
--- Build the detail lines (arguments + diff) for a tool call
-function M:_build_tool_call_details_lines(arguments, details)
+-- Build the argument detail lines (tool call arguments only)
+function M:_build_tool_call_arguments_lines(arguments)
   local lines = {}
 
   if arguments and arguments ~= "" then
@@ -1752,9 +1823,15 @@ function M:_build_tool_call_details_lines(arguments, details)
     table.insert(lines, "")
   end
 
+  return lines
+end
+
+-- Build the diff detail lines (tool call diff only)
+function M:_build_tool_call_diff_lines(details)
+  local lines = {}
+
   local diff = details and details.diff or nil
   if diff and diff ~= "" then
-    table.insert(lines, "Diff:")
     table.insert(lines, "```diff")
     for _, line in ipairs(Utils.split_lines(diff)) do
       table.insert(lines, line)
@@ -1764,6 +1841,85 @@ function M:_build_tool_call_details_lines(arguments, details)
   end
 
   return lines
+end
+
+-- Optional helper to build combined detail lines (arguments + diff)
+-- NOTE: callers that need independent control over arguments vs diff
+-- should prefer _build_tool_call_arguments_lines/_build_tool_call_diff_lines.
+function M:_build_tool_call_details_lines(arguments, details)
+  local lines = {}
+
+  local arg_lines = self:_build_tool_call_arguments_lines(arguments)
+  for _, line in ipairs(arg_lines) do
+    table.insert(lines, line)
+  end
+
+  local diff_lines = self:_build_tool_call_diff_lines(details)
+  for _, line in ipairs(diff_lines) do
+    table.insert(lines, line)
+  end
+
+  return lines
+end
+
+-- Check if tool call details contain a diff
+function M:_has_details_diff(details)
+  return details and type(details) == "table" and details.diff and details.diff ~= ""
+end
+
+-- Build the label text shown below the tool call summary when a diff is available
+function M:_build_tool_call_diff_label_text(call)
+  local label = get_tool_call_diff_label()
+
+  -- Use different indicators depending on diff expanded/collapsed state
+  if call and call.diff_expanded then
+    return "[- " .. label .. "]"
+  end
+
+  return "[+ " .. label .. "]"
+end
+
+-- Update the existing "view diff" label line to reflect the current expanded/collapsed state
+function M:_update_tool_call_diff_label_line(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if not call or not call.label_line then
+    return
+  end
+
+  local label_text = self:_build_tool_call_diff_label_text(call)
+
+  self:_safe_buffer_update(chat.bufnr, function()
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.label_line - 1, call.label_line, false, { label_text })
+  end)
+end
+
+-- Insert the "view diff" label line directly below the tool call summary
+function M:_insert_tool_call_diff_label_line(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if not call or not call.header_line or call.label_line or not call.has_diff then
+    return
+  end
+
+  local label_text = self:_build_tool_call_diff_label_text(call)
+
+  self:_safe_buffer_update(chat.bufnr, function()
+    -- Insert label immediately after the header line
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line, false, { label_text })
+  end)
+
+  -- Track the label line (1-based)
+  call.label_line = call.header_line + 1
+
+  -- Shift subsequent tool call headers/labels down by one line
+  self:_adjust_tool_call_lines(call, 1)
 end
 
 -- Update the visual header line for a tool call
@@ -1780,7 +1936,7 @@ function M:_update_tool_call_header_line(call)
   end)
 end
 
--- Adjust header_line for tool calls that come after the given one
+-- Adjust header_line (and optional label_line) for tool calls that come after the given one
 function M:_adjust_tool_call_lines(changed_call, delta)
   if not self._tool_calls or delta == 0 then
     return
@@ -1790,10 +1946,14 @@ function M:_adjust_tool_call_lines(changed_call, delta)
     if call ~= changed_call and call.header_line and changed_call.header_line and call.header_line > changed_call.header_line then
       call.header_line = call.header_line + delta
     end
+
+    if call ~= changed_call and call.label_line and changed_call.header_line and call.label_line > changed_call.header_line then
+      call.label_line = call.label_line + delta
+    end
   end
 end
 
--- Expand a tool call, inserting its details below the header
+-- Expand a tool call's arguments, inserting them below the header
 function M:_expand_tool_call(call)
   local chat = self.containers.chat
   if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
@@ -1804,26 +1964,31 @@ function M:_expand_tool_call(call)
     return
   end
 
-  call.details_lines = call.details_lines or self:_build_tool_call_details_lines(call.arguments, call.details)
-  local count = call.details_lines and #call.details_lines or 0
+  call.arguments_lines = call.arguments_lines or self:_build_tool_call_arguments_lines(call.arguments)
+  local count = call.arguments_lines and #call.arguments_lines or 0
   if count == 0 then
     return
   end
 
   self:_safe_buffer_update(chat.bufnr, function()
-    -- Insert details immediately after the header (before the following blank line)
-    vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line, false, call.details_lines)
+    -- Insert arguments immediately after the header line
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line, false, call.arguments_lines)
   end)
+
+  -- If there is a diff label, it must move down by the number of inserted lines
+  if call.has_diff and call.label_line then
+    call.label_line = call.label_line + count
+  end
 
   call.expanded = true
 
-  -- Shift subsequent tool call header lines down
+  -- Shift subsequent tool call header/label lines down
   self:_adjust_tool_call_lines(call, count)
 
   -- Update header arrow
   self:_update_tool_call_header_line(call)
 
-  -- Move cursor to show the full details block
+  -- Move cursor to show the full arguments block
   if chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
     local last_line = call.header_line + count
     vim.api.nvim_win_set_cursor(chat.winid, { last_line, 0 })
@@ -1833,7 +1998,7 @@ function M:_expand_tool_call(call)
   end
 end
 
--- Collapse a tool call, removing its details from the buffer
+-- Collapse a tool call's arguments, removing them from the buffer
 function M:_collapse_tool_call(call)
   local chat = self.containers.chat
   if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
@@ -1844,7 +2009,7 @@ function M:_collapse_tool_call(call)
     return
   end
 
-  local count = call.details_lines and #call.details_lines or 0
+  local count = call.arguments_lines and #call.arguments_lines or 0
   if count == 0 then
     call.expanded = false
     self:_update_tool_call_header_line(call)
@@ -1852,19 +2017,92 @@ function M:_collapse_tool_call(call)
   end
 
   self:_safe_buffer_update(chat.bufnr, function()
+    -- Remove the arguments block directly below the header
     vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line + count, false, {})
   end)
 
+  -- If there is a diff label, move it back up
+  if call.has_diff and call.label_line then
+    call.label_line = call.label_line - count
+  end
+
   call.expanded = false
 
-  -- Shift subsequent tool call header lines back up
+  -- Shift subsequent tool call header/label lines back up
   self:_adjust_tool_call_lines(call, -count)
 
   -- Update header arrow
   self:_update_tool_call_header_line(call)
 end
 
+-- Expand a tool call's diff, inserting it below the diff label
+function M:_expand_tool_call_diff(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if not call.has_diff or not call.label_line or call.diff_expanded then
+    return
+  end
+
+  call.diff_lines = call.diff_lines or self:_build_tool_call_diff_lines(call.details)
+  local count = call.diff_lines and #call.diff_lines or 0
+  if count == 0 then
+    return
+  end
+
+  self:_safe_buffer_update(chat.bufnr, function()
+    -- Insert diff lines immediately after the diff label line
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.label_line, call.label_line, false, call.diff_lines)
+  end)
+
+  call.diff_expanded = true
+
+  -- Shift subsequent tool call header/label lines down
+  self:_adjust_tool_call_lines(call, count)
+
+  -- Update the diff label to show the collapse indicator
+  self:_update_tool_call_diff_label_line(call)
+end
+
+-- Collapse a tool call's diff, removing it from the buffer
+function M:_collapse_tool_call_diff(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if not call.diff_expanded then
+    return
+  end
+
+  local count = call.diff_lines and #call.diff_lines or 0
+  if count == 0 then
+    call.diff_expanded = false
+    self:_update_tool_call_diff_label_line(call)
+    return
+  end
+
+  self:_safe_buffer_update(chat.bufnr, function()
+    -- Remove the diff block that starts immediately after the label line
+    vim.api.nvim_buf_set_lines(chat.bufnr, call.label_line, call.label_line + count, false, {})
+  end)
+
+  call.diff_expanded = false
+
+  -- Shift subsequent tool call header/label lines back up
+  self:_adjust_tool_call_lines(call, -count)
+
+  -- Update the diff label to show the expand indicator again
+  self:_update_tool_call_diff_label_line(call)
+end
+
 -- Toggle tool call details at the current cursor position in the chat window
+--
+-- When a tool call has a diff available, the header toggle (arrow) controls
+-- visibility of the tool arguments, while the "view diff" label controls
+-- visibility of the diff only.
 function M:_toggle_tool_call_at_cursor()
   local chat = self.containers.chat
   if not chat or not vim.api.nvim_win_is_valid(chat.winid) then
@@ -1879,6 +2117,18 @@ function M:_toggle_tool_call_at_cursor()
     return
   end
 
+  -- If we are on or below the diff label for a call that has a diff,
+  -- toggle only the diff block.
+  if call.has_diff and call.label_line and line >= call.label_line then
+    if call.diff_expanded then
+      self:_collapse_tool_call_diff(call)
+    else
+      self:_expand_tool_call_diff(call)
+    end
+    return
+  end
+
+  -- Otherwise toggle the arguments block via the header arrow
   if call.expanded then
     self:_collapse_tool_call(call)
   else
