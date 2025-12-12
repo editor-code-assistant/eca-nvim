@@ -62,10 +62,16 @@ M._defaults = {
         expanded = "▲",   -- Arrow when the tool call details are expanded
         collapsed = "▶",  -- Arrow when the tool call details are collapsed
       },
-      diff_label = {
-        collapsed = "+ view diff", -- Label when the diff is collapsed
-        expanded = "- view diff",  -- Label when the diff is expanded
+      diff = {
+        collapsed_label = "+ view diff", -- Label when the diff is collapsed
+        expanded_label = "- view diff",  -- Label when the diff is expanded
+        expanded = false,                -- When true, tool diffs start expanded
       },
+    },
+    reasoning = {
+      expanded = false,              -- When true, "Thinking" blocks start expanded
+      running_label = "Thinking...", -- Label while reasoning is running
+      finished_label = "Thought",    -- Base label when reasoning is finished
     },
   },
   windows = {

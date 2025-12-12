@@ -59,6 +59,26 @@ require("eca").setup({
         "Type your message and use CTRL+s to send",
       },
     },
+    tool_call = {
+      icons = {
+        success = "✅",   -- Shown when a tool call succeeds
+        error = "❌",     -- Shown when a tool call fails
+        running = "⏳",   -- Shown while a tool call is running / has no final status yet
+        expanded = "▲",   -- Arrow when the tool call details are expanded
+        collapsed = "▶",  -- Arrow when the tool call details are collapsed
+      },
+      diff_label = {
+        collapsed = "+ view diff", -- Label when the diff is collapsed
+        expanded = "- view diff",  -- Label when the diff is expanded
+      },
+    },
+    reasoning = {
+      -- When true, "Thinking" blocks are expanded by default
+      expanded = false,
+      -- Customize the labels used for the reasoning block
+      running_label = "Thinking...",
+      finished_label = "Thought",
+    },
   },
 
   -- === WINDOW SETTINGS ===
