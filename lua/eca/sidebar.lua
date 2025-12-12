@@ -1,7 +1,7 @@
 local Utils = require("eca.utils")
 local Logger = require("eca.logger")
 local Config = require("eca.config")
-ca
+
 -- Load nui.nvim components (required dependency)
 local Split = require("nui.split")
 
