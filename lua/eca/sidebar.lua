@@ -1,7 +1,7 @@
 local Utils = require("eca.utils")
 local Logger = require("eca.logger")
 local Config = require("eca.config")
-
+ca
 -- Load nui.nvim components (required dependency)
 local Split = require("nui.split")
 
@@ -25,6 +25,7 @@ local Split = require("nui.split")
 ---@field private _headers table Table of headers for the chat
 ---@field private _welcome_message_applied boolean Whether the welcome message has been applied
 ---@field private _contexts_placeholder_line string Placeholder line for contexts in input
+---@field private _reasons table Map of in-flight reasoning entries keyed by id
 
 local M = {}
 M.__index = M
@@ -35,9 +36,9 @@ local WINDOW_MARGIN = 3 -- Additional margin for window borders and spacing
 local UI_ELEMENTS_HEIGHT = 2 -- Reserve space for statusline and tabline
 local SAFETY_MARGIN = 2 -- Extra margin to prevent "Not enough room" errors
 
--- Tool call icons (can be overridden via Config.icons.tool_call)
+-- Tool call icons (can be overridden via Config.chat.tool_call.icons)
 local function get_tool_call_icons()
-  local icons_cfg = (Config.icons and Config.icons.tool_call) or {}
+  local icons_cfg = (Config.chat and Config.chat.tool_call and Config.chat.tool_call.icons) or {}
   return {
     success = icons_cfg.success or "✅",
     error = icons_cfg.error or "❌",
@@ -47,10 +48,26 @@ local function get_tool_call_icons()
   }
 end
 
--- Label used for tool call diffs ([+ label] / [- label])
-local function get_tool_call_diff_label()
-  local cfg = Config.tool_call or {}
-  return cfg.diff_label or "view diff"
+-- Label texts used for tool call diffs.
+--
+-- Configuration (under `Config.chat.tool_call`):
+--   - `diff_label.collapsed`: text when diff is collapsed (default: "+ view diff")
+--   - `diff_label.expanded`: text when diff is expanded (default: "- view diff")
+--
+-- Backwards compatibility:
+--   - `diff_label_collapsed` / `diff_label_expanded` (flat keys) are still
+--     honored if the nested table is not provided.
+local function get_tool_call_diff_labels()
+  local cfg = (Config.chat and Config.chat.tool_call) or {}
+  local labels_cfg = cfg.diff_label or {}
+
+  local collapsed = labels_cfg.collapsed or "+ view diff"
+  local expanded = labels_cfg.expanded or "- view diff"
+
+  return {
+    collapsed = collapsed,
+    expanded = expanded,
+  }
 end
 
 ---@param id integer Tab ID
@@ -82,6 +99,7 @@ function M.new(id, mediator)
   instance._contexts_placeholder_line = ""
   instance._contexts = {}
   instance._tool_calls = {}
+  instance._reasons = {}
 
   require("eca.observer").subscribe("sidebar-" .. id, function(message)
     instance:handle_chat_content(message)
@@ -210,6 +228,7 @@ function M:reset()
   self._contexts_placeholder_line = ""
   self._contexts = {}
   self._tool_calls = {}
+  self._reasons = {}
 end
 
 function M:new_chat()
@@ -359,7 +378,7 @@ function M:_create_containers()
       modifiable = false,
     }),
     win_options = vim.tbl_deep_extend("force", base_win_options, {
-      winhighlight = "Normal:Comment",
+      winhighlight = "Normal:EcaUsage",
       statusline = " ",
     }),
   })
@@ -1275,6 +1294,12 @@ function M:handle_chat_content_received(params)
 
     -- Clean up tool call state
     self:_finalize_tool_call()
+  elseif content.type == "reasonStarted" then
+    self:_handle_reason_started(content)
+  elseif content.type == "reasonText" then
+    self:_handle_reason_text(content)
+  elseif content.type == "reasonFinished" then
+    self:_handle_reason_finished(content)
   end
 end
 
@@ -1421,6 +1446,9 @@ function M:_update_streaming_message(content)
   if not success then
     Logger.notify("Error updating buffer: " .. tostring(err), vim.log.levels.ERROR)
   else
+    -- Reapply highlights for existing tool calls and reasoning blocks,
+    -- since full-buffer updates can drop extmark-based styling.
+    self:_reapply_tool_call_highlights()
     -- Auto-scroll to bottom during streaming to follow the text
     self:_scroll_to_bottom()
   end
@@ -1483,6 +1511,10 @@ function M:_add_message(role, content)
     -- Auto-scroll to bottom after adding new message
     self:_scroll_to_bottom()
   end)
+
+  -- After appending a new message, previously highlighted tool calls and
+  -- reasoning blocks may lose their extmark-based styling, so reapply it.
+  self:_reapply_tool_call_highlights()
 end
 
 function M:_finalize_streaming_response()
@@ -1734,6 +1766,9 @@ function M:_display_tool_call(content)
   self:_add_message("assistant", header_text)
   call.header_line = before_line_count + 1
 
+  -- Apply header highlight (tool call vs reasoning)
+  self:_highlight_tool_call_header(call)
+
   if call.has_diff then
     self:_insert_tool_call_diff_label_line(call)
   end
@@ -1744,6 +1779,174 @@ end
 function M:_finalize_tool_call()
   self._current_tool_call = nil
   self._is_tool_call_streaming = false
+end
+
+-- ===== Reasoning ("Thinking") handling =====
+
+-- Create a new reasoning entry that behaves like a tool call
+function M:_handle_reason_started(content)
+  local id = content.id
+  if not id then
+    return
+  end
+
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  self._reasons = self._reasons or {}
+  self._tool_calls = self._tool_calls or {}
+
+  -- If a new reasoning starts while another one is still "running",
+  -- mark the previous one as finished so only one active "Thinking"
+  -- block is shown at a time.
+  for existing_id, existing_call in pairs(self._reasons) do
+    if existing_id ~= id
+      and existing_call
+      and existing_call.status == nil
+      -- Only auto-convert entries that are *currently* showing
+      -- the running label, so we don't clobber completed
+      -- entries like "Thought 1.23 s" when a new reasoning
+      -- block starts later.
+      and existing_call.title == "Thinking..." then
+      -- For reasoning entries we don't show status icons; instead we just
+      -- update the label from "Thinking..." to "Thought".
+      existing_call.title = "Thought"
+      existing_call.status = nil
+      self:_update_tool_call_header_line(existing_call)
+    end
+  end
+
+  -- Avoid creating duplicates for the same reasoning id
+  if self._reasons[id] then
+    return
+  end
+
+  local call = {
+    id = id,
+    title = "Thinking...", -- fixed summary label while reasoning is running
+    header_line = nil,
+    expanded = false,      -- controls visibility of reasoning text
+    diff_expanded = false, -- unused for reasoning
+    status = nil,          -- unused for reasoning headers; no status icons
+    arguments = "",       -- we reuse arguments as the accumulated reasoning text
+    details = {},
+    has_diff = false,
+    label_line = nil,
+    arguments_lines = {},
+    diff_lines = {},
+    details_lines = nil,
+    details_line_count = 0,
+    is_reason = true,
+  }
+
+  local before_line_count = vim.api.nvim_buf_line_count(chat.bufnr)
+  local header_text = self:_build_tool_call_header_text(call)
+  self:_add_message("assistant", header_text)
+  call.header_line = before_line_count + 1
+
+  -- Apply header highlight (reasoning entries use Comment)
+  self:_highlight_tool_call_header(call)
+
+  -- Track this reasoning both in a dedicated map and in the generic tool_calls
+  self._reasons[id] = call
+  table.insert(self._tool_calls, call)
+end
+
+-- Append streamed reasoning text and update the expanded block (if open)
+function M:_handle_reason_text(content)
+  local id = content.id
+  if not id or not content.text then
+    return
+  end
+
+  self._reasons = self._reasons or {}
+  local call = self._reasons[id]
+  if not call then
+    -- If we somehow receive text without a start, create the entry lazily
+    self:_handle_reason_started({ id = id })
+    call = self._reasons[id]
+    if not call then
+      return
+    end
+  end
+
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  -- Accumulate raw reasoning text
+  call.arguments = (call.arguments or "") .. content.text
+
+  -- Build markdown quote block for the reasoning body
+  call.arguments_lines = {}
+
+  local lines = Utils.split_lines(call.arguments or "")
+  for index, line in ipairs(lines) do
+    line = line ~= "" and line or " "
+    if index == 1 then
+      -- First line uses markdown blockquote prefix
+      table.insert(call.arguments_lines, "> " .. line)
+    else
+      -- Subsequent lines are indented to align with the first line's content
+      table.insert(call.arguments_lines, "  " .. line)
+    end
+  end
+
+  -- Trailing blank line for spacing
+  table.insert(call.arguments_lines, "")
+
+  -- If the reasoning block is expanded, update its region in the buffer in-place
+  if call.expanded then
+    local prev_count = call._last_arguments_count or 0
+    local new_count = #call.arguments_lines
+
+    self:_safe_buffer_update(chat.bufnr, function()
+      if prev_count == 0 and new_count > 0 then
+        -- Insert for the first time immediately after the header
+        vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line, false, call.arguments_lines)
+        -- Shift subsequent tool calls down by the inserted line count
+        self:_adjust_tool_call_lines(call, new_count)
+      else
+        -- Replace existing block; adjust subsequent calls only if size changed
+        vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line + prev_count, false, call.arguments_lines)
+        if new_count ~= prev_count then
+          self:_adjust_tool_call_lines(call, new_count - prev_count)
+        end
+      end
+    end)
+
+    call._last_arguments_count = new_count
+  end
+end
+
+-- Mark reasoning as finished and update the header icon
+function M:_handle_reason_finished(content)
+  local id = content.id
+  if not id then
+    return
+  end
+
+  self._reasons = self._reasons or {}
+  local call = self._reasons[id]
+  if not call then
+    return
+  end
+
+  -- When reasoning is finished, update the label from "Thinking..." to
+  -- "Thought <seconds> s" when totalTimeMs is available.
+  local total_ms = tonumber(content.totalTimeMs)
+  if total_ms and total_ms > 0 then
+    local seconds = total_ms / 1000
+    call.title = string.format("Thought %.2f s", seconds)
+  else
+    call.title = "Thought"
+  end
+
+  call.status = nil
+  self:_update_tool_call_header_line(call)
 end
 
 -- Find existing tool call entry by id
@@ -1801,9 +2004,17 @@ end
 
 -- Build the header text for a tool call like: "▶ summary ⏳" (or "▶ summary ✅" / "▶ summary ❌")
 function M:_build_tool_call_header_text(call)
-  local title = call.title or "Tool call"
   local icons = get_tool_call_icons()
   local arrow = call.expanded and icons.expanded or icons.collapsed
+
+  -- Reasoning ("Thinking") entries do not show status icons; they only
+  -- display the toggle arrow and a text label ("Thinking..." / "Thought").
+  if call.is_reason then
+    local title = call.title or "Thinking..."
+    return table.concat({ arrow, title }, " ")
+  end
+
+  local title = call.title or "Tool call"
   local status = call.status or icons.running
   local parts = { arrow, title, status }
 
@@ -1869,14 +2080,141 @@ end
 
 -- Build the label text shown below the tool call summary when a diff is available
 function M:_build_tool_call_diff_label_text(call)
-  local label = get_tool_call_diff_label()
+  local labels = get_tool_call_diff_labels()
 
-  -- Use different indicators depending on diff expanded/collapsed state
+  -- Use different texts depending on diff expanded/collapsed state
   if call and call.diff_expanded then
-    return "[- " .. label .. "]"
+    return labels.expanded
   end
 
-  return "[+ " .. label .. "]"
+  return labels.collapsed
+end
+
+-- Helper to choose sidebar highlight groups in a theme-aware way
+local function _eca_sidebar_hl(kind)
+  if kind == "tool_header" then
+    return "EcaToolCall"
+  elseif kind == "reason_header" then
+    return "EcaUsage"
+  elseif kind == "diff_label" then
+    return "EcaHyperlink"
+  end
+
+  return "Normal"
+end
+
+-- Highlight a tool call header line (summary / reasoning label)
+--
+-- * Regular tool calls use a dedicated highlight group (EcaToolCall by default)
+-- * Reasoning entries ("Thinking..." / "Thought ...") are highlighted differently
+--   and adapt to light/dark themes via _eca_sidebar_hl()
+function M:_highlight_tool_call_header(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if not call or not call.header_line then
+    return
+  end
+
+  self.extmarks = self.extmarks or {}
+  if not self.extmarks.tool_header then
+    self.extmarks.tool_header = {
+      _ns = vim.api.nvim_create_namespace("extmarks_tool_header"),
+      _id = {},
+    }
+  end
+
+  local ns = self.extmarks.tool_header._ns
+  local key = call.id or tostring(call.header_line)
+
+  -- Clear any previous highlight for this call
+  if self.extmarks.tool_header._id[key] then
+    pcall(vim.api.nvim_buf_del_extmark, chat.bufnr, ns, self.extmarks.tool_header._id[key])
+  end
+
+  local line = vim.api.nvim_buf_get_lines(chat.bufnr, call.header_line - 1, call.header_line, false)[1] or ""
+  local end_col = #line
+
+  local hl_group
+  if call.is_reason then
+    hl_group = _eca_sidebar_hl("reason_header")
+  else
+    hl_group = _eca_sidebar_hl("tool_header")
+  end
+
+  -- Add an extmark that highlights the entire header line
+  self.extmarks.tool_header._id[key] = vim.api.nvim_buf_set_extmark(chat.bufnr, ns, call.header_line - 1, 0, {
+    hl_group = hl_group,
+    end_col = end_col,
+    priority = 180,
+  })
+end
+
+-- Highlight the "view diff" label as a hyperlink-style element
+function M:_highlight_tool_call_diff_label_line(call)
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  if not call or not call.label_line then
+    return
+  end
+
+  self.extmarks = self.extmarks or {}
+  if not self.extmarks.diff_label then
+    self.extmarks.diff_label = {
+      _ns = vim.api.nvim_create_namespace("extmarks_diff_label"),
+      _id = {},
+    }
+  end
+
+  local ns = self.extmarks.diff_label._ns
+  local key = call.id or tostring(call.header_line)
+
+  -- Clear any previous highlight for this call
+  if self.extmarks.diff_label._id[key] then
+    pcall(vim.api.nvim_buf_del_extmark, chat.bufnr, ns, self.extmarks.diff_label._id[key])
+  end
+
+  -- Determine how much of the line to highlight (the whole label text)
+  local line = vim.api.nvim_buf_get_lines(chat.bufnr, call.label_line - 1, call.label_line, false)[1] or ""
+  local end_col = #line
+
+  -- Add an extmark that highlights the label text using a theme-aware group
+  -- Use a high priority so it wins over Treesitter/markdown highlights.
+  self.extmarks.diff_label._id[key] = vim.api.nvim_buf_set_extmark(chat.bufnr, ns, call.label_line - 1, 0, {
+    hl_group = _eca_sidebar_hl("diff_label"),
+    end_col = end_col,
+    priority = 200,
+  })
+end
+
+-- Reapply header and diff label highlights after full-buffer updates
+-- (e.g. when streaming assistant responses or appending new messages).
+-- This ensures previously expanded tool calls and reasoning blocks
+-- keep their visual styling instead of "resetting".
+function M:_reapply_tool_call_highlights()
+  if not self._tool_calls or vim.tbl_isempty(self._tool_calls) then
+    return
+  end
+
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return
+  end
+
+  for _, call in ipairs(self._tool_calls) do
+    if call.header_line then
+      self:_highlight_tool_call_header(call)
+    end
+
+    if call.has_diff and call.label_line then
+      self:_highlight_tool_call_diff_label_line(call)
+    end
+  end
 end
 
 -- Update the existing "view diff" label line to reflect the current expanded/collapsed state
@@ -1895,6 +2233,9 @@ function M:_update_tool_call_diff_label_line(call)
   self:_safe_buffer_update(chat.bufnr, function()
     vim.api.nvim_buf_set_lines(chat.bufnr, call.label_line - 1, call.label_line, false, { label_text })
   end)
+
+  -- Ensure the label is highlighted after updating its text
+  self:_highlight_tool_call_diff_label_line(call)
 end
 
 -- Insert the "view diff" label line directly below the tool call summary
@@ -1918,6 +2259,9 @@ function M:_insert_tool_call_diff_label_line(call)
   -- Track the label line (1-based)
   call.label_line = call.header_line + 1
 
+  -- Ensure the label is highlighted when first inserted
+  self:_highlight_tool_call_diff_label_line(call)
+
   -- Shift subsequent tool call headers/labels down by one line
   self:_adjust_tool_call_lines(call, 1)
 end
@@ -1934,6 +2278,9 @@ function M:_update_tool_call_header_line(call)
   self:_safe_buffer_update(chat.bufnr, function()
     vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line - 1, call.header_line, false, { header_text })
   end)
+
+  -- Re-apply header highlight after updating its text/arrow/status
+  self:_highlight_tool_call_header(call)
 end
 
 -- Adjust header_line (and optional label_line) for tool calls that come after the given one
@@ -1964,6 +2311,52 @@ function M:_expand_tool_call(call)
     return
   end
 
+  -- Reasoning ("Thinking") entries behave slightly differently: we never
+  -- wrap them in code fences and the streaming handler is responsible for
+  -- keeping the body up to date. Here we just insert the current body once.
+  if call.is_reason then
+    -- Build markdown fenced block if we don't have it yet
+    if not call.arguments_lines or #call.arguments_lines == 0 then
+      call.arguments_lines = {}
+
+      table.insert(call.arguments_lines, "```text")
+      for _, line in ipairs(Utils.split_lines(call.arguments or "")) do
+        table.insert(call.arguments_lines, line)
+      end
+      table.insert(call.arguments_lines, "```")
+      table.insert(call.arguments_lines, "")
+    end
+
+    local count = call.arguments_lines and #call.arguments_lines or 0
+    if count > 0 then
+      self:_safe_buffer_update(chat.bufnr, function()
+        -- Insert reasoning lines immediately after the header line
+        vim.api.nvim_buf_set_lines(chat.bufnr, call.header_line, call.header_line, false, call.arguments_lines)
+      end)
+
+      -- Track how many lines we inserted so that subsequent streaming
+      -- updates (_handle_reason_text) can correctly replace this block.
+      call._last_arguments_count = count
+
+      -- Shift subsequent tool call header/label lines down
+      self:_adjust_tool_call_lines(call, count)
+    end
+
+    call.expanded = true
+    self:_update_tool_call_header_line(call)
+
+    if chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+      local last_line = call.header_line + (call._last_arguments_count or 0)
+      vim.api.nvim_win_set_cursor(chat.winid, { last_line, 0 })
+      vim.api.nvim_win_call(chat.winid, function()
+        vim.cmd("normal! zb")
+      end)
+    end
+
+    return
+  end
+
+  -- Regular tool calls: show JSON arguments block
   call.arguments_lines = call.arguments_lines or self:_build_tool_call_arguments_lines(call.arguments)
   local count = call.arguments_lines and #call.arguments_lines or 0
   if count == 0 then

@@ -12,6 +12,9 @@ function M.setup()
   vim.api.nvim_set_hl(0, "EcaSuccess", { fg = "#9ece6a", bg = "#2b3b2e" })
   vim.api.nvim_set_hl(0, "EcaWarning", { fg = "#e0af68", bg = "#3d3a2b" })
   vim.api.nvim_set_hl(0, "EcaInfo", { fg = "#7dcfff", bg = "#2b3a3d" })
+  vim.api.nvim_set_hl(0, "EcaToolCall", { link = "Title" })
+  vim.api.nvim_set_hl(0, "EcaHyperlink", { link = "Underlined", underline = true })
+  vim.api.nvim_set_hl(0, "EcaUsage", { link = "Comment" })
 end
 
 return M
