@@ -2137,15 +2137,32 @@ function M:_build_tool_call_header_text(call)
   local icons = get_tool_call_icons()
   local arrow = call.expanded and icons.expanded or icons.collapsed
 
+  -- Normalize all pieces to strings to avoid issues when configuration or
+  -- status fields accidentally contain non-string values (e.g. userdata).
+  if type(arrow) ~= "string" then
+    arrow = tostring(arrow)
+  end
+
   -- Reasoning ("Thinking") entries do not show status icons; they only
   -- display the toggle arrow and a text label ("Thinking..." / "Thought").
   if call.is_reason then
     local title = call.title or "Thinking..."
+    if type(title) ~= "string" then
+      title = tostring(title)
+    end
     return table.concat({ arrow, title }, " ")
   end
 
   local title = call.title or "Tool call"
   local status = call.status or icons.running
+
+  if type(title) ~= "string" then
+    title = tostring(title)
+  end
+  if type(status) ~= "string" then
+    status = tostring(status)
+  end
+
   local parts = { arrow, title, status }
 
   return table.concat(parts, " ")
@@ -2248,6 +2265,13 @@ function M:_highlight_tool_call_header(call)
     return
   end
 
+  -- Guard against stale header_line values that point past the end of the
+  -- buffer (for example after streaming updates that rewrote the chat).
+  local line_count = vim.api.nvim_buf_line_count(chat.bufnr)
+  if call.header_line < 1 or call.header_line > line_count then
+    return
+  end
+
   self.extmarks = self.extmarks or {}
   if not self.extmarks.tool_header then
     self.extmarks.tool_header = {
@@ -2290,6 +2314,13 @@ function M:_highlight_tool_call_diff_label_line(call)
   end
 
   if not call or not call.label_line then
+    return
+  end
+
+  -- Guard against stale label_line values that point past the end of the
+  -- buffer (for example after streaming updates that rewrote the chat).
+  local line_count = vim.api.nvim_buf_line_count(chat.bufnr)
+  if call.label_line < 1 or call.label_line > line_count then
     return
   end
 
