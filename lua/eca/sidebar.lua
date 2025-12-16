@@ -36,9 +36,45 @@ local WINDOW_MARGIN = 3 -- Additional margin for window borders and spacing
 local UI_ELEMENTS_HEIGHT = 2 -- Reserve space for statusline and tabline
 local SAFETY_MARGIN = 2 -- Extra margin to prevent "Not enough room" errors
 
--- Tool call icons (can be overridden via Config.chat.tool_call.icons)
+local function _shorten_tokens(n)
+  n = tonumber(n) or 0
+  if n >= 1000 then
+    local rounded = math.floor(n / 1000 + 0.5)
+    return string.format("%dk", rounded)
+  end
+  return tostring(n)
+end
+
+local function _format_usage(tokens, limit, costs)
+  local usage_cfg = (Config.windows and Config.windows.usage) or {}
+  local fmt = usage_cfg.format
+    or Config.usage_string_format -- backwards compatibility
+    or "{session_tokens_short} / {limit_tokens_short} (${session_cost})"
+
+  local placeholders = {
+    session_tokens = tostring(tokens or 0),
+    limit_tokens = tostring(limit or 0),
+    session_tokens_short = _shorten_tokens(tokens),
+    limit_tokens_short = _shorten_tokens(limit),
+    session_cost = tostring(costs or "0.00"),
+  }
+
+  local result = fmt:gsub("{(.-)}", function(key)
+    return placeholders[key] or ""
+  end)
+
+  return result
+end
+
+-- Tool call icons (can be overridden via Config.windows.chat.tool_call.icons)
+local function _get_chat_config()
+  -- Prefer `windows.chat`, but fall back to top-level `chat` for backwards compatibility
+  return (Config.windows and Config.windows.chat) or Config.chat or {}
+end
+
 local function get_tool_call_icons()
-  local icons_cfg = (Config.chat and Config.chat.tool_call and Config.chat.tool_call.icons) or {}
+  local chat_cfg = _get_chat_config()
+  local icons_cfg = (chat_cfg.tool_call and chat_cfg.tool_call.icons) or {}
   return {
     success = icons_cfg.success or "✅",
     error = icons_cfg.error or "❌",
@@ -50,7 +86,7 @@ end
 
 -- Label texts used for tool call diffs.
 --
--- Preferred configuration (under `Config.chat.tool_call`):
+-- Preferred configuration (under `windows.chat.tool_call`):
 --   tool_call = {
 --     diff = {
 --       collapsed_label = "+ view diff", -- Label when the diff is collapsed
@@ -64,7 +100,8 @@ end
 --   - `diff_label_collapsed` / `diff_label_expanded` (flat keys)
 --   - `diff_start_expanded` (boolean flag) to control initial expansion
 local function get_tool_call_diff_labels()
-  local cfg = (Config.chat and Config.chat.tool_call) or {}
+  local chat_cfg = _get_chat_config()
+  local cfg = chat_cfg.tool_call or {}
 
   local diff_cfg = cfg.diff or {}
   local labels_cfg = cfg.diff_label or {}
@@ -86,7 +123,8 @@ local function get_tool_call_diff_labels()
 end
 
 local function should_start_diff_expanded()
-  local cfg = (Config.chat and Config.chat.tool_call) or {}
+  local chat_cfg = _get_chat_config()
+  local cfg = chat_cfg.tool_call or {}
   local diff_cfg = cfg.diff or {}
 
   if diff_cfg.expanded ~= nil then
@@ -101,7 +139,8 @@ local function should_start_diff_expanded()
 end
 
 local function get_reasoning_labels()
-  local cfg = (Config.chat and Config.chat.reasoning) or {}
+  local chat_cfg = _get_chat_config()
+  local cfg = chat_cfg.reasoning or {}
   local running = cfg.running_label or "Thinking..."
   local finished = cfg.finished_label or "Thought"
 
@@ -132,9 +171,10 @@ function M.new(id, mediator)
   instance._augroup = vim.api.nvim_create_augroup("eca_sidebar_" .. id, { clear = true })
   instance._response_start_time = 0
   instance._max_response_length = 50000 -- 50KB max response
+  local chat_cfg = _get_chat_config()
   instance._headers = {
-    user = (Config.chat and Config.chat.headers and Config.chat.headers.user) or "> ",
-    assistant = (Config.chat and Config.chat.headers and Config.chat.headers.assistant) or "",
+    user = (chat_cfg.headers and chat_cfg.headers.user) or "> ",
+    assistant = (chat_cfg.headers and chat_cfg.headers.assistant) or "",
   }
   instance._welcome_message_applied = false
   instance._contexts_placeholder_line = ""
@@ -426,7 +466,7 @@ function M:_create_containers()
       modifiable = false,
     }),
     win_options = vim.tbl_deep_extend("force", base_win_options, {
-      winhighlight = "Normal:EcaUsage",
+      winhighlight = "Normal:EcaLabel",
       statusline = " ",
     }),
   })
@@ -863,7 +903,7 @@ function M:_update_input_display(opts)
         self.extmarks.contexts._ns,
         0,
         i,
-        vim.tbl_extend("force", { virt_text = { { context_name, "Comment" } }, virt_text_pos = "inline", hl_mode = "replace" }, { id = self.extmarks.contexts._id[i] })
+        vim.tbl_extend("force", { virt_text = { { context_name, "EcaLabel" } }, virt_text_pos = "inline", hl_mode = "replace" }, { id = self.extmarks.contexts._id[i] })
       )
     end
 
@@ -1011,21 +1051,21 @@ function M:_update_config_display()
   -- While any MCP is still starting, dim the active count
   local active_hl = "Normal"
   if starting_count > 0 then
-    active_hl = "Comment"
+    active_hl = "EcaLabel"
   end
 
   local registered_hl = "Normal"
   if has_failed then
     registered_hl = "Exception" -- highlight registered count in red when any MCP failed
-  elseif active_hl == "Comment" then
+  elseif active_hl == "EcaLabel" then
     -- While MCPs are still starting, dim the total count as well
-    registered_hl = "Comment"
+    registered_hl = "EcaLabel"
   end
 
   local texts = {
-    { "model:",    "Comment" }, { model, "Normal" }, { " " },
-    { "behavior:", "Comment" }, { behavior, "Normal" }, { " " },
-    { "mcps:", "Comment" }, { tostring(active_count), active_hl }, { "/", "Comment" },
+    { "model:",    "EcaLabel" }, { model, "Normal" }, { " " },
+    { "behavior:", "EcaLabel" }, { behavior, "Normal" }, { " " },
+    { "mcps:", "EcaLabel" }, { tostring(active_count), active_hl }, { "/", "EcaLabel" },
     { tostring(registered_count), registered_hl },
   }
 
@@ -1068,7 +1108,7 @@ function M:_update_usage_info()
   local costs = self.mediator:costs_session() or "0.00"
 
   self._current_status = string.format("%s", status_text)
-  self._usage_info = string.format("%d / %d (%s)", tokens, limit, costs)
+  self._usage_info = _format_usage(tokens, limit, costs)
 
   self.extmarks = self.extmarks or {}
 
@@ -1121,7 +1161,8 @@ function M:_update_welcome_content()
     return
   end
 
-  local cfg = (Config.chat and Config.chat.welcome) or {}
+  local chat_cfg = _get_chat_config()
+  local cfg = chat_cfg.welcome or {}
   local cfg_msg = (cfg.message and cfg.message ~= "" and cfg.message) or nil
   local welcome_message = cfg_msg or (self.mediator and self.mediator:welcome_message() or nil)
 
@@ -1497,7 +1538,9 @@ function M:_update_streaming_message(content)
     return
   end
 
-  -- Simple and direct buffer update
+  -- Simple and direct buffer update that only rewrites the assistant's
+  -- own streaming region. This avoids clobbering content that may have
+  -- been appended after it (e.g. tool calls or reasoning blocks).
   local success, err = pcall(function()
     -- Make buffer modifiable
     vim.api.nvim_set_option_value("modifiable", true, { buf = chat.bufnr })
@@ -2242,7 +2285,7 @@ local function _eca_sidebar_hl(kind)
   if kind == "tool_header" then
     return "EcaToolCall"
   elseif kind == "reason_header" then
-    return "EcaUsage"
+    return "EcaLabel"
   elseif kind == "diff_label" then
     return "EcaHyperlink"
   end
