@@ -11,7 +11,11 @@ return {
       -- Default configuration
       server_path = "",
       server_args = "",
-      usage_string_format = "{messageCost} / {sessionCost}",
+      windows = {
+        usage = {
+          format = "{session_tokens_short} / {limit_tokens_short} (${session_cost})",
+        },
+      },
       log = {
         display = "split", -- "split" or "popup"
         level = vim.log.levels.INFO,
