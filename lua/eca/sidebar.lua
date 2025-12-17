@@ -2782,11 +2782,39 @@ function M:_replace_text(target, replacement, opts)
       local line = range_lines[idx] or ""
       local s_idx, e_idx = line:find(target, 1, true)
       if s_idx then
-        local new_line = (line:sub(1, s_idx - 1)) .. replacement .. (line:sub(e_idx + 1))
         local absolute_line = end_line + idx - 1 -- convert to absolute 1-based line
-        vim.api.nvim_buf_set_lines(chat.bufnr, absolute_line - 1, absolute_line, false, { new_line })
-        changed = true
-        break
+
+        -- If replacement contains newlines, split it into proper buffer lines
+        if type(replacement) == "string" and replacement:find("\n") then
+          local parts = Utils.split_lines(replacement)
+          local prefix = line:sub(1, s_idx - 1)
+          local suffix = line:sub(e_idx + 1)
+
+          local new_lines = {}
+          if #parts > 0 then
+            -- First line: prefix + first part
+            table.insert(new_lines, prefix .. parts[1])
+            -- Middle parts (if any)
+            for i = 2, #parts do
+              table.insert(new_lines, parts[i])
+            end
+            -- Append suffix to the last inserted line
+            new_lines[#new_lines] = new_lines[#new_lines] .. suffix
+          else
+            -- Fallback: no parts (shouldn't happen), just replace inline
+            table.insert(new_lines, prefix .. suffix)
+          end
+
+          vim.api.nvim_buf_set_lines(chat.bufnr, absolute_line - 1, absolute_line, false, new_lines)
+          changed = true
+          break
+        else
+          -- Simple single-line replacement
+          local new_line = (line:sub(1, s_idx - 1)) .. replacement .. (line:sub(e_idx + 1))
+          vim.api.nvim_buf_set_lines(chat.bufnr, absolute_line - 1, absolute_line, false, { new_line })
+          changed = true
+          break
+        end
       end
     end
   end)
