@@ -72,6 +72,11 @@ M._defaults = {
           "Type your message and use CTRL+s to send", -- Tips appended under the welcome (set empty list {} to disable)
         },
       },
+      typing = {
+        enabled = true,        -- Enable typewriter effect for streaming responses
+        chars_per_tick = 1,    -- Number of characters to display per tick (1 = realistic typing)
+        tick_delay = 10,       -- Delay in milliseconds between ticks (lower = faster)
+      },
       tool_call = {
         icons = {
           success = "✅",   -- Shown when a tool call succeeds

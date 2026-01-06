@@ -1,6 +1,7 @@
 local Utils = require("eca.utils")
 local Logger = require("eca.logger")
 local Config = require("eca.config")
+local StreamQueue = require("eca.stream_queue")
 
 -- Load nui.nvim components (required dependency)
 local Split = require("nui.split")
@@ -26,6 +27,8 @@ local Split = require("nui.split")
 ---@field private _welcome_message_applied boolean Whether the welcome message has been applied
 ---@field private _contexts_placeholder_line string Placeholder line for contexts in input
 ---@field private _reasons table Map of in-flight reasoning entries keyed by id
+---@field private _stream_queue eca.StreamQueue Queue for streaming text display
+---@field private _stream_visible_buffer string Accumulated visible text during streaming
 
 local M = {}
 M.__index = M
@@ -36,15 +39,6 @@ local WINDOW_MARGIN = 3 -- Additional margin for window borders and spacing
 local UI_ELEMENTS_HEIGHT = 2 -- Reserve space for statusline and tabline
 local SAFETY_MARGIN = 2 -- Extra margin to prevent "Not enough room" errors
 
-local function _shorten_tokens(n)
-  n = tonumber(n) or 0
-  if n >= 1000 then
-    local rounded = math.floor(n / 1000 + 0.5)
-    return string.format("%dk", rounded)
-  end
-  return tostring(n)
-end
-
 local function _format_usage(tokens, limit, costs)
   local usage_cfg = (Config.windows and Config.windows.usage) or {}
   local fmt = usage_cfg.format
@@ -54,8 +48,8 @@ local function _format_usage(tokens, limit, costs)
   local placeholders = {
     session_tokens = tostring(tokens or 0),
     limit_tokens = tostring(limit or 0),
-    session_tokens_short = _shorten_tokens(tokens),
-    limit_tokens_short = _shorten_tokens(limit),
+    session_tokens_short = Utils.shorten_tokens(tokens),
+    limit_tokens_short = Utils.shorten_tokens(limit),
     session_cost = tostring(costs or "0.00"),
   }
 
@@ -66,104 +60,11 @@ local function _format_usage(tokens, limit, costs)
   return result
 end
 
--- Tool call icons (can be overridden via Config.windows.chat.tool_call.icons)
-local function _get_chat_config()
-  -- Merge top-level `chat` (backwards compatible) with `windows.chat`.
-  -- `windows.chat` provides modern defaults, while a user-provided
-  -- `chat.tool_call` block (legacy style) can still override fields
-  -- like `diff_label` and `diff_start_expanded`.
-  local win_chat = (Config.windows and Config.windows.chat) or {}
-  local top_chat = Config.chat or {}
-
-  if next(top_chat) == nil then
-    return win_chat
-  end
-
-  return vim.tbl_deep_extend("force", win_chat, top_chat)
-end
-
-local function get_tool_call_icons()
-  local chat_cfg = _get_chat_config()
-  local icons_cfg = (chat_cfg.tool_call and chat_cfg.tool_call.icons) or {}
-  return {
-    success = icons_cfg.success or "✅",
-    error = icons_cfg.error or "❌",
-    running = icons_cfg.running or "⏳",
-    expanded = icons_cfg.expanded or "▲",
-    collapsed = icons_cfg.collapsed or "▶",
-  }
-end
-
--- Label texts used for tool call diffs.
---
--- Preferred configuration (under `windows.chat.tool_call`):
---   tool_call = {
---     diff = {
---       collapsed_label = "+ view diff", -- Label when the diff is collapsed
---       expanded_label = "- view diff",  -- Label when the diff is expanded
---       expanded = false,                 -- When true, tool diffs start expanded
---     },
---   }
---
--- Backwards compatibility:
---   - `diff_label = { collapsed, expanded }` (older table format)
---   - `diff_label_collapsed` / `diff_label_expanded` (flat keys)
---   - `diff_start_expanded` (boolean flag) to control initial expansion
-local function get_tool_call_diff_labels()
-  local chat_cfg = _get_chat_config()
-  local cfg = chat_cfg.tool_call or {}
-
-  local diff_cfg = cfg.diff or {}
-  local labels_cfg = cfg.diff_label or {}
-
-  local collapsed = diff_cfg.collapsed_label
-    or labels_cfg.collapsed
-    or cfg.diff_label_collapsed
-    or "+ view diff"
-
-  local expanded = diff_cfg.expanded_label
-    or labels_cfg.expanded
-    or cfg.diff_label_expanded
-    or "- view diff"
-
-  return {
-    collapsed = collapsed,
-    expanded = expanded,
-  }
-end
-
-local function should_start_diff_expanded()
-  local chat_cfg = _get_chat_config()
-  local cfg = chat_cfg.tool_call or {}
-  local diff_cfg = cfg.diff or {}
-
-  if diff_cfg.expanded ~= nil then
-    return diff_cfg.expanded == true
-  end
-
-  if cfg.diff_start_expanded ~= nil then
-    return cfg.diff_start_expanded == true
-  end
-
-  return false
-end
-
-local function get_reasoning_labels()
-  local chat_cfg = _get_chat_config()
-  local cfg = chat_cfg.reasoning or {}
-  local running = cfg.running_label or "Thinking..."
-  local finished = cfg.finished_label or "Thought"
-
-  return {
-    running = running,
-    finished = finished,
-  }
-end
-
 ---@param id integer Tab ID
 ---@param mediator eca.Mediator
 ---@return eca.Sidebar
 function M.new(id, mediator)
+  local chat_cfg = Utils.get_chat_config()
   local instance = setmetatable({}, M)
   instance.id = id
   instance.mediator = mediator
@@ -181,7 +82,6 @@ function M.new(id, mediator)
   instance._augroup = vim.api.nvim_create_augroup("eca_sidebar_" .. id, { clear = true })
   instance._response_start_time = 0
   instance._max_response_length = 50000 -- 50KB max response
-  local chat_cfg = _get_chat_config()
   instance._headers = {
     user = (chat_cfg.headers and chat_cfg.headers.user) or "> ",
     assistant = (chat_cfg.headers and chat_cfg.headers.assistant) or "",
@@ -191,10 +91,25 @@ function M.new(id, mediator)
   instance._contexts = {}
   instance._tool_calls = {}
   instance._reasons = {}
-  -- Internal queue for smooth, per-character streaming in the chat
-  instance._stream_queue = ""
   instance._stream_visible_buffer = ""
-  instance._stream_tick_scheduled = false
+
+  -- Get typing configuration
+  local typing_cfg = chat_cfg.typing or {}
+  local typing_enabled = typing_cfg.enabled ~= false  -- Default to true
+  local chars_per_tick = typing_enabled and (typing_cfg.chars_per_tick or 1) or 1000  -- Large number = instant
+  local tick_delay = typing_enabled and (typing_cfg.tick_delay or 10) or 0
+
+  -- Initialize stream queue with callback to update display
+  instance._stream_queue = StreamQueue.new(function(chunk, is_complete)
+    instance._stream_visible_buffer = (instance._stream_visible_buffer or "") .. chunk
+    instance:_update_streaming_message(instance._stream_visible_buffer)
+  end, {
+    chars_per_tick = chars_per_tick,
+    tick_delay = tick_delay,
+    should_continue = function()
+      return instance._is_streaming
+    end,
+  })
 
   require("eca.observer").subscribe("sidebar-" .. id, function(message)
     instance:handle_chat_content(message)
@@ -324,9 +239,10 @@ function M:reset()
   self._contexts = {}
   self._tool_calls = {}
   self._reasons = {}
-  self._stream_queue = ""
   self._stream_visible_buffer = ""
-  self._stream_tick_scheduled = false
+  if self._stream_queue then
+    self._stream_queue:clear()
+  end
 end
 
 function M:new_chat()
@@ -1171,7 +1087,7 @@ function M:_update_welcome_content()
     return
   end
 
-  local chat_cfg = _get_chat_config()
+  local chat_cfg = Utils.get_chat_config()
   local cfg = chat_cfg.welcome or {}
   local cfg_msg = (cfg.message and cfg.message ~= "" and cfg.message) or nil
   local welcome_message = cfg_msg or (self.mediator and self.mediator:welcome_message() or nil)
@@ -1354,7 +1270,7 @@ function M:handle_chat_content_received(params)
     Logger.debug(tool_log)
 
     -- Determine completion status icon (configurable)
-    local icons = get_tool_call_icons()
+    local icons = Utils.get_tool_call_icons()
     local status_icon = icons.success
     if content.error then
       status_icon = icons.error
@@ -1378,7 +1294,7 @@ function M:handle_chat_content_received(params)
         -- If this call now has a diff and doesn't yet have a label line, add it
         if call.has_diff and not call.label_line and not call.expanded then
           self:_insert_tool_call_diff_label_line(call)
-          if should_start_diff_expanded() then
+          if Utils.should_start_diff_expanded() then
             self:_expand_tool_call_diff(call)
           end
         end
@@ -1435,7 +1351,7 @@ function M:handle_chat_content_received(params)
 
         if call.has_diff then
           self:_insert_tool_call_diff_label_line(call)
-          if should_start_diff_expanded() then
+          if Utils.should_start_diff_expanded() then
             self:_expand_tool_call_diff(call)
           end
         end
@@ -1482,13 +1398,13 @@ function M:_handle_streaming_text(text)
 
   if not self._is_streaming then
     Logger.debug("Starting streaming response")
-    -- Start streaming with an internal character queue so that text
-    -- is rendered smoothly, one (or a few) characters at a time.
+    -- Start streaming with the stream queue
     self._is_streaming = true
     self._current_response_buffer = ""
-    self._stream_queue = ""
     self._stream_visible_buffer = ""
-    self._stream_tick_scheduled = false
+    if self._stream_queue then
+      self._stream_queue:clear()
+    end
 
     -- Determine insertion point before adding placeholder (works even with empty header)
     local chat = self.containers.chat
@@ -1518,66 +1434,12 @@ function M:_handle_streaming_text(text)
 
   -- Accumulate the full response for finalization and history
   self._current_response_buffer = (self._current_response_buffer or "") .. text
-  -- Enqueue new characters to be rendered gradually
-  self._stream_queue = (self._stream_queue or "") .. text
-
-  Logger.debug("DEBUG: Buffer now has " .. #self._current_response_buffer .. " chars (queued: " .. #self._stream_queue .. ")")
-
-  -- Ensure the per-character render loop is running
-  self:_start_streaming_tick()
-end
-
--- Internal helper: run a tick of the per-character streaming loop.
--- This pulls a small number of characters from `_stream_queue` and
--- appends them to the visible buffer, then reschedules itself while
--- streaming is active. The goal is to make updates feel smooth and
--- natural instead of "chunky".
-function M:_start_streaming_tick()
-  if self._stream_tick_scheduled then
-    return
+  -- Enqueue new text to be rendered gradually
+  if self._stream_queue then
+    self._stream_queue:enqueue(text)
   end
 
-  self._stream_tick_scheduled = true
-
-  local function step()
-    -- This runs on the main loop via vim.defer_fn
-    self._stream_tick_scheduled = false
-
-    -- If streaming finished in the meantime, stop here.
-    if not self._is_streaming then
-      return
-    end
-
-    local queue = self._stream_queue or ""
-    if queue == "" then
-      -- Nothing to render yet; poll again shortly while the server
-      -- continues to stream more content.
-      self._stream_tick_scheduled = true
-      vim.defer_fn(step, 10)
-      return
-    end
-
-    -- Render a small batch of characters per tick so long messages
-    -- don't take forever to appear but still feel "typewriter-like".
-    local CHARS_PER_TICK = 2
-    local count = math.min(CHARS_PER_TICK, #queue)
-    local chunk = queue:sub(1, count)
-    self._stream_queue = queue:sub(count + 1)
-
-    self._stream_visible_buffer = (self._stream_visible_buffer or "") .. chunk
-    self:_update_streaming_message(self._stream_visible_buffer)
-
-    -- Keep the loop going while we still have content or the server is
-    -- likely to send more.
-    if self._is_streaming or (self._stream_queue and #self._stream_queue > 0) then
-      self._stream_tick_scheduled = true
-      vim.defer_fn(step, 10)
-    end
-  end
-
-  -- Start immediately (or after a tiny delay) so the first characters
-  -- appear right away.
-  vim.defer_fn(step, 1)
+  Logger.debug("DEBUG: Buffer now has " .. #self._current_response_buffer .. " chars (queue size: " .. (self._stream_queue and self._stream_queue:size() or 0) .. ")")
 end
 
 ---@param content string
@@ -1744,9 +1606,10 @@ function M:_finalize_streaming_response()
     self._is_streaming = false
     self._current_response_buffer = ""
     self._response_start_time = 0
-    self._stream_queue = ""
     self._stream_visible_buffer = ""
-    self._stream_tick_scheduled = false
+    if self._stream_queue then
+      self._stream_queue:clear()
+    end
 
     -- Clear assistant placeholder tracking extmark
     local chat = self.containers.chat
@@ -1997,14 +1860,14 @@ function M:_display_tool_call(content)
   -- Apply header highlight (tool call vs reasoning)
   self:_highlight_tool_call_header(call)
 
-  if call.has_diff then
-    self:_insert_tool_call_diff_label_line(call)
-    if should_start_diff_expanded() then
-      self:_expand_tool_call_diff(call)
-    end
-  end
-
-  table.insert(self._tool_calls, call)
+          if call.has_diff then
+            self:_insert_tool_call_diff_label_line(call)
+            if Utils.should_start_diff_expanded() then
+              self:_expand_tool_call_diff(call)
+            end
+          end
+  
+          table.insert(self._tool_calls, call)
 end
 
 function M:_finalize_tool_call()
@@ -2032,7 +1895,7 @@ function M:_handle_reason_started(content)
   -- If a new reasoning starts while another one is still "running",
   -- mark the previous one as finished so only one active "Thinking"
   -- block is shown at a time.
-  local labels = get_reasoning_labels()
+  local labels = Utils.get_reasoning_labels()
   local running_label = labels.running
   local finished_label = labels.finished
 
@@ -2061,7 +1924,7 @@ function M:_handle_reason_started(content)
   -- Whether "Thinking" blocks should start expanded by default
   -- Use the merged chat config so both legacy `chat.reasoning` and
   -- modern `windows.chat.reasoning` can control this behavior.
-  local chat_cfg = _get_chat_config()
+  local chat_cfg = Utils.get_chat_config()
   local reasoning_cfg = chat_cfg.reasoning or {}
   local expand = reasoning_cfg.expanded == true
 
@@ -2122,10 +1985,9 @@ function M:_handle_reason_text(content)
   -- Accumulate raw reasoning text
   call.arguments = (call.arguments or "") .. content.text
 
-  -- Build plain text block for the reasoning body (no markdown quote prefix)
-  -- We intentionally do not insert a leading blank spacer line here so
-  -- that the first line immediately below the header contains the first
-  -- piece of reasoning text (this matches the expectations in tests).
+  -- Build plain text block for the reasoning body (no markdown quote prefix).
+  -- We keep the first inserted line as the first line of reasoning text rather
+  -- than a blank spacer so that navigation from the header lands on the actual content.
   call.arguments_lines = {}
 
   local lines = Utils.split_lines(call.arguments or "")
@@ -2176,7 +2038,7 @@ function M:_handle_reason_finished(content)
     return
   end
 
-  local labels = get_reasoning_labels()
+  local labels = Utils.get_reasoning_labels()
   local finished_label = labels.finished
 
   -- When reasoning is finished, update the label from running to a
@@ -2248,7 +2110,7 @@ end
 
 -- Build the header text for a tool call like: "▶ summary ⏳" (or "▶ summary ✅" / "▶ summary ❌")
 function M:_build_tool_call_header_text(call)
-  local icons = get_tool_call_icons()
+  local icons = Utils.get_tool_call_icons()
 
   -- Reasoning ("Thinking") entries do not show status icons; they only
   -- display a toggle arrow (when there is body content to show) and a
@@ -2314,12 +2176,6 @@ function M:_build_tool_call_arguments_lines(arguments, outputs, outputs_type)
   local has_content = false
 
   if arguments and arguments ~= "" then
-    if not has_content then
-      -- Spacer between the header and the first line of the block
-      table.insert(lines, "")
-      has_content = true
-    end
-
     table.insert(lines, "Arguments:")
     table.insert(lines, "```json")
     for _, line in ipairs(Utils.split_lines(arguments)) do
@@ -2327,13 +2183,13 @@ function M:_build_tool_call_arguments_lines(arguments, outputs, outputs_type)
     end
     table.insert(lines, "```")
     table.insert(lines, "")
+    has_content = true
   end
 
   if outputs and outputs ~= "" then
     if not has_content then
-      -- Spacer between the header and the first line of the block
+      -- Add spacer only if this is the first section
       table.insert(lines, "")
-      has_content = true
     end
 
     table.insert(lines, "Output:")
@@ -2374,9 +2230,7 @@ function M:_build_tool_call_diff_lines(details)
 
   local diff = details and details.diff or nil
   if diff and diff ~= "" then
-    -- Start the diff block directly with the fenced header so that
-    -- the first inserted line is the ```diff fence. Tests expect the
-    -- first diff line immediately below the label to be this fence.
+    -- Start the diff block with the fenced header (no leading newline)
     table.insert(lines, "```diff")
     for _, line in ipairs(Utils.split_lines(diff)) do
       table.insert(lines, line)
@@ -2418,7 +2272,7 @@ end
 
 -- Build the label text shown below the tool call summary when a diff is available
 function M:_build_tool_call_diff_label_text(call)
-  local labels = get_tool_call_diff_labels()
+  local labels = Utils.get_tool_call_diff_labels()
 
   -- Use different texts depending on diff expanded/collapsed state
   if call and call.diff_expanded then
