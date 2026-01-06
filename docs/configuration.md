@@ -128,6 +128,13 @@ require("eca").setup({
         },
       },
 
+      -- Typewriter effect for streaming responses
+      typing = {
+        enabled = true,       -- Enable/disable typewriter effect
+        chars_per_tick = 1,   -- Characters to display per tick (1 = realistic typing)
+        tick_delay = 10,      -- Delay in ms between ticks (lower = faster typing)
+      },
+
       -- Tool call display settings
       tool_call = {
         icons = {
@@ -208,6 +215,47 @@ require("eca").setup({
   log = {
     level = vim.log.levels.DEBUG,
     display = "split",
+  },
+})
+```
+
+### Typing Speed Presets
+
+```lua
+-- Fast typing (2x speed)
+require("eca").setup({
+  windows = {
+    chat = {
+      typing = {
+        enabled = true,
+        chars_per_tick = 2,  -- 2 characters at a time
+        tick_delay = 5,      -- 5ms between ticks
+      },
+    },
+  },
+})
+
+-- Slow/realistic typing
+require("eca").setup({
+  windows = {
+    chat = {
+      typing = {
+        enabled = true,
+        chars_per_tick = 1,  -- 1 character at a time
+        tick_delay = 30,     -- 30ms between ticks (~33 chars/sec)
+      },
+    },
+  },
+})
+
+-- Instant display (no typing effect)
+require("eca").setup({
+  windows = {
+    chat = {
+      typing = {
+        enabled = false,  -- Disable typing effect
+      },
+    },
   },
 })
 ```
