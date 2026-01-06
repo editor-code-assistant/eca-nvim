@@ -44,19 +44,22 @@ function M:process()
 
   self.running = true
 
-  -- Get the next text chunk from the queue
-  local text = table.remove(self.queue, 1)
-  
-  -- Create a local queue of characters from this text chunk
+  -- Combine all queued text into a single character queue for smooth continuous streaming
+  local combined_text = table.concat(self.queue, "")
+  self.queue = {}
+
+  -- Create a local queue of characters from all text chunks
   local char_queue = {}
-  for i = 1, #text do
-    table.insert(char_queue, text:sub(i, i))
+  for i = 1, #combined_text do
+    table.insert(char_queue, combined_text:sub(i, i))
   end
 
   local function done()
     self.running = false
-    -- Process next item in queue if available
-    self:process()
+    -- Process next item in queue if available (in case new items were added during processing)
+    if #self.queue > 0 then
+      self:process()
+    end
   end
 
   local function step()
@@ -64,6 +67,16 @@ function M:process()
     if self.should_continue and not self.should_continue() then
       done()
       return
+    end
+
+    -- Check if new items were added to the queue while we were processing
+    -- If so, add them to the current character queue to maintain smooth animation
+    if #self.queue > 0 then
+      local new_text = table.concat(self.queue, "")
+      self.queue = {}
+      for i = 1, #new_text do
+        table.insert(char_queue, new_text:sub(i, i))
+      end
     end
 
     -- If no more characters in this chunk, mark as done
