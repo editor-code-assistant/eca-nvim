@@ -82,6 +82,93 @@ end
 
 T["tool call diffs"] = MiniTest.new_set()
 
+T["tool call diffs"]["shows arguments and outputs sections when expanded"] = function()
+  child.lua([[
+    local Sidebar = _G.Sidebar
+
+    -- Simulate a tool call lifecycle with arguments and outputs (no diff)
+    Sidebar:handle_chat_content_received({
+      chatId = 'chat-out',
+      content = {
+        type = 'toolCallPrepare',
+        id = 'tool-out',
+        name = 'test_tool',
+        summary = 'Test Tool',
+        argumentsText = '{"value": 1}',
+        details = {},
+      },
+    })
+
+    Sidebar:handle_chat_content_received({
+      chatId = 'chat-out',
+      content = {
+        type = 'toolCallRunning',
+        id = 'tool-out',
+      },
+    })
+
+    Sidebar:handle_chat_content_received({
+      chatId = 'chat-out',
+      content = {
+        type = 'toolCalled',
+        id = 'tool-out',
+        name = 'test_tool',
+        summary = 'Test Tool',
+        outputs = {
+          { type = 'text', text = 'tool-output-123' },
+        },
+      },
+    })
+  ]])
+
+  flush(100)
+
+  child.lua([[
+    local Sidebar = _G.Sidebar
+    local call = Sidebar._tool_calls[1]
+    local chat = Sidebar.containers.chat
+
+    if not call or not chat or not chat.bufnr then
+      _G.tool_details = { expanded = false, has_arguments = false, has_output = false, has_output_text = false }
+      return
+    end
+
+    -- Expand the arguments/output block via the header
+    vim.api.nvim_win_set_cursor(chat.winid, { call.header_line, 0 })
+    Sidebar:_toggle_tool_call_at_cursor()
+
+    local buf = chat.bufnr
+    local lines = vim.api.nvim_buf_get_lines(buf, call.header_line, call.header_line + 20, false)
+
+    local details = {
+      expanded = call.expanded,
+      has_arguments = false,
+      has_output = false,
+      has_output_text = false,
+    }
+
+    for _, line in ipairs(lines) do
+      if line == 'Arguments:' then
+        details.has_arguments = true
+      elseif line == 'Output:' then
+        details.has_output = true
+      end
+      if string.find(line, 'tool-output-123', 1, true) then
+        details.has_output_text = true
+      end
+    end
+
+    _G.tool_details = details
+  ]])
+
+  local info = child.lua_get("_G.tool_details")
+
+  eq(info.expanded, true)
+  eq(info.has_arguments, true)
+  eq(info.has_output, true)
+  eq(info.has_output_text, true)
+end
+
 T["tool call diffs"]["shows diff label and toggles diff block with <CR>"] = function()
   child.lua([[
     local Sidebar = _G.Sidebar
@@ -455,6 +542,33 @@ T["reasoning blocks"]["start expanded when configured"] = function()
   eq(has_first, true)
 end
 
+T["reasoning blocks"]["hide arrow until there is body text"] = function()
+  child.lua([[
+    local Sidebar = _G.Sidebar
+
+    Sidebar:handle_chat_content_received({
+      chatId = 'chat-r0',
+      content = { type = 'reasonStarted', id = 'r0' },
+    })
+  ]])
+
+  flush(50)
+
+  child.lua([[
+    local Sidebar = _G.Sidebar
+    local call = Sidebar._reasons['r0']
+    local buf = Sidebar.containers.chat.bufnr
+    _G.reason_header = call and vim.api.nvim_buf_get_lines(buf, call.header_line - 1, call.header_line, false)[1] or ''
+  ]])
+
+  local header = child.lua_get("_G.reason_header")
+
+  -- With no streamed reasoning text yet, the header should not show
+  -- the expand/collapse arrow icon.
+  local has_arrow = child.lua_get("string.find(..., '▶', 1, true) ~= nil", { header })
+  eq(has_arrow, false)
+end
+
 T["mcps display"] = MiniTest.new_set()
 
 T["mcps display"]["shows active and registered counts with highlights"] = function()
@@ -496,6 +610,63 @@ T["mcps display"]["shows active and registered counts with highlights"] = functi
   eq(info.active_hl, "EcaLabel")
   eq(info.registered_text, "3")
   eq(info.registered_hl, "Exception")
+end
+
+T["tool call summaries"] = MiniTest.new_set()
+
+T["tool call summaries"]["appends filename for fileChange details"] = function()
+  child.lua([[
+    local Sidebar = _G.Sidebar
+
+    -- Simulate a tool call lifecycle that reports a file change
+    Sidebar:handle_chat_content_received({
+      chatId = 'chat-file',
+      content = {
+        type = 'toolCallPrepare',
+        id = 'tool-file',
+        name = 'write_file',
+        summary = 'Apply edit',
+        argumentsText = '{"value": 1}',
+        details = {},
+      },
+    })
+
+    Sidebar:handle_chat_content_received({
+      chatId = 'chat-file',
+      content = {
+        type = 'toolCallRunning',
+        id = 'tool-file',
+      },
+    })
+
+    Sidebar:handle_chat_content_received({
+      chatId = 'chat-file',
+      content = {
+        type = 'toolCalled',
+        id = 'tool-file',
+        name = 'write_file',
+        summary = 'Apply edit',
+        details = { type = 'fileChange', path = '/tmp/example/foo.lua', diff = '+added' },
+      },
+    })
+  ]])
+
+  flush(100)
+
+  child.lua([[
+    local Sidebar = _G.Sidebar
+    local call = Sidebar._tool_calls[1]
+    local buf = Sidebar.containers.chat.bufnr
+    _G.file_summary = {
+      header = call and vim.api.nvim_buf_get_lines(buf, call.header_line - 1, call.header_line, false)[1] or '',
+    }
+  ]])
+
+  local info = child.lua_get("_G.file_summary")
+
+  -- Header should mention the basename of the changed file
+  local has_filename = child.lua_get("string.find(..., 'foo.lua', 1, true) ~= nil", { info.header })
+  eq(has_filename, true)
 end
 
 return T

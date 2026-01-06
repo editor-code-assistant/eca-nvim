@@ -1300,6 +1300,27 @@ function M:handle_chat_content_received(params)
   elseif content.type == "toolCalled" then
     local tool_text = self:_tool_call_text(content)
 
+    -- If this tool call reports a file change, append the basename of the
+    -- path to the summary shown in the chat so users can immediately see
+    -- which file was touched.
+    local details = content.details
+    if details and type(details) == "table" and details.type == "fileChange" then
+      local path = details.path
+      if path and path ~= "" then
+        local filename = vim.fn.fnamemodify(path, ":t")
+        if filename and filename ~= "" then
+          -- Avoid duplicating the filename if it is already present
+          if tool_text and tool_text ~= "" then
+            if not string.find(tool_text, filename, 1, true) then
+              tool_text = string.format("%s %s", tool_text, filename)
+            end
+          else
+            tool_text = filename
+          end
+        end
+      end
+    end
+
     -- Add diff to current tool call if present in toolCalled content
     if self._current_tool_call and content.details then
       self._current_tool_call.details = content.details
@@ -1307,11 +1328,27 @@ function M:handle_chat_content_received(params)
 
     -- Show the tool result in logs only
     local tool_log = string.format("**Tool Result**: %s", content.name or "unknown")
+    local outputs_text = nil
+    local outputs_type = nil
     if content.outputs and #content.outputs > 0 then
+      local pieces = {}
       for _, output in ipairs(content.outputs) do
-        if output.type == "text" and output.content then
-          tool_log = tool_log .. "\n" .. output.content
+        if output.type == "text" then
+          local txt = output.text or output.content
+          if txt and txt ~= "" then
+            table.insert(pieces, txt)
+            tool_log = tool_log .. "\n" .. txt
+            outputs_type = outputs_type or output.type
+          end
+        else
+          -- Even if we don't render non-text payloads directly, remember
+          -- their reported type so that any displayed block can still
+          -- use an appropriate fence language.
+          outputs_type = outputs_type or output.type
         end
+      end
+      if #pieces > 0 then
+        outputs_text = table.concat(pieces, "\n")
       end
     end
     Logger.debug(tool_log)
@@ -1334,7 +1371,6 @@ function M:handle_chat_content_received(params)
       if content.details then
         call.details = content.details
         call.has_diff = self:_has_details_diff(call.details)
-        call.arguments_lines = self:_build_tool_call_arguments_lines(call.arguments)
         call.diff_lines = self:_build_tool_call_diff_lines(call.details)
         call.details_lines = nil
         call.details_line_count = 0
@@ -1348,6 +1384,13 @@ function M:handle_chat_content_received(params)
         end
       end
 
+      -- Always refresh stored outputs/argument lines when we get a final toolCalled event
+      if outputs_text and outputs_text ~= "" then
+        call.outputs = outputs_text
+        call.outputs_type = outputs_type or call.outputs_type
+      end
+      call.arguments_lines = self:_build_tool_call_arguments_lines(call.arguments, call.outputs, call.outputs_type)
+
       call.status = status_icon
       call.title = tool_text or call.title
 
@@ -1357,7 +1400,9 @@ function M:handle_chat_content_received(params)
       -- Create a new entry for tool calls that didn't have a running phase
       local details = content.details or {}
       local arguments = self._current_tool_call and self._current_tool_call.arguments or ""
-      local arguments_lines = self:_build_tool_call_arguments_lines(arguments)
+      local outputs = outputs_text or ""
+      local outputs_type_value = outputs_type
+      local arguments_lines = self:_build_tool_call_arguments_lines(arguments, outputs, outputs_type_value)
       local diff_lines = self:_build_tool_call_diff_lines(details)
       local has_diff = self:_has_details_diff(details)
 
@@ -1370,6 +1415,8 @@ function M:handle_chat_content_received(params)
         status = status_icon,
         arguments = arguments,
         details = details,
+        outputs = outputs,
+        outputs_type = outputs_type_value,
         has_diff = has_diff,
         label_line = nil,
         -- Separate storage for arguments vs diff so each can be toggled independently
@@ -1811,6 +1858,7 @@ function M:_handle_tool_call_prepare(content)
       summary = "",
       arguments = "",
       details = {},
+      outputs = "",
     }
   end
 
@@ -1889,7 +1937,11 @@ function M:_display_tool_call(content)
   end
 
   -- Build detail lines from current state (arguments and diff are controlled separately)
-  local arguments_lines = self:_build_tool_call_arguments_lines(self._current_tool_call.arguments)
+  local arguments_lines = self:_build_tool_call_arguments_lines(
+    self._current_tool_call.arguments,
+    self._current_tool_call.outputs,
+    self._current_tool_call.outputs_type
+  )
   local diff_lines = self:_build_tool_call_diff_lines(self._current_tool_call.details)
   local has_diff = self:_has_details_diff(self._current_tool_call.details)
 
@@ -1927,6 +1979,7 @@ function M:_display_tool_call(content)
     status = nil,
     arguments = self._current_tool_call.arguments or "",
     details = self._current_tool_call.details or {},
+    outputs = self._current_tool_call.outputs or "",
     has_diff = has_diff,
     label_line = nil,
     -- Store arguments and diff lines separately so they can be toggled independently
@@ -2070,6 +2123,9 @@ function M:_handle_reason_text(content)
   call.arguments = (call.arguments or "") .. content.text
 
   -- Build plain text block for the reasoning body (no markdown quote prefix)
+  -- We intentionally do not insert a leading blank spacer line here so
+  -- that the first line immediately below the header contains the first
+  -- piece of reasoning text (this matches the expectations in tests).
   call.arguments_lines = {}
 
   local lines = Utils.split_lines(call.arguments or "")
@@ -2077,9 +2133,6 @@ function M:_handle_reason_text(content)
     line = line ~= "" and line or " "
     table.insert(call.arguments_lines, line)
   end
-
-  -- Trailing blank line for spacing
-  table.insert(call.arguments_lines, "")
 
   -- If the reasoning block is expanded, update its region in the buffer in-place
   if call.expanded then
@@ -2103,6 +2156,11 @@ function M:_handle_reason_text(content)
 
     call._last_arguments_count = new_count
   end
+
+  -- Ensure the header arrow reflects whether there is body content to show.
+  -- This will add the expand/collapse icon once we have streamed some
+  -- reasoning text, and it will be omitted while the body is still empty.
+  self:_update_tool_call_header_line(call)
 end
 
 -- Mark reasoning as finished and update the header icon
@@ -2191,22 +2249,47 @@ end
 -- Build the header text for a tool call like: "▶ summary ⏳" (or "▶ summary ✅" / "▶ summary ❌")
 function M:_build_tool_call_header_text(call)
   local icons = get_tool_call_icons()
+
+  -- Reasoning ("Thinking") entries do not show status icons; they only
+  -- display a toggle arrow (when there is body content to show) and a
+  -- text label ("Thinking..." / "Thought").
+  if call.is_reason then
+    local title = call.title or "Thinking..."
+    if type(title) ~= "string" then
+      title = tostring(title)
+    end
+
+    -- Only show the expand/collapse arrow once we actually have some
+    -- reasoning text to display. This avoids showing a useless toggle
+    -- while the model is still preparing its thoughts.
+    local has_body = false
+    if call.arguments and type(call.arguments) == "string" and call.arguments:match("%S") then
+      has_body = true
+    elseif call.arguments_lines and #call.arguments_lines > 0 then
+      has_body = true
+    end
+
+    if not has_body then
+      return title
+    end
+
+    local arrow = call.expanded and icons.expanded or icons.collapsed
+    if type(arrow) ~= "string" then
+      arrow = tostring(arrow)
+    end
+
+    return table.concat({ arrow, title }, " ")
+  end
+
+  -- Regular tool calls always show an expand/collapse arrow. The arrow
+  -- controls the visibility of the arguments block; any diff is toggled
+  -- separately via the "view diff" label.
   local arrow = call.expanded and icons.expanded or icons.collapsed
 
   -- Normalize all pieces to strings to avoid issues when configuration or
   -- status fields accidentally contain non-string values (e.g. userdata).
   if type(arrow) ~= "string" then
     arrow = tostring(arrow)
-  end
-
-  -- Reasoning ("Thinking") entries do not show status icons; they only
-  -- display the toggle arrow and a text label ("Thinking..." / "Thought").
-  if call.is_reason then
-    local title = call.title or "Thinking..."
-    if type(title) ~= "string" then
-      title = tostring(title)
-    end
-    return table.concat({ arrow, title }, " ")
   end
 
   local title = call.title or "Tool call"
@@ -2224,17 +2307,62 @@ function M:_build_tool_call_header_text(call)
   return table.concat(parts, " ")
 end
 
--- Build the argument detail lines (tool call arguments only)
-function M:_build_tool_call_arguments_lines(arguments)
+  -- Build the argument and output detail lines for a tool call.
+-- Arguments and outputs are shown in separate labeled sections.
+function M:_build_tool_call_arguments_lines(arguments, outputs, outputs_type)
   local lines = {}
+  local has_content = false
 
   if arguments and arguments ~= "" then
+    if not has_content then
+      -- Spacer between the header and the first line of the block
+      table.insert(lines, "")
+      has_content = true
+    end
+
+    table.insert(lines, "Arguments:")
     table.insert(lines, "```json")
     for _, line in ipairs(Utils.split_lines(arguments)) do
       table.insert(lines, line)
     end
     table.insert(lines, "```")
     table.insert(lines, "")
+  end
+
+  if outputs and outputs ~= "" then
+    if not has_content then
+      -- Spacer between the header and the first line of the block
+      table.insert(lines, "")
+      has_content = true
+    end
+
+    table.insert(lines, "Output:")
+
+    -- Choose fence language based on reported output type. When the tool
+    -- says the output type is "text", render it as a plain text fence
+    -- instead of JSON. For unknown types we keep using "json" for
+    -- backwards compatibility.
+    local lang = "json"
+    if type(outputs_type) == "string" and outputs_type ~= "" then
+      if outputs_type == "text" then
+        lang = "text"
+      else
+        lang = outputs_type
+      end
+    end
+
+    table.insert(lines, "```" .. lang)
+    for _, line in ipairs(Utils.split_lines(outputs)) do
+      table.insert(lines, line)
+    end
+    table.insert(lines, "```")
+    table.insert(lines, "")
+  end
+
+  -- Remove any trailing blank lines; we keep internal spacing (for example
+  -- between the Arguments and Output sections) intact.
+  while #lines > 0 and lines[#lines]:match("^%s*$") do
+    table.remove(lines)
   end
 
   return lines
@@ -2246,12 +2374,19 @@ function M:_build_tool_call_diff_lines(details)
 
   local diff = details and details.diff or nil
   if diff and diff ~= "" then
+    -- Start the diff block directly with the fenced header so that
+    -- the first inserted line is the ```diff fence. Tests expect the
+    -- first diff line immediately below the label to be this fence.
     table.insert(lines, "```diff")
     for _, line in ipairs(Utils.split_lines(diff)) do
       table.insert(lines, line)
     end
     table.insert(lines, "```")
-    table.insert(lines, "")
+  end
+
+  -- Remove any trailing blank lines just in case
+  while #lines > 0 and lines[#lines]:match("^%s*$") do
+    table.remove(lines)
   end
 
   return lines
@@ -2260,10 +2395,10 @@ end
 -- Optional helper to build combined detail lines (arguments + diff)
 -- NOTE: callers that need independent control over arguments vs diff
 -- should prefer _build_tool_call_arguments_lines/_build_tool_call_diff_lines.
-function M:_build_tool_call_details_lines(arguments, details)
+function M:_build_tool_call_details_lines(arguments, details, outputs, outputs_type)
   local lines = {}
 
-  local arg_lines = self:_build_tool_call_arguments_lines(arguments)
+  local arg_lines = self:_build_tool_call_arguments_lines(arguments, outputs, outputs_type)
   for _, line in ipairs(arg_lines) do
     table.insert(lines, line)
   end
@@ -2532,14 +2667,17 @@ function M:_expand_tool_call(call)
   -- wrap them in code fences and the streaming handler is responsible for
   -- keeping the body up to date. Here we just insert the current body once.
   if call.is_reason then
-    -- Build markdown fenced block if we don't have it yet
+    -- Build a plain text block if we don't have it yet. We keep the
+    -- first inserted line as the first line of reasoning text rather
+    -- than a blank spacer so that navigation from the header lands on
+    -- the actual content.
     if not call.arguments_lines or #call.arguments_lines == 0 then
       call.arguments_lines = {}
 
       for _, line in ipairs(Utils.split_lines(call.arguments or "")) do
+        line = line ~= "" and line or " "
         table.insert(call.arguments_lines, line)
       end
-      table.insert(call.arguments_lines, "")
     end
 
     local count = call.arguments_lines and #call.arguments_lines or 0
@@ -2571,8 +2709,8 @@ function M:_expand_tool_call(call)
     return
   end
 
-  -- Regular tool calls: show JSON arguments block
-  call.arguments_lines = call.arguments_lines or self:_build_tool_call_arguments_lines(call.arguments)
+  -- Regular tool calls: show JSON arguments and output blocks
+  call.arguments_lines = call.arguments_lines or self:_build_tool_call_arguments_lines(call.arguments, call.outputs)
   local count = call.arguments_lines and #call.arguments_lines or 0
   if count == 0 then
     return
