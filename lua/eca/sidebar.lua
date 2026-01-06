@@ -68,8 +68,18 @@ end
 
 -- Tool call icons (can be overridden via Config.windows.chat.tool_call.icons)
 local function _get_chat_config()
-  -- Prefer `windows.chat`, but fall back to top-level `chat` for backwards compatibility
-  return (Config.windows and Config.windows.chat) or Config.chat or {}
+  -- Merge top-level `chat` (backwards compatible) with `windows.chat`.
+  -- `windows.chat` provides modern defaults, while a user-provided
+  -- `chat.tool_call` block (legacy style) can still override fields
+  -- like `diff_label` and `diff_start_expanded`.
+  local win_chat = (Config.windows and Config.windows.chat) or {}
+  local top_chat = Config.chat or {}
+
+  if next(top_chat) == nil then
+    return win_chat
+  end
+
+  return vim.tbl_deep_extend("force", win_chat, top_chat)
 end
 
 local function get_tool_call_icons()
@@ -1996,7 +2006,10 @@ function M:_handle_reason_started(content)
   end
 
   -- Whether "Thinking" blocks should start expanded by default
-  local reasoning_cfg = (Config.chat and Config.chat.reasoning) or {}
+  -- Use the merged chat config so both legacy `chat.reasoning` and
+  -- modern `windows.chat.reasoning` can control this behavior.
+  local chat_cfg = _get_chat_config()
+  local reasoning_cfg = chat_cfg.reasoning or {}
   local expand = reasoning_cfg.expanded == true
 
   local call = {

@@ -505,11 +505,27 @@ function M.setup()
           for _, name in ipairs(names) do
             local tool = tools[name] or {}
 
+            -- Build a human-readable preview string that always includes the
+            -- tool name and its primary "kind" field (when available),
+            -- followed by a full vim.inspect dump for debugging.
+            local preview_text
+            if next(tool) ~= nil then
+              local kind_value = tool.kind ~= nil and tostring(tool.kind) or "(unknown)"
+              preview_text = string.format("name: %s\nkind: %s", name, kind_value)
+
+              local inspected = vim.inspect(tool)
+              if inspected and inspected ~= "" then
+                preview_text = preview_text .. "\n" .. inspected
+              end
+            else
+              preview_text = string.format("name: %s\n<empty tool>", name)
+            end
+
             table.insert(items, {
               text = name,
               idx = name,
               preview = {
-                text = vim.inspect(tool),
+                text = preview_text,
                 ft = "lua",
               },
             })

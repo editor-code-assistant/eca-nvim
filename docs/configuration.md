@@ -59,18 +59,6 @@ require("eca").setup({
     auto_repo_map = true,
   },
 
-  -- === TODOS PANEL ===
-  todos = {
-    enabled = true,  -- Enable or disable todos integration
-    max_height = 5,  -- Maximum height for the todos container
-  },
-
-  -- === SELECTED CODE PANEL ===
-  selected_code = {
-    enabled = true,  -- Show currently selected code in the UI
-    max_height = 8,  -- Maximum height for the selected code container
-  },
-
   -- === KEY MAPPINGS ===
   mappings = {
     chat = "<leader>ec",  -- Open chat
