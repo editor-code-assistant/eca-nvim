@@ -262,6 +262,54 @@ require("eca").setup({
 
 ---
 
+## Migration Guide
+
+### Upgrading from older versions
+
+If you have existing configuration, note these changes:
+
+**Config structure changes:**
+- `debug` option removed → Use `log.level = vim.log.levels.DEBUG`
+- `usage_string_format` moved → Now `windows.usage.format`
+- `chat.*` options moved → Now nested under `windows.chat.*`
+
+**Legacy config is still supported** through automatic merging, but the new structure is recommended:
+
+```lua
+-- Old (still works)
+require("eca").setup({
+  debug = true,
+  usage_string_format = "{messageCost} / {sessionCost}",
+  chat = {
+    headers = { user = "> " },
+  },
+})
+
+-- New (recommended)
+require("eca").setup({
+  log = {
+    level = vim.log.levels.DEBUG,
+  },
+  windows = {
+    usage = {
+      format = "{session_cost}",
+    },
+    chat = {
+      headers = { user = "> " },
+    },
+  },
+})
+```
+
+**New placeholders for usage format:**
+- `{session_tokens}` → Raw session token count
+- `{limit_tokens}` → Raw token limit
+- `{session_tokens_short}` → Shortened format (e.g., "30k")
+- `{limit_tokens_short}` → Shortened format (e.g., "400k")
+- `{session_cost}` → Session cost
+
+---
+
 ## Notes
 - Set `server_path` if you prefer using a local ECA binary.
 - Use the `log` block to control verbosity and where logs are written.

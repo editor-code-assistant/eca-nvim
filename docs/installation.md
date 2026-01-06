@@ -12,6 +12,7 @@ This guide covers system requirements and how to install the ECA Neovim plugin w
 
 ### Optional
 - plenary.nvim — Utility functions used by some distributions
+- snacks.nvim — Required for `:EcaServerMessages` and `:EcaServerTools` commands (picker functionality)
 
 ### Tested Systems
 - macOS (Intel and Apple Silicon)
@@ -29,8 +30,9 @@ This guide covers system requirements and how to install the ECA Neovim plugin w
 {
   "editor-code-assistant/eca-nvim",
   dependencies = {
-    "MunifTanjim/nui.nvim",   -- Required: UI framework
-    "nvim-lua/plenary.nvim",  -- Optional: Enhanced async operations
+    "MunifTanjim/nui.nvim",      -- Required: UI framework
+    "nvim-lua/plenary.nvim",     -- Optional: Enhanced async operations
+    "folke/snacks.nvim",         -- Optional: Picker for server messages/tools
   },
   opts = {}
 }
@@ -42,8 +44,9 @@ Advanced setup example:
 {
   "editor-code-assistant/eca-nvim",
   dependencies = {
-    "MunifTanjim/nui.nvim",   -- Required: UI framework
-    "nvim-lua/plenary.nvim",  -- Optional: Enhanced async operations
+    "MunifTanjim/nui.nvim",      -- Required: UI framework
+    "nvim-lua/plenary.nvim",     -- Optional: Enhanced async operations
+    "folke/snacks.nvim",         -- Optional: Picker for server messages/tools
   },
   keys = {
     { "<leader>ec", "<cmd>EcaChat<cr>", desc = "Open ECA chat" },
@@ -67,8 +70,9 @@ Advanced setup example:
 use {
   "editor-code-assistant/eca-nvim",
   requires = {
-    "MunifTanjim/nui.nvim",   -- Required: UI framework
-    "nvim-lua/plenary.nvim",  -- Optional: Enhanced async operations
+    "MunifTanjim/nui.nvim",      -- Required: UI framework
+    "nvim-lua/plenary.nvim",     -- Optional: Enhanced async operations
+    "folke/snacks.nvim",         -- Optional: Picker for server messages/tools
   },
   config = function()
     require("eca").setup({
@@ -87,8 +91,9 @@ Plug 'editor-code-assistant/eca-nvim'
 " Required dependencies
 Plug 'MunifTanjim/nui.nvim'
 
-" Optional dependencies (enhanced async operations)
-Plug 'nvim-lua/plenary.nvim'
+" Optional dependencies
+Plug 'nvim-lua/plenary.nvim'  " Enhanced async operations
+Plug 'folke/snacks.nvim'      " Picker for server messages/tools
 
 " After the plugins, add:
 lua << EOF
@@ -106,8 +111,9 @@ call dein#add('editor-code-assistant/eca-nvim')
 " Required dependencies
 call dein#add('MunifTanjim/nui.nvim')
 
-" Optional dependencies (enhanced async operations)
-call dein#add('nvim-lua/plenary.nvim')
+" Optional dependencies
+call dein#add('nvim-lua/plenary.nvim')  " Enhanced async operations
+call dein#add('folke/snacks.nvim')      " Picker for server messages/tools
 
 " Configuration
 lua << EOF
@@ -127,8 +133,9 @@ EOF
 # Required dependencies
 "nui.nvim" = { git = "MunifTanjim/nui.nvim" }
 
-# Optional dependencies (enhanced async operations)
-"plenary.nvim" = { git = "nvim-lua/plenary.nvim" }
+# Optional dependencies
+"plenary.nvim" = { git = "nvim-lua/plenary.nvim" }  # Enhanced async operations
+"snacks.nvim" = { git = "folke/snacks.nvim" }       # Picker for server messages/tools
 ```
 
 ### mini.deps
@@ -139,8 +146,9 @@ local add = MiniDeps.add
 add({
   source = "editor-code-assistant/eca-nvim",
   depends = {
-    "MunifTanjim/nui.nvim",   -- Required: UI framework
-    "nvim-lua/plenary.nvim",  -- Optional: Enhanced async operations
+    "MunifTanjim/nui.nvim",      -- Required: UI framework
+    "nvim-lua/plenary.nvim",     -- Optional: Enhanced async operations
+    "folke/snacks.nvim",         -- Optional: Picker for server messages/tools
   }
 })
 

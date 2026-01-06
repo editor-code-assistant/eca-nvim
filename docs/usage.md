@@ -2,6 +2,18 @@
 
 Everything you need to get productive with ECA inside Neovim.
 
+## What's New
+
+Recent updates include:
+
+- **Expandable tool calls**: Click `Enter` on tool call headers to show/hide arguments, outputs, and diffs
+- **Reasoning blocks**: See ECA's "thinking" process with expandable reasoning content
+- **Typewriter effect**: Responses stream with a configurable typing animation (can be disabled)
+- **Enhanced MCP display**: See active vs. registered MCP server counts with status indicators
+- **Debug commands**: `:EcaServerMessages` and `:EcaServerTools` for inspecting server state
+- **Better usage display**: Shortened token counts (e.g., "30k / 400k") with customizable format
+- **Improved highlights**: New `EcaToolCall`, `EcaHyperlink`, and `EcaLabel` highlight groups
+
 ## Quick Start
 
 1. Install the plugin using any package manager
@@ -30,6 +42,8 @@ Everything you need to get productive with ECA inside Neovim.
 | `:EcaServerStart` | Start ECA server manually | `:EcaServerStart` |
 | `:EcaServerStop` | Stop ECA server | `:EcaServerStop` |
 | `:EcaServerRestart` | Restart ECA server | `:EcaServerRestart` |
+| `:EcaServerMessages` | Display server messages (for debugging) | `:EcaServerMessages` |
+| `:EcaServerTools` | Display registered server tools | `:EcaServerTools` |
 | `:EcaSend <message>` | Send message directly (without opening chat) | `:EcaSend Explain this function` |
 
 Deprecated aliases (still available but log a warning): `:EcaAddFile`, `:EcaAddSelection`, `:EcaRemoveContext`, `:EcaListContexts`, `:EcaClearContexts`. Prefer the `:EcaChat*` variants above.
@@ -52,6 +66,7 @@ Deprecated aliases (still available but log a warning): `:EcaAddFile`, `:EcaAddS
 |----------|--------|---------|
 | `Ctrl+S` | Send message | Insert/Normal mode |
 | `Enter` | New line | Insert mode |
+| `Enter` (in chat buffer) | Toggle tool call/reasoning block | Normal mode on tool call or reasoning header |
 | `Esc` | Exit insert mode | Insert mode |
 
 ---
@@ -62,7 +77,23 @@ Deprecated aliases (still available but log a warning): `:EcaAddFile`, `:EcaAddS
 - Type in the input line starting with `> `
 - Press `Enter` to insert a new line
 - Press `Ctrl+S` to send
-- Responses stream in real time
+- Responses stream in real time with a typewriter effect (configurable)
+
+### Interacting with responses
+
+#### Tool calls
+When ECA uses tools (like file editing), tool calls appear in the chat with:
+- **Header line**: Shows tool name and status icon (⏳ running, ✅ success, ❌ error)
+- **Expandable details**: Press `Enter` on the header to show/hide arguments and outputs
+- **Diff view**: If a tool modifies files, a "view diff" label appears below the header. Press `Enter` on this label to expand/collapse the diff
+
+#### Reasoning blocks
+When ECA is "thinking" (extended reasoning), you'll see:
+- **"Thinking..."** label while reasoning is active
+- **"Thought X.XX s"** label when complete, showing elapsed time
+- Press `Enter` on the header to expand/collapse the reasoning content
+
+These blocks can be configured to start expanded or collapsed (see Configuration)
 
 ### Examples
 
@@ -190,6 +221,27 @@ When typing paths directly with `@` to trigger completion, the input might brief
 
 After confirming a completion item, that `@...` reference is turned into a context entry and shown as a short label (for example `sidebar.lua `) in the context area.
 
+---
+
+## Model Context Protocol (MCP) Servers
+
+ECA supports MCP servers for extended functionality. The config display line at the bottom of the sidebar shows:
+
+```
+model: <model-name>  behavior: <behavior>  mcps: 2/3
+```
+
+Where:
+- The first number (2) is the count of **active MCPs** (starting + running)
+- The second number (3) is the **total registered MCPs**
+
+**Status indicators**:
+- Gray text: One or more MCPs are still starting
+- Red text: One or more MCPs failed to start
+- Normal text: All MCPs are running successfully
+
+Use `:EcaServerTools` to see which tools are available from your MCP servers.
+
 ### Context completion and `@` / `#` path shortcuts
 
 Inside the input (filetype `eca-input`):
@@ -280,6 +332,12 @@ are first expanded to absolute paths on the Neovim side (including `~` expansion
 
 " Start again
 :EcaServerStart
+
+" Debug: view server messages
+:EcaServerMessages
+
+" Debug: view registered tools
+:EcaServerTools
 ```
 
 ### Quick commands
@@ -293,6 +351,45 @@ are first expanded to absolute paths on the Neovim side (including `~` expansion
 
 " Toggle chat visibility
 :EcaToggle
+```
+
+---
+
+## Typewriter Effect
+
+ECA displays streaming responses with a configurable typewriter effect for a more natural reading experience.
+
+### Configuration
+
+```lua
+require("eca").setup({
+  windows = {
+    chat = {
+      typing = {
+        enabled = true,        -- Enable/disable typewriter effect
+        chars_per_tick = 1,    -- Characters per tick (higher = faster)
+        tick_delay = 10,       -- Delay in ms between ticks (lower = faster)
+      },
+    },
+  },
+})
+```
+
+### Presets
+
+**Fast typing (2x speed)**:
+```lua
+typing = { enabled = true, chars_per_tick = 2, tick_delay = 5 }
+```
+
+**Slow/realistic typing**:
+```lua
+typing = { enabled = true, chars_per_tick = 1, tick_delay = 30 }
+```
+
+**Instant display (no effect)**:
+```lua
+typing = { enabled = false }
 ```
 
 ---

@@ -15,10 +15,17 @@ Solutions:
 ```lua
 -- Debug configuration
 require("eca").setup({
-  debug = true,
   server_args = "--log-level debug",
+  log = {
+    level = vim.log.levels.DEBUG,
+    display = "split",
+  },
 })
 ```
+
+You can also use these debug commands to inspect the server state:
+- `:EcaServerMessages` - View all server messages
+- `:EcaServerTools` - View all registered tools
 
 ## Connectivity issues
 
@@ -57,9 +64,22 @@ Solutions:
 
 ## Performance issues
 
-Symptoms: Lag when typing, slow responses
+Symptoms: Lag when typing, slow responses, slow streaming
 
 Solutions:
 - Reduce window width: `windows.width = 25`
 - Disable visual updates: `behavior.show_status_updates = false`
+- Speed up or disable typewriter effect:
+  ```lua
+  windows = {
+    chat = {
+      typing = {
+        enabled = false,  -- Instant display
+        -- OR
+        chars_per_tick = 10,  -- Much faster typing
+        tick_delay = 1,
+      },
+    },
+  }
+  ```
 - Use the minimalist configuration preset
