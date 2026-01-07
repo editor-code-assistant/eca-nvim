@@ -88,7 +88,7 @@ function M:process()
     -- Render a small batch of characters per tick
     local count = math.min(self.chars_per_tick, #char_queue)
     local chunk = ""
-    for i = 1, count do
+    for _ = 1, count do
       chunk = chunk .. table.remove(char_queue, 1)
     end
 
@@ -102,7 +102,7 @@ function M:process()
   end
 
   -- Start processing this chunk
-  vim.defer_fn(step, 1)
+  vim.defer_fn(step, math.min(1, self.tick_delay))
 end
 
 ---Clear the queue and stop processing

@@ -246,9 +246,12 @@ function M.setup()
             local flat_preview = entry.flat_preview or ""
 
             -- Truncate overly long headers so the separator stays fixed.
+            --
+            -- NOTE: We truncate to exactly `header_width` characters so that the
+            -- padding logic below can reliably keep the separator aligned.
             local display_header = header
             if #display_header > header_width then
-              display_header = display_header:sub(1, header_width - 1)
+              display_header = display_header:sub(1, header_width)
             end
 
             -- Pad headers (or empty ones) up to header_width so the
