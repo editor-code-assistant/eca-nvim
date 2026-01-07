@@ -189,6 +189,15 @@ function M.should_start_diff_expanded()
   return diff_cfg.expanded == true
 end
 
+---Check if cursor position should be preserved when expanding/collapsing tool calls
+---@return boolean
+function M.should_preserve_cursor()
+  local chat_cfg = M.get_chat_config()
+  local cfg = chat_cfg.tool_call or {}
+
+  return cfg.preserve_cursor == true
+end
+
 ---Get reasoning labels configuration
 ---@return table
 function M.get_reasoning_labels()

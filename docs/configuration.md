@@ -149,6 +149,7 @@ require("eca").setup({
           expanded_label = "- view diff",  -- Label when the diff is expanded
           expanded = false,                -- When true, tool diffs start expanded
         },
+        preserve_cursor = true,            -- When true, cursor stays in place when expanding/collapsing
       },
 
       -- Reasoning ("Thinking") block behavior
@@ -254,6 +255,24 @@ require("eca").setup({
     chat = {
       typing = {
         enabled = false,  -- Disable typing effect
+      },
+    },
+  },
+})
+```
+
+### Tool Call Behavior
+
+```lua
+-- Keep cursor in place when expanding/collapsing tool calls
+require("eca").setup({
+  windows = {
+    chat = {
+      tool_call = {
+        preserve_cursor = true,  -- Don't move cursor on expand/collapse
+        diff = {
+          expanded = true,       -- Start with diffs expanded
+        },
       },
     },
   },

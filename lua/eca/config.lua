@@ -90,6 +90,7 @@ M._defaults = {
           expanded_label = "- view diff",  -- Label when the diff is expanded
           expanded = false,                -- When true, tool diffs start expanded
         },
+        preserve_cursor = true,           -- When true, cursor position is preserved when expanding/collapsing
       },
       reasoning = {
         expanded = false,              -- When true, "Thinking" blocks start expanded

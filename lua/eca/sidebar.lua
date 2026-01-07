@@ -2517,6 +2517,13 @@ function M:_expand_tool_call(call)
     return
   end
 
+  -- Save cursor position before expansion (if configured)
+  local saved_cursor = nil
+  local preserve_cursor = Utils.should_preserve_cursor()
+  if preserve_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    saved_cursor = vim.api.nvim_win_get_cursor(chat.winid)
+  end
+
   -- Reasoning ("Thinking") entries behave slightly differently: we never
   -- wrap them in code fences and the streaming handler is responsible for
   -- keeping the body up to date. Here we just insert the current body once.
@@ -2552,7 +2559,15 @@ function M:_expand_tool_call(call)
     call.expanded = true
     self:_update_tool_call_header_line(call)
 
-    if chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    -- Restore cursor position or move to last line based on config
+    if saved_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+      -- Adjust cursor row if it was after the insertion point
+      if saved_cursor[1] > call.header_line then
+        saved_cursor[1] = saved_cursor[1] + count
+      end
+      vim.api.nvim_win_set_cursor(chat.winid, saved_cursor)
+    elseif not preserve_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+      -- Default behavior: move cursor to last line of expanded content
       local last_line = call.header_line + (call._last_arguments_count or 0)
       vim.api.nvim_win_set_cursor(chat.winid, { last_line, 0 })
       vim.api.nvim_win_call(chat.winid, function()
@@ -2588,8 +2603,15 @@ function M:_expand_tool_call(call)
   -- Update header arrow
   self:_update_tool_call_header_line(call)
 
-  -- Move cursor to show the full arguments block
-  if chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+  -- Restore cursor position or move to last line based on config
+  if saved_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    -- Adjust cursor row if it was after the insertion point
+    if saved_cursor[1] > call.header_line then
+      saved_cursor[1] = saved_cursor[1] + count
+    end
+    vim.api.nvim_win_set_cursor(chat.winid, saved_cursor)
+  elseif not preserve_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    -- Default behavior: move cursor to last line of expanded content
     local last_line = call.header_line + count
     vim.api.nvim_win_set_cursor(chat.winid, { last_line, 0 })
     vim.api.nvim_win_call(chat.winid, function()
@@ -2607,6 +2629,13 @@ function M:_collapse_tool_call(call)
 
   if not call.expanded then
     return
+  end
+
+  -- Save cursor position before collapsing (if configured)
+  local saved_cursor = nil
+  local preserve_cursor = Utils.should_preserve_cursor()
+  if preserve_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    saved_cursor = vim.api.nvim_win_get_cursor(chat.winid)
   end
 
   local count = call.arguments_lines and #call.arguments_lines or 0
@@ -2633,6 +2662,19 @@ function M:_collapse_tool_call(call)
 
   -- Update header arrow
   self:_update_tool_call_header_line(call)
+
+  -- Restore cursor position, adjusting if it was after the collapsed region
+  if saved_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    -- If cursor was inside the collapsed region, move it to the header
+    if saved_cursor[1] > call.header_line and saved_cursor[1] <= call.header_line + count then
+      saved_cursor[1] = call.header_line
+      saved_cursor[2] = 0
+    -- If cursor was after the collapsed region, adjust it up
+    elseif saved_cursor[1] > call.header_line + count then
+      saved_cursor[1] = saved_cursor[1] - count
+    end
+    vim.api.nvim_win_set_cursor(chat.winid, saved_cursor)
+  end
 end
 
 -- Expand a tool call's diff, inserting it below the diff label
@@ -2644,6 +2686,13 @@ function M:_expand_tool_call_diff(call)
 
   if not call.has_diff or not call.label_line or call.diff_expanded then
     return
+  end
+
+  -- Save cursor position before expansion (if configured)
+  local saved_cursor = nil
+  local preserve_cursor = Utils.should_preserve_cursor()
+  if preserve_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    saved_cursor = vim.api.nvim_win_get_cursor(chat.winid)
   end
 
   call.diff_lines = call.diff_lines or self:_build_tool_call_diff_lines(call.details)
@@ -2664,6 +2713,15 @@ function M:_expand_tool_call_diff(call)
 
   -- Update the diff label to show the collapse indicator
   self:_update_tool_call_diff_label_line(call)
+
+  -- Restore cursor position (no default cursor movement for diff expansion)
+  if saved_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    -- Adjust cursor row if it was after the insertion point
+    if saved_cursor[1] > call.label_line then
+      saved_cursor[1] = saved_cursor[1] + count
+    end
+    vim.api.nvim_win_set_cursor(chat.winid, saved_cursor)
+  end
 end
 
 -- Collapse a tool call's diff, removing it from the buffer
@@ -2675,6 +2733,13 @@ function M:_collapse_tool_call_diff(call)
 
   if not call.diff_expanded then
     return
+  end
+
+  -- Save cursor position before collapsing (if configured)
+  local saved_cursor = nil
+  local preserve_cursor = Utils.should_preserve_cursor()
+  if preserve_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    saved_cursor = vim.api.nvim_win_get_cursor(chat.winid)
   end
 
   local count = call.diff_lines and #call.diff_lines or 0
@@ -2696,6 +2761,19 @@ function M:_collapse_tool_call_diff(call)
 
   -- Update the diff label to show the expand indicator again
   self:_update_tool_call_diff_label_line(call)
+
+  -- Restore cursor position, adjusting if it was after the collapsed region
+  if saved_cursor and chat.winid and vim.api.nvim_win_is_valid(chat.winid) then
+    -- If cursor was inside the collapsed region, move it to the label
+    if saved_cursor[1] > call.label_line and saved_cursor[1] <= call.label_line + count then
+      saved_cursor[1] = call.label_line
+      saved_cursor[2] = 0
+    -- If cursor was after the collapsed region, adjust it up
+    elseif saved_cursor[1] > call.label_line + count then
+      saved_cursor[1] = saved_cursor[1] - count
+    end
+    vim.api.nvim_win_set_cursor(chat.winid, saved_cursor)
+  end
 end
 
 -- Toggle tool call details at the current cursor position in the chat window
