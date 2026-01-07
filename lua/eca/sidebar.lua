@@ -1462,6 +1462,10 @@ function M:_update_streaming_message(content)
     return
   end
 
+  -- Capture the current chat view so we only auto-scroll if the user was
+  -- already at (or very near) the bottom, and hasn't moved since.
+  local anchor = self:_capture_chat_view_state()
+
   -- Simple and direct buffer update that only rewrites the assistant's
   -- own streaming region. This avoids clobbering content that may have
   -- been appended after it (e.g. tool calls or reasoning blocks).
@@ -1530,8 +1534,8 @@ function M:_update_streaming_message(content)
     -- Reapply highlights for existing tool calls and reasoning blocks,
     -- since full-buffer updates can drop extmark-based styling.
     self:_reapply_tool_call_highlights()
-    -- Auto-scroll to bottom during streaming to follow the text
-    self:_scroll_to_bottom()
+    -- Auto-scroll only if the user was already at the bottom.
+    self:_scroll_to_bottom({ anchor = anchor })
   end
 end
 
@@ -1542,6 +1546,12 @@ function M:_add_message(role, content)
   if not chat then
     return
   end
+
+  -- Capture the current chat view before appending. We'll only auto-scroll if:
+  -- - this is a user message (force scroll), or
+  -- - the user was already at the bottom and hasn't moved since.
+  local anchor = self:_capture_chat_view_state()
+  local force_scroll = role == "user"
 
   self:_safe_buffer_update(chat.bufnr, function()
     local lines = vim.api.nvim_buf_get_lines(chat.bufnr, 0, -1, false)
@@ -1589,8 +1599,8 @@ function M:_add_message(role, content)
     -- Update buffer safely
     vim.api.nvim_buf_set_lines(chat.bufnr, 0, -1, false, lines)
 
-    -- Auto-scroll to bottom after adding new message
-    self:_scroll_to_bottom()
+    -- Only auto-scroll if appropriate (see anchor/force_scroll above)
+    self:_scroll_to_bottom({ force = force_scroll, anchor = anchor })
   end)
 
   -- After appending a new message, previously highlighted tool calls and
@@ -1629,29 +1639,103 @@ function M:_finalize_streaming_response()
   end
 end
 
----Auto-scroll to bottom of the chat
-function M:_scroll_to_bottom()
+---@private
+---@return table|nil
+function M:_capture_chat_view_state()
   local chat = self.containers.chat
-  if not chat or not vim.api.nvim_win_is_valid(chat.winid) then
+  if not chat
+      or not chat.winid
+      or not vim.api.nvim_win_is_valid(chat.winid)
+      or not chat.bufnr
+      or not vim.api.nvim_buf_is_valid(chat.bufnr) then
+    return nil
+  end
+
+  local chat_cfg = (Config.windows and Config.windows.chat) or {}
+  local threshold = tonumber(chat_cfg.autoscroll_threshold) or 1
+  if threshold < 0 then
+    threshold = 0
+  end
+
+  local current_win = vim.api.nvim_get_current_win()
+
+  local cursor = vim.api.nvim_win_get_cursor(chat.winid)
+  local cursor_line = cursor and cursor[1] or 1
+
+  return vim.api.nvim_win_call(chat.winid, function()
+    local view = vim.fn.winsaveview()
+    local bottomline = vim.fn.line("w$")
+    local line_count = vim.api.nvim_buf_line_count(chat.bufnr)
+
+    return {
+      view = view,
+      bottomline = bottomline,
+      line_count = line_count,
+      is_current = current_win == chat.winid,
+      cursor_line = cursor_line,
+      cursor_at_bottom = cursor_line >= math.max(1, line_count - threshold),
+      -- Keep a view-based "at bottom" as well, mainly for debugging/telemetry.
+      at_bottom = bottomline >= math.max(1, line_count - threshold),
+    }
+  end)
+end
+
+---Auto-scroll to bottom of the chat.
+---
+---By default, we only scroll if the user was already at (or very near) the bottom.
+---Pass `{ force = true }` to always scroll (e.g. after sending a user message).
+---@param opts? { force?: boolean, anchor?: table }
+function M:_scroll_to_bottom(opts)
+  opts = opts or {}
+
+  local chat = self.containers.chat
+  if not chat or not vim.api.nvim_win_is_valid(chat.winid) or not vim.api.nvim_buf_is_valid(chat.bufnr) then
     return
   end
 
-  -- Get total number of lines in buffer
-  local line_count = vim.api.nvim_buf_line_count(chat.bufnr)
+  local anchor = opts.anchor
+  -- Scroll if:
+  -- - explicitly forced (e.g. user just sent a message), OR
+  -- - the chat window is NOT focused (user isn't interacting with it), OR
+  -- - the chat window is focused AND the user is already at the bottom.
+  local should_scroll = opts.force == true
+      or (anchor == nil)
+      or (anchor and (not anchor.is_current or anchor.cursor_at_bottom))
 
-  -- Set cursor to the last line and scroll to bottom
-  vim.defer_fn(function()
-    if vim.api.nvim_win_is_valid(chat.winid) and vim.api.nvim_buf_is_valid(chat.bufnr) then
-      -- Refresh line count in case it changed
-      local current_line_count = vim.api.nvim_buf_line_count(chat.bufnr)
-      -- Set cursor to last line
-      vim.api.nvim_win_set_cursor(chat.winid, { current_line_count, 0 })
-      -- Ensure the last line is visible
-      vim.api.nvim_win_call(chat.winid, function()
-        vim.cmd("normal! zb") -- scroll so cursor line is at bottom of window
-      end)
+  if not should_scroll then
+    return
+  end
+
+  -- Defer to the next scheduler tick so any buffer updates have been applied.
+  vim.schedule(function()
+    local chat2 = self.containers.chat
+    if not chat2 or not vim.api.nvim_win_is_valid(chat2.winid) or not vim.api.nvim_buf_is_valid(chat2.bufnr) then
+      return
     end
-  end, 10) -- Reduced delay for faster streaming response
+
+    -- If the chat window was focused at capture time, only scroll if the user
+    -- hasn't moved the chat view since we captured `anchor`.
+    if opts.force ~= true and anchor and anchor.is_current and anchor.view then
+      local unchanged = vim.api.nvim_win_call(chat2.winid, function()
+        local view = vim.fn.winsaveview()
+        return view.topline == anchor.view.topline and view.lnum == anchor.view.lnum
+      end)
+      if not unchanged then
+        return
+      end
+    end
+
+    local current_line_count = vim.api.nvim_buf_line_count(chat2.bufnr)
+    if current_line_count < 1 then
+      current_line_count = 1
+    end
+
+    -- Set cursor to last line and scroll to bottom
+    vim.api.nvim_win_set_cursor(chat2.winid, { current_line_count, 0 })
+    vim.api.nvim_win_call(chat2.winid, function()
+      vim.cmd("normal! zb") -- scroll so cursor line is at bottom of window
+    end)
+  end)
 end
 
 ---@param bufnr integer
