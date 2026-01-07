@@ -407,13 +407,12 @@ function M.setup()
   })
 
   vim.api.nvim_create_user_command("EcaFixTreesitter", function()
-    local Utils = require("eca.utils")
-
     -- Emergency treesitter fix for chat buffer
     vim.schedule(function()
       local eca = require("eca")
-      if eca.sidebar and eca.sidebar.containers and eca.sidebar.containers.chat then
-        local bufnr = eca.sidebar.containers.chat.bufnr
+      local sidebar = eca.get()
+      if sidebar and sidebar.containers and sidebar.containers.chat then
+        local bufnr = sidebar.containers.chat.bufnr
         if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
           -- Disable all highlighting for this buffer
           pcall(vim.api.nvim_set_option_value, "syntax", "off", { buf = bufnr })

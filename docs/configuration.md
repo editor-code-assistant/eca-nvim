@@ -333,7 +333,7 @@ require("eca").setup({
 - Set `server_path` if you prefer using a local ECA binary.
 - Use the `log` block to control verbosity and where logs are written.
 - `context.auto_repo_map` controls whether repo context is attached automatically.
-- `todos` and `selected_code` can be disabled entirely if you prefer a simpler UI.
+
 - Adjust `windows.width` to fit your layout.
 - Keymaps can be set manually by turning off `behavior.auto_set_keymaps` and defining your own mappings.
 - The `windows.usage.format` string controls how token and cost usage are displayed.

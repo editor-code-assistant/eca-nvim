@@ -21,14 +21,6 @@ M._defaults = {
   context = {
     auto_repo_map = true, -- Automatically add repoMap context when starting new chat
   },
-  todos = {
-    enabled = true, -- Enable todos functionality
-    max_height = 5, -- Maximum height for todos container
-  },
-  selected_code = {
-    enabled = true, -- Enable selected code display
-    max_height = 8, -- Maximum height for selected code container
-  },
   mappings = {
     chat = "<leader>ec",
     focus = "<leader>ef",
