@@ -1,5 +1,6 @@
 local Utils = require("eca.utils")
 local Logger = require("eca.logger")
+local Picker = require("eca.ui.picker")
 
 local M = {}
 
@@ -173,18 +174,10 @@ function M.setup()
   })
 
   vim.api.nvim_create_user_command("EcaServerMessages", function()
-    local has_snacks, snacks = pcall(require, "snacks")
-    if not has_snacks then
-      Logger.notify("snacks.nvim is not available", vim.log.levels.ERROR)
-      return
-    end
-
-    snacks.picker(
-      ---@type snacks.picker.Config
+    Picker.pick(
       {
         source = "eca messages",
-        finder = function(opts, ctx)
-          ---@type snacks.picker.finder.Item[]
+        finder = function(opts, _)
           local items = {}
           local eca = require("eca")
           if not eca or not eca.server then
@@ -192,17 +185,105 @@ function M.setup()
             return items
           end
 
+          -- First pass: collect messages so we can render them with
+          -- a fixed header width and keep the separator in a constant column.
+          local entries = {}
+
           for msg in vim.iter(eca.server.messages) do
-            local decoded = vim.json.decode(msg.content)
+            local ok, decoded = pcall(vim.json.decode, msg.content)
+            if ok and type(decoded) == "table" then
+              local parts = {}
+
+              if msg.direction then
+                table.insert(parts, string.format("[%s]", tostring(msg.direction)))
+              end
+
+              if decoded.method then
+                table.insert(parts, tostring(decoded.method))
+              end
+
+              if decoded.id ~= nil then
+                table.insert(parts, string.format("#%s", tostring(decoded.id)))
+              end
+
+              local header = table.concat(parts, " ")
+              local preview_text = vim.inspect(decoded) or ""
+
+              -- Flatten whitespace so searching works on a single line
+              local flat_preview = ""
+              if preview_text ~= "" then
+                flat_preview = preview_text:gsub("%s+", " ")
+              end
+
+              local json_text = ""
+              local ok_json, encoded = pcall(vim.json.encode, decoded)
+              if ok_json and type(encoded) == "string" and encoded ~= "" then
+                json_text = encoded
+              end
+
+              table.insert(entries, {
+                header = header,
+                flat_preview = flat_preview,
+                preview_text = preview_text,
+                json_text = json_text,
+                id = decoded.id or msg.id,
+              })
+            end
+          end
+
+          if #entries == 0 then
+            return items
+          end
+
+          -- Second pass: build display items with a fixed header width so that
+          -- the separator and body always start in the same column.
+          local separator = "  |  "
+          local header_width = 40 -- column where the header area ends
+
+          for idx, entry in ipairs(entries) do
+            local header = entry.header or ""
+            local preview_text = entry.preview_text or ""
+            local flat_preview = entry.flat_preview or ""
+
+            -- Truncate overly long headers so the separator stays fixed.
+            --
+            -- NOTE: We truncate to exactly `header_width` characters so that the
+            -- padding logic below can reliably keep the separator aligned.
+            local display_header = header
+            if #display_header > header_width then
+              display_header = display_header:sub(1, header_width)
+            end
+
+            -- Pad headers (or empty ones) up to header_width so the
+            -- first character of the separator is always in the same column.
+            local padding = math.max(0, header_width - #display_header)
+            local padded_header = display_header .. string.rep(" ", padding)
+
+            local text = padded_header
+            if flat_preview ~= "" then
+              text = padded_header .. separator .. flat_preview
+            end
+
+            if text == "" then
+              if preview_text ~= "" then
+                text = preview_text:gsub("%s+", " ")
+              elseif entry.json_text and entry.json_text ~= "" then
+                text = entry.json_text
+              else
+                text = "<empty message>"
+              end
+            end
+
             table.insert(items, {
-              text = decoded.method,
-              idx = decoded.id,
+              text = text,
+              idx = entry.id or idx,
               preview = {
-                text = vim.inspect(decoded),
+                text = preview_text,
                 ft = "lua",
               },
             })
           end
+
           return items
         end,
         preview = "preview",
@@ -326,13 +407,12 @@ function M.setup()
   })
 
   vim.api.nvim_create_user_command("EcaFixTreesitter", function()
-    local Utils = require("eca.utils")
-
     -- Emergency treesitter fix for chat buffer
     vim.schedule(function()
       local eca = require("eca")
-      if eca.sidebar and eca.sidebar.containers and eca.sidebar.containers.chat then
-        local bufnr = eca.sidebar.containers.chat.bufnr
+      local sidebar = eca.get()
+      if sidebar and sidebar.containers and sidebar.containers.chat then
+        local bufnr = sidebar.containers.chat.bufnr
         if bufnr and vim.api.nvim_buf_is_valid(bufnr) then
           -- Disable all highlighting for this buffer
           pcall(vim.api.nvim_set_option_value, "syntax", "off", { buf = bufnr })
@@ -400,6 +480,71 @@ function M.setup()
     end)
   end, {
     desc = "Select current ECA Chat behavior",
+  })
+
+  vim.api.nvim_create_user_command("EcaServerTools", function()
+    Picker.pick(
+      {
+        source = "eca tools",
+        finder = function(_, _)
+          local items = {}
+          local eca = require("eca")
+          if not eca or not eca.state then
+            Logger.notify("ECA state is not available", vim.log.levels.ERROR)
+            return items
+          end
+
+          local tools = eca.state.tools or {}
+          if not tools or vim.tbl_isempty(tools) then
+            Logger.notify("No tools registered in server state", vim.log.levels.INFO)
+            return items
+          end
+
+          -- Collect and sort tool names for stable ordering
+          local names = vim.tbl_keys(tools)
+          table.sort(names)
+
+          for _, name in ipairs(names) do
+            local tool = tools[name] or {}
+
+            -- Build a human-readable preview string that always includes the
+            -- tool name and its primary "kind" field (when available),
+            -- followed by a full vim.inspect dump for debugging.
+            local preview_text
+            if next(tool) ~= nil then
+              local kind_value = tool.kind ~= nil and tostring(tool.kind) or "(unknown)"
+              preview_text = string.format("name: %s\nkind: %s", name, kind_value)
+
+              local inspected = vim.inspect(tool)
+              if inspected and inspected ~= "" then
+                preview_text = preview_text .. "\n" .. inspected
+              end
+            else
+              preview_text = string.format("name: %s\n<empty tool>", name)
+            end
+
+            table.insert(items, {
+              text = name,
+              idx = name,
+              preview = {
+                text = preview_text,
+                ft = "lua",
+              },
+            })
+          end
+
+          return items
+        end,
+        preview = "preview",
+        format = "text",
+        confirm = function(self, item, _)
+          vim.fn.setreg("", item.preview.text)
+          self:close()
+        end,
+      }
+    )
+  end, {
+    desc = "Display ECA server tools (yank preview on confirm)",
   })
 
   Logger.debug("ECA commands registered")

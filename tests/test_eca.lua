@@ -16,6 +16,14 @@ T["config"]["has default values"] = function()
   MiniTest.expect.equality(type(config), "table")
 end
 
+T["config"]["has usage window defaults"] = function()
+  local config = require("eca.config")
+  MiniTest.expect.equality(
+    config.options.windows.usage.format,
+    "{session_tokens_short} / {limit_tokens_short} (${session_cost})"
+  )
+end
+
 -- Test utilities
 T["utils"] = MiniTest.new_set()
 

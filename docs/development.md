@@ -39,9 +39,32 @@
 Run tests before submitting a PR:
 
 ```bash
-# Unit tests
-nvim --headless -c "lua require('eca.tests').run_all()"
+# Run all tests with mini.test
+nvim --headless -u scripts/minimal_init.lua -c "lua require('mini.test').setup(); MiniTest.run_file('tests/test_eca.lua')"
+
+# Run specific test files
+nvim --headless -u scripts/minimal_init.lua -c "lua require('mini.test').setup(); MiniTest.run_file('tests/test_stream_queue.lua')"
+nvim --headless -u scripts/minimal_init.lua -c "lua require('mini.test').setup(); MiniTest.run_file('tests/test_sidebar_usage_and_tools.lua')"
 
 # Manual test
-nvim -c "lua require('eca').setup({debug=true})"
+nvim -c "lua require('eca').setup({log = {level = vim.log.levels.DEBUG}})"
 ```
+
+### Test Coverage
+
+The plugin includes comprehensive tests for:
+- Core configuration and utilities (`test_eca.lua`, `test_utils.lua`)
+- Stream queue and typewriter effect (`test_stream_queue.lua`)
+- Sidebar tool calls and reasoning blocks (`test_sidebar_usage_and_tools.lua`)
+- Picker commands (`test_picker.lua`, `test_server_picker_commands.lua`)
+- Highlight groups (`test_highlights.lua`)
+
+### Highlight Groups
+
+ECA defines custom highlight groups for UI elements:
+- `EcaToolCall` - Tool call headers
+- `EcaHyperlink` - Clickable diff labels
+- `EcaLabel` - Muted text (context labels, reasoning headers)
+- `EcaSuccess`, `EcaWarning`, `EcaInfo` - Status indicators
+
+These can be customized in your colorscheme or via `:highlight` commands.

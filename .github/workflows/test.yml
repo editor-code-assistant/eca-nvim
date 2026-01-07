@@ -11,15 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        neovim_version: ['v0.9.5', 'v0.10.0', 'nightly']
-    
+        neovim_version: ['v0.9.5', 'v0.10.0', 'v0.11.4', 'v0.12.0', 'nightly']
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install Neovim
       uses: rhysd/action-setup-vim@v1
       with:
         neovim: true
-    
+
     - name: Run tests
       run: make test
