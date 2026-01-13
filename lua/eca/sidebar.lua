@@ -1380,6 +1380,10 @@ end
 function M:render_tool_call(tool_content, chat_id)
   -- Handle explicit manual approval (toolCallRun with manualApproval flag)
   if tool_content.type == "toolCallRun" and tool_content.manualApproval then
+    -- Mark as shown to prevent duplicate approval dialogs from implicit flow
+    if self._current_tool_call then
+      self._current_tool_call.approval_shown = true
+    end
     return require("eca.approve").approve_tool_call(tool_content, function()
       self.mediator:send("chat/toolCallApprove", { chatId = chat_id, toolCallId = tool_content.id }, nil)
     end, function()
