@@ -1205,6 +1205,9 @@ function M:handle_chat_content_received(params)
     if content.state == "finished" then
       self:_finalize_streaming_response()
       self:_update_input_display()
+    elseif content.text == "Waiting for tool call approval" then
+      -- Handle implicit approval flow when toolCallPrepare was already received
+      self:render_tool_call(content, chat_id)
     end
   elseif content.type == "toolCallPrepare" then
     self:_finalize_streaming_response()
@@ -1375,11 +1378,43 @@ function M:handle_chat_content_received(params)
 end
 
 function M:render_tool_call(tool_content, chat_id)
+  -- Handle explicit manual approval (toolCallRun with manualApproval flag)
   if tool_content.type == "toolCallRun" and tool_content.manualApproval then
     return require("eca.approve").approve_tool_call(tool_content, function()
       self.mediator:send("chat/toolCallApprove", { chatId = chat_id, toolCallId = tool_content.id }, nil)
     end, function()
       self.mediator:send("chat/toolCallReject", { chatId = chat_id, toolCallId = tool_content.id }, nil)
+    end)
+  end
+
+  -- Handle implicit approval flow: progress message "Waiting for tool call approval"
+  -- with a previously prepared tool call (toolCallPrepare stored in _current_tool_call)
+  if tool_content.type == "progress"
+      and tool_content.text == "Waiting for tool call approval"
+      and self._current_tool_call
+      and self._current_tool_call.id
+      and not self._current_tool_call.approval_shown then
+    -- Mark as shown to avoid duplicate approval dialogs
+    self._current_tool_call.approval_shown = true
+
+    -- Store the tool call id in a local variable to avoid closure issues
+    local tool_call_id = self._current_tool_call.id
+
+    -- Build tool content from the prepared tool call for the approval dialog
+    -- Using field names expected by approve.lua
+    local prepared_tool_call = {
+      id = tool_call_id,
+      name = self._current_tool_call.name or "Tool call",
+      summary = self._current_tool_call.summary,
+      arguments = self._current_tool_call.arguments or "",
+      origin = "eca", -- default origin for implicit approval
+      details = self._current_tool_call.details,
+    }
+
+    return require("eca.approve").approve_tool_call(prepared_tool_call, function()
+      self.mediator:send("chat/toolCallApprove", { chatId = chat_id, toolCallId = tool_call_id }, nil)
+    end, function()
+      self.mediator:send("chat/toolCallReject", { chatId = chat_id, toolCallId = tool_call_id }, nil)
     end)
   end
 end
@@ -1811,6 +1846,7 @@ function M:_handle_tool_call_prepare(content)
       arguments = "",
       details = {},
       outputs = "",
+      approval_shown = false,
     }
   end
 

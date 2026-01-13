@@ -2,14 +2,16 @@ local M = {}
 
 ---@param tool_call eca.ToolCallRun
 function M.get_preview_lines(tool_call)
-  if not tool_call.details then
-    local arguments = vim.split(vim.inspect(tool_call.arguments), "\n")
+  -- If no details or details without diff, show tool call info
+  if not tool_call.details or not tool_call.details.diff then
+    local arguments_text = tool_call.arguments or ""
+    local arguments = vim.split(vim.inspect(arguments_text), "\n")
     local messages = {}
     if tool_call.summary then
       table.insert(messages, "Summary: " .. tool_call.summary)
     end
-    table.insert(messages, "Tool Name: " .. tool_call.name)
-    table.insert(messages, "Tool Type: " .. tool_call.origin)
+    table.insert(messages, "Tool Name: " .. (tool_call.name or "unknown"))
+    table.insert(messages, "Tool Type: " .. (tool_call.origin or "unknown"))
     table.insert(messages, "Tool Arguments: ")
     for _, v in pairs(arguments) do
       table.insert(messages, v)
@@ -17,7 +19,7 @@ function M.get_preview_lines(tool_call)
     return messages
   end
   local lines = vim.split(tool_call.details.diff, "\n")
-  return { tool_call.details.path, unpack(lines) }
+  return { tool_call.details.path or "", unpack(lines) }
 end
 
 ---@param lines string[]
