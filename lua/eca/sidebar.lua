@@ -161,7 +161,7 @@ function M:_close_windows_only()
 
   for name, container in pairs(self.containers) do
     if container and container.winid and vim.api.nvim_win_is_valid(container.winid) then
-      if preserve then
+      if preserve and name == "chat" then
         -- Close only the window, keep the buffer alive
         pcall(vim.api.nvim_win_close, container.winid, true)
         container.winid = nil
@@ -654,12 +654,9 @@ function M:_setup_containers()
 end
 
 function M:_refresh_container_content()
-  local preserve = Config.behavior and Config.behavior.preserve_chat_history
   -- Refresh content without full setup
   if self.containers.chat then
-    if not preserve then
-      self:_set_welcome_content()
-    end
+    self:_set_welcome_content()
   end
 
   if self.containers.config then

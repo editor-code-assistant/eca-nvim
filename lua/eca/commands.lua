@@ -550,7 +550,7 @@ function M.setup()
   vim.api.nvim_create_user_command("EcaChatClear", function()
     local sidebar = require("eca").get()
     if sidebar then
-      sidebar._welcome_message_applied = false
+      sidebar._welcome_message_applied = true
       sidebar._force_welcome = false
       local chat = sidebar.containers and sidebar.containers.chat
       if chat and chat.bufnr and vim.api.nvim_buf_is_valid(chat.bufnr) then

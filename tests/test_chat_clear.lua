@@ -167,7 +167,7 @@ T["EcaChatClear"]["resets _welcome_message_applied and _force_welcome"] = functi
   child.cmd("EcaChatClear")
 
   local flags = child.lua_get("_G.get_sidebar_flags()")
-  eq(flags.welcome_message_applied, false)
+  eq(flags.welcome_message_applied, true)
   eq(flags.force_welcome, false)
 end
 
@@ -180,6 +180,59 @@ T["EcaChatClear"]["is idempotent when called twice"] = function()
   child.cmd("EcaChatClear")
 
   eq(child.lua_get("_G.get_chat_lines()"), { "" })
+end
+
+-- preserve_chat_history toggle cycle -----------------------------------------
+
+T["preserve_chat_history"] = MiniTest.new_set()
+
+T["preserve_chat_history"]["reuses same bufnr and keeps content across close/open"] = function()
+  setup_env(true)
+  flush(200)
+
+  child.lua("_G.fill_chat()")
+  local bufnr_before = child.lua_get("require('eca').get().containers.chat.bufnr")
+
+  child.lua([[require("eca").close_sidebar()]])
+  flush(100)
+  child.lua([[require("eca").open_sidebar({})]])
+  flush(200)
+
+  local bufnr_after = child.lua_get("require('eca').get().containers.chat.bufnr")
+  eq(bufnr_before, bufnr_after)
+  eq(child.lua_get("_G.chat_has_old_content()"), true)
+end
+
+T["preserve_chat_history"]["does not leak buffers across repeated toggles"] = function()
+  setup_env(true)
+  flush(200)
+
+  local buf_count_before = child.lua_get("#vim.api.nvim_list_bufs()")
+
+  for _ = 1, 5 do
+    child.lua([[require("eca").close_sidebar()]])
+    flush(100)
+    child.lua([[require("eca").open_sidebar({})]])
+    flush(200)
+  end
+
+  local buf_count_after = child.lua_get("#vim.api.nvim_list_bufs()")
+  -- Allow at most 1 extra buffer (nui internals), but definitely not 5+
+  eq(buf_count_after - buf_count_before <= 1, true)
+end
+
+T["preserve_chat_history"]["content is lost when preserve is disabled"] = function()
+  setup_env(false)
+  flush(200)
+
+  child.lua("_G.fill_chat()")
+
+  child.lua([[require("eca").close_sidebar()]])
+  flush(100)
+  child.lua([[require("eca").open_sidebar({})]])
+  flush(200)
+
+  eq(child.lua_get("_G.chat_has_old_content()"), false)
 end
 
 return T
