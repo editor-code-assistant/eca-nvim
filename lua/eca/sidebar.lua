@@ -157,11 +157,19 @@ function M:close()
 end
 
 function M:_close_windows_only()
+  local preserve = Config.behavior and Config.behavior.preserve_chat_history
+
   for name, container in pairs(self.containers) do
     if container and container.winid and vim.api.nvim_win_is_valid(container.winid) then
-      container:unmount()
-      -- Keep the container reference but mark window as invalid
-      container.winid = nil
+      if preserve then
+        -- Close only the window, keep the buffer alive
+        pcall(vim.api.nvim_win_close, container.winid, true)
+        container.winid = nil
+      else
+        container:unmount()
+        -- Keep the container reference but mark window as invalid
+        container.winid = nil
+      end
     end
   end
   Logger.debug("ECA sidebar windows closed")
@@ -318,6 +326,14 @@ function M:_create_containers()
     winfixwidth = false,
   }
 
+  local preserve = Config.behavior and Config.behavior.preserve_chat_history
+  local existing_chat_bufnr = preserve
+      and self.containers.chat
+      and self.containers.chat.bufnr
+      and vim.api.nvim_buf_is_valid(self.containers.chat.bufnr)
+      and self.containers.chat.bufnr
+    or nil
+
   --  Create and mount main chat container first
   self.containers.chat = Split({
     relative = "editor",
@@ -332,6 +348,13 @@ function M:_create_containers()
     }),
     win_options = base_win_options,
   })
+
+  if existing_chat_bufnr then
+    pcall(vim.api.nvim_buf_delete, self.containers.chat.bufnr, { force = true })
+    self.containers.chat.bufnr = existing_chat_bufnr
+    Logger.debug("Reusing existing chat buffer: " .. existing_chat_bufnr)
+  end
+
   self.containers.chat:mount()
   self:_setup_container_events(self.containers.chat, "chat")
 
@@ -631,9 +654,12 @@ function M:_setup_containers()
 end
 
 function M:_refresh_container_content()
+  local preserve = Config.behavior and Config.behavior.preserve_chat_history
   -- Refresh content without full setup
   if self.containers.chat then
-    self:_set_welcome_content()
+    if not preserve then
+      self:_set_welcome_content()
+    end
   end
 
   if self.containers.config then
