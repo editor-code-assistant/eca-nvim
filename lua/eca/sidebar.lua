@@ -253,6 +253,15 @@ function M:reset()
   end
 end
 
+function M:clear_chat()
+  local chat = self.containers and self.containers.chat
+  if chat and chat.bufnr and vim.api.nvim_buf_is_valid(chat.bufnr) then
+    self._welcome_message_applied = true
+    self._force_welcome = false
+    vim.api.nvim_buf_set_lines(chat.bufnr, 0, -1, false, {})
+  end
+end
+
 function M:new_chat()
   self:reset()
   self._force_welcome = true
@@ -333,6 +342,14 @@ function M:_create_containers()
       and vim.api.nvim_buf_is_valid(self.containers.chat.bufnr)
       and self.containers.chat.bufnr
     or nil
+
+  -- Clean up the old chat Split's autocmds before creating a new one.
+  -- Detach the buffer first so that unmount() does not delete it.
+  if existing_chat_bufnr then
+    local old_chat = self.containers.chat
+    old_chat.bufnr = nil
+    pcall(old_chat.unmount, old_chat)
+  end
 
   --  Create and mount main chat container first
   self.containers.chat = Split({
