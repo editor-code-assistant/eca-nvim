@@ -159,7 +159,7 @@ T["EcaChatClear"]["is a no-op when sidebar is closed and buffer was destroyed (p
   eq(ok, true)
 end
 
-T["EcaChatClear"]["resets _welcome_message_applied and _force_welcome"] = function()
+T["EcaChatClear"]["marks welcome as applied and clears force_welcome after clear"] = function()
   setup_env(false)
   flush(200)
 

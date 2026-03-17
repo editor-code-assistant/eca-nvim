@@ -256,6 +256,24 @@ end
 function M:clear_chat()
   local chat = self.containers and self.containers.chat
   if chat and chat.bufnr and vim.api.nvim_buf_is_valid(chat.bufnr) then
+    -- Reset chat content state to prevent stale line numbers / extmark IDs.
+    self._tool_calls = {}
+    self._reasons = {}
+    self._current_tool_call = nil
+    self._is_tool_call_streaming = false
+    self._is_streaming = false
+    self._current_response_buffer = ""
+    self._stream_visible_buffer = ""
+    if self._stream_queue then
+      self._stream_queue:clear()
+    end
+    -- Reset chat extmark refs (marks are invalidated when the buffer is wiped).
+    if self.extmarks then
+      self.extmarks.assistant = nil
+      self.extmarks.tool_header = nil
+      self.extmarks.tool_diff_label = nil
+    end
+    -- Prevent state/updated events from repopulating the cleared buffer.
     self._welcome_message_applied = true
     self._force_welcome = false
     vim.api.nvim_buf_set_lines(chat.bufnr, 0, -1, false, {})
@@ -343,11 +361,12 @@ function M:_create_containers()
       and self.containers.chat.bufnr
     or nil
 
-  -- Clean up the old chat Split's autocmds before creating a new one.
-  -- Detach the buffer first so that unmount() does not delete it.
-  if existing_chat_bufnr then
-    local old_chat = self.containers.chat
-    old_chat.bufnr = nil
+  -- Always unmount the old Split to clean up its autocmds.
+  local old_chat = self.containers.chat
+  if old_chat then
+    if existing_chat_bufnr then
+      old_chat.bufnr = nil -- detach so unmount() doesn't delete the preserved buffer
+    end
     pcall(old_chat.unmount, old_chat)
   end
 
