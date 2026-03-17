@@ -263,6 +263,7 @@ function M:clear_chat()
     self._is_tool_call_streaming = false
     self._is_streaming = false
     self._current_response_buffer = ""
+    self._last_user_message = ""
     self._stream_visible_buffer = ""
     if self._stream_queue then
       self._stream_queue:clear()
