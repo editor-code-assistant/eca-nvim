@@ -17,6 +17,7 @@ M._defaults = {
     auto_start_server = false, -- Automatically start server on setup
     auto_download = true, -- Automatically download server if not found
     show_status_updates = true, -- Show status updates in notifications
+    preserve_chat_history = false, -- When true, chat history is preserved across sidebar open/close cycles
   },
   context = {
     auto_repo_map = true, -- Automatically add repoMap context when starting new chat

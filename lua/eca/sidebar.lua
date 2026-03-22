@@ -157,11 +157,19 @@ function M:close()
 end
 
 function M:_close_windows_only()
+  local preserve = Config.behavior and Config.behavior.preserve_chat_history
+
   for name, container in pairs(self.containers) do
     if container and container.winid and vim.api.nvim_win_is_valid(container.winid) then
-      container:unmount()
-      -- Keep the container reference but mark window as invalid
-      container.winid = nil
+      if preserve and name == "chat" then
+        -- Close only the window, keep the buffer alive
+        pcall(vim.api.nvim_win_close, container.winid, true)
+        container.winid = nil
+      else
+        container:unmount()
+        -- Keep the container reference but mark window as invalid
+        container.winid = nil
+      end
     end
   end
   Logger.debug("ECA sidebar windows closed")
@@ -245,6 +253,34 @@ function M:reset()
   end
 end
 
+function M:clear_chat()
+  local chat = self.containers and self.containers.chat
+  if chat and chat.bufnr and vim.api.nvim_buf_is_valid(chat.bufnr) then
+    -- Reset chat content state to prevent stale line numbers / extmark IDs.
+    self._tool_calls = {}
+    self._reasons = {}
+    self._current_tool_call = nil
+    self._is_tool_call_streaming = false
+    self._is_streaming = false
+    self._current_response_buffer = ""
+    self._last_user_message = ""
+    self._stream_visible_buffer = ""
+    if self._stream_queue then
+      self._stream_queue:clear()
+    end
+    -- Reset chat extmark refs (marks are invalidated when the buffer is wiped).
+    if self.extmarks then
+      self.extmarks.assistant = nil
+      self.extmarks.tool_header = nil
+      self.extmarks.tool_diff_label = nil
+    end
+    -- Prevent state/updated events from repopulating the cleared buffer.
+    self._welcome_message_applied = true
+    self._force_welcome = false
+    vim.api.nvim_buf_set_lines(chat.bufnr, 0, -1, false, {})
+  end
+end
+
 function M:new_chat()
   self:reset()
   self._force_welcome = true
@@ -318,6 +354,23 @@ function M:_create_containers()
     winfixwidth = false,
   }
 
+  local preserve = Config.behavior and Config.behavior.preserve_chat_history
+  local existing_chat_bufnr = preserve
+      and self.containers.chat
+      and self.containers.chat.bufnr
+      and vim.api.nvim_buf_is_valid(self.containers.chat.bufnr)
+      and self.containers.chat.bufnr
+    or nil
+
+  -- Always unmount the old Split to clean up its autocmds.
+  local old_chat = self.containers.chat
+  if old_chat then
+    if existing_chat_bufnr then
+      old_chat.bufnr = nil -- detach so unmount() doesn't delete the preserved buffer
+    end
+    pcall(old_chat.unmount, old_chat)
+  end
+
   --  Create and mount main chat container first
   self.containers.chat = Split({
     relative = "editor",
@@ -332,6 +385,13 @@ function M:_create_containers()
     }),
     win_options = base_win_options,
   })
+
+  if existing_chat_bufnr then
+    pcall(vim.api.nvim_buf_delete, self.containers.chat.bufnr, { force = true })
+    self.containers.chat.bufnr = existing_chat_bufnr
+    Logger.debug("Reusing existing chat buffer: " .. existing_chat_bufnr)
+  end
+
   self.containers.chat:mount()
   self:_setup_container_events(self.containers.chat, "chat")
 

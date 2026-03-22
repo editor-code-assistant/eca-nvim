@@ -547,6 +547,15 @@ function M.setup()
     desc = "Display ECA server tools (yank preview on confirm)",
   })
 
+  vim.api.nvim_create_user_command("EcaChatClear", function()
+    local sidebar = require("eca").get()
+    if sidebar then
+      sidebar:clear_chat()
+    end
+  end, {
+    desc = "Clear ECA chat buffer",
+  })
+
   Logger.debug("ECA commands registered")
 end
 
