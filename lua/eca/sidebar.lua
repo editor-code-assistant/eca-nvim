@@ -1013,8 +1013,8 @@ function M:_update_config_display()
     return
   end
 
-  local model = self.mediator:selected_model() or "unknown"
-  local behavior = self.mediator:selected_behavior() or "unknown"
+  local model = tostring(self.mediator:selected_model() or "unknown")
+  local behavior = tostring(self.mediator:selected_behavior() or "unknown")
   local mcps = self.mediator:mcps()
 
   local registered_count = vim.tbl_count(mcps)
