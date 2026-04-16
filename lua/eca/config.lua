@@ -26,7 +26,7 @@ M._defaults = {
     chat = "<leader>ec",
     focus = "<leader>ef",
     toggle = "<leader>et",
-    -- Chat input submit keys (per-mode). Always bound regardless of `auto_set_keymaps`,
+    -- Chat input submit keys (per-mode). Always bound regardless of `behavior.auto_set_keymaps`,
     -- since the input window is unusable without a way to send.
     submit = {
       normal = "<CR>",
