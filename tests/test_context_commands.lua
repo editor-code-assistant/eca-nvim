@@ -7,6 +7,16 @@ local function flush(ms)
   child.api.nvim_eval("1")
 end
 
+-- Returns the registered command's name, or nil if not registered. Filters
+-- server-side so the function-valued `callback` field (present on 0.12+)
+-- does not cross the MiniTest msgpack boundary.
+local function cmd_registered_name(name)
+  return child.lua_get(string.format(
+    "(vim.api.nvim_get_commands({})[%q] or {}).name",
+    name
+  ))
+end
+
 local function setup_test_environment()
   child.lua([[
     local Eca = require('eca')
@@ -100,9 +110,7 @@ end
 T["EcaChatAddFile"] = MiniTest.new_set()
 
 T["EcaChatAddFile"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatAddFile), "table")
-  eq(commands.EcaChatAddFile.name, "EcaChatAddFile")
+  eq(cmd_registered_name("EcaChatAddFile"), "EcaChatAddFile")
 end
 
 T["EcaChatAddFile"]["adds current file as context when no args"] = function()
@@ -140,9 +148,7 @@ end
 T["EcaAddFile"] = MiniTest.new_set()
 
 T["EcaAddFile"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaAddFile), "table")
-  eq(commands.EcaAddFile.name, "EcaAddFile")
+  eq(cmd_registered_name("EcaAddFile"), "EcaAddFile")
 end
 
 T["EcaAddFile"]["shows deprecation notice when called"] = function()
@@ -160,9 +166,7 @@ end
 T["EcaChatRemoveFile"] = MiniTest.new_set()
 
 T["EcaChatRemoveFile"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatRemoveFile), "table")
-  eq(commands.EcaChatRemoveFile.name, "EcaChatRemoveFile")
+  eq(cmd_registered_name("EcaChatRemoveFile"), "EcaChatRemoveFile")
 end
 
 T["EcaChatRemoveFile"]["removes current file context when no args"] = function()
@@ -197,9 +201,7 @@ end
 T["EcaRemoveContext"] = MiniTest.new_set()
 
 T["EcaRemoveContext"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaRemoveContext), "table")
-  eq(commands.EcaRemoveContext.name, "EcaRemoveContext")
+  eq(cmd_registered_name("EcaRemoveContext"), "EcaRemoveContext")
 end
 
 T["EcaRemoveContext"]["shows deprecation notice when called"] = function()
@@ -215,9 +217,7 @@ end
 T["EcaChatAddSelection"] = MiniTest.new_set()
 
 T["EcaChatAddSelection"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatAddSelection), "table")
-  eq(commands.EcaChatAddSelection.name, "EcaChatAddSelection")
+  eq(cmd_registered_name("EcaChatAddSelection"), "EcaChatAddSelection")
 end
 
 T["EcaChatAddSelection"]["adds a ranged file context based on visual selection"] = function()
@@ -250,9 +250,7 @@ end
 T["EcaAddSelection"] = MiniTest.new_set()
 
 T["EcaAddSelection"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaAddSelection), "table")
-  eq(commands.EcaAddSelection.name, "EcaAddSelection")
+  eq(cmd_registered_name("EcaAddSelection"), "EcaAddSelection")
 end
 
 T["EcaAddSelection"]["shows deprecation notice when called"] = function()
@@ -268,9 +266,7 @@ end
 T["EcaChatAddUrl"] = MiniTest.new_set()
 
 T["EcaChatAddUrl"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatAddUrl), "table")
-  eq(commands.EcaChatAddUrl.name, "EcaChatAddUrl")
+  eq(cmd_registered_name("EcaChatAddUrl"), "EcaChatAddUrl")
 end
 
 T["EcaChatAddUrl"]["adds web context and truncates name based on config"] = function()
@@ -329,9 +325,7 @@ end
 T["EcaChatListContexts"] = MiniTest.new_set()
 
 T["EcaChatListContexts"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatListContexts), "table")
-  eq(commands.EcaChatListContexts.name, "EcaChatListContexts")
+  eq(cmd_registered_name("EcaChatListContexts"), "EcaChatListContexts")
 end
 
 T["EcaChatListContexts"]["runs without modifying contexts"] = function()
@@ -352,9 +346,7 @@ end
 T["EcaListContexts"] = MiniTest.new_set()
 
 T["EcaListContexts"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaListContexts), "table")
-  eq(commands.EcaListContexts.name, "EcaListContexts")
+  eq(cmd_registered_name("EcaListContexts"), "EcaListContexts")
 end
 
 T["EcaListContexts"]["shows deprecation notice when called"] = function()
@@ -372,9 +364,7 @@ end
 T["EcaChatClearContexts"] = MiniTest.new_set()
 
 T["EcaChatClearContexts"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatClearContexts), "table")
-  eq(commands.EcaChatClearContexts.name, "EcaChatClearContexts")
+  eq(cmd_registered_name("EcaChatClearContexts"), "EcaChatClearContexts")
 end
 
 T["EcaChatClearContexts"]["clears all contexts"] = function()
@@ -395,9 +385,7 @@ end
 T["EcaClearContexts"] = MiniTest.new_set()
 
 T["EcaClearContexts"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaClearContexts), "table")
-  eq(commands.EcaClearContexts.name, "EcaClearContexts")
+  eq(cmd_registered_name("EcaClearContexts"), "EcaClearContexts")
 end
 
 T["EcaClearContexts"]["shows deprecation notice when called"] = function()

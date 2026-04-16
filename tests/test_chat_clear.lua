@@ -7,6 +7,16 @@ local function flush(ms)
   child.api.nvim_eval("1")
 end
 
+-- Returns the registered command's name, or nil if not registered. Filters
+-- server-side so the function-valued `callback` field (present on 0.12+)
+-- does not cross the MiniTest msgpack boundary.
+local function cmd_registered_name(name)
+  return child.lua_get(string.format(
+    "(vim.api.nvim_get_commands({})[%q] or {}).name",
+    name
+  ))
+end
+
 local function setup_helpers()
   _G.fill_chat = function()
     local sidebar = require("eca").get()
@@ -82,9 +92,7 @@ T["EcaChatClear"] = MiniTest.new_set()
 
 T["EcaChatClear"]["command is registered"] = function()
   setup_env(false)
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatClear), "table")
-  eq(commands.EcaChatClear.name, "EcaChatClear")
+  eq(cmd_registered_name("EcaChatClear"), "EcaChatClear")
 end
 
 T["EcaChatClear"]["clears chat buffer when sidebar is open"] = function()
