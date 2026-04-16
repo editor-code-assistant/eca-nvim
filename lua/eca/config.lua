@@ -26,6 +26,12 @@ M._defaults = {
     chat = "<leader>ec",
     focus = "<leader>ef",
     toggle = "<leader>et",
+    -- Chat input submit keys (per-mode). Always bound regardless of `behavior.auto_set_keymaps`,
+    -- since the input window is unusable without a way to send.
+    submit = {
+      normal = "<CR>",
+      insert = "<C-s>",
+    },
   },
   windows = {
     wrap = true,
@@ -62,7 +68,8 @@ M._defaults = {
       welcome = {
         message = "", -- If non-empty, overrides server-provided welcome message
         tips = {
-          "Type your message and use CTRL+s to send", -- Tips appended under the welcome (set empty list {} to disable)
+          -- Available placeholders: {submit_key_normal}, {submit_key_insert}
+          "Type your message and press {submit_key_insert} to send", -- Tips appended under the welcome (set empty list {} to disable)
         },
       },
       typing = {

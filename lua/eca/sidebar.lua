@@ -617,12 +617,12 @@ end
 ---@private
 ---@param container NuiSplit
 function M:_setup_input_keymaps(container)
-  -- Setup keymaps for input container
-  container:map("n", "<C-s>", function()
+  local submit = Config.mappings.submit
+  container:map("n", submit.normal, function()
     self:_handle_input()
   end, { noremap = true, silent = true })
 
-  container:map("i", "<C-s>", function()
+  container:map("i", submit.insert, function()
     self:_handle_input()
   end, { noremap = true, silent = true })
 end
@@ -1163,8 +1163,16 @@ function M:_update_welcome_content()
     local tips = cfg.tips or {}
 
     if #tips > 0 then
+      local submit = Config.mappings.submit
+      local placeholders = {
+        submit_key_normal = submit.normal,
+        submit_key_insert = submit.insert,
+      }
       for _, tip in ipairs(tips) do
-        table.insert(lines, tip)
+        local rendered = tip:gsub("{(.-)}", function(k)
+          return placeholders[k] or ("{" .. k .. "}")
+        end)
+        table.insert(lines, rendered)
       end
     end
 

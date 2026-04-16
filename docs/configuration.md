@@ -64,6 +64,19 @@ require("eca").setup({
     chat = "<leader>ec",  -- Open chat
     focus = "<leader>ef", -- Focus sidebar
     toggle = "<leader>et",-- Toggle sidebar
+
+    -- Chat input submit keys (per-mode). Always bound regardless of
+    -- `behavior.auto_set_keymaps`, since the input window is unusable without
+    -- a way to send. Override one or both — partial overrides preserve the
+    -- other mode's default.
+    --
+    -- Example "chat-app feel" override (insert-mode Enter sends, no easy
+    -- newline while composing):
+    --   submit = { insert = "<CR>" }
+    submit = {
+      normal = "<CR>",
+      insert = "<C-s>",
+    },
   },
 
   -- === WINDOWS & UI ===
@@ -122,9 +135,10 @@ require("eca").setup({
         -- If non-empty, overrides the server-provided welcome message
         message = "",
 
-        -- Tips appended under the welcome (set {} to disable)
+        -- Tips appended under the welcome (set {} to disable).
+        -- Available placeholders: {submit_key_normal}, {submit_key_insert}
         tips = {
-          "Type your message and use CTRL+s to send",
+          "Type your message and press {submit_key_insert} to send",
         },
       },
 

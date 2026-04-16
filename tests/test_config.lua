@@ -609,4 +609,179 @@ T["behavior_validation"]["typing.enabled=true enables gradual display"] = functi
   eq(child.lua_get("_G.tick_delay"), 5)
 end
 
+-- ===== Mappings tests =====
+
+T["mappings"] = MiniTest.new_set()
+
+T["mappings"]["submit defaults bind <CR> in normal and <C-s> in insert"] = function()
+  child.lua([[
+    local Server = require('eca.server').new()
+    local State = require('eca.state').new()
+    local Mediator = require('eca.mediator').new(Server, State)
+    local Sidebar = require('eca.sidebar')
+    local sidebar = Sidebar.new(1, Mediator)
+
+    sidebar:open()
+
+    local input_bufnr = sidebar.containers.input.bufnr
+
+    -- Normalize a key string the same way nvim does internally for keymaps
+    local function norm(k)
+      return vim.api.nvim_replace_termcodes(k, true, true, true)
+    end
+    local function has_mapping(mode, key)
+      local target = norm(key)
+      for _, m in ipairs(vim.api.nvim_buf_get_keymap(input_bufnr, mode)) do
+        if norm(m.lhs) == target then
+          return true
+        end
+      end
+      return false
+    end
+
+    _G.has_normal_cr = has_mapping("n", "<CR>")
+    _G.has_insert_cs = has_mapping("i", "<C-s>")
+  ]])
+
+  eq(child.lua_get("_G.has_normal_cr"), true)
+  eq(child.lua_get("_G.has_insert_cs"), true)
+end
+
+T["mappings"]["submit partial override preserves other mode default"] = function()
+  child.lua([[
+    local Config = require('eca.config')
+    Config.override({
+      mappings = {
+        submit = {
+          insert = "<C-x>",
+        },
+      },
+    })
+
+    local Server = require('eca.server').new()
+    local State = require('eca.state').new()
+    local Mediator = require('eca.mediator').new(Server, State)
+    local Sidebar = require('eca.sidebar')
+    local sidebar = Sidebar.new(1, Mediator)
+
+    sidebar:open()
+
+    local input_bufnr = sidebar.containers.input.bufnr
+
+    local function norm(k)
+      return vim.api.nvim_replace_termcodes(k, true, true, true)
+    end
+    local function has_mapping(mode, key)
+      local target = norm(key)
+      for _, m in ipairs(vim.api.nvim_buf_get_keymap(input_bufnr, mode)) do
+        if norm(m.lhs) == target then
+          return true
+        end
+      end
+      return false
+    end
+
+    _G.has_normal_cr = has_mapping("n", "<CR>")        -- default preserved
+    _G.has_insert_cx = has_mapping("i", "<C-x>")       -- override applied
+    _G.has_insert_cs = has_mapping("i", "<C-s>")       -- old default unbound
+  ]])
+
+  eq(child.lua_get("_G.has_normal_cr"), true)
+  eq(child.lua_get("_G.has_insert_cx"), true)
+  eq(child.lua_get("_G.has_insert_cs"), false)
+end
+
+T["mappings"]["submit full override binds both modes"] = function()
+  child.lua([[
+    local Config = require('eca.config')
+    Config.override({
+      mappings = {
+        submit = {
+          normal = "<C-y>",
+          insert = "<C-x>",
+        },
+      },
+    })
+
+    local Server = require('eca.server').new()
+    local State = require('eca.state').new()
+    local Mediator = require('eca.mediator').new(Server, State)
+    local Sidebar = require('eca.sidebar')
+    local sidebar = Sidebar.new(1, Mediator)
+
+    sidebar:open()
+
+    local input_bufnr = sidebar.containers.input.bufnr
+
+    local function norm(k)
+      return vim.api.nvim_replace_termcodes(k, true, true, true)
+    end
+    local function has_mapping(mode, key)
+      local target = norm(key)
+      for _, m in ipairs(vim.api.nvim_buf_get_keymap(input_bufnr, mode)) do
+        if norm(m.lhs) == target then
+          return true
+        end
+      end
+      return false
+    end
+
+    _G.has_normal_cy = has_mapping("n", "<C-y>")
+    _G.has_insert_cx = has_mapping("i", "<C-x>")
+    _G.has_normal_cr = has_mapping("n", "<CR>")
+  ]])
+
+  eq(child.lua_get("_G.has_normal_cy"), true)
+  eq(child.lua_get("_G.has_insert_cx"), true)
+  eq(child.lua_get("_G.has_normal_cr"), false)
+end
+
+T["mappings"]["welcome tip substitutes submit key placeholders"] = function()
+  child.lua([[
+    local Config = require('eca.config')
+    Config.override({
+      mappings = {
+        submit = {
+          normal = "<C-y>",
+          insert = "<C-x>",
+        },
+      },
+      windows = {
+        chat = {
+          welcome = {
+            tips = {
+              "normal={submit_key_normal} insert={submit_key_insert} unknown={nope}",
+            },
+          },
+        },
+      },
+    })
+
+    local Server = require('eca.server').new()
+    local State = require('eca.state').new()
+    local Mediator = require('eca.mediator').new(Server, State)
+    -- Force a non-empty welcome_message so the tips branch runs
+    function Mediator:welcome_message() return "welcome" end
+
+    local Sidebar = require('eca.sidebar')
+    local sidebar = Sidebar.new(1, Mediator)
+    sidebar:open()
+    sidebar:_update_welcome_content()
+
+    local chat_bufnr = sidebar.containers.chat.bufnr
+    local lines = vim.api.nvim_buf_get_lines(chat_bufnr, 0, -1, false)
+    _G.lines = lines
+  ]])
+
+  local lines = child.lua_get("_G.lines")
+  local found = false
+  for _, line in ipairs(lines) do
+    if line == "normal=<C-y> insert=<C-x> unknown={nope}" then
+      found = true
+      break
+    end
+  end
+  eq(found, true)
+end
+
 return T
