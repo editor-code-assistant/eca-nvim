@@ -21,7 +21,7 @@ Recent updates include:
 3. Open a file you want to analyze
 4. Run `:EcaChat` or press `<leader>ec`
 5. On first run, the server downloads automatically
-6. Type your question and press `Ctrl+S` to send
+6. Type your question and press `<C-s>` to send (configurable — see [Configuration](./configuration.md))
 
 ---
 
@@ -64,10 +64,13 @@ Deprecated aliases (still available but log a warning): `:EcaAddFile`, `:EcaAddS
 
 | Shortcut | Action | Context |
 |----------|--------|---------|
-| `Ctrl+S` | Send message | Insert/Normal mode |
+| `<CR>` | Send message (default) | Normal mode in input |
+| `<C-s>` | Send message (default) | Insert mode in input |
 | `Enter` | New line | Insert mode |
 | `Enter` (in chat buffer) | Toggle tool call/reasoning block | Normal mode on tool call or reasoning header |
 | `Esc` | Exit insert mode | Insert mode |
+
+Submit keys are configurable via `mappings.submit.normal` and `mappings.submit.insert` — see [Configuration](./configuration.md).
 
 ---
 
@@ -75,8 +78,8 @@ Deprecated aliases (still available but log a warning): `:EcaAddFile`, `:EcaAddS
 
 ### Sending messages
 - Type in the input line starting with `> `
-- Press `Enter` to insert a new line
-- Press `Ctrl+S` to send
+- Press `Enter` to insert a new line (insert mode)
+- Press `<C-s>` (insert mode) or `<CR>` (normal mode) to send — both configurable
 - Responses stream in real time with a typewriter effect (configurable)
 
 ### Interacting with responses
@@ -313,7 +316,7 @@ are first expanded to absolute paths on the Neovim side (including `~` expansion
    ```markdown
    > Explain what this function does and how I can improve it
    ```
-5. Send with `Ctrl+S`
+5. Send with `<C-s>` (insert) or `<CR>` (normal)
 6. Read the response and implement suggestions
 7. Continue the conversation for clarifications
 

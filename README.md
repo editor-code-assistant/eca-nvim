@@ -12,7 +12,7 @@ A lightweight Neovim plugin that embeds [ECA (Editor Code Assistant)](https://ec
 
 1. Install via your plugin manager (see Installation below)
 2. Run `:EcaChat` or press `<leader>ec`
-3. Type your message and press `Ctrl+S`
+3. Type your message and press `<C-s>` (or your configured submit key)
 
 
 ## Documentation
