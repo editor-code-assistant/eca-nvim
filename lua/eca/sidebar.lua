@@ -256,6 +256,11 @@ end
 function M:clear_chat()
   local chat = self.containers and self.containers.chat
   if chat and chat.bufnr and vim.api.nvim_buf_is_valid(chat.bufnr) then
+    local chat_id = self.mediator:id()
+    if chat_id then
+      self.mediator:send("chat/clear", { chatId = chat_id, messages = true }, nil)
+    end
+
     -- Reset chat content state to prevent stale line numbers / extmark IDs.
     self._tool_calls = {}
     self._reasons = {}
