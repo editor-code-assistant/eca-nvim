@@ -2,6 +2,16 @@ local MiniTest = require("mini.test")
 local eq = MiniTest.expect.equality
 local child = MiniTest.new_child_neovim()
 
+-- Returns the registered command's name, or nil if not registered. Filters
+-- server-side so the function-valued `callback` field (present on 0.12+)
+-- does not cross the MiniTest msgpack boundary.
+local function cmd_registered_name(name)
+  return child.lua_get(string.format(
+    "(vim.api.nvim_get_commands({})[%q] or {}).name",
+    name
+  ))
+end
+
 local function setup_test_environment()
   -- Setup commands
   require('eca.commands').setup()
@@ -52,9 +62,7 @@ local T = MiniTest.new_set({
 T["EcaChatSelectModel"] = MiniTest.new_set()
 
 T["EcaChatSelectModel"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatSelectModel), "table")
-  eq(commands.EcaChatSelectModel.name, "EcaChatSelectModel")
+  eq(cmd_registered_name("EcaChatSelectModel"), "EcaChatSelectModel")
 end
 
 T["EcaChatSelectModel"]["updates state when model selected"] = function()
@@ -114,9 +122,7 @@ end
 T["EcaChatSelectBehavior"] = MiniTest.new_set()
 
 T["EcaChatSelectBehavior"]["command is registered"] = function()
-  local commands = child.lua_get("vim.api.nvim_get_commands({})")
-  eq(type(commands.EcaChatSelectBehavior), "table")
-  eq(commands.EcaChatSelectBehavior.name, "EcaChatSelectBehavior")
+  eq(cmd_registered_name("EcaChatSelectBehavior"), "EcaChatSelectBehavior")
 end
 
 T["EcaChatSelectBehavior"]["updates state when behavior selected"] = function()
