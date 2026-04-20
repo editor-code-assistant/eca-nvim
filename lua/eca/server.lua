@@ -37,6 +37,9 @@ function M.new(opts)
         require("eca.observer").notify(message)
       end)
     end,
+    on_request = function(_, message)
+      return require("eca.editor").handle_request(message)
+    end,
     cwd = vim.fn.getcwd(),
     workspace_folders = {
       {
@@ -52,6 +55,7 @@ function M.new(opts)
     on_initialize = opts.on_initialize,
     on_stop = opts.on_stop,
     on_notification = opts.on_notification,
+    on_request = opts.on_request,
     messages = {},
     pending_requests = {},
     initialized = false,
@@ -201,6 +205,7 @@ function M:initialize()
     capabilities = {
       codeAssistant = {
         chat = true,
+        editor = { diagnostics = true },
       },
     },
     workspaceFolders = vim.deepcopy(self.workspace_folders),
@@ -255,11 +260,36 @@ function M:handle_message(message)
     else
       callback(nil, message.result)
     end
+  elseif message.id and message.method then
+    if self.on_request then
+      local id = message.id
+      vim.schedule(function()
+        local ok, result = pcall(self.on_request, self, message)
+        if not ok then
+          Logger.error("on_request error: " .. tostring(result))
+          self:send_response(id, {})
+          return
+        end
+        local ok2, err = pcall(self.send_response, self, id, result)
+        if not ok2 then
+          Logger.error("send_response error: " .. tostring(err))
+        end
+      end)
+    end
   elseif message.method and not message.id then
     if self.on_notification then
       self:on_notification(message)
     end
   end
+end
+
+---@param id integer|string
+---@param result table
+function M:send_response(id, result)
+  local message = { jsonrpc = "2.0", id = id, result = result }
+  local json = vim.json.encode(message)
+  local content = string.format("Content-Length: %d\r\n\r\n%s", #json, json)
+  self.process:write(content)
 end
 
 ---@return integer
