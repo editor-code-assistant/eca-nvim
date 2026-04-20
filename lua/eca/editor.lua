@@ -39,7 +39,7 @@ function M.handle_request(message)
   if message.method == "editor/getDiagnostics" then
     return get_diagnostics(message.params or {})
   end
-  return {}
+  return nil
 end
 
 return M

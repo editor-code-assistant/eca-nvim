@@ -267,7 +267,11 @@ function M:handle_message(message)
         local ok, result = pcall(self.on_request, self, message)
         if not ok then
           Logger.error("on_request error: " .. tostring(result))
-          self:send_response(id, {})
+          pcall(self.send_error_response, self, id, -32603, "Internal error")
+          return
+        end
+        if result == nil then
+          pcall(self.send_error_response, self, id, -32601, "Method not found")
           return
         end
         local ok2, err = pcall(self.send_response, self, id, result)
@@ -286,7 +290,25 @@ end
 ---@param id integer|string
 ---@param result table
 function M:send_response(id, result)
+  if not self:is_running() then
+    Logger.error("send_response: server not running, dropping response for id=" .. tostring(id))
+    return
+  end
   local message = { jsonrpc = "2.0", id = id, result = result }
+  local json = vim.json.encode(message)
+  local content = string.format("Content-Length: %d\r\n\r\n%s", #json, json)
+  self.process:write(content)
+end
+
+---@param id integer|string
+---@param code integer JSON-RPC error code
+---@param msg string
+function M:send_error_response(id, code, msg)
+  if not self:is_running() then
+    Logger.error("send_error_response: server not running, dropping error for id=" .. tostring(id))
+    return
+  end
+  local message = { jsonrpc = "2.0", id = id, error = { code = code, message = msg } }
   local json = vim.json.encode(message)
   local content = string.format("Content-Length: %d\r\n\r\n%s", #json, json)
   self.process:write(content)

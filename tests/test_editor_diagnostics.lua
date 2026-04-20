@@ -14,13 +14,13 @@ local T = MiniTest.new_set({
 T["editor"] = MiniTest.new_set()
 
 T["editor"]["returns empty diagnostics when buffer not found"] = function()
-  local count = child.lua_get([[
+  local diagnostics = child.lua_get([[
     require("eca.editor").handle_request({
       method = "editor/getDiagnostics",
       params = { uri = "file:///nonexistent/file.lua" },
     }).diagnostics
   ]])
-  eq(#count, 0)
+  eq(#diagnostics, 0)
 end
 
 T["editor"]["maps severity levels correctly"] = function()
@@ -113,11 +113,11 @@ T["editor"]["uri field is present on each diagnostic"] = function()
   eq(child.lua_get("_G.uri_result[2]"), "file:///tmp/eca_test_uri.lua")
 end
 
-T["editor"]["returns empty table for unknown method"] = function()
-  local count = child.lua_get([[
-    vim.tbl_count(require("eca.editor").handle_request({ method = "editor/unknown", params = {} }))
+T["editor"]["returns nil for unknown method"] = function()
+  local is_nil = child.lua_get([[
+    require("eca.editor").handle_request({ method = "editor/unknown", params = {} }) == nil
   ]])
-  eq(count, 0)
+  eq(is_nil, true)
 end
 
 return T
