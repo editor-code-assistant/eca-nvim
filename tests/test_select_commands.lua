@@ -82,6 +82,28 @@ T["EcaChatSelectModel"]["updates state when model selected"] = function()
   eq(child.lua_get("_G.State.config.models.selected"), "model2")
 end
 
+T["EcaChatSelectModel"]["notifies server of model change"] = function()
+  child.lua([[
+    _G.State.config.models.list = { "model1", "model2", "model3" }
+    _G.State.config.models.selected = "model1"
+
+    -- Capture outgoing notifications
+    _G.sent_notifications = {}
+    _G.Mediator.send = function(self, method, params, callback)
+      table.insert(_G.sent_notifications, { method = method, params = params })
+    end
+
+    _G.mock_select("model2")
+  ]])
+
+  child.cmd("EcaChatSelectModel")
+
+  local notifications = child.lua_get("_G.sent_notifications")
+  eq(#notifications, 1)
+  eq(notifications[1].method, "chat/selectedModelChanged")
+  eq(notifications[1].params.model, "model2")
+end
+
 T["EcaChatSelectModel"]["handles nil selection"] = function()
   -- Setup initial state
   child.lua([[

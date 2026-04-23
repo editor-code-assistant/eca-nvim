@@ -454,7 +454,7 @@ function M.setup()
     }, function(choice)
       if choice then
         chat.mediator:update_selected_model(choice)
-        chat.mediator:send("chat/selectedModelChanged", { model = choice, variant = nil }, nil)
+        chat.mediator:send("chat/selectedModelChanged", { model = choice, variant = vim.NIL }, nil)
       end
     end)
   end, {
