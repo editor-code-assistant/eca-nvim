@@ -1721,11 +1721,6 @@ function M:_add_message(role, content)
 end
 function M:_finalize_streaming_response()
   if self._is_streaming then
-    local chat_id = self.mediator:id()
-    if chat_id then
-      self.mediator:send("chat/promptStop", { chatId = chat_id }, nil)
-    end
-
     Logger.debug("DEBUG: Finalizing streaming response")
     Logger.debug("DEBUG: Final buffer had " .. #(self._current_response_buffer or "") .. " chars")
 

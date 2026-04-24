@@ -393,9 +393,15 @@ function M.setup()
 
   vim.api.nvim_create_user_command("EcaStopResponse", function()
     local eca = require("eca")
+    local chat = eca.get()
     local Utils = require("eca.utils")
 
     -- Force stop any ongoing streaming response
+    local chat_id = chat.mediator:id()
+    if chat_id then
+      chat.mediator:send("chat/promptStop", { chatId = chat_id }, nil)
+    end
+
     if eca.sidebar then
       eca.sidebar:_finalize_streaming_response()
       Logger.notify("Forced stop of streaming response", vim.log.levels.INFO)
