@@ -1,3 +1,10 @@
 #!/usr/bin/env bash
 
-nvim --headless -c "PlenaryBustedDirectory lua/spec"
+set -eu
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+nvim --headless -u NONE --noplugin \
+  -c "set rtp^=${ROOT_DIR}/deps/plenary.nvim" \
+  -c "set rtp^=${ROOT_DIR}" \
+  -c "PlenaryBustedDirectory ${ROOT_DIR}/lua/spec"

@@ -3,11 +3,11 @@
 .PHONY: test deps clean
 
 # Download dependencies for testing
-deps: deps/plenary
+deps: deps/plenary.nvim
 
-deps/plenary:
+deps/plenary.nvim:
 	mkdir -p deps
-	git clone --filter=blob:none https://github.com/nvim-lua/plenary.nvim.git
+	git clone --filter=blob:none https://github.com/nvim-lua/plenary.nvim.git deps/plenary.nvim
 
 # Run all tests
 test: deps
