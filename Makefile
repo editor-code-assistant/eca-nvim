@@ -10,8 +10,10 @@ deps/plenary.nvim:
 	git clone --filter=blob:none https://github.com/nvim-lua/plenary.nvim.git deps/plenary.nvim
 
 # Run all tests
-test: deps
-	./script/test
+	test: deps
+	nvim --headless -u NONE --noplugin \
+  	-c "set rtp^=deps/plenary.nvim" \
+  	-c "lua require('plenary.test_harness').test_directory_command(\"lua/spec\")"
 
 # Clean up dependencies
 clean:
