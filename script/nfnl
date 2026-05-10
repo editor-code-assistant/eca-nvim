@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -xe
+
+mkdir -p deps
+
+if [ -d "deps/nfnl" ]; then
+  (cd deps/nfnl && git pull)
+else
+  git clone https://github.com/Olical/nfnl.git deps/nfnl
+fi
+
+SRC_DIR=deps/nfnl \
+  DEST_PROJECT=eca \
+  ./deps/nfnl/script/embed "."
