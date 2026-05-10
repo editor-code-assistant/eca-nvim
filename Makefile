@@ -1,26 +1,19 @@
 # Makefile for ECA Neovim plugin testing
 
-.PHONY: test test-file deps clean
+.PHONY: test deps clean
 
 # Download dependencies for testing
-deps: deps/mini.nvim deps/nui.nvim
+deps: deps/plenary.nvim
 
-deps/mini.nvim:
+deps/plenary.nvim:
 	mkdir -p deps
-	git clone --filter=blob:none https://github.com/echasnovski/mini.nvim deps/mini.nvim
-
-deps/nui.nvim:
-	mkdir -p deps
-	git clone --filter=blob:none https://github.com/MunifTanjim/nui.nvim deps/nui.nvim
+	git clone --filter=blob:none https://github.com/nvim-lua/plenary.nvim.git deps/plenary.nvim
 
 # Run all tests
 test: deps
-	nvim --headless --noplugin -u ./scripts/minimal_init.lua -c "lua MiniTest.run()"
-
-# Run a specific test file
-# Usage: make test-file FILE=tests/test_example.lua
-test-file: deps
-	nvim --headless --noplugin -u ./scripts/minimal_init.lua -c "lua MiniTest.run_file('$(FILE)')"
+	nvim --headless -u NONE --noplugin \
+  	-c "set rtp^=deps/plenary.nvim" \
+  	-c "lua require('plenary.test_harness').test_directory_command(\"lua/spec\")"
 
 # Clean up dependencies
 clean:
