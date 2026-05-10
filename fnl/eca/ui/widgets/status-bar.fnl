@@ -17,7 +17,7 @@
   "Create a status-bar widget.
    initial-state: {: workspaces : elapsed-ms : tokens-in : tokens-out : max-tokens : cost : trust? : init-progress : pending-approvals?}
    Returns {: render : update : get-state}."
-  (var state (vim.tbl_extend :force
+  (local state (vim.tbl_extend :force
                {:workspaces []
                 :elapsed-ms nil
                 :tokens-in 0

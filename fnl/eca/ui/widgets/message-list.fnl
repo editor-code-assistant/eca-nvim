@@ -7,7 +7,7 @@
 (fn create [canvas]
   "Create a message-list widget.
    Returns {: render : append-message : update-message : clear : get-state}."
-  (var state {:messages []
+  (local state {:messages []
               :ns-id nil
               :end-line 0})
 
@@ -31,26 +31,20 @@
     (let [rendered (message-component.render msg)
           sep (separator-component.render {:width 50})]
       ;; Write message lines
-      (canvas:set-modifiable true)
       (canvas:set-lines start-line start-line rendered.lines)
       (apply-highlights start-line rendered.highlights)
       ;; Write separator after message
       (let [sep-line (+ start-line (length rendered.lines))]
         (canvas:set-lines sep-line sep-line [sep.line])
         (apply-highlights sep-line sep.highlights)
-        (canvas:set-modifiable false)
         ;; Return total lines written (message + separator)
         (+ (length rendered.lines) 1))))
 
   (fn render []
     "Full re-render of all messages."
     (let [ns (ensure-ns)]
-      (canvas:set-modifiable true)
       ;; Clear the messages area (leave room for prompt at the end)
-      (let [total-lines (canvas:line-count)]
-        ;; We render from line 0 up to where messages end
-        ;; Prompt area is handled by prompt-area widget
-        (canvas:set-lines 0 state.end-line []))
+      (canvas:set-lines 0 state.end-line [])
       (set state.end-line 0)
       (if (= 0 (length state.messages))
         ;; Show welcome message
@@ -61,8 +55,7 @@
         ;; Render all messages
         (each [_ msg (ipairs state.messages)]
           (let [lines-written (render-single-message msg state.end-line)]
-            (set state.end-line (+ state.end-line lines-written)))))
-      (canvas:set-modifiable false)))
+            (set state.end-line (+ state.end-line lines-written)))))))
 
   (fn append-message [msg]
     "Append a new message and render it incrementally."
@@ -80,15 +73,13 @@
 
   (fn update-message [id new-content]
     "Update the content of an existing message (for streaming)."
-    ;; Find and update the message in state
-    (var found false)
-    (each [i msg (ipairs state.messages)]
-      (when (= msg.id id)
-        (tset msg :content new-content)
-        (set found true)))
-    ;; Re-render everything (could optimize later)
-    (when found
-      (render)))
+    (let [found (accumulate [f false
+                             _ msg (ipairs state.messages)]
+                  (if (= msg.id id)
+                    (do (tset msg :content new-content) true)
+                    f))]
+      (when found
+        (render))))
 
   (fn clear []
     "Clear all messages."

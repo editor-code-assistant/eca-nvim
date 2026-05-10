@@ -66,13 +66,18 @@ local function create(canvas)
     end
   end
   local function update_message(id, new_content)
-    local found = false
-    for i, msg in ipairs(state.messages) do
-      if (msg.id == id) then
-        msg["content"] = new_content
-        found = true
-      else
+    local found
+    do
+      local f = false
+      for _, msg in ipairs(state.messages) do
+        if (msg.id == id) then
+          msg["content"] = new_content
+          f = true
+        else
+          f = f
+        end
       end
+      found = f
     end
     if found then
       return render()

@@ -13,21 +13,25 @@ local function create(canvas)
     if (0 == #state.contexts) then
       return {line = "", parts = {}}
     else
-      local parts = {}
-      local highlights = {}
-      local col = 0
-      for i, ctx in ipairs(state.contexts) do
-        if (i > 1) then
-          table.insert(parts, " ")
-          col = (col + 1)
-        else
+      local result
+      do
+        local acc = {parts = {}, highlights = {}, col = 0}
+        for _, ctx in ipairs(state.contexts) do
+          local sep_col
+          if (acc.col > 0) then
+            table.insert(acc.parts, " ")
+            sep_col = (acc.col + 1)
+          else
+            sep_col = acc.col
+          end
+          local rendered = context_item_component.render(ctx)
+          table.insert(acc.parts, rendered.text)
+          table.insert(acc.highlights, {["hl-group"] = rendered["hl-group"], ["col-start"] = sep_col, ["col-end"] = (sep_col + #rendered.text)})
+          acc = {parts = acc.parts, highlights = acc.highlights, col = (sep_col + #rendered.text)}
         end
-        local rendered = context_item_component.render(ctx)
-        table.insert(parts, rendered.text)
-        table.insert(highlights, {["hl-group"] = rendered["hl-group"], ["col-start"] = col, ["col-end"] = (col + #rendered.text)})
-        col = (col + #rendered.text)
+        result = acc
       end
-      return {line = table.concat(parts, ""), highlights = highlights}
+      return {line = table.concat(result.parts, ""), highlights = result.highlights}
     end
   end
   local function render(line_num)
@@ -47,12 +51,13 @@ local function create(canvas)
     end
   end
   local function add(ctx)
-    local exists = false
-    for _, existing in ipairs(state.contexts) do
-      if (existing.name == ctx.name) then
-        exists = true
-      else
+    local exists
+    do
+      local found = false
+      for _, existing in ipairs(state.contexts) do
+        found = (found or (existing.name == ctx.name))
       end
+      exists = found
     end
     if not exists then
       return table.insert(state.contexts, ctx)

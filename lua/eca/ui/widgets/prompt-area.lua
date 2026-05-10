@@ -21,18 +21,26 @@ local function create(canvas)
     local has_contexts_3f = (#ctx_state.contexts > 0)
     local lines = {sep.line}
     if has_contexts_3f then
-      local parts = {}
-      local col = 0
-      for i, ctx in ipairs(ctx_state.contexts) do
-        if (i > 1) then
-          table.insert(parts, " ")
-        else
+      local parts
+      do
+        local tbl_26_ = {}
+        local i_27_ = 0
+        for _, ctx in ipairs(ctx_state.contexts) do
+          local val_28_
+          do
+            local ci = require("eca.ui.components.context-item")
+            local rendered = ci.render(ctx)
+            val_28_ = rendered.text
+          end
+          if (nil ~= val_28_) then
+            i_27_ = (i_27_ + 1)
+            tbl_26_[i_27_] = val_28_
+          else
+          end
         end
-        local ci = require("eca.ui.components.context-item")
-        local rendered = ci.render(ctx)
-        table.insert(parts, rendered.text)
+        parts = tbl_26_
       end
-      table.insert(lines, table.concat(parts, ""))
+      table.insert(lines, table.concat(parts, " "))
     else
     end
     table.insert(lines, (prefix.text .. state["prompt-text"]))

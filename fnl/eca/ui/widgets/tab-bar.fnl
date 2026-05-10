@@ -5,7 +5,7 @@
   "Create a tab-bar widget.
    initial-state: {: tabs [{: id : title : loading? : approval?}] : active-id}
    Returns {: render : add-tab : remove-tab : select-tab : update-tab : get-state}."
-  (var state (vim.tbl_extend :force
+  (local state (vim.tbl_extend :force
                {:tabs []
                 :active-id nil}
                (or initial-state {})))
@@ -33,7 +33,8 @@
 
   (fn render []
     (let [tabline (build-tabline)]
-      (canvas:set-option :win :tabline tabline)))
+      (canvas:set-option :global :tabline tabline)
+      (canvas:set-option :global :showtabline 2)))
 
   (fn add-tab [tab]
     "Add a new tab. tab: {: id : title : loading? : approval?}."

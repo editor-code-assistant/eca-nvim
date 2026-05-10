@@ -15,8 +15,8 @@
   "Build a canvas object from flat api functions, bound to a specific buf/win.
    This is the bridge between the flat api module and the canvas protocol
    that widgets expect."
-  (var buf buf-id)
-  (var win win-id)
+  (let [buf buf-id
+        win win-id]
 
   {:set-lines
    (fn [_ start end lines]
@@ -48,15 +48,17 @@
 
    :set-option
    (fn [_ scope key value]
-     (match scope
+     (case scope
        :win (api.set-option :win win key value)
-       :buf (api.set-option :buf buf key value)))
+       :buf (api.set-option :buf buf key value)
+       :global (api.set-option :global nil key value)))
 
    :get-option
    (fn [_ scope key]
-     (match scope
+     (case scope
        :win (api.get-option :win win key)
-       :buf (api.get-option :buf buf key)))
+       :buf (api.get-option :buf buf key)
+       :global (api.get-option :global nil key)))
 
    :get-cursor
    (fn [_]
@@ -74,21 +76,16 @@
    (fn [_]
      (api.win-is-valid win))
 
-   :set-modifiable
-   (fn [_ bool]
-     (api.set-option :buf buf :modifiable bool))
-
    :set-hl
    (fn [_ ns group opts]
      (api.set-hl ns group opts))
 
    :close-win
    (fn [_]
-     (api.win-close win)
-     (set win nil))
+     (api.win-close win))
 
    :buf-id (fn [_] buf)
-   :win-id (fn [_] win)})
+   :win-id (fn [_] win)}))
 
 ;; ── Buffer/window setup ─────────────────────────────────
 
@@ -97,10 +94,7 @@
   (canvas:set-option :buf :buftype "nofile")
   (canvas:set-option :buf :bufhidden "hide")
   (canvas:set-option :buf :swapfile false)
-  (canvas:set-option :buf :filetype "eca-chat")
-  (canvas:set-option :buf :wrap true)
-  (canvas:set-option :buf :linebreak true)
-  (canvas:set-option :buf :modifiable false))
+  (canvas:set-option :buf :filetype "eca-chat"))
 
 (fn setup-chat-window [canvas]
   "Configure the chat window options."
@@ -112,6 +106,33 @@
   (canvas:set-option :win :wrap true)
   (canvas:set-option :win :linebreak true)
   (canvas:set-option :win :conceallevel 2))
+
+;; ── Edit guard ──────────────────────────────────────────
+
+(fn setup-edit-guard [api buf-id get-prompt-start-line]
+  "Attach to buffer to guard editable region.
+   Only the prompt area (from prompt-start-line onwards) is user-editable.
+   Edits outside that region are undone immediately."
+  (var internal-edit false)
+
+  (fn set-internal [bool]
+    (set internal-edit bool))
+
+  (api.buf-attach buf-id
+    {:on_lines
+     (fn [_ buf changedtick first-line last-line new-last-line]
+       ;; If this is an internal (widget) edit, allow it
+       (when (not internal-edit)
+         (let [prompt-start (get-prompt-start-line)]
+           ;; If the edit touches lines before the prompt area, undo it
+           (when (< first-line prompt-start)
+             (api.schedule
+               (fn []
+                 (when (api.buf-is-valid buf)
+                   (vim.cmd "silent! undo"))))))))})
+
+  ;; Return a function to wrap internal edits
+  set-internal)
 
 ;; ── Main entry ──────────────────────────────────────────
 
@@ -129,25 +150,41 @@
                 :position (or ui-config.position :right)}]
 
     (var canvas nil)
-    (var widgets {:header nil
-                  :messages nil
-                  :prompt nil
-                  :status nil
-                  :tabs nil})
+    (var set-internal-edit nil)
+    (local widgets {:header nil
+                    :messages nil
+                    :prompt nil
+                    :status nil
+                    :tabs nil})
 
     (fn is-open? []
       (and (not= nil canvas)
            (canvas:buf-valid?)
            (canvas:win-valid?)))
 
+    (fn get-prompt-start-line []
+      "Get the line where the prompt area starts."
+      (let [state (widgets.prompt.get-state)]
+        (or state.prompt-start-line 0)))
+
+    (fn with-internal-edit [f]
+      "Wrap a function call as an internal edit (bypasses edit guard)."
+      (when set-internal-edit
+        (set-internal-edit true))
+      (f)
+      (when set-internal-edit
+        (set-internal-edit false)))
+
     (fn render-all []
       "Full render of all widgets."
-      (widgets.header.render)
-      (widgets.messages.render)
-      (let [end-line (widgets.messages.get-end-line)]
-        (widgets.prompt.render end-line))
-      (widgets.status.render)
-      (widgets.tabs.render))
+      (with-internal-edit
+        (fn []
+          (widgets.header.render)
+          (widgets.messages.render)
+          (let [end-line (widgets.messages.get-end-line)]
+            (widgets.prompt.render end-line))
+          (widgets.status.render)
+          (widgets.tabs.render))))
 
     (fn open []
       "Open the chat window."
@@ -179,10 +216,14 @@
               {:tabs [{:id 1 :title "Chat 1"}]
                :active-id 1}))
 
+          ;; Setup edit guard — only prompt area is user-editable
+          (set set-internal-edit
+            (setup-edit-guard api buf-id get-prompt-start-line))
+
           ;; Initial render
-          (canvas:set-modifiable true)
-          (canvas:set-lines 0 -1 [""])
-          (canvas:set-modifiable false)
+          (with-internal-edit
+            (fn []
+              (canvas:set-lines 0 -1 [""])))
           (render-all))))
 
     (fn close []
@@ -199,21 +240,27 @@
     ;; === Message API ===
     (fn append-message [msg]
       (when (is-open?)
-        (widgets.messages.append-message msg)
-        (let [end-line (widgets.messages.get-end-line)]
-          (widgets.prompt.render end-line))))
+        (with-internal-edit
+          (fn []
+            (widgets.messages.append-message msg)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
 
     (fn update-message [id content]
       (when (is-open?)
-        (widgets.messages.update-message id content)
-        (let [end-line (widgets.messages.get-end-line)]
-          (widgets.prompt.render end-line))))
+        (with-internal-edit
+          (fn []
+            (widgets.messages.update-message id content)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
 
     (fn clear-messages []
       (when (is-open?)
-        (widgets.messages.clear)
-        (let [end-line (widgets.messages.get-end-line)]
-          (widgets.prompt.render end-line))))
+        (with-internal-edit
+          (fn []
+            (widgets.messages.clear)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
 
     ;; === Tool call API (TODO) ===
     (fn show-tool-call [tc] nil)
@@ -236,15 +283,19 @@
     ;; === Context API ===
     (fn add-context [ctx]
       (when (is-open?)
-        (widgets.prompt.add-context ctx)
-        (let [end-line (widgets.messages.get-end-line)]
-          (widgets.prompt.render end-line))))
+        (with-internal-edit
+          (fn []
+            (widgets.prompt.add-context ctx)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
 
     (fn remove-context [name]
       (when (is-open?)
-        (widgets.prompt.remove-context name)
-        (let [end-line (widgets.messages.get-end-line)]
-          (widgets.prompt.render end-line))))
+        (with-internal-edit
+          (fn []
+            (widgets.prompt.remove-context name)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
 
     ;; === Tab API ===
     (fn add-chat-tab [tab]
@@ -272,13 +323,15 @@
         (let [text (widgets.prompt.get-text)]
           (when (and text (not= "" text))
             (widgets.prompt.add-to-history text)
-            (widgets.prompt.clear)
+            (with-internal-edit
+              (fn [] (widgets.prompt.clear)))
             (when on-submit
               (on-submit text))))))
 
     (fn set-loading [bool]
       (when (is-open?)
-        (widgets.prompt.set-loading bool)))
+        (with-internal-edit
+          (fn [] (widgets.prompt.set-loading bool)))))
 
     ;; Public API
     {: open

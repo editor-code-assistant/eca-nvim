@@ -64,16 +64,18 @@
 ;; ── Options ─────────────────────────────────────────────
 
 (fn set-option [scope id key value]
-  "Set an option. scope: :win or :buf. id: win-id or buf-id."
-  (match scope
+  "Set an option. scope: :win, :buf, or :global. id: win-id or buf-id (ignored for :global)."
+  (case scope
     :win (nvim.nvim_set_option_value key value {:win id})
-    :buf (nvim.nvim_set_option_value key value {:buf id})))
+    :buf (nvim.nvim_set_option_value key value {:buf id})
+    :global (nvim.nvim_set_option_value key value {})))
 
 (fn get-option [scope id key]
-  "Get an option. scope: :win or :buf."
-  (match scope
+  "Get an option. scope: :win, :buf, or :global."
+  (case scope
     :win (nvim.nvim_get_option_value key {:win id})
-    :buf (nvim.nvim_get_option_value key {:buf id})))
+    :buf (nvim.nvim_get_option_value key {:buf id})
+    :global (nvim.nvim_get_option_value key {})))
 
 ;; ── Highlights ──────────────────────────────────────────
 
@@ -92,6 +94,14 @@
 
 (fn set-keymap [mode lhs rhs opts]
   (vim.keymap.set mode lhs rhs (or opts {})))
+
+;; ── Buffer attach ───────────────────────────────────────
+
+(fn buf-attach [buf opts]
+  "Attach to buffer events. opts: {: on_lines : on_bytes : on_detach ...}
+   on_lines: (fn [_ buf changedtick first-line last-line new-last-line] ...)
+   Return true from on_lines to detach."
+  (nvim.nvim_buf_attach buf false (or opts {})))
 
 ;; ── Scheduling ──────────────────────────────────────────
 
@@ -137,6 +147,8 @@
  : create-autocmd
  ;; Keymaps
  : set-keymap
+ ;; Buffer attach
+ : buf-attach
  ;; Scheduling
  : schedule
  : defer

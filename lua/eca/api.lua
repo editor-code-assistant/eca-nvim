@@ -76,6 +76,8 @@ local function set_option(scope, id, key, value)
     return nvim.nvim_set_option_value(key, value, {win = id})
   elseif (scope == "buf") then
     return nvim.nvim_set_option_value(key, value, {buf = id})
+  elseif (scope == "global") then
+    return nvim.nvim_set_option_value(key, value, {})
   else
     return nil
   end
@@ -85,6 +87,8 @@ local function get_option(scope, id, key)
     return nvim.nvim_get_option_value(key, {win = id})
   elseif (scope == "buf") then
     return nvim.nvim_get_option_value(key, {buf = id})
+  elseif (scope == "global") then
+    return nvim.nvim_get_option_value(key, {})
   else
     return nil
   end

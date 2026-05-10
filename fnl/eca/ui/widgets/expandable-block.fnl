@@ -33,7 +33,7 @@
   "Create an expandable-block widget.
    initial-state: {: id : type : status : expanded? : label : content : elapsed-ms : children}
    Returns {: render : toggle : update-status : collapse : expand : get-state}."
-  (var state (vim.tbl_extend :force
+  (local state (vim.tbl_extend :force
                {:id nil
                 :type :tool-call
                 :status nil
@@ -63,13 +63,11 @@
         (each [_ line (ipairs state.content)]
           (table.insert lines (.. "  " line))))
       ;; Write to buffer
-      (canvas:set-modifiable true)
       (canvas:set-lines start-line start-line lines)
       ;; Highlight the label line
       (canvas:add-extmark ns start-line 0
         {:end_col (length label-line)
          :hl_group :EcaExpandableLabel})
-      (canvas:set-modifiable false)
       ;; Return line count
       (length lines)))
 

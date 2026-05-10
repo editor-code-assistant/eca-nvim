@@ -32,7 +32,8 @@ local function create(canvas, initial_state)
   end
   local function render()
     local tabline = build_tabline()
-    return canvas["set-option"](canvas, "win", "tabline", tabline)
+    canvas["set-option"](canvas, "global", "tabline", tabline)
+    return canvas["set-option"](canvas, "global", "showtabline", 2)
   end
   local function add_tab(tab)
     table.insert(state.tabs, tab)

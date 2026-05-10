@@ -28,7 +28,7 @@
   "Create a header-bar widget.
    initial-state: {: model : agent : variant : mcps-total : mcps-ready}
    Returns {: render : update : get-state}."
-  (var state (or initial-state
+  (local state (or initial-state
                  {:model "claude"
                   :agent "coder"
                   :variant nil

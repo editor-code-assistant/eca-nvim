@@ -15,7 +15,7 @@
   (let [cfg (or (. type-config type)
                 {:prefix "@" :hl-group :EcaContextFile})
         display-name (or cfg.label name "")
-        text (match type
+        text (case type
                :cursor (.. cfg.prefix "cursor(" (or name "") (if detail (.. " " detail) "") ")")
                :repo-map (.. cfg.prefix display-name)
                _ (.. cfg.prefix display-name))]

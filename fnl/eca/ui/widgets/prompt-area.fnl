@@ -8,7 +8,7 @@
 (fn create [canvas]
   "Create a prompt-area widget.
    Returns widget with full API."
-  (var state {:loading? false
+  (local state {:loading? false
               :prompt-text ""
               :history []
               :history-idx 0
@@ -35,20 +35,15 @@
           lines [sep.line]]
       ;; Add context bar line if there are contexts
       (when has-contexts?
-        (let [parts []]
-          (var col 0)
-          (each [i ctx (ipairs ctx-state.contexts)]
-            (when (> i 1)
-              (table.insert parts " "))
-            (let [ci (require :eca.ui.components.context-item)
-                  rendered (ci.render ctx)]
-              (table.insert parts rendered.text)))
-          (table.insert lines (table.concat parts ""))))
+        (let [parts (icollect [_ ctx (ipairs ctx-state.contexts)]
+                      (let [ci (require :eca.ui.components.context-item)
+                            rendered (ci.render ctx)]
+                        rendered.text))]
+          (table.insert lines (table.concat parts " "))))
       ;; Add prompt line
       (table.insert lines (.. prefix.text state.prompt-text))
 
       ;; Write all lines
-      (canvas:set-modifiable true)
       (canvas:set-lines start-line -1 lines)
 
       ;; Highlight separator
@@ -65,8 +60,6 @@
       ;; Highlight context items if present
       (when has-contexts?
         (ctx-bar.render (+ start-line 1)))
-
-      (canvas:set-modifiable false)
 
       ;; Position cursor at end of prompt
       (when (canvas:win-valid?)
@@ -96,9 +89,7 @@
     (let [prefix (prompt-prefix-component.render {:loading? state.loading?})
           total (canvas:line-count)
           last-line-idx (- total 1)]
-      (canvas:set-modifiable true)
-      (canvas:set-lines last-line-idx total [(.. prefix.text state.prompt-text)])
-      (canvas:set-modifiable false)))
+      (canvas:set-lines last-line-idx total [(.. prefix.text state.prompt-text)])))
 
   (fn clear []
     "Clear the prompt text."
@@ -111,9 +102,7 @@
     (let [prefix (prompt-prefix-component.render {:loading? bool})
           total (canvas:line-count)
           last-line-idx (- total 1)]
-      (canvas:set-modifiable true)
-      (canvas:set-lines last-line-idx total [(.. prefix.text state.prompt-text)])
-      (canvas:set-modifiable false)))
+      (canvas:set-lines last-line-idx total [(.. prefix.text state.prompt-text)])))
 
   (fn add-to-history [text]
     "Save text to history."

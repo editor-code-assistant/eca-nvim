@@ -16,7 +16,6 @@
    :set-cursor       ;; (canvas line col) — move cursor
    :buf-valid?       ;; (canvas) — is buffer still valid?
    :win-valid?       ;; (canvas) — is window still valid?
-   :set-modifiable   ;; (canvas bool) — toggle buffer readonly
    :close-win        ;; (canvas) — close window
    :set-hl           ;; (canvas ns group opts) — define highlight group
    :buf-id           ;; (canvas) — returns the underlying buffer id
@@ -26,13 +25,11 @@
 (fn validate [canvas]
   "Validate that a canvas implementation satisfies the protocol.
    Returns true if valid, or (false missing-keys) if not."
-  (var missing [])
-  (each [_ key (ipairs protocol-keys)]
-    (when (= nil (. canvas key))
-      (table.insert missing key)))
-  (if (= 0 (length missing))
-    true
-    (values false missing)))
+  (let [missing (icollect [_ key (ipairs protocol-keys)]
+                   (when (= nil (. canvas key)) key))]
+    (if (= 0 (length missing))
+      true
+      (values false missing))))
 
 (fn describe []
   "Returns the list of protocol keys for documentation/introspection."
