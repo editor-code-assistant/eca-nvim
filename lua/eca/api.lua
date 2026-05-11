@@ -1,120 +1,113 @@
 -- [nfnl] fnl/eca/api.fnl
-local nvim = vim.api
-local function buf_set_lines(buf, start, _end, lines)
-  return nvim.nvim_buf_set_lines(buf, start, _end, false, lines)
-end
-local function buf_get_lines(buf, start, _end)
-  return nvim.nvim_buf_get_lines(buf, start, _end, false)
-end
-local function buf_line_count(buf)
-  return nvim.nvim_buf_line_count(buf)
-end
-local function buf_is_valid(buf)
-  return ((nil ~= buf) and nvim.nvim_buf_is_valid(buf))
-end
-local function buf_create(opts)
-  local o = (opts or {})
-  local _1_
-  if (nil ~= o.listed) then
-    _1_ = o.listed
-  else
-    _1_ = false
-  end
-  local function _3_()
-    if (nil ~= o.scratch) then
-      return o.scratch
-    else
-      return true
+local self = {}
+local chats = {}
+local plugin_opts = {}
+self["resolve-chat"] = function()
+  local current = chats[vim.api.nvim_get_current_buf()]
+  local or_1_ = current
+  if not or_1_ then
+    local found = nil
+    for _, chat in pairs(chats) do
+      if (not found and chat["is-open?"]()) then
+        found = chat
+      else
+      end
     end
+    or_1_ = found
   end
-  return nvim.nvim_create_buf(_1_, _3_())
+  return or_1_
 end
-local function buf_set_keymap(buf, mode, lhs, rhs, opts)
-  return nvim.nvim_buf_set_keymap(buf, mode, lhs, rhs, (opts or {}))
-end
-local function win_open(buf, opts)
-  return nvim.nvim_open_win(buf, true, (opts or {}))
-end
-local function win_close(win)
-  if (win and nvim.nvim_win_is_valid(win)) then
-    return nvim.nvim_win_close(win, true)
+self["register-chat"] = function(chat)
+  local buf_id = chat["get-buf-id"]()
+  if buf_id then
+    chats[buf_id] = chat
+    return nil
   else
     return nil
   end
 end
-local function win_is_valid(win)
-  return ((nil ~= win) and nvim.nvim_win_is_valid(win))
-end
-local function win_get_cursor(win)
-  if win then
-    return nvim.nvim_win_get_cursor(win)
+self["chat-open"] = function()
+  local existing = self["resolve-chat"]()
+  if not (existing and existing["is-open?"]()) then
+    local builder = require("eca.ui.builder")
+    local chat_ui = builder["create-chat-ui"]({["on-submit"] = (plugin_opts["on-submit"] or self["default-on-submit"]), opts = {ui = (plugin_opts.ui or {}), keymaps = (plugin_opts.keymaps or {{mode = "i", lhs = "<C-s>", rhs = "<cmd>EcaChatSubmit<CR>"}, {mode = "n", lhs = "<CR>", rhs = "<cmd>EcaChatSubmit<CR>"}})}})
+    chat_ui.open()
+    self["register-chat"](chat_ui)
+    chat_ui["set-welcome"]("Welcome to ECA Chat")
+    chat_ui["update-header"]({{title = "model", value = "claude"}, {title = "behavior", value = "agent"}})
+    return chat_ui["update-footer"]({{value = "ECA Chat"}, {title = "tokens", value = "0/200K"}})
   else
     return nil
   end
 end
-local function win_set_cursor(win, pos)
-  if win then
-    return nvim.nvim_win_set_cursor(win, pos)
+self["chat-close"] = function()
+  local chat = self["resolve-chat"]()
+  if chat then
+    return chat.close()
   else
     return nil
   end
 end
-local function create_namespace(name)
-  return nvim.nvim_create_namespace(name)
+self["chat-toggle"] = function()
+  local chat = self["resolve-chat"]()
+  if (chat and chat["is-open?"]()) then
+    return chat.close()
+  else
+    return self["chat-open"]()
+  end
 end
-local function buf_set_extmark(buf, ns_id, line, col, opts)
-  return nvim.nvim_buf_set_extmark(buf, ns_id, line, col, (opts or {}))
-end
-local function buf_del_extmark(buf, ns_id, id)
-  return nvim.nvim_buf_del_extmark(buf, ns_id, id)
-end
-local function buf_get_extmarks(buf, ns_id, start, _end, opts)
-  return nvim.nvim_buf_get_extmarks(buf, ns_id, start, _end, (opts or {}))
-end
-local function set_option(scope, id, key, value)
-  if (scope == "win") then
-    return nvim.nvim_set_option_value(key, value, {win = id})
-  elseif (scope == "buf") then
-    return nvim.nvim_set_option_value(key, value, {buf = id})
-  elseif (scope == "global") then
-    return nvim.nvim_set_option_value(key, value, {})
+self["chat-submit"] = function()
+  local chat = self["resolve-chat"]()
+  if chat then
+    return chat["submit-prompt"]()
   else
     return nil
   end
 end
-local function get_option(scope, id, key)
-  if (scope == "win") then
-    return nvim.nvim_get_option_value(key, {win = id})
-  elseif (scope == "buf") then
-    return nvim.nvim_get_option_value(key, {buf = id})
-  elseif (scope == "global") then
-    return nvim.nvim_get_option_value(key, {})
+self["chat-clear"] = function()
+  local chat = self["resolve-chat"]()
+  if chat then
+    return chat["clear-messages"]()
   else
     return nil
   end
 end
-local function set_hl(ns, group, opts)
-  return nvim.nvim_set_hl(ns, group, opts)
+self["chat-set-model"] = function(model)
+  local chat = self["resolve-chat"]()
+  if chat then
+    return chat["update-header-item"]("model", model)
+  else
+    return nil
+  end
 end
-local function create_user_command(name, f, opts)
-  return nvim.nvim_create_user_command(name, f, (opts or {}))
+self["chat-set-loading"] = function(bool)
+  local chat = self["resolve-chat"]()
+  if chat then
+    return chat["set-loading"](bool)
+  else
+    return nil
+  end
 end
-local function create_autocmd(event, opts)
-  return nvim.nvim_create_autocmd(event, opts)
+self["default-on-submit"] = function(text)
+  local chat = self["resolve-chat"]()
+  if chat then
+    chat["append-message"]({id = tostring(os.time()), content = text, prefix = "> "})
+    chat["set-loading"](true)
+    local function _11_()
+      if chat["is-open?"]() then
+        chat["append-message"]({id = ("reply-" .. tostring(os.time())), content = ("You said: " .. text .. "\n\n(This is a mock response)")})
+        return chat["set-loading"](false)
+      else
+        return nil
+      end
+    end
+    return vim.defer_fn(_11_, 500)
+  else
+    return nil
+  end
 end
-local function set_keymap(mode, lhs, rhs, opts)
-  return vim.keymap.set(mode, lhs, rhs, (opts or {}))
+self["set-plugin-opts"] = function(opts)
+  plugin_opts = (opts or {})
+  return nil
 end
-local function schedule(f)
-  return vim.schedule(f)
-end
-local function defer(f, ms)
-  return vim.defer_fn(f, ms)
-end
-local function editor_width()
-  return vim.o.columns
-end
-local function editor_height()
-  return vim.o.lines
-end
-return {["buf-set-lines"] = buf_set_lines, ["buf-get-lines"] = buf_get_lines, ["buf-line-count"] = buf_line_count, ["buf-is-valid"] = buf_is_valid, ["buf-create"] = buf_create, ["buf-set-keymap"] = buf_set_keymap, ["win-open"] = win_open, ["win-close"] = win_close, ["win-is-valid"] = win_is_valid, ["win-get-cursor"] = win_get_cursor, ["win-set-cursor"] = win_set_cursor, ["create-namespace"] = create_namespace, ["buf-set-extmark"] = buf_set_extmark, ["buf-del-extmark"] = buf_del_extmark, ["buf-get-extmarks"] = buf_get_extmarks, ["set-option"] = set_option, ["get-option"] = get_option, ["set-hl"] = set_hl, ["create-user-command"] = create_user_command, ["create-autocmd"] = create_autocmd, ["set-keymap"] = set_keymap, schedule = schedule, defer = defer, ["editor-width"] = editor_width, ["editor-height"] = editor_height}
+return self

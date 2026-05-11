@@ -1,39 +1,26 @@
-;; icon component — maps semantic names to unicode icons.
-;; Stateless, pure function.
+;; icon component — maps UI semantic names to unicode icons.
+;; Stateless, pure function. Handles UI concepts, not business logic.
 
 (local icons
   {:collapsed  "⏵"
    :expanded   "⏷"
-   :pending    "⏳"
-   :running    "⏳"
+   :loading    "⏳"
    :success    "✅"
    :error      "❌"
-   :approval   "🚧"
-   :loading    "⏳"
+   :warning    "⚠️"
+   :info       "ℹ️"
    :stop       "⏹"
    :new        "+"
    :close      "×"})
 
-(local icon-highlights
-  {:collapsed  :EcaExpandableIcon
-   :expanded   :EcaExpandableIcon
-   :pending    :EcaToolCallPending
-   :running    :EcaToolCallPending
-   :success    :EcaToolCallSuccess
-   :error      :EcaToolCallError
-   :approval   :EcaToolCallApproval
-   :loading    :EcaSpinner
-   :stop       :EcaToolCallError
-   :new        :EcaButtonAccept
-   :close      :EcaButtonReject})
-
-(fn render [{: name}]
-  "Render an icon by semantic name.
+(fn render [{: name : text : hl-group}]
+  "Render an icon by semantic name or direct text.
+   name: lookup key (e.g. :collapsed, :success)
+   text: direct icon text (overrides name lookup)
+   hl-group: highlight group
    Returns {: text : hl-group}."
-  (let [icon (or (. icons name) "?")
-        hl (or (. icon-highlights name) :EcaExpandableIcon)]
-    {:text icon
-     :hl-group hl}))
+  {:text (or text (. icons name) "?")
+   :hl-group (or hl-group :Normal)})
 
 {: render
  : icons}

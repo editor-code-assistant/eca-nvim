@@ -1,328 +1,208 @@
 -- [nfnl] fnl/eca/ui/builder.fnl
+local nvim = vim.api
 local highlights = require("eca.ui.highlights")
 local header_bar_widget = require("eca.ui.widgets.header-bar")
 local message_list_widget = require("eca.ui.widgets.message-list")
 local prompt_area_widget = require("eca.ui.widgets.prompt-area")
-local status_bar_widget = require("eca.ui.widgets.status-bar")
-local tab_bar_widget = require("eca.ui.widgets.tab-bar")
-local function build_canvas(api, buf_id, win_id)
-  local buf = buf_id
-  local win = win_id
-  local function _1_(_, start, _end, lines)
-    return api["buf-set-lines"](buf, start, _end, lines)
-  end
-  local function _2_(_, start, _end)
-    return api["buf-get-lines"](buf, start, _end)
-  end
-  local function _3_(_)
-    return api["buf-line-count"](buf)
-  end
-  local function _4_(_, ns_id, line, col, opts)
-    return api["buf-set-extmark"](buf, ns_id, line, col, opts)
-  end
-  local function _5_(_, ns_id, id)
-    return api["buf-del-extmark"](buf, ns_id, id)
-  end
-  local function _6_(_, ns_id, start, _end, opts)
-    return api["buf-get-extmarks"](buf, ns_id, start, _end, opts)
-  end
-  local function _7_(_, name)
-    return api["create-namespace"](name)
-  end
-  local function _8_(_, scope, key, value)
-    if (scope == "win") then
-      return api["set-option"]("win", win, key, value)
-    elseif (scope == "buf") then
-      return api["set-option"]("buf", buf, key, value)
-    elseif (scope == "global") then
-      return api["set-option"]("global", nil, key, value)
-    else
-      return nil
-    end
-  end
-  local function _10_(_, scope, key)
-    if (scope == "win") then
-      return api["get-option"]("win", win, key)
-    elseif (scope == "buf") then
-      return api["get-option"]("buf", buf, key)
-    elseif (scope == "global") then
-      return api["get-option"]("global", nil, key)
-    else
-      return nil
-    end
-  end
-  local function _12_(_)
-    return api["win-get-cursor"](win)
-  end
-  local function _13_(_, line, col)
-    return api["win-set-cursor"](win, {line, col})
-  end
-  local function _14_(_)
-    return api["buf-is-valid"](buf)
-  end
-  local function _15_(_)
-    return api["win-is-valid"](win)
-  end
-  local function _16_(_, ns, group, opts)
-    return api["set-hl"](ns, group, opts)
-  end
-  local function _17_(_)
-    return api["win-close"](win)
-  end
-  local function _18_(_)
-    return buf
-  end
-  local function _19_(_)
-    return win
-  end
-  return {["set-lines"] = _1_, ["get-lines"] = _2_, ["line-count"] = _3_, ["add-extmark"] = _4_, ["del-extmark"] = _5_, ["get-extmarks"] = _6_, ["create-namespace"] = _7_, ["set-option"] = _8_, ["get-option"] = _10_, ["get-cursor"] = _12_, ["set-cursor"] = _13_, ["buf-valid?"] = _14_, ["win-valid?"] = _15_, ["set-hl"] = _16_, ["close-win"] = _17_, ["buf-id"] = _18_, ["win-id"] = _19_}
+local footer_bar_widget = require("eca.ui.widgets.footer-bar")
+local function setup_chat_buffer(buf)
+  nvim.nvim_buf_set_name(buf, "ECA Chat")
+  nvim.nvim_set_option_value("buftype", "nofile", {buf = buf})
+  nvim.nvim_set_option_value("bufhidden", "hide", {buf = buf})
+  nvim.nvim_set_option_value("swapfile", false, {buf = buf})
+  return nvim.nvim_set_option_value("filetype", "eca-chat", {buf = buf})
 end
-local function setup_chat_buffer(canvas)
-  canvas["set-option"](canvas, "buf", "buftype", "nofile")
-  canvas["set-option"](canvas, "buf", "bufhidden", "hide")
-  canvas["set-option"](canvas, "buf", "swapfile", false)
-  return canvas["set-option"](canvas, "buf", "filetype", "eca-chat")
+local function setup_chat_window(win)
+  nvim.nvim_set_option_value("number", false, {win = win})
+  nvim.nvim_set_option_value("relativenumber", false, {win = win})
+  nvim.nvim_set_option_value("signcolumn", "no", {win = win})
+  nvim.nvim_set_option_value("foldcolumn", "0", {win = win})
+  nvim.nvim_set_option_value("numberwidth", 1, {win = win})
+  nvim.nvim_set_option_value("statuscolumn", "", {win = win})
+  nvim.nvim_set_option_value("spell", false, {win = win})
+  nvim.nvim_set_option_value("list", false, {win = win})
+  nvim.nvim_set_option_value("wrap", true, {win = win})
+  nvim.nvim_set_option_value("linebreak", true, {win = win})
+  return nvim.nvim_set_option_value("conceallevel", 2, {win = win})
 end
-local function setup_chat_window(canvas)
-  canvas["set-option"](canvas, "win", "number", false)
-  canvas["set-option"](canvas, "win", "relativenumber", false)
-  canvas["set-option"](canvas, "win", "signcolumn", "no")
-  canvas["set-option"](canvas, "win", "foldcolumn", "0")
-  canvas["set-option"](canvas, "win", "spell", false)
-  canvas["set-option"](canvas, "win", "wrap", true)
-  canvas["set-option"](canvas, "win", "linebreak", true)
-  return canvas["set-option"](canvas, "win", "conceallevel", 2)
-end
-local function setup_edit_guard(api, buf_id, get_prompt_start_line)
+local function setup_edit_guard(buf_id, render_all_fn, get_prompt_state, focus_prompt_fn)
   local internal_edit = false
+  local guard_ns = nil
+  local function ensure_guard_ns()
+    if (nil == guard_ns) then
+      guard_ns = nvim.nvim_create_namespace("eca-edit-guard")
+    else
+    end
+    return guard_ns
+  end
+  local function get_prefix(loading_3f)
+    local prompt_prefix = require("eca.ui.components.prompt-prefix")
+    return prompt_prefix.render({["loading?"] = loading_3f}).text
+  end
+  local function salvage_user_text(buf, prompt_start_line, prefix)
+    local current_count = nvim.nvim_buf_line_count(buf)
+    local start = math.min(prompt_start_line, current_count)
+    local prompt_lines = nvim.nvim_buf_get_lines(buf, start, current_count, false)
+    if (0 == #prompt_lines) then
+      return {""}
+    else
+      local tbl_26_ = {}
+      local i_27_ = 0
+      for i, line in ipairs(prompt_lines) do
+        local val_28_
+        if (i == 1) then
+          if vim.startswith(line, prefix) then
+            val_28_ = string.sub(line, (#prefix + 1))
+          else
+            val_28_ = line:gsub("^>%s*", "")
+          end
+        else
+          val_28_ = line
+        end
+        if (nil ~= val_28_) then
+          i_27_ = (i_27_ + 1)
+          tbl_26_[i_27_] = val_28_
+        else
+        end
+      end
+      return tbl_26_
+    end
+  end
+  local function restore_with_user_text(buf, prefix, user_lines)
+    internal_edit = true
+    render_all_fn()
+    do
+      local new_count = nvim.nvim_buf_line_count(buf)
+      local new_last_idx = (new_count - 1)
+      local restored_lines
+      do
+        local tbl_26_ = {}
+        local i_27_ = 0
+        for i, line in ipairs(user_lines) do
+          local val_28_
+          if (i == 1) then
+            val_28_ = (prefix .. line)
+          else
+            val_28_ = line
+          end
+          if (nil ~= val_28_) then
+            i_27_ = (i_27_ + 1)
+            tbl_26_[i_27_] = val_28_
+          else
+          end
+        end
+        restored_lines = tbl_26_
+      end
+      if (#restored_lines > 0) then
+        nvim.nvim_buf_set_lines(buf, new_last_idx, new_count, false, restored_lines)
+        local ns = ensure_guard_ns()
+        nvim.nvim_buf_set_extmark(buf, ns, new_last_idx, 0, {end_col = #prefix, hl_group = "EcaPromptPrefix"})
+      else
+      end
+    end
+    internal_edit = false
+    if focus_prompt_fn then
+      return focus_prompt_fn()
+    else
+      return nil
+    end
+  end
+  local function on_lines_handler(_, buf, changedtick, first_line, last_line, new_last_line)
+    if not internal_edit then
+      local _let_10_ = get_prompt_state()
+      local prompt_start_line = _let_10_["prompt-start-line"]
+      local loading_3f = _let_10_["loading?"]
+      local prefix = get_prefix(loading_3f)
+      local function _11_()
+        if nvim.nvim_buf_is_valid(buf) then
+          local current_count = nvim.nvim_buf_line_count(buf)
+          local prompt_idx = math.min(prompt_start_line, (current_count - 1))
+          local prompt_lines = nvim.nvim_buf_get_lines(buf, prompt_idx, (prompt_idx + 1), false)
+          local prompt_line_text = (prompt_lines[1] or "")
+          local damaged_3f = ((first_line < prompt_start_line) or not vim.startswith(prompt_line_text, prefix))
+          if damaged_3f then
+            local user_lines = salvage_user_text(buf, prompt_start_line, prefix)
+            return restore_with_user_text(buf, prefix, user_lines)
+          else
+            return nil
+          end
+        else
+          return nil
+        end
+      end
+      return vim.schedule(_11_)
+    else
+      return nil
+    end
+  end
+  nvim.nvim_buf_attach(buf_id, false, {on_lines = on_lines_handler})
   local function set_internal(bool)
     internal_edit = bool
     return nil
   end
-  local function _20_(_, buf, changedtick, first_line, last_line, new_last_line)
-    if not internal_edit then
-      local prompt_start = get_prompt_start_line()
-      if (first_line < prompt_start) then
-        local function _21_()
-          if api["buf-is-valid"](buf) then
-            return vim.cmd("silent! undo")
-          else
-            return nil
-          end
-        end
-        return api.schedule(_21_)
-      else
-        return nil
-      end
+  local function update_expected_count()
+    return nil
+  end
+  return {["set-internal"] = set_internal, ["update-expected-count"] = update_expected_count}
+end
+local function create_chat_ui(_15_)
+  local on_submit = _15_["on-submit"]
+  local opts = _15_.opts
+  local ui_config = (opts.ui or {})
+  local config = {width = (ui_config.width or 0.4), position = (ui_config.position or "right"), keymaps = (opts.keymaps or {})}
+  local state = {["header-items"] = {}, ["footer-items"] = {}, welcome = nil}
+  local buf_id = nil
+  local win_id = nil
+  local guard = nil
+  local widgets = {header = nil, messages = nil, prompt = nil, footer = nil}
+  local function is_open_3f()
+    return ((nil ~= buf_id) and nvim.nvim_buf_is_valid(buf_id) and (nil ~= win_id) and nvim.nvim_win_is_valid(win_id))
+  end
+  local function with_internal_edit(f)
+    if guard then
+      guard["set-internal"](true)
+    else
+    end
+    f()
+    if guard then
+      guard["set-internal"](false)
+      return guard["update-expected-count"]()
     else
       return nil
     end
   end
-  api["buf-attach"](buf_id, {on_lines = _20_})
-  return set_internal
-end
-local function create_chat_ui(_25_)
-  local api = _25_.api
-  local on_submit = _25_["on-submit"]
-  local on_approve = _25_["on-approve"]
-  local on_reject = _25_["on-reject"]
-  local on_stop = _25_["on-stop"]
-  local on_new_chat = _25_["on-new-chat"]
-  local on_select_tab = _25_["on-select-tab"]
-  local on_context_add = _25_["on-context-add"]
-  local opts = _25_.opts
-  local ui_config = (opts.ui or {})
-  local config = {width = (ui_config.width or 0.4), position = (ui_config.position or "right")}
-  local canvas = nil
-  local set_internal_edit = nil
-  local widgets = {header = nil, messages = nil, prompt = nil, status = nil, tabs = nil}
-  local function is_open_3f()
-    return ((nil ~= canvas) and canvas["buf-valid?"](canvas) and canvas["win-valid?"](canvas))
-  end
-  local function get_prompt_start_line()
-    local state = widgets.prompt["get-state"]()
-    return (state["prompt-start-line"] or 0)
-  end
-  local function with_internal_edit(f)
-    if set_internal_edit then
-      set_internal_edit(true)
-    else
-    end
-    f()
-    if set_internal_edit then
-      return set_internal_edit(false)
+  local function focus_prompt()
+    if (win_id and nvim.nvim_win_is_valid(win_id)) then
+      local total = nvim.nvim_buf_line_count(buf_id)
+      local prompt_state = widgets.prompt["get-state"]()
+      local prompt_line = (prompt_state["prompt-start-line"] or (total - 1))
+      return nvim.nvim_win_set_cursor(win_id, {(prompt_line + 1), 2})
     else
       return nil
     end
   end
   local function render_all()
-    local function _28_()
-      widgets.header.render()
-      widgets.messages.render()
+    local function _19_()
       do
+        local header_lines = widgets.header.render()
+        widgets.messages["set-start-line"](header_lines)
+        widgets.messages.render()
         local end_line = widgets.messages["get-end-line"]()
         widgets.prompt.render(end_line)
       end
-      widgets.status.render()
-      return widgets.tabs.render()
-    end
-    return with_internal_edit(_28_)
-  end
-  local function open()
-    if not is_open_3f() then
-      local buf_id = api["buf-create"]({scratch = true, listed = false})
-      local win_width = math.floor((api["editor-width"]() * config.width))
-      local win_id = api["win-open"](buf_id, {split = "right", width = win_width})
-      canvas = build_canvas(api, buf_id, win_id)
-      highlights.setup(canvas)
-      setup_chat_buffer(canvas)
-      setup_chat_window(canvas)
-      widgets.header = header_bar_widget.create(canvas, {})
-      widgets.messages = message_list_widget.create(canvas)
-      widgets.prompt = prompt_area_widget.create(canvas)
-      widgets.status = status_bar_widget.create(canvas, {})
-      widgets.tabs = tab_bar_widget.create(canvas, {tabs = {{id = 1, title = "Chat 1"}}, ["active-id"] = 1})
-      set_internal_edit = setup_edit_guard(api, buf_id, get_prompt_start_line)
-      local function _29_()
-        return canvas["set-lines"](canvas, 0, -1, {""})
+      if widgets.footer then
+        return widgets.footer.render()
+      else
+        return nil
       end
-      with_internal_edit(_29_)
-      return render_all()
-    else
-      return nil
     end
+    return with_internal_edit(_19_)
   end
   local function close()
     if is_open_3f() then
-      return canvas["close-win"](canvas)
-    else
+      nvim.nvim_win_close(win_id, true)
+      win_id = nil
       return nil
-    end
-  end
-  local function toggle()
-    if is_open_3f() then
-      return close()
-    else
-      return open()
-    end
-  end
-  local function append_message(msg)
-    if is_open_3f() then
-      local function _33_()
-        widgets.messages["append-message"](msg)
-        local end_line = widgets.messages["get-end-line"]()
-        return widgets.prompt.render(end_line)
-      end
-      return with_internal_edit(_33_)
-    else
-      return nil
-    end
-  end
-  local function update_message(id, content)
-    if is_open_3f() then
-      local function _35_()
-        widgets.messages["update-message"](id, content)
-        local end_line = widgets.messages["get-end-line"]()
-        return widgets.prompt.render(end_line)
-      end
-      return with_internal_edit(_35_)
-    else
-      return nil
-    end
-  end
-  local function clear_messages()
-    if is_open_3f() then
-      local function _37_()
-        widgets.messages.clear()
-        local end_line = widgets.messages["get-end-line"]()
-        return widgets.prompt.render(end_line)
-      end
-      return with_internal_edit(_37_)
-    else
-      return nil
-    end
-  end
-  local function show_tool_call(tc)
-    return nil
-  end
-  local function update_tool_call(id, status)
-    return nil
-  end
-  local function show_approval(tc)
-    return nil
-  end
-  local function update_model_info(info)
-    if is_open_3f() then
-      return widgets.header.update(info)
-    else
-      return nil
-    end
-  end
-  local function update_usage(usage)
-    if is_open_3f() then
-      return widgets.status.update(usage)
-    else
-      return nil
-    end
-  end
-  local function update_progress(progress)
-    if is_open_3f() then
-      return widgets.status.update({["init-progress"] = progress})
-    else
-      return nil
-    end
-  end
-  local function add_context(ctx)
-    if is_open_3f() then
-      local function _42_()
-        widgets.prompt["add-context"](ctx)
-        local end_line = widgets.messages["get-end-line"]()
-        return widgets.prompt.render(end_line)
-      end
-      return with_internal_edit(_42_)
-    else
-      return nil
-    end
-  end
-  local function remove_context(name)
-    if is_open_3f() then
-      local function _44_()
-        widgets.prompt["remove-context"](name)
-        local end_line = widgets.messages["get-end-line"]()
-        return widgets.prompt.render(end_line)
-      end
-      return with_internal_edit(_44_)
-    else
-      return nil
-    end
-  end
-  local function add_chat_tab(tab)
-    if is_open_3f() then
-      widgets.tabs["add-tab"](tab)
-      return widgets.tabs.render()
-    else
-      return nil
-    end
-  end
-  local function remove_chat_tab(id)
-    if is_open_3f() then
-      widgets.tabs["remove-tab"](id)
-      return widgets.tabs.render()
-    else
-      return nil
-    end
-  end
-  local function select_chat_tab(id)
-    if is_open_3f() then
-      widgets.tabs["select-tab"](id)
-      return widgets.tabs.render()
-    else
-      return nil
-    end
-  end
-  local function get_prompt_text()
-    if is_open_3f() then
-      return widgets.prompt["get-text"]()
     else
       return nil
     end
@@ -332,10 +212,11 @@ local function create_chat_ui(_25_)
       local text = widgets.prompt["get-text"]()
       if (text and ("" ~= text)) then
         widgets.prompt["add-to-history"](text)
-        local function _50_()
+        local function _22_()
           return widgets.prompt.clear()
         end
-        with_internal_edit(_50_)
+        with_internal_edit(_22_)
+        focus_prompt()
         if on_submit then
           return on_submit(text)
         else
@@ -348,16 +229,180 @@ local function create_chat_ui(_25_)
       return nil
     end
   end
-  local function set_loading(bool)
-    if is_open_3f() then
-      local function _54_()
-        return widgets.prompt["set-loading"](bool)
+  local function open()
+    if not is_open_3f() then
+      buf_id = nvim.nvim_create_buf(false, true)
+      do
+        local width = math.floor((vim.o.columns * config.width))
+        win_id = nvim.nvim_open_win(buf_id, true, {split = "right", width = width})
       end
-      return with_internal_edit(_54_)
+      highlights.setup()
+      setup_chat_buffer(buf_id)
+      setup_chat_window(win_id)
+      widgets.header = header_bar_widget.create(buf_id, win_id, state["header-items"])
+      widgets.messages = message_list_widget.create(buf_id)
+      if state.welcome then
+        widgets.messages["set-welcome"]({lines = {state.welcome, ""}, highlights = {{["line-idx"] = 0, ["hl-group"] = "EcaWelcome", ["col-start"] = 0, ["col-end"] = #state.welcome}}})
+      else
+      end
+      widgets.prompt = prompt_area_widget.create(buf_id)
+      widgets.footer = footer_bar_widget.create(buf_id, win_id, state["footer-items"])
+      for _, km in ipairs(config.keymaps) do
+        vim.keymap.set(km.mode, km.lhs, km.rhs, {buffer = buf_id, noremap = true, silent = true})
+      end
+      nvim.nvim_buf_set_lines(buf_id, 0, -1, false, {""})
+      render_all()
+      focus_prompt()
+      local function _27_()
+        local s = widgets.prompt["get-state"]()
+        return {["prompt-start-line"] = (s["prompt-start-line"] or 0), ["loading?"] = s["loading?"]}
+      end
+      guard = setup_edit_guard(buf_id, render_all, _27_, focus_prompt)
+      return nil
     else
       return nil
     end
   end
-  return {open = open, close = close, toggle = toggle, ["is-open?"] = is_open_3f, ["append-message"] = append_message, ["update-message"] = update_message, ["clear-messages"] = clear_messages, ["show-tool-call"] = show_tool_call, ["update-tool-call"] = update_tool_call, ["show-approval"] = show_approval, ["update-model-info"] = update_model_info, ["update-usage"] = update_usage, ["update-progress"] = update_progress, ["add-context"] = add_context, ["remove-context"] = remove_context, ["add-chat-tab"] = add_chat_tab, ["remove-chat-tab"] = remove_chat_tab, ["select-chat-tab"] = select_chat_tab, ["get-prompt-text"] = get_prompt_text, ["submit-prompt"] = submit_prompt, ["set-loading"] = set_loading}
+  local function toggle()
+    if is_open_3f() then
+      return close()
+    else
+      return open()
+    end
+  end
+  local function get_buf_id()
+    return buf_id
+  end
+  local function append_message(msg)
+    if is_open_3f() then
+      local function _30_()
+        widgets.messages["append-message"](msg)
+        local end_line = widgets.messages["get-end-line"]()
+        return widgets.prompt.render(end_line)
+      end
+      with_internal_edit(_30_)
+      return focus_prompt()
+    else
+      return nil
+    end
+  end
+  local function update_message(id, content)
+    if is_open_3f() then
+      local function _32_()
+        widgets.messages["update-message"](id, content)
+        local end_line = widgets.messages["get-end-line"]()
+        return widgets.prompt.render(end_line)
+      end
+      return with_internal_edit(_32_)
+    else
+      return nil
+    end
+  end
+  local function clear_messages()
+    if is_open_3f() then
+      local function _34_()
+        widgets.messages.clear()
+        local end_line = widgets.messages["get-end-line"]()
+        return widgets.prompt.render(end_line)
+      end
+      return with_internal_edit(_34_)
+    else
+      return nil
+    end
+  end
+  local function update_header(new_items)
+    state["header-items"] = new_items
+    if is_open_3f() then
+      local function _36_()
+        return widgets.header.update(new_items)
+      end
+      return with_internal_edit(_36_)
+    else
+      return nil
+    end
+  end
+  local function update_header_item(title, new_value)
+    local found = false
+    for _, item in ipairs(state["header-items"]) do
+      if (item.title == title) then
+        item["value"] = new_value
+        found = true
+      else
+      end
+    end
+    if not found then
+      table.insert(state["header-items"], {title = title, value = new_value})
+    else
+    end
+    if is_open_3f() then
+      local function _40_()
+        return widgets.header.update(state["header-items"])
+      end
+      return with_internal_edit(_40_)
+    else
+      return nil
+    end
+  end
+  local function update_footer(new_items)
+    state["footer-items"] = new_items
+    if is_open_3f() then
+      local function _42_()
+        return widgets.footer.update(new_items)
+      end
+      return with_internal_edit(_42_)
+    else
+      return nil
+    end
+  end
+  local function update_footer_item(title, new_value)
+    local found = false
+    for _, item in ipairs(state["footer-items"]) do
+      if (item.title == title) then
+        item["value"] = new_value
+        found = true
+      else
+      end
+    end
+    if not found then
+      table.insert(state["footer-items"], {title = title, value = new_value})
+    else
+    end
+    if is_open_3f() then
+      local function _46_()
+        return widgets.footer.update(state["footer-items"])
+      end
+      return with_internal_edit(_46_)
+    else
+      return nil
+    end
+  end
+  local function set_welcome(text)
+    state.welcome = text
+    if is_open_3f() then
+      widgets.messages["set-welcome"]({lines = {text, ""}, highlights = {{["line-idx"] = 0, ["hl-group"] = "EcaWelcome", ["col-start"] = 0, ["col-end"] = #text}}})
+      local msg_state = widgets.messages["get-state"]()
+      if (0 == #msg_state.messages) then
+        local function _48_()
+          return render_all()
+        end
+        return with_internal_edit(_48_)
+      else
+        return nil
+      end
+    else
+      return nil
+    end
+  end
+  local function set_loading(bool)
+    if is_open_3f() then
+      local function _51_()
+        return widgets.prompt["set-loading"](bool)
+      end
+      return with_internal_edit(_51_)
+    else
+      return nil
+    end
+  end
+  return {open = open, close = close, toggle = toggle, ["is-open?"] = is_open_3f, ["get-buf-id"] = get_buf_id, ["append-message"] = append_message, ["update-message"] = update_message, ["clear-messages"] = clear_messages, ["update-header"] = update_header, ["update-header-item"] = update_header_item, ["update-footer"] = update_footer, ["update-footer-item"] = update_footer_item, ["set-welcome"] = set_welcome, ["submit-prompt"] = submit_prompt, ["set-loading"] = set_loading}
 end
 return {["create-chat-ui"] = create_chat_ui}

@@ -1,36 +1,42 @@
 ;; commands — Vim user commands for ECA.
-;; Users map keymaps to these commands in their own config.
+;; Uses the public chat API from api.fnl.
 
-(local api (require :eca.api))
+(local nvim vim.api)
 
-(fn setup [chat-ui]
+(fn setup [api]
   "Register all :Eca* user commands."
-  (api.create-user-command "EcaChat"
-    (fn [] (chat-ui.toggle))
+  (nvim.nvim_create_user_command "EcaChat"
+    (fn [] (api.chat-toggle))
     {:desc "Toggle ECA Chat window"})
 
-  (api.create-user-command "EcaChatOpen"
-    (fn [] (chat-ui.open))
+  (nvim.nvim_create_user_command "EcaChatOpen"
+    (fn [] (api.chat-open))
     {:desc "Open ECA Chat window"})
 
-  (api.create-user-command "EcaChatClose"
-    (fn [] (chat-ui.close))
+  (nvim.nvim_create_user_command "EcaChatClose"
+    (fn [] (api.chat-close))
     {:desc "Close ECA Chat window"})
 
-  (api.create-user-command "EcaChatClear"
-    (fn [] (chat-ui.clear-messages))
-    {:desc "Clear ECA Chat messages"})
+  (nvim.nvim_create_user_command "EcaChatClear"
+    (fn [] (api.chat-clear))
+    {:desc "Clear current chat messages"})
 
-  (api.create-user-command "EcaChatNew"
-    (fn [] (chat-ui.clear-messages))
-    {:desc "Start a new ECA Chat"})
+  (nvim.nvim_create_user_command "EcaChatNew"
+    (fn [] (api.chat-open))
+    {:desc "Open a new ECA Chat"})
 
-  (api.create-user-command "EcaChatSubmit"
-    (fn [] (chat-ui.submit-prompt))
+  (nvim.nvim_create_user_command "EcaChatSubmit"
+    (fn [] (api.chat-submit))
     {:desc "Submit current prompt"})
 
-  (api.create-user-command "EcaChatStop"
-    (fn [] (chat-ui.set-loading false))
-    {:desc "Stop current ECA response"}))
+  (nvim.nvim_create_user_command "EcaChatStop"
+    (fn [] (api.chat-set-loading false))
+    {:desc "Stop current ECA response"})
+
+  (nvim.nvim_create_user_command "EcaChatSetModel"
+    (fn [cmd]
+      (when (and cmd.args (not= "" cmd.args))
+        (api.chat-set-model cmd.args)))
+    {:desc "Set the model" :nargs 1}))
 
 {: setup}

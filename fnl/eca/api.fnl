@@ -1,157 +1,92 @@
-;; Neovim API adapter — flat functions wrapping vim.api.*
-;; This is the ONLY file that touches vim.api.* directly.
-;; Every other module uses these functions instead of calling Neovim directly.
+;; ECA API — chat registry + public functions.
+;; Commands and external consumers use this module.
 
-(local nvim vim.api)
+(local self {})
+(local chats {})
+(var plugin-opts {})
 
-;; ── Buffer ──────────────────────────────────────────────
+;; ── Chat registry ───────────────────────────────────────
 
-(fn buf-set-lines [buf start end lines]
-  (nvim.nvim_buf_set_lines buf start end false lines))
+(fn self.resolve-chat []
+  "Find the chat for the current buffer, or any open chat."
+  (let [current (. chats (vim.api.nvim_get_current_buf))]
+    (or current
+        (do (var found nil)
+            (each [_ chat (pairs chats)]
+              (when (and (not found) (chat.is-open?))
+                (set found chat)))
+            found))))
 
-(fn buf-get-lines [buf start end]
-  (nvim.nvim_buf_get_lines buf start end false))
+(fn self.register-chat [chat]
+  (let [buf-id (chat.get-buf-id)]
+    (when buf-id
+      (tset chats buf-id chat))))
 
-(fn buf-line-count [buf]
-  (nvim.nvim_buf_line_count buf))
+;; ── Chat public API ─────────────────────────────────────
 
-(fn buf-is-valid [buf]
-  (and (not= nil buf) (nvim.nvim_buf_is_valid buf)))
+(fn self.chat-open []
+  (let [existing (self.resolve-chat)]
+    (when (not (and existing (existing.is-open?)))
+      (let [builder (require :eca.ui.builder)
+            chat-ui (builder.create-chat-ui
+                      {:on-submit (or plugin-opts.on-submit self.default-on-submit)
+                       :opts {:ui (or plugin-opts.ui {})
+                              :keymaps (or plugin-opts.keymaps
+                                           [{:mode :i :lhs "<C-s>" :rhs "<cmd>EcaChatSubmit<CR>"}
+                                            {:mode :n :lhs "<CR>" :rhs "<cmd>EcaChatSubmit<CR>"}])}})]
+        (chat-ui.open)
+        (self.register-chat chat-ui)
+        ;; Mock server data
+        (chat-ui.set-welcome "Welcome to ECA Chat")
+        (chat-ui.update-header [{:title "model" :value "claude"}
+                                {:title "behavior" :value "agent"}])
+        (chat-ui.update-footer [{:value "ECA Chat"}
+                                {:title "tokens" :value "0/200K"}])))))
 
-(fn buf-create [opts]
-  "Create a new buffer. opts: {: listed : scratch}"
-  (let [o (or opts {})]
-    (nvim.nvim_create_buf
-      (if (not= nil o.listed) o.listed false)
-      (if (not= nil o.scratch) o.scratch true))))
+(fn self.chat-close []
+  (let [chat (self.resolve-chat)]
+    (when chat (chat.close))))
 
-(fn buf-set-keymap [buf mode lhs rhs opts]
-  (nvim.nvim_buf_set_keymap buf mode lhs rhs (or opts {})))
+(fn self.chat-toggle []
+  (let [chat (self.resolve-chat)]
+    (if (and chat (chat.is-open?))
+      (chat.close)
+      (self.chat-open))))
 
-;; ── Window ──────────────────────────────────────────────
+(fn self.chat-submit []
+  (let [chat (self.resolve-chat)]
+    (when chat (chat.submit-prompt))))
 
-(fn win-open [buf opts]
-  "Open a new window. Returns win-id."
-  (nvim.nvim_open_win buf true (or opts {})))
+(fn self.chat-clear []
+  (let [chat (self.resolve-chat)]
+    (when chat (chat.clear-messages))))
 
-(fn win-close [win]
-  (when (and win (nvim.nvim_win_is_valid win))
-    (nvim.nvim_win_close win true)))
+(fn self.chat-set-model [model]
+  (let [chat (self.resolve-chat)]
+    (when chat (chat.update-header-item "model" model))))
 
-(fn win-is-valid [win]
-  (and (not= nil win) (nvim.nvim_win_is_valid win)))
+(fn self.chat-set-loading [bool]
+  (let [chat (self.resolve-chat)]
+    (when chat (chat.set-loading bool))))
 
-(fn win-get-cursor [win]
-  (when win (nvim.nvim_win_get_cursor win)))
+(fn self.default-on-submit [text]
+  (let [chat (self.resolve-chat)]
+    (when chat
+      (chat.append-message
+        {:id (tostring (os.time))
+         :content text
+         :prefix "> "})
+      (chat.set-loading true)
+      (vim.defer_fn
+        (fn []
+          (when (chat.is-open?)
+            (chat.append-message
+              {:id (.. "reply-" (tostring (os.time)))
+               :content (.. "You said: " text "\n\n(This is a mock response)")})
+            (chat.set-loading false)))
+        500))))
 
-(fn win-set-cursor [win pos]
-  (when win (nvim.nvim_win_set_cursor win pos)))
+(fn self.set-plugin-opts [opts]
+  (set plugin-opts (or opts {})))
 
-;; ── Extmarks ────────────────────────────────────────────
-
-(fn create-namespace [name]
-  (nvim.nvim_create_namespace name))
-
-(fn buf-set-extmark [buf ns-id line col opts]
-  (nvim.nvim_buf_set_extmark buf ns-id line col (or opts {})))
-
-(fn buf-del-extmark [buf ns-id id]
-  (nvim.nvim_buf_del_extmark buf ns-id id))
-
-(fn buf-get-extmarks [buf ns-id start end opts]
-  (nvim.nvim_buf_get_extmarks buf ns-id start end (or opts {})))
-
-;; ── Options ─────────────────────────────────────────────
-
-(fn set-option [scope id key value]
-  "Set an option. scope: :win, :buf, or :global. id: win-id or buf-id (ignored for :global)."
-  (case scope
-    :win (nvim.nvim_set_option_value key value {:win id})
-    :buf (nvim.nvim_set_option_value key value {:buf id})
-    :global (nvim.nvim_set_option_value key value {})))
-
-(fn get-option [scope id key]
-  "Get an option. scope: :win, :buf, or :global."
-  (case scope
-    :win (nvim.nvim_get_option_value key {:win id})
-    :buf (nvim.nvim_get_option_value key {:buf id})
-    :global (nvim.nvim_get_option_value key {})))
-
-;; ── Highlights ──────────────────────────────────────────
-
-(fn set-hl [ns group opts]
-  (nvim.nvim_set_hl ns group opts))
-
-;; ── Commands ────────────────────────────────────────────
-
-(fn create-user-command [name f opts]
-  (nvim.nvim_create_user_command name f (or opts {})))
-
-(fn create-autocmd [event opts]
-  (nvim.nvim_create_autocmd event opts))
-
-;; ── Keymaps (global) ────────────────────────────────────
-
-(fn set-keymap [mode lhs rhs opts]
-  (vim.keymap.set mode lhs rhs (or opts {})))
-
-;; ── Buffer attach ───────────────────────────────────────
-
-(fn buf-attach [buf opts]
-  "Attach to buffer events. opts: {: on_lines : on_bytes : on_detach ...}
-   on_lines: (fn [_ buf changedtick first-line last-line new-last-line] ...)
-   Return true from on_lines to detach."
-  (nvim.nvim_buf_attach buf false (or opts {})))
-
-;; ── Scheduling ──────────────────────────────────────────
-
-(fn schedule [f]
-  (vim.schedule f))
-
-(fn defer [f ms]
-  (vim.defer_fn f ms))
-
-;; ── Editor info ─────────────────────────────────────────
-
-(fn editor-width []
-  (. vim.o :columns))
-
-(fn editor-height []
-  (. vim.o :lines))
-
-{;; Buffer
- : buf-set-lines
- : buf-get-lines
- : buf-line-count
- : buf-is-valid
- : buf-create
- : buf-set-keymap
- ;; Window
- : win-open
- : win-close
- : win-is-valid
- : win-get-cursor
- : win-set-cursor
- ;; Extmarks
- : create-namespace
- : buf-set-extmark
- : buf-del-extmark
- : buf-get-extmarks
- ;; Options
- : set-option
- : get-option
- ;; Highlights
- : set-hl
- ;; Commands
- : create-user-command
- : create-autocmd
- ;; Keymaps
- : set-keymap
- ;; Buffer attach
- : buf-attach
- ;; Scheduling
- : schedule
- : defer
- ;; Editor
- : editor-width
- : editor-height}
+self

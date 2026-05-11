@@ -1,25 +1,12 @@
-;; context-item component — renders @context mentions.
-;; Stateless, pure function.
+;; context-item component — renders a tagged text item.
+;; Stateless, pure function. Zero business logic.
 
-(local type-config
-  {:file      {:prefix "@"  :hl-group :EcaContextFile}
-   :dir       {:prefix "@"  :hl-group :EcaContextDir}
-   :repo-map  {:prefix "@"  :hl-group :EcaContextRepoMap :label "repoMap"}
-   :cursor    {:prefix "@"  :hl-group :EcaContextCursor}
-   :mcp       {:prefix "@"  :hl-group :EcaContextMcp}})
-
-(fn render [{: type : name : detail}]
+(fn render [{: text : hl-group}]
   "Render a context item.
-   type: :file, :dir, :repo-map, :cursor, :mcp
+   text: display text (e.g. '@file.lua', '@repoMap')
+   hl-group: highlight group
    Returns {: text : hl-group}."
-  (let [cfg (or (. type-config type)
-                {:prefix "@" :hl-group :EcaContextFile})
-        display-name (or cfg.label name "")
-        text (case type
-               :cursor (.. cfg.prefix "cursor(" (or name "") (if detail (.. " " detail) "") ")")
-               :repo-map (.. cfg.prefix display-name)
-               _ (.. cfg.prefix display-name))]
-    {:text text
-     :hl-group cfg.hl-group}))
+  {:text (or text "")
+   :hl-group (or hl-group :Normal)})
 
 {: render}

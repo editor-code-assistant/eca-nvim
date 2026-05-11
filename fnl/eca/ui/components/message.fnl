@@ -1,10 +1,5 @@
-;; message component — renders chat message blocks.
+;; message component — renders a text block with optional prefix.
 ;; Stateless, pure function.
-
-(local role-config
-  {:user      {:prefix "  You" :hl-group :EcaUser}
-   :assistant {:prefix "  ECA" :hl-group :EcaAssistant}
-   :system    {:prefix "  System" :hl-group :EcaSystem}})
 
 (fn split-lines [text]
   "Split text into lines."
@@ -15,39 +10,28 @@
         (table.insert lines line)))
     lines))
 
-(fn render [{: role : content}]
-  "Render a chat message.
-   Returns {: lines : highlights} where lines is a list of strings
-   and highlights is a list of {: line-idx : hl-group : col-start : col-end}."
-  (let [cfg (or (. role-config role)
-                {:prefix "  ?" :hl-group :EcaAssistant})
+(fn render [{: content : prefix : hl-group}]
+  "Render a text block.
+   content: text string (may contain newlines)
+   prefix: optional string prepended to first line (e.g. '> ')
+   hl-group: optional highlight group for the block
+   Returns {: lines : highlights}."
+  (let [pfx (or prefix "")
+        ;; If prefix is set and no explicit hl-group, use EcaMessagePrefix
+        hl (or hl-group (when (and prefix (> (length prefix) 0)) :EcaMessagePrefix))
         content-lines (split-lines (or content ""))
-        lines [cfg.prefix "" ]
-        highlights [{:line-idx 0
-                     :hl-group cfg.hl-group
-                     :col-start 0
-                     :col-end (length cfg.prefix)}]]
-    ;; Add content lines
-    (each [_ line (ipairs content-lines)]
-      (table.insert lines line))
-    ;; Add trailing empty line
+        lines []
+        highlights []]
+    (each [i line (ipairs content-lines)]
+      (let [full (if (= i 1) (.. pfx line) line)]
+        (table.insert lines full)
+        (when hl
+          (table.insert highlights
+            {:line-idx (- (length lines) 1)
+             :hl-group hl
+             :col-start 0
+             :col-end (length full)}))))
     (table.insert lines "")
     {: lines : highlights}))
 
-(fn render-welcome []
-  "Render a welcome message for empty chats.
-   Returns {: lines : highlights}."
-  (let [lines [""
-               "  Welcome to ECA Chat"
-               ""
-               "  Type your message below and press Enter to send."
-               "  Use @ to attach context (files, directories, etc.)"
-               ""]]
-    {:lines lines
-     :highlights [{:line-idx 1
-                   :hl-group :EcaWelcome
-                   :col-start 0
-                   :col-end (length "  Welcome to ECA Chat")}]}))
-
-{: render
- : render-welcome}
+{: render}

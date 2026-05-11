@@ -1,63 +1,73 @@
 -- [nfnl] fnl/eca/ui/widgets/status-bar.fnl
-local usage_component = require("eca.ui.components.usage")
-local function format_elapsed(ms)
-  if (nil == ms) then
-    return nil
-  else
-    local seconds = math.floor((ms / 1000))
-    if (seconds >= 60) then
-      local mins = math.floor((seconds / 60))
-      local secs = (seconds % 60)
-      return (tostring(mins) .. "m " .. tostring(secs) .. "s")
+local function create(canvas, initial_sections)
+  local state
+  local _2_
+  do
+    local t_1_ = initial_sections
+    if (nil ~= t_1_) then
+      t_1_ = t_1_.left
     else
-      return (tostring(seconds) .. "s")
     end
+    _2_ = t_1_
   end
-end
-local function create(canvas, initial_state)
-  local state = vim.tbl_extend("force", {workspaces = {}, ["elapsed-ms"] = nil, ["tokens-in"] = 0, ["tokens-out"] = 0, ["max-tokens"] = 200000, cost = nil, ["init-progress"] = nil, ["pending-approvals?"] = false, ["trust?"] = false}, (initial_state or {}))
-  local function build_statusline()
-    local parts = {}
-    if (#state.workspaces > 0) then
-      table.insert(parts, ("%#EcaHeaderValue# " .. table.concat(state.workspaces, ", ") .. " "))
+  local _5_
+  do
+    local t_4_ = initial_sections
+    if (nil ~= t_4_) then
+      t_4_ = t_4_.center
     else
     end
-    table.insert(parts, "%=")
-    if state["init-progress"] then
-      table.insert(parts, ("%#EcaSpinner# \226\143\179 " .. state["init-progress"] .. " "))
+    _5_ = t_4_
+  end
+  local _8_
+  do
+    local t_7_ = initial_sections
+    if (nil ~= t_7_) then
+      t_7_ = t_7_.right
     else
     end
+    _8_ = t_7_
+  end
+  state = {left = (_2_ or {}), center = (_5_ or {}), right = (_8_ or {})}
+  local function build_section(items)
+    local parts
     do
-      local elapsed = format_elapsed(state["elapsed-ms"])
-      if elapsed then
-        local icon
-        if state["pending-approvals?"] then
-          icon = "\240\159\154\167"
+      local tbl_26_ = {}
+      local i_27_ = 0
+      for _, item in ipairs(items) do
+        local val_28_ = ("%#" .. (item["hl-group"] or "Normal") .. "# " .. item.text .. " ")
+        if (nil ~= val_28_) then
+          i_27_ = (i_27_ + 1)
+          tbl_26_[i_27_] = val_28_
         else
-          icon = "\226\143\177"
         end
-        table.insert(parts, ("%#EcaElapsed# " .. icon .. " " .. elapsed .. " "))
-      else
       end
-    end
-    do
-      local usage_rendered = usage_component.render(state)
-      table.insert(parts, ("%#EcaUsage# " .. usage_rendered.text .. " "))
-    end
-    if state["trust?"] then
-      table.insert(parts, "%#EcaTrustOn# \240\159\148\165 ")
-    else
-      table.insert(parts, "%#EcaTrustOff# \240\159\155\161\239\184\143 ")
+      parts = tbl_26_
     end
     return table.concat(parts, "")
+  end
+  local function build_statusline()
+    local left = build_section(state.left)
+    local center = build_section(state.center)
+    local right = build_section(state.right)
+    return (left .. "%=" .. center .. "%=" .. right)
   end
   local function render()
     local statusline = build_statusline()
     return canvas["set-option"](canvas, "win", "statusline", statusline)
   end
-  local function update(new_state)
-    for k, v in pairs(new_state) do
-      state[k] = v
+  local function update(new_sections)
+    if new_sections.left then
+      state.left = new_sections.left
+    else
+    end
+    if new_sections.center then
+      state.center = new_sections.center
+    else
+    end
+    if new_sections.right then
+      state.right = new_sections.right
+    else
     end
     return render()
   end

@@ -1,250 +1,227 @@
-;; builder — orchestrates widgets, receives injected dependencies.
-;; Builds a canvas from api functions and injects it into widgets.
-;; The builder NEVER imports vim.api — all interaction goes through injected api.
+;; builder — orchestrates widgets, manages chat UI lifecycle.
 
+(local nvim vim.api)
 (local highlights (require :eca.ui.highlights))
 (local header-bar-widget (require :eca.ui.widgets.header-bar))
 (local message-list-widget (require :eca.ui.widgets.message-list))
 (local prompt-area-widget (require :eca.ui.widgets.prompt-area))
-(local status-bar-widget (require :eca.ui.widgets.status-bar))
-(local tab-bar-widget (require :eca.ui.widgets.tab-bar))
-
-;; ── Canvas builder ──────────────────────────────────────
-
-(fn build-canvas [api buf-id win-id]
-  "Build a canvas object from flat api functions, bound to a specific buf/win.
-   This is the bridge between the flat api module and the canvas protocol
-   that widgets expect."
-  (let [buf buf-id
-        win win-id]
-
-  {:set-lines
-   (fn [_ start end lines]
-     (api.buf-set-lines buf start end lines))
-
-   :get-lines
-   (fn [_ start end]
-     (api.buf-get-lines buf start end))
-
-   :line-count
-   (fn [_]
-     (api.buf-line-count buf))
-
-   :add-extmark
-   (fn [_ ns-id line col opts]
-     (api.buf-set-extmark buf ns-id line col opts))
-
-   :del-extmark
-   (fn [_ ns-id id]
-     (api.buf-del-extmark buf ns-id id))
-
-   :get-extmarks
-   (fn [_ ns-id start end opts]
-     (api.buf-get-extmarks buf ns-id start end opts))
-
-   :create-namespace
-   (fn [_ name]
-     (api.create-namespace name))
-
-   :set-option
-   (fn [_ scope key value]
-     (case scope
-       :win (api.set-option :win win key value)
-       :buf (api.set-option :buf buf key value)
-       :global (api.set-option :global nil key value)))
-
-   :get-option
-   (fn [_ scope key]
-     (case scope
-       :win (api.get-option :win win key)
-       :buf (api.get-option :buf buf key)
-       :global (api.get-option :global nil key)))
-
-   :get-cursor
-   (fn [_]
-     (api.win-get-cursor win))
-
-   :set-cursor
-   (fn [_ line col]
-     (api.win-set-cursor win [line col]))
-
-   :buf-valid?
-   (fn [_]
-     (api.buf-is-valid buf))
-
-   :win-valid?
-   (fn [_]
-     (api.win-is-valid win))
-
-   :set-hl
-   (fn [_ ns group opts]
-     (api.set-hl ns group opts))
-
-   :close-win
-   (fn [_]
-     (api.win-close win))
-
-   :buf-id (fn [_] buf)
-   :win-id (fn [_] win)}))
+(local footer-bar-widget (require :eca.ui.widgets.footer-bar))
 
 ;; ── Buffer/window setup ─────────────────────────────────
 
-(fn setup-chat-buffer [canvas]
-  "Configure the chat buffer options."
-  (canvas:set-option :buf :buftype "nofile")
-  (canvas:set-option :buf :bufhidden "hide")
-  (canvas:set-option :buf :swapfile false)
-  (canvas:set-option :buf :filetype "eca-chat"))
+(fn setup-chat-buffer [buf]
+  (nvim.nvim_buf_set_name buf "ECA Chat")
+  (nvim.nvim_set_option_value :buftype "nofile" {:buf buf})
+  (nvim.nvim_set_option_value :bufhidden "hide" {:buf buf})
+  (nvim.nvim_set_option_value :swapfile false {:buf buf})
+  (nvim.nvim_set_option_value :filetype "eca-chat" {:buf buf}))
 
-(fn setup-chat-window [canvas]
-  "Configure the chat window options."
-  (canvas:set-option :win :number false)
-  (canvas:set-option :win :relativenumber false)
-  (canvas:set-option :win :signcolumn "no")
-  (canvas:set-option :win :foldcolumn "0")
-  (canvas:set-option :win :spell false)
-  (canvas:set-option :win :wrap true)
-  (canvas:set-option :win :linebreak true)
-  (canvas:set-option :win :conceallevel 2))
+(fn setup-chat-window [win]
+  (nvim.nvim_set_option_value :number false {:win win})
+  (nvim.nvim_set_option_value :relativenumber false {:win win})
+  (nvim.nvim_set_option_value :signcolumn "no" {:win win})
+  (nvim.nvim_set_option_value :foldcolumn "0" {:win win})
+  (nvim.nvim_set_option_value :numberwidth 1 {:win win})
+  (nvim.nvim_set_option_value :statuscolumn "" {:win win})
+  (nvim.nvim_set_option_value :spell false {:win win})
+  (nvim.nvim_set_option_value :list false {:win win})
+  (nvim.nvim_set_option_value :wrap true {:win win})
+  (nvim.nvim_set_option_value :linebreak true {:win win})
+  (nvim.nvim_set_option_value :conceallevel 2 {:win win})
+)
 
 ;; ── Edit guard ──────────────────────────────────────────
 
-(fn setup-edit-guard [api buf-id get-prompt-start-line]
-  "Attach to buffer to guard editable region.
-   Only the prompt area (from prompt-start-line onwards) is user-editable.
-   Edits outside that region are undone immediately."
+(fn setup-edit-guard [buf-id render-all-fn get-prompt-state focus-prompt-fn]
   (var internal-edit false)
+  (var guard-ns nil)
+
+  (fn ensure-guard-ns []
+    (when (= nil guard-ns)
+      (set guard-ns (nvim.nvim_create_namespace "eca-edit-guard")))
+    guard-ns)
+
+  (fn get-prefix [loading?]
+    (let [prompt-prefix (require :eca.ui.components.prompt-prefix)]
+      (. (prompt-prefix.render {:loading? loading?}) :text)))
+
+  (fn salvage-user-text [buf prompt-start-line prefix]
+    (let [current-count (nvim.nvim_buf_line_count buf)
+          start (math.min prompt-start-line current-count)
+          prompt-lines (nvim.nvim_buf_get_lines buf start current-count false)]
+      (if (= 0 (length prompt-lines))
+        [""]
+        (icollect [i line (ipairs prompt-lines)]
+          (if (= i 1)
+            (if (vim.startswith line prefix)
+              (string.sub line (+ (length prefix) 1))
+              (line:gsub "^>%s*" ""))
+            line)))))
+
+  (fn restore-with-user-text [buf prefix user-lines]
+    (set internal-edit true)
+    (render-all-fn)
+    (let [new-count (nvim.nvim_buf_line_count buf)
+          new-last-idx (- new-count 1)
+          restored-lines (icollect [i line (ipairs user-lines)]
+                           (if (= i 1) (.. prefix line) line))]
+      (when (> (length restored-lines) 0)
+        (nvim.nvim_buf_set_lines buf new-last-idx new-count false restored-lines)
+        (let [ns (ensure-guard-ns)]
+          (nvim.nvim_buf_set_extmark buf ns new-last-idx 0
+            {:end_col (length prefix)
+             :hl_group :EcaPromptPrefix}))))
+    (set internal-edit false)
+    (when focus-prompt-fn
+      (focus-prompt-fn)))
+
+  (fn on-lines-handler [_ buf changedtick first-line last-line new-last-line]
+    (when (not internal-edit)
+      (let [{: prompt-start-line : loading?} (get-prompt-state)
+            prefix (get-prefix loading?)]
+        (vim.schedule
+          (fn []
+            (when (nvim.nvim_buf_is_valid buf)
+              (let [current-count (nvim.nvim_buf_line_count buf)
+                    prompt-idx (math.min prompt-start-line (- current-count 1))
+                    prompt-lines (nvim.nvim_buf_get_lines buf prompt-idx (+ prompt-idx 1) false)
+                    prompt-line-text (or (. prompt-lines 1) "")
+                    damaged? (or (< first-line prompt-start-line)
+                                 (not (vim.startswith prompt-line-text prefix)))]
+                (when damaged?
+                  (let [user-lines (salvage-user-text buf prompt-start-line prefix)]
+                    (restore-with-user-text buf prefix user-lines))))))))))
+
+  (nvim.nvim_buf_attach buf-id false {:on_lines on-lines-handler})
 
   (fn set-internal [bool]
     (set internal-edit bool))
 
-  (api.buf-attach buf-id
-    {:on_lines
-     (fn [_ buf changedtick first-line last-line new-last-line]
-       ;; If this is an internal (widget) edit, allow it
-       (when (not internal-edit)
-         (let [prompt-start (get-prompt-start-line)]
-           ;; If the edit touches lines before the prompt area, undo it
-           (when (< first-line prompt-start)
-             (api.schedule
-               (fn []
-                 (when (api.buf-is-valid buf)
-                   (vim.cmd "silent! undo"))))))))})
+  (fn update-expected-count [] nil)
 
-  ;; Return a function to wrap internal edits
-  set-internal)
+  {: set-internal : update-expected-count})
 
 ;; ── Main entry ──────────────────────────────────────────
 
-(fn create-chat-ui [{: api : on-submit : on-approve : on-reject
-                     : on-stop : on-new-chat : on-select-tab
-                     : on-context-add : opts}]
-  "Create the chat UI. Receives injected dependencies.
-   api: flat module of Neovim API functions (from eca.api)
-   on-*: callback functions for user actions
-   opts: {: ui} where ui contains {: width : position}
-
-   Returns chat-ui with public API."
+(fn create-chat-ui [{: on-submit : opts}]
   (let [ui-config (or opts.ui {})
         config {:width (or ui-config.width 0.4)
-                :position (or ui-config.position :right)}]
+                :position (or ui-config.position :right)
+                :keymaps (or opts.keymaps [])}]
 
-    (var canvas nil)
-    (var set-internal-edit nil)
-    (local widgets {:header nil
-                    :messages nil
-                    :prompt nil
-                    :status nil
-                    :tabs nil})
+    ;; Mutable state
+    (local state {:header-items []
+                  :footer-items []
+                  :welcome nil})
+
+    (var buf-id nil)
+    (var win-id nil)
+    (var guard nil)
+    (local widgets {:header nil :messages nil :prompt nil :footer nil})
 
     (fn is-open? []
-      (and (not= nil canvas)
-           (canvas:buf-valid?)
-           (canvas:win-valid?)))
-
-    (fn get-prompt-start-line []
-      "Get the line where the prompt area starts."
-      (let [state (widgets.prompt.get-state)]
-        (or state.prompt-start-line 0)))
+      (and (not= nil buf-id)
+           (nvim.nvim_buf_is_valid buf-id)
+           (not= nil win-id)
+           (nvim.nvim_win_is_valid win-id)))
 
     (fn with-internal-edit [f]
-      "Wrap a function call as an internal edit (bypasses edit guard)."
-      (when set-internal-edit
-        (set-internal-edit true))
+      (when guard (guard.set-internal true))
       (f)
-      (when set-internal-edit
-        (set-internal-edit false)))
+      (when guard
+        (guard.set-internal false)
+        (guard.update-expected-count)))
+
+    (fn focus-prompt []
+      (when (and win-id (nvim.nvim_win_is_valid win-id))
+        (let [total (nvim.nvim_buf_line_count buf-id)
+              prompt-state (widgets.prompt.get-state)
+              prompt-line (or prompt-state.prompt-start-line (- total 1))]
+          (nvim.nvim_win_set_cursor win-id [(+ prompt-line 1) 2]))))
 
     (fn render-all []
-      "Full render of all widgets."
       (with-internal-edit
         (fn []
-          (widgets.header.render)
-          (widgets.messages.render)
-          (let [end-line (widgets.messages.get-end-line)]
-            (widgets.prompt.render end-line))
-          (widgets.status.render)
-          (widgets.tabs.render))))
+          (let [header-lines (widgets.header.render)]
+            (widgets.messages.set-start-line header-lines)
+            (widgets.messages.render)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line)))
+          (when widgets.footer
+            (widgets.footer.render)))))
 
-    (fn open []
-      "Open the chat window."
-      (when (not (is-open?))
-        (let [buf-id (api.buf-create {:listed false :scratch true})
-              win-width (math.floor (* (api.editor-width) config.width))
-              win-id (api.win-open buf-id
-                       {:split :right
-                        :width win-width})]
-          ;; Build canvas from api functions + buf/win ids
-          (set canvas (build-canvas api buf-id win-id))
-
-          ;; Setup highlights, buffer and window options
-          (highlights.setup canvas)
-          (setup-chat-buffer canvas)
-          (setup-chat-window canvas)
-
-          ;; Create widgets — all receive canvas (never api directly)
-          (set widgets.header
-            (header-bar-widget.create canvas {}))
-          (set widgets.messages
-            (message-list-widget.create canvas))
-          (set widgets.prompt
-            (prompt-area-widget.create canvas))
-          (set widgets.status
-            (status-bar-widget.create canvas {}))
-          (set widgets.tabs
-            (tab-bar-widget.create canvas
-              {:tabs [{:id 1 :title "Chat 1"}]
-               :active-id 1}))
-
-          ;; Setup edit guard — only prompt area is user-editable
-          (set set-internal-edit
-            (setup-edit-guard api buf-id get-prompt-start-line))
-
-          ;; Initial render
-          (with-internal-edit
-            (fn []
-              (canvas:set-lines 0 -1 [""])))
-          (render-all))))
+    ;; Functions needed before open
 
     (fn close []
-      "Close the chat window."
       (when (is-open?)
-        (canvas:close-win)))
+        (nvim.nvim_win_close win-id true)
+        (set win-id nil)))
+
+    (fn submit-prompt []
+      (when (is-open?)
+        (let [text (widgets.prompt.get-text)]
+          (when (and text (not= "" text))
+            (widgets.prompt.add-to-history text)
+            (with-internal-edit (fn [] (widgets.prompt.clear)))
+            (focus-prompt)
+            (when on-submit (on-submit text))))))
+
+    ;; Open
+
+    (fn open []
+      (when (not (is-open?))
+        (set buf-id (nvim.nvim_create_buf false true))
+        (let [width (math.floor (* (. vim.o :columns) config.width))]
+          (set win-id (nvim.nvim_open_win buf-id true {:split :right :width width})))
+
+        (highlights.setup)
+        (setup-chat-buffer buf-id)
+        (setup-chat-window win-id)
+
+        ;; Create widgets
+        (set widgets.header (header-bar-widget.create buf-id win-id state.header-items))
+        (set widgets.messages (message-list-widget.create buf-id))
+        (when state.welcome
+          (widgets.messages.set-welcome
+            {:lines [state.welcome ""]
+             :highlights [{:line-idx 0 :hl-group :EcaWelcome :col-start 0
+                           :col-end (length state.welcome)}]}))
+        (set widgets.prompt (prompt-area-widget.create buf-id))
+        (set widgets.footer (footer-bar-widget.create buf-id win-id state.footer-items))
+
+        ;; Keymaps
+        (each [_ km (ipairs config.keymaps)]
+          (vim.keymap.set km.mode km.lhs km.rhs
+            {:buffer buf-id :noremap true :silent true}))
+
+        ;; Initial render
+        (nvim.nvim_buf_set_lines buf-id 0 -1 false [""])
+        (render-all)
+        (focus-prompt)
+
+        ;; Edit guard
+        (set guard
+          (setup-edit-guard buf-id render-all
+            (fn []
+              (let [s (widgets.prompt.get-state)]
+                {:prompt-start-line (or s.prompt-start-line 0)
+                 :loading? s.loading?}))
+            focus-prompt))))
 
     (fn toggle []
-      "Toggle the chat window."
-      (if (is-open?)
-        (close)
-        (open)))
+      (if (is-open?) (close) (open)))
 
-    ;; === Message API ===
+    (fn get-buf-id [] buf-id)
+
+    ;; Message API
     (fn append-message [msg]
       (when (is-open?)
         (with-internal-edit
           (fn []
             (widgets.messages.append-message msg)
             (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
+              (widgets.prompt.render end-line))))
+        (focus-prompt)))
 
     (fn update-message [id content]
       (when (is-open?)
@@ -262,98 +239,59 @@
             (let [end-line (widgets.messages.get-end-line)]
               (widgets.prompt.render end-line))))))
 
-    ;; === Tool call API (TODO) ===
-    (fn show-tool-call [tc] nil)
-    (fn update-tool-call [id status] nil)
-    (fn show-approval [tc] nil)
-
-    ;; === Status API ===
-    (fn update-model-info [info]
+    ;; State updates
+    (fn update-header [new-items]
+      (set state.header-items new-items)
       (when (is-open?)
-        (widgets.header.update info)))
+        (with-internal-edit (fn [] (widgets.header.update new-items)))))
 
-    (fn update-usage [usage]
+    (fn update-header-item [title new-value]
+      (var found false)
+      (each [_ item (ipairs state.header-items)]
+        (when (= item.title title)
+          (tset item :value new-value)
+          (set found true)))
+      (when (not found)
+        (table.insert state.header-items {:title title :value new-value}))
       (when (is-open?)
-        (widgets.status.update usage)))
+        (with-internal-edit (fn [] (widgets.header.update state.header-items)))))
 
-    (fn update-progress [progress]
+    (fn update-footer [new-items]
+      (set state.footer-items new-items)
       (when (is-open?)
-        (widgets.status.update {:init-progress progress})))
+        (with-internal-edit (fn [] (widgets.footer.update new-items)))))
 
-    ;; === Context API ===
-    (fn add-context [ctx]
+    (fn update-footer-item [title new-value]
+      (var found false)
+      (each [_ item (ipairs state.footer-items)]
+        (when (= item.title title)
+          (tset item :value new-value)
+          (set found true)))
+      (when (not found)
+        (table.insert state.footer-items {:title title :value new-value}))
       (when (is-open?)
-        (with-internal-edit
-          (fn []
-            (widgets.prompt.add-context ctx)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
+        (with-internal-edit (fn [] (widgets.footer.update state.footer-items)))))
 
-    (fn remove-context [name]
+    (fn set-welcome [text]
+      (set state.welcome text)
       (when (is-open?)
-        (with-internal-edit
-          (fn []
-            (widgets.prompt.remove-context name)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
-
-    ;; === Tab API ===
-    (fn add-chat-tab [tab]
-      (when (is-open?)
-        (widgets.tabs.add-tab tab)
-        (widgets.tabs.render)))
-
-    (fn remove-chat-tab [id]
-      (when (is-open?)
-        (widgets.tabs.remove-tab id)
-        (widgets.tabs.render)))
-
-    (fn select-chat-tab [id]
-      (when (is-open?)
-        (widgets.tabs.select-tab id)
-        (widgets.tabs.render)))
-
-    ;; === Prompt access ===
-    (fn get-prompt-text []
-      (when (is-open?)
-        (widgets.prompt.get-text)))
-
-    (fn submit-prompt []
-      (when (is-open?)
-        (let [text (widgets.prompt.get-text)]
-          (when (and text (not= "" text))
-            (widgets.prompt.add-to-history text)
-            (with-internal-edit
-              (fn [] (widgets.prompt.clear)))
-            (when on-submit
-              (on-submit text))))))
+        (widgets.messages.set-welcome
+          {:lines [text ""]
+           :highlights [{:line-idx 0 :hl-group :EcaWelcome :col-start 0
+                         :col-end (length text)}]})
+        (let [msg-state (widgets.messages.get-state)]
+          (when (= 0 (length msg-state.messages))
+            (with-internal-edit (fn [] (render-all)))))))
 
     (fn set-loading [bool]
       (when (is-open?)
-        (with-internal-edit
-          (fn [] (widgets.prompt.set-loading bool)))))
+        (with-internal-edit (fn [] (widgets.prompt.set-loading bool)))))
 
-    ;; Public API
-    {: open
-     : close
-     : toggle
-     : is-open?
-     : append-message
-     : update-message
-     : clear-messages
-     : show-tool-call
-     : update-tool-call
-     : show-approval
-     : update-model-info
-     : update-usage
-     : update-progress
-     : add-context
-     : remove-context
-     : add-chat-tab
-     : remove-chat-tab
-     : select-chat-tab
-     : get-prompt-text
-     : submit-prompt
-     : set-loading}))
+    {: open : close : toggle : is-open? : get-buf-id
+     : append-message : update-message : clear-messages
+     : update-header : update-header-item
+     : update-footer : update-footer-item
+     : set-welcome
+     : submit-prompt : set-loading}))
 
 {: create-chat-ui}

@@ -5,29 +5,18 @@ local function create(canvas, initial_state)
     local parts = {}
     for _, tab in ipairs(state.tabs) do
       local is_active = (tab.id == state["active-id"])
-      local hl_group
-      if tab["approval?"] then
-        hl_group = "EcaTabLoading"
-      elseif tab["loading?"] then
-        hl_group = "EcaTabLoading"
-      elseif is_active then
-        hl_group = "EcaTabActive"
-      else
-        hl_group = "EcaTabInactive"
+      local hl
+      local or_1_ = tab["hl-group"]
+      if not or_1_ then
+        if is_active then
+          or_1_ = "EcaTabActive"
+        else
+          or_1_ = "EcaTabInactive"
+        end
       end
-      local prefix
-      if tab["approval?"] then
-        prefix = "\240\159\154\167 "
-      elseif tab["loading?"] then
-        prefix = "\226\143\179 "
-      else
-        prefix = ""
-      end
-      local title = (tab.title or tostring(tab.id))
-      table.insert(parts, ("%#" .. hl_group .. "# " .. prefix .. title .. " "))
+      hl = or_1_
+      table.insert(parts, ("%#" .. hl .. "# " .. (tab.label or tostring(tab.id)) .. " "))
     end
-    table.insert(parts, "%#EcaButtonAccept# + ")
-    table.insert(parts, "%#EcaButtonReject# \195\151 ")
     return table.concat(parts, "%#Normal#\226\148\130")
   end
   local function render()
@@ -45,12 +34,24 @@ local function create(canvas, initial_state)
     end
   end
   local function remove_tab(id)
-    local new_tabs = {}
-    for _, tab in ipairs(state.tabs) do
-      if (tab.id ~= id) then
-        table.insert(new_tabs, tab)
-      else
+    local new_tabs
+    do
+      local tbl_26_ = {}
+      local i_27_ = 0
+      for _, tab in ipairs(state.tabs) do
+        local val_28_
+        if (tab.id ~= id) then
+          val_28_ = tab
+        else
+          val_28_ = nil
+        end
+        if (nil ~= val_28_) then
+          i_27_ = (i_27_ + 1)
+          tbl_26_[i_27_] = val_28_
+        else
+        end
       end
+      new_tabs = tbl_26_
     end
     state.tabs = new_tabs
     if (state["active-id"] == id) then
@@ -68,10 +69,10 @@ local function create(canvas, initial_state)
     state["active-id"] = id
     return nil
   end
-  local function update_tab(id, new_state)
+  local function update_tab(id, new_data)
     for _, tab in ipairs(state.tabs) do
       if (tab.id == id) then
-        for k, v in pairs(new_state) do
+        for k, v in pairs(new_data) do
           tab[k] = v
         end
       else

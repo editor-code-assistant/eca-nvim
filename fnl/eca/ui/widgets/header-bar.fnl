@@ -1,54 +1,38 @@
-;; header-bar widget — winbar with model/agent/variant/mcps info.
-;; Stateful: composes key-value components, renders via canvas.
+;; header-bar widget — fixed header using winbar.
 
-(local key-value (require :eca.ui.components.key-value))
+(local nvim vim.api)
 
-(fn build-winbar-string [state]
-  "Build the winbar format string from state.
-   Uses %#HlGroup# syntax for Neovim statusline/winbar highlighting."
-  (let [{: model : agent : variant : mcps-total : mcps-ready} state
-        parts []]
-    (when model
-      (table.insert parts
-        (.. "%#EcaHeaderKey#model%#EcaHeaderValue#:" model)))
-    (when agent
-      (table.insert parts
-        (.. "%#EcaHeaderKey#agent%#EcaHeaderValue#:" agent)))
-    (when variant
-      (table.insert parts
-        (.. "%#EcaHeaderKey#variant%#EcaHeaderValue#:" variant)))
-    (when mcps-total
-      (let [ready (or mcps-ready 0)
-            total mcps-total]
-        (table.insert parts
-          (.. "%#EcaHeaderKey#mcps%#EcaHeaderValue#:" (tostring ready) "/" (tostring total)))))
-    (table.concat parts "  ")))
+(fn create [buf-id win-id initial-items]
+  (var items (or initial-items []))
 
-(fn create [canvas initial-state]
-  "Create a header-bar widget.
-   initial-state: {: model : agent : variant : mcps-total : mcps-ready}
-   Returns {: render : update : get-state}."
-  (local state (or initial-state
-                 {:model "claude"
-                  :agent "coder"
-                  :variant nil
-                  :mcps-total 0
-                  :mcps-ready 0}))
+  (fn build-winbar []
+    (let [parts (icollect [_ item (ipairs items)]
+                  (.. "%#EcaHeaderKey#" item.title "%#EcaHeaderValue#:" item.value))
+          count (length parts)]
+      (case count
+        0 ""
+        1 (.. " " (. parts 1))
+        2 (.. " " (. parts 1) "%=" (. parts 2) " ")
+        _ (let [left (. parts 1)
+                right (. parts count)
+                center-parts []
+                _ (for [i 2 (- count 1)]
+                    (table.insert center-parts (. parts i)))
+                center (table.concat center-parts "  ")]
+            (.. " " left "%=" center "%=" right " ")))))
 
   (fn render []
-    (let [winbar (build-winbar-string state)]
-      (canvas:set-option :win :winbar winbar)))
+    (nvim.nvim_set_option_value :winbar (build-winbar) {:win win-id})
+    (nvim.nvim_buf_set_lines buf-id 0 1 false [""])
+    1)
 
-  (fn update [new-state]
-    (each [k v (pairs new-state)]
-      (tset state k v))
+  (fn update [new-items]
+    (set items new-items)
     (render))
 
-  (fn get-state []
-    state)
+  (fn get-state [] items)
+  (fn line-count [] 1)
 
-  {: render
-   : update
-   : get-state})
+  {: render : update : get-state : line-count})
 
 {: create}

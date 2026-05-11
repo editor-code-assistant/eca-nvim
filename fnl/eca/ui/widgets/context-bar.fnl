@@ -1,80 +1,58 @@
-;; context-bar widget — horizontal bar of attached @contexts.
-;; Stateful: manages list of contexts, renders via canvas.
+;; context-bar widget — horizontal bar of tagged items.
 
-(local context-item-component (require :eca.ui.components.context-item))
+(local nvim vim.api)
 
-(fn create [canvas]
-  "Create a context-bar widget.
-   Returns {: render : add : remove : clear : get-state}."
-  (local state {:contexts []
-              :ns-id nil})
+(fn create [buf-id]
+  (local state {:items [] :ns-id nil})
 
   (fn ensure-ns []
     (when (= nil state.ns-id)
-      (set state.ns-id (canvas:create-namespace "eca-context-bar")))
+      (set state.ns-id (nvim.nvim_create_namespace "eca-context-bar")))
     state.ns-id)
 
   (fn build-line []
-    "Build the context bar line from current state."
-    (if (= 0 (length state.contexts))
-      {:line "" :parts []}
+    (if (= 0 (length state.items))
+      {:line "" :highlights []}
       (let [result (accumulate [acc {:parts [] :highlights [] :col 0}
-                                _ ctx (ipairs state.contexts)]
+                                _ item (ipairs state.items)]
                      (let [sep-col (if (> acc.col 0)
                                      (do (table.insert acc.parts " ")
                                          (+ acc.col 1))
-                                     acc.col)
-                           rendered (context-item-component.render ctx)]
-                       (table.insert acc.parts rendered.text)
+                                     acc.col)]
+                       (table.insert acc.parts item.text)
                        (table.insert acc.highlights
-                         {:hl-group rendered.hl-group
+                         {:hl-group (or item.hl-group :Normal)
                           :col-start sep-col
-                          :col-end (+ sep-col (length rendered.text))})
+                          :col-end (+ sep-col (length item.text))})
                        {:parts acc.parts
                         :highlights acc.highlights
-                        :col (+ sep-col (length rendered.text))}))]
+                        :col (+ sep-col (length item.text))}))]
         {:line (table.concat result.parts "")
          :highlights result.highlights})))
 
   (fn render [line-num]
-    "Render the context bar at the given line number."
     (let [ns (ensure-ns)
           {: line : highlights} (build-line)]
       (when (and line (not= "" line))
-        (canvas:set-lines line-num (+ line-num 1) [line])
-        ;; Apply highlights
+        (nvim.nvim_buf_set_lines buf-id line-num (+ line-num 1) false [line])
         (each [_ hl (ipairs (or highlights []))]
-          (canvas:add-extmark ns line-num hl.col-start
-            {:end_col hl.col-end
-             :hl_group hl.hl-group})))))
+          (nvim.nvim_buf_set_extmark buf-id ns line-num hl.col-start
+            {:end_col hl.col-end :hl_group hl.hl-group})))))
 
-  (fn add [ctx]
-    "Add a context item. ctx: {: type : name : path : detail}."
-    (let [exists (accumulate [found false
-                              _ existing (ipairs state.contexts)]
-                   (or found (= existing.name ctx.name)))]
+  (fn add [item]
+    (let [exists (accumulate [found false _ existing (ipairs state.items)]
+                   (or found (= existing.text item.text)))]
       (when (not exists)
-        (table.insert state.contexts ctx))))
+        (table.insert state.items item))))
 
-  (fn remove [name]
-    "Remove a context item by name."
-    (let [new-contexts []]
-      (each [_ ctx (ipairs state.contexts)]
-        (when (not= ctx.name name)
-          (table.insert new-contexts ctx)))
-      (set state.contexts new-contexts)))
+  (fn remove [text]
+    (set state.items
+      (icollect [_ item (ipairs state.items)]
+        (when (not= item.text text) item))))
 
-  (fn clear []
-    "Remove all contexts."
-    (set state.contexts []))
+  (fn clear [] (set state.items []))
+  (fn get-state [] state)
 
-  (fn get-state []
-    state)
-
-  {: render
-   : add
-   : remove
-   : clear
-   : get-state})
+  {: render : add : remove : clear : get-state})
 
 {: create}
