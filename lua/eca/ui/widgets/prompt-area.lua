@@ -1,7 +1,6 @@
 -- [nfnl] fnl/eca/ui/widgets/prompt-area.fnl
 local nvim = vim.api
 local prompt_prefix_component = require("eca.ui.components.prompt-prefix")
-local context_bar_widget = require("eca.ui.widgets.context-bar")
 local function create(buf_id, _3fopts)
   local wrap_write
   local _2_
@@ -21,8 +20,9 @@ local function create(buf_id, _3fopts)
     or_4_ = _5_
   end
   wrap_write = or_4_
-  local state = {["prompt-text"] = "", history = {}, ["history-idx"] = 0, ["prompt-start-line"] = 0, ["ns-id"] = nil, ["status-text"] = nil, ["status-timer"] = nil, ["status-dots"] = 0, ["status-extmark-id"] = nil, ["loading?"] = false}
-  local ctx_bar = context_bar_widget.create(buf_id)
+  local state = {["prompt-text"] = "", history = {}, ["history-idx"] = 0, ["prompt-start-line"] = 0, ["status-anchor-line"] = 0, ["ns-id"] = nil, ["status-text"] = nil, ["status-timer"] = nil, ["status-dots"] = 0, ["status-extmark-id"] = nil, ["stop-extmark-id"] = nil, ["steering-text"] = nil, ["loading?"] = false}
+  local idle_prefix = prompt_prefix_component.render({["loading?"] = false})
+  local loading_prefix = prompt_prefix_component.render({["loading?"] = true})
   local function ensure_ns()
     if (nil == state["ns-id"]) then
       state["ns-id"] = nvim.nvim_create_namespace("eca-prompt-area")
@@ -30,7 +30,7 @@ local function create(buf_id, _3fopts)
     end
     return state["ns-id"]
   end
-  local function update_status_virt_text()
+  local function update_status_virt()
     local ns = ensure_ns()
     if state["status-extmark-id"] then
       pcall(nvim.nvim_buf_del_extmark, buf_id, ns, state["status-extmark-id"])
@@ -40,63 +40,132 @@ local function create(buf_id, _3fopts)
     if state["status-text"] then
       local dots = string.rep(".", ((state["status-dots"] % 3) + 1))
       local status_str = (state["status-text"] .. dots)
-      state["status-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, state["prompt-start-line"], 0, {virt_lines_above = true, virt_lines = {{{status_str, "EcaSpinner"}}}})
+      state["status-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, state["status-anchor-line"], 0, {virt_lines = {{{status_str, "EcaSpinner"}}}})
       return nil
     else
       return nil
     end
   end
-  local function render(start_line)
-    state["prompt-start-line"] = start_line
+  local function update_stop_virt()
     local ns = ensure_ns()
-    local prefix = prompt_prefix_component.render({["loading?"] = state["loading?"]})
-    local ctx_state = ctx_bar["get-state"]()
-    local has_contexts_3f = (#ctx_state.items > 0)
-    local lines = {}
-    if has_contexts_3f then
-      local parts
-      do
-        local tbl_26_ = {}
-        local i_27_ = 0
-        for _, item in ipairs(ctx_state.items) do
-          local val_28_ = item.text
-          if (nil ~= val_28_) then
-            i_27_ = (i_27_ + 1)
-            tbl_26_[i_27_] = val_28_
-          else
-          end
-        end
-        parts = tbl_26_
-      end
-      table.insert(lines, table.concat(parts, " "))
+    if state["stop-extmark-id"] then
+      pcall(nvim.nvim_buf_del_extmark, buf_id, ns, state["stop-extmark-id"])
+      state["stop-extmark-id"] = nil
     else
     end
     if state["loading?"] then
-      table.insert(lines, (prefix.text .. "stop"))
+      state["stop-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, state["prompt-start-line"], 0, {virt_lines_above = true, virt_lines = {{{loading_prefix.text, loading_prefix["hl-group"]}, {"stop", "EcaStopLabel"}}}})
+      return nil
     else
-      table.insert(lines, (prefix.text .. state["prompt-text"]))
+      return nil
     end
-    nvim.nvim_buf_set_lines(buf_id, start_line, -1, false, lines)
-    if has_contexts_3f then
-      ctx_bar.render(start_line)
+  end
+  local function update_virt_lines()
+    update_status_virt()
+    return update_stop_virt()
+  end
+  local function read_live_prompt_text()
+    local total = nvim.nvim_buf_line_count(buf_id)
+    local start = state["prompt-start-line"]
+    if ((total > 0) and (start <= (total - 1))) then
+      local lines = nvim.nvim_buf_get_lines(buf_id, start, total, false)
+      if (#lines > 0) then
+        do
+          local first_line = lines[1]
+          if vim.startswith(first_line, idle_prefix.text) then
+            lines[1] = string.sub(first_line, (#idle_prefix.text + 1))
+          else
+          end
+        end
+        return table.concat(lines, "\n")
+      else
+        return nil
+      end
     else
+      return nil
     end
+  end
+  local function save_live_text()
     do
-      local prompt_line_idx = ((start_line + #lines) - 1)
-      state["prompt-start-line"] = prompt_line_idx
-      nvim.nvim_buf_set_extmark(buf_id, ns, prompt_line_idx, 0, {end_col = #prefix.text, hl_group = prefix["hl-group"]})
-      if state["loading?"] then
-        nvim.nvim_buf_set_extmark(buf_id, ns, prompt_line_idx, #prefix.text, {end_col = (#prefix.text + 4), hl_group = "EcaStopLabel"})
+      local total = nvim.nvim_buf_line_count(buf_id)
+      local start = state["prompt-start-line"]
+      if ((start > 0) and (start <= (total - 1))) then
+        local first_line = (nvim.nvim_buf_get_lines(buf_id, start, (start + 1), false)[1] or "")
+        if vim.startswith(first_line, idle_prefix.text) then
+          local live = (read_live_prompt_text() or "")
+          state["prompt-text"] = live
+        else
+        end
       else
       end
     end
-    update_status_virt_text()
+    return state["prompt-text"]
+  end
+  local function render(start_line, _3fskip_read)
+    if not _3fskip_read then
+      local live_text = (read_live_prompt_text() or state["prompt-text"])
+      state["prompt-text"] = live_text
+    else
+    end
+    state["prompt-start-line"] = start_line
+    local ns = ensure_ns()
+    local _ = nvim.nvim_buf_clear_namespace(buf_id, ns, 0, -1)
+    local lines = {}
+    if state["steering-text"] then
+      local truncated
+      if (#state["steering-text"] > 50) then
+        truncated = (string.sub(state["steering-text"], 1, 50) .. "...")
+      else
+        truncated = state["steering-text"]
+      end
+      table.insert(lines, ("Steering: " .. truncated .. " [-]"))
+    else
+    end
+    do
+      local text_lines = vim.split(state["prompt-text"], "\n", {plain = true})
+      table.insert(lines, (idle_prefix.text .. (text_lines[1] or "")))
+      for i = 2, #text_lines do
+        table.insert(lines, text_lines[i])
+      end
+    end
+    nvim.nvim_buf_set_lines(buf_id, start_line, -1, false, lines)
+    do
+      local prompt_line_idx = ((start_line + #lines) - 1)
+      state["prompt-start-line"] = prompt_line_idx
+      if state["steering-text"] then
+        local steering_line_idx = (prompt_line_idx - 1)
+        local line_text = lines[((steering_line_idx - start_line) + 1)]
+        local cancel_start = (#line_text - 3)
+        nvim.nvim_buf_set_extmark(buf_id, ns, steering_line_idx, 0, {end_col = math.min(10, #line_text), hl_group = "EcaSteeringLabel"})
+        nvim.nvim_buf_set_extmark(buf_id, ns, steering_line_idx, cancel_start, {end_col = #line_text, hl_group = "EcaStopLabel"})
+      else
+      end
+      local buf_line = (nvim.nvim_buf_get_lines(buf_id, prompt_line_idx, (prompt_line_idx + 1), false)[1] or "")
+      if (#buf_line >= #idle_prefix.text) then
+        nvim.nvim_buf_set_extmark(buf_id, ns, prompt_line_idx, 0, {end_col = #idle_prefix.text, hl_group = idle_prefix["hl-group"]})
+      else
+      end
+    end
+    update_virt_lines()
     return #lines
+  end
+  local function render_highlights(prompt_line)
+    state["prompt-start-line"] = prompt_line
+    local ns = ensure_ns()
+    nvim.nvim_buf_clear_namespace(buf_id, ns, 0, -1)
+    do
+      local buf_line = (nvim.nvim_buf_get_lines(buf_id, prompt_line, (prompt_line + 1), false)[1] or "")
+      if (#buf_line >= #idle_prefix.text) then
+        nvim.nvim_buf_set_extmark(buf_id, ns, prompt_line, 0, {end_col = #idle_prefix.text, hl_group = idle_prefix["hl-group"]})
+      else
+      end
+    end
+    return update_virt_lines()
   end
   local function animate_dots()
     state["status-dots"] = (state["status-dots"] + 1)
     if (state["status-text"] and nvim.nvim_buf_is_valid(buf_id)) then
-      return update_status_virt_text()
+      return update_virt_lines()
     else
       return nil
     end
@@ -123,48 +192,54 @@ local function create(buf_id, _3fopts)
     else
       state["status-text"] = nil
       state["status-timer"] = nil
-      return update_status_virt_text()
+      return update_virt_lines()
     end
   end
   local function set_loading(bool)
     state["loading?"] = bool
+    return update_virt_lines()
+  end
+  local function set_status_anchor_line(line)
+    state["status-anchor-line"] = line
+    return nil
+  end
+  local function set_steering(text)
+    state["steering-text"] = text
     return nil
   end
   local function get_text()
-    if not state["loading?"] then
-      local total = nvim.nvim_buf_line_count(buf_id)
-      local prompt_lines = nvim.nvim_buf_get_lines(buf_id, state["prompt-start-line"], total, false)
-      local prefix = prompt_prefix_component.render({["loading?"] = false})
-      if (prompt_lines and (#prompt_lines > 0)) then
-        local first_line = prompt_lines[1]
-        local stripped
-        if vim.startswith(first_line, prefix.text) then
-          stripped = string.sub(first_line, (#prefix.text + 1))
-        else
-          stripped = first_line
-        end
-        local parts = {stripped}
-        for i = 2, #prompt_lines do
-          table.insert(parts, prompt_lines[i])
-        end
-        return table.concat(parts, "\n")
+    local total = nvim.nvim_buf_line_count(buf_id)
+    local start = state["prompt-start-line"]
+    local lines = nvim.nvim_buf_get_lines(buf_id, start, total, false)
+    if (#lines > 0) then
+      local first_line = lines[1]
+      if vim.startswith(first_line, idle_prefix.text) then
+        lines[1] = string.sub(first_line, (#idle_prefix.text + 1))
       else
-        return nil
       end
     else
-      return nil
     end
+    return table.concat(lines, "\n")
   end
   local function set_text(text)
     state["prompt-text"] = (text or "")
     if not state["loading?"] then
-      local prefix = prompt_prefix_component.render({["loading?"] = false})
+      local start = state["prompt-start-line"]
       local total = nvim.nvim_buf_line_count(buf_id)
-      local last_line_idx = (total - 1)
-      return nvim.nvim_buf_set_lines(buf_id, last_line_idx, total, false, {(prefix.text .. state["prompt-text"])})
+      local text_lines = vim.split(state["prompt-text"], "\n", {plain = true})
+      local buf_lines = {}
+      table.insert(buf_lines, (idle_prefix.text .. (text_lines[1] or "")))
+      for i = 2, #text_lines do
+        table.insert(buf_lines, text_lines[i])
+      end
+      return nvim.nvim_buf_set_lines(buf_id, start, total, false, buf_lines)
     else
       return nil
     end
+  end
+  local function set_text_internal(text)
+    state["prompt-text"] = (text or "")
+    return nil
   end
   local function clear()
     return set_text("")
@@ -195,15 +270,35 @@ local function create(buf_id, _3fopts)
       return set_text("")
     end
   end
-  local function add_context(ctx)
-    return ctx_bar.add(ctx)
+  local function _32_()
+    local event = vim.v.event
+    local lines = event.regcontents
+    local first = (lines[1] or "")
+    if vim.startswith(first, idle_prefix.text) then
+      local stripped = string.sub(first, (#idle_prefix.text + 1))
+      local reg = (event.regname or "\"")
+      lines[1] = stripped
+      local function _33_()
+        vim.fn.setreg(reg, lines, event.regtype)
+        if (reg ~= "+") then
+          vim.fn.setreg("+", lines, event.regtype)
+        else
+        end
+        if (reg ~= "*") then
+          return vim.fn.setreg("*", lines, event.regtype)
+        else
+          return nil
+        end
+      end
+      return vim.schedule(_33_)
+    else
+      return nil
+    end
   end
-  local function remove_context(name)
-    return ctx_bar.remove(name)
-  end
+  nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _32_})
   local function get_state()
     return state
   end
-  return {render = render, ["get-text"] = get_text, ["set-text"] = set_text, clear = clear, ["set-status"] = set_status, ["set-loading"] = set_loading, ["add-to-history"] = add_to_history, ["history-prev"] = history_prev, ["history-next"] = history_next, ["add-context"] = add_context, ["remove-context"] = remove_context, ["get-state"] = get_state}
+  return {render = render, ["render-highlights"] = render_highlights, ["get-text"] = get_text, ["save-live-text"] = save_live_text, ["set-text"] = set_text, ["set-text-internal"] = set_text_internal, clear = clear, ["set-status"] = set_status, ["set-loading"] = set_loading, ["set-steering"] = set_steering, ["set-status-anchor-line"] = set_status_anchor_line, ["add-to-history"] = add_to_history, ["history-prev"] = history_prev, ["history-next"] = history_next, ["get-state"] = get_state}
 end
 return {create = create}

@@ -1,10 +1,10 @@
 -- [nfnl] fnl/eca/ui/widgets/header-bar.fnl
 local nvim = vim.api
-local bar = require("eca.ui.components.bar-items")
+local bar_items = require("eca.ui.components.bar-items")
 local function create(buf_id, win_id, initial_items)
   local items = (initial_items or {})
   local function render()
-    nvim.nvim_set_option_value("winbar", bar.render({items = items}), {win = win_id})
+    nvim.nvim_set_option_value("winbar", bar_items.render({items = items}), {win = win_id})
     nvim.nvim_buf_set_lines(buf_id, 0, 1, false, {""})
     return 1
   end

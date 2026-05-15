@@ -1,14 +1,15 @@
 ;; header-bar widget — fixed header using winbar.
 
 (local nvim vim.api)
-(local bar (require :eca.ui.components.bar-items))
+(local bar-items (require :eca.ui.components.bar-items))
 
 (fn create [buf-id win-id initial-items]
   (var items (or initial-items []))
 
   (fn render []
     (nvim.nvim_set_option_value :winbar
-      (bar.render {:items items}) {:win win-id})
+      (bar-items.render {:items items}) {:win win-id})
+    ;; Blank line for spacing
     (nvim.nvim_buf_set_lines buf-id 0 1 false [""])
     1)
 

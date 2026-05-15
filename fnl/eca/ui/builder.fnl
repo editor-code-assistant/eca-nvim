@@ -4,6 +4,7 @@
 (local highlights (require :eca.ui.highlights))
 (local header-bar-widget (require :eca.ui.widgets.header-bar))
 (local message-list-widget (require :eca.ui.widgets.message-list))
+(local context-area-widget (require :eca.ui.widgets.context-area))
 (local prompt-area-widget (require :eca.ui.widgets.prompt-area))
 (local footer-bar-widget (require :eca.ui.widgets.footer-bar))
 
@@ -52,69 +53,55 @@
 
 (fn setup-edit-guard [buf-id render-all-fn get-prompt-state focus-prompt-fn]
   (var internal-edit false)
-  (var guard-ns nil)
 
-  (fn ensure-guard-ns []
-    (when (= nil guard-ns)
-      (set guard-ns (nvim.nvim_create_namespace "eca-edit-guard")))
-    guard-ns)
-
-  (fn get-prefix [loading?]
-    (let [prompt-prefix (require :eca.ui.components.prompt-prefix)]
-      (. (prompt-prefix.render {:loading? loading?}) :text)))
-
-  (fn salvage-user-text [buf prompt-start-line prefix]
+  (fn salvage-user-text [buf prompt-line]
+    "Read user text from the prompt line, stripping prefix.
+     If the line no longer starts with '> ', the prompt was deleted — return empty."
     (let [current-count (nvim.nvim_buf_line_count buf)
-          start (math.min prompt-start-line current-count)
-          prompt-lines (nvim.nvim_buf_get_lines buf start current-count false)]
-      (if (= 0 (length prompt-lines))
-        [""]
-        (icollect [i line (ipairs prompt-lines)]
-          (if (= i 1)
-            (if (vim.startswith line prefix)
-              (string.sub line (+ (length prefix) 1))
-              (line:gsub "^>%s*" ""))
-            line)))))
+          idx (math.min prompt-line (- current-count 1))
+          lines (nvim.nvim_buf_get_lines buf idx (+ idx 1) false)
+          last-line (or (. lines 1) "")]
+      (if (vim.startswith last-line "> ")
+        [(string.sub last-line 3)]
+        [""])))
 
-  (fn restore-with-user-text [buf prefix user-lines]
+  (fn restore-with-user-text [buf user-lines]
     (set internal-edit true)
     (render-all-fn)
     (let [new-count (nvim.nvim_buf_line_count buf)
           new-last-idx (- new-count 1)
-          restored-lines (icollect [i line (ipairs user-lines)]
-                           (if (= i 1) (.. prefix line) line))]
-      (when (> (length restored-lines) 0)
-        (nvim.nvim_buf_set_lines buf new-last-idx new-count false restored-lines)
-        (let [ns (ensure-guard-ns)]
+          restored (icollect [i line (ipairs user-lines)]
+                     (if (= i 1) (.. "> " line) line))]
+      (when (> (length restored) 0)
+        (nvim.nvim_buf_set_lines buf new-last-idx new-count false restored)
+        ;; Re-apply prefix highlight
+        (let [ns (nvim.nvim_create_namespace "eca-prompt-restore")]
           (nvim.nvim_buf_set_extmark buf ns new-last-idx 0
-            {:end_col (length prefix)
+            {:end_col 2
              :hl_group :EcaPromptPrefix}))))
     (set internal-edit false)
-    (when focus-prompt-fn
-      (focus-prompt-fn)))
+    (when focus-prompt-fn (focus-prompt-fn)))
 
   (fn on-lines-handler [_ buf changedtick first-line last-line new-last-line]
     (when (not internal-edit)
-      (let [{: prompt-start-line : loading?} (get-prompt-state)
-            prefix (get-prefix loading?)]
-        (vim.schedule
-          (fn []
-            (when (nvim.nvim_buf_is_valid buf)
-              (let [current-count (nvim.nvim_buf_line_count buf)
-                    prompt-idx (math.min prompt-start-line (- current-count 1))
-                    prompt-lines (nvim.nvim_buf_get_lines buf prompt-idx (+ prompt-idx 1) false)
-                    prompt-line-text (or (. prompt-lines 1) "")
-                    damaged? (or (< first-line prompt-start-line)
-                                 (not (vim.startswith prompt-line-text prefix)))]
-                (when damaged?
-                  (let [user-lines (salvage-user-text buf prompt-start-line prefix)]
-                    (restore-with-user-text buf prefix user-lines))))))))))
+      (let [prompt-state (get-prompt-state)
+            prompt-line (or prompt-state.prompt-start-line 0)
+            lines-deleted? (> last-line new-last-line)
+            ;; Damaged if:
+            ;; 1. edit is before the prompt (chat history touched), OR
+            ;; 2. edit touches the prompt area AND lines were deleted (e.g. dd)
+            damaged? (or (< first-line prompt-line)
+                         (and (<= first-line prompt-line) lines-deleted?))]
+        (when damaged?
+          (vim.schedule
+            (fn []
+              (when (nvim.nvim_buf_is_valid buf)
+                (let [user-lines (salvage-user-text buf prompt-line)]
+                  (restore-with-user-text buf user-lines)))))))))
 
   (nvim.nvim_buf_attach buf-id false {:on_lines on-lines-handler})
 
-  (fn set-internal [bool]
-    (set internal-edit bool))
-
+  (fn set-internal [bool] (set internal-edit bool))
   (fn update-expected-count [] nil)
 
   {: set-internal : update-expected-count})
@@ -130,12 +117,13 @@
     ;; Mutable state
     (local state {:header-items []
                   :footer-items []
-                  :welcome nil})
+                  :welcome nil
+                  :queued-prompt nil})
 
     (var buf-id nil)
     (var win-id nil)
     (var guard nil)
-    (local widgets {:header nil :messages nil :prompt nil :footer nil})
+    (local widgets {:header nil :messages nil :context nil :prompt nil :footer nil})
 
     (fn is-open? []
       (and (not= nil buf-id)
@@ -144,21 +132,11 @@
            (nvim.nvim_win_is_valid win-id)))
 
     (fn with-internal-edit [f]
-      ;; Save cursor position, do the write, restore cursor
-      (let [saved-cursor (when (and win-id (nvim.nvim_win_is_valid win-id))
-                           (nvim.nvim_win_get_cursor win-id))]
-        (when guard (guard.set-internal true))
-        (f)
-        (when guard
-          (guard.set-internal false)
-          (guard.update-expected-count))
-        ;; Restore cursor if it was saved and window still valid
-        (when (and saved-cursor win-id (nvim.nvim_win_is_valid win-id))
-          (let [total (nvim.nvim_buf_line_count buf-id)
-                ;; Clamp cursor to valid range
-                line (math.min (. saved-cursor 1) total)
-                col (. saved-cursor 2)]
-            (pcall nvim.nvim_win_set_cursor win-id [line col])))))
+      (when guard (guard.set-internal true))
+      (f)
+      (when guard
+        (guard.set-internal false)
+        (guard.update-expected-count)))
 
     (fn focus-prompt []
       (when (and win-id (nvim.nvim_win_is_valid win-id))
@@ -167,14 +145,59 @@
               prompt-line (or prompt-state.prompt-start-line (- total 1))]
           (nvim.nvim_win_set_cursor win-id [(+ prompt-line 1) 2]))))
 
+    (fn make-separator []
+      (let [win (vim.fn.bufwinid buf-id)
+            width (if (and win (not= win -1))
+                    (nvim.nvim_win_get_width win)
+                    40)]
+        (string.rep "─" width)))
+
+    (fn render-prompt-area []
+      "Re-render separator + context-area + prompt from current message end-line.
+       Clears everything after messages first to avoid stale lines."
+      (let [msg-end (widgets.messages.get-end-line)
+            ;; Save prompt text before clearing the buffer (safe on first render)
+            live-text (widgets.prompt.save-live-text)
+            ;; Build all lines to write at once: separator + context + prompt
+            sep (make-separator)
+            ctx-items (widgets.context.get-state)
+            has-ctx? (widgets.context.has-items?)
+            prompt-text-lines (vim.split (or live-text "") "\n" {:plain true})
+            all-lines [sep]]
+        ;; Context line (if items exist)
+        (when has-ctx?
+          (let [parts (icollect [_ item (ipairs ctx-items.items)] item.text)]
+            (table.insert all-lines (table.concat parts " "))))
+        ;; Prompt lines ("> " prefix on first line)
+        (let [idle-prefix "> "]
+          (table.insert all-lines (.. idle-prefix (or (. prompt-text-lines 1) "")))
+          (for [i 2 (length prompt-text-lines)]
+            (table.insert all-lines (. prompt-text-lines i))))
+        ;; Write everything in one shot — replaces from msg-end to end of buffer
+        (nvim.nvim_buf_set_lines buf-id msg-end -1 false all-lines)
+        ;; Update prompt internal state
+        (let [prompt-start (+ msg-end (if has-ctx? 2 1))]
+          (widgets.prompt.set-text-internal (or live-text ""))
+          ;; Separator highlight
+          (let [ns (nvim.nvim_create_namespace "eca-separator")]
+            (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
+            (pcall nvim.nvim_buf_set_extmark buf-id ns msg-end 0
+              {:end_col (length sep) :hl_group :EcaSeparator}))
+          ;; Status anchors to separator
+          (widgets.prompt.set-status-anchor-line msg-end)
+          ;; Context highlight
+          (when has-ctx?
+            (widgets.context.render-highlights (+ msg-end 1)))
+          ;; Prompt render (just highlights + virt lines, buffer already written)
+          (widgets.prompt.render-highlights prompt-start))))
+
     (fn render-all []
       (with-internal-edit
         (fn []
           (let [header-lines (widgets.header.render)]
             (widgets.messages.set-start-line header-lines)
             (widgets.messages.render)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line)))
+            (render-prompt-area))
           (when widgets.footer
             (widgets.footer.render)))))
 
@@ -185,19 +208,42 @@
         (nvim.nvim_win_close win-id true)
         (set win-id nil)))
 
+    (fn cancel-steering []
+      "Cancel queued steering message but keep waiting for response."
+      (when state.queued-prompt
+        (set state.queued-prompt nil)
+        (when (is-open?)
+          (with-internal-edit
+            (fn []
+              (widgets.prompt.set-steering nil)
+              (render-prompt-area))))))
+
+    (fn stop []
+      "Stop everything: streaming, loading, status, steering."
+      (cancel-steering)
+      (when on-stop (on-stop)))
+
     (fn submit-prompt []
       (when (is-open?)
-        (let [prompt-state (widgets.prompt.get-state)]
+        (let [prompt-state (widgets.prompt.get-state)
+              text (widgets.prompt.get-text)]
           (if prompt-state.loading?
-            ;; During loading, Enter/submit triggers stop
-            (when on-stop (on-stop))
-            ;; Normal: submit text
-            (let [text (widgets.prompt.get-text)]
-              (when (and text (not= "" text))
-                (widgets.prompt.add-to-history text)
-                (with-internal-edit (fn [] (widgets.prompt.clear)))
-                (focus-prompt)
-                (when on-submit (on-submit text))))))))
+            ;; During loading: always queue as steering
+            (when (and text (not= "" text))
+              (set state.queued-prompt text)
+              (widgets.prompt.add-to-history text)
+              (with-internal-edit
+                (fn []
+                  (widgets.prompt.clear)
+                  (widgets.prompt.set-steering text)
+                  (render-prompt-area)))
+              (focus-prompt))
+            ;; Normal: submit immediately
+            (when (and text (not= "" text))
+              (widgets.prompt.add-to-history text)
+              (with-internal-edit (fn [] (widgets.prompt.clear)))
+              (focus-prompt)
+              (when on-submit (on-submit text)))))))
 
     ;; Open
 
@@ -225,6 +271,7 @@
             {:lines [state.welcome ""]
              :highlights [{:line-idx 0 :hl-group :EcaWelcome :col-start 0
                            :col-end (length state.welcome)}]}))
+        (set widgets.context (context-area-widget.create buf-id))
         (set widgets.prompt (prompt-area-widget.create buf-id
                               {:wrap-write with-internal-edit}))
         (set widgets.footer (footer-bar-widget.create buf-id win-id state.footer-items))
@@ -259,8 +306,7 @@
         (with-internal-edit
           (fn []
             (widgets.messages.append-message msg)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))
+            (render-prompt-area)))
         (focus-prompt)))
 
     (fn update-message [id content]
@@ -268,24 +314,21 @@
         (with-internal-edit
           (fn []
             (widgets.messages.update-message id content)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
+            (render-prompt-area)))))
 
     (fn finish-streaming [id]
       (when (is-open?)
         (with-internal-edit
           (fn []
             (widgets.messages.finish-streaming id)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
+            (render-prompt-area)))))
 
     (fn clear-messages []
       (when (is-open?)
         (with-internal-edit
           (fn []
             (widgets.messages.clear)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
+            (render-prompt-area)))))
 
     ;; State updates
     (fn update-header [new-items]
@@ -332,28 +375,49 @@
             (with-internal-edit (fn [] (render-all)))))))
 
     (fn set-status [text]
-      "Set status indicator. text=nil to hide."
+      "Set status indicator (virtual text, no re-render needed)."
+      (when (is-open?)
+        (widgets.prompt.set-status text)))
+
+    ;; === Context API ===
+    (fn add-context [ctx]
       (when (is-open?)
         (with-internal-edit
           (fn []
-            (widgets.prompt.set-status text)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
+            (widgets.context.add ctx)
+            (render-prompt-area)))
+        (focus-prompt)))
+
+    (fn remove-context [name]
+      (when (is-open?)
+        (with-internal-edit
+          (fn []
+            (widgets.context.remove name)
+            (render-prompt-area)))))
 
     (fn set-loading [bool]
-      "Toggle loading state. Shows ⏳ stop when loading, > when idle."
+      "Toggle loading state. When turning off, flush queued prompt."
       (when (is-open?)
-        (with-internal-edit
-          (fn []
-            (widgets.prompt.set-loading bool)
-            (let [end-line (widgets.messages.get-end-line)]
-              (widgets.prompt.render end-line))))))
+        (widgets.prompt.set-loading bool)
+        (focus-prompt)
+        ;; When loading finishes, check for queued steering message
+        (when (and (not bool) state.queued-prompt)
+          (let [queued state.queued-prompt]
+            (set state.queued-prompt nil)
+            (with-internal-edit
+              (fn []
+                (widgets.prompt.set-steering nil)
+                (render-prompt-area)))
+            ;; Submit the queued message
+            (when on-submit (on-submit queued))))))
 
     {: open : close : toggle : is-open? : get-buf-id
      : append-message : update-message : finish-streaming : clear-messages
      : update-header : update-header-item
      : update-footer : update-footer-item
      : set-welcome
-     : submit-prompt : set-status : set-loading}))
+     : submit-prompt : stop : cancel-steering
+     : set-status : set-loading
+     : add-context : remove-context}))
 
 {: create-chat-ui}

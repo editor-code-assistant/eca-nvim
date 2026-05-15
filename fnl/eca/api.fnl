@@ -39,10 +39,15 @@
         (self.register-chat chat-ui)
         ;; Mock server data
         (chat-ui.set-welcome "Welcome to ECA Chat")
-        (chat-ui.update-header [{:title "model" :value "claude"}
-                                {:title "behavior" :value "agent"}])
-        (chat-ui.update-footer [{:value "Testing assoc-some in @shared."}
-                                {:value "12.4K / 200K ($0.03)"}])))))
+        (chat-ui.update-header [{:title "model" :value "claude/opus-4.6"}
+                                {:title "agent" :value "code"}
+                                {:title "variant" :value "-"}
+                                {:title "mcps" :value "1"}])
+        (chat-ui.update-footer [{:value "~/dev/eca-nvim"}
+                                {:value "⏱ 0s"}
+                                {:value "0/200K ($0.00)"}])
+        ;; Mock context
+        (chat-ui.add-context {:text "@cursor(README.md 3:1)" :hl-group :EcaContextCursor})))))
 
 (fn self.chat-close []
   (let [chat (self.resolve-chat)]
@@ -66,6 +71,16 @@
   (let [chat (self.resolve-chat)]
     (when chat (chat.update-header-item "model" model))))
 
+(fn self.chat-stop []
+  "Stop everything: streaming, loading, status, steering."
+  (let [chat (self.resolve-chat)]
+    (when chat (chat.stop))))
+
+(fn self.chat-cancel-steering []
+  "Cancel queued steering only."
+  (let [chat (self.resolve-chat)]
+    (when chat (chat.cancel-steering))))
+
 (fn self.chat-set-status [text]
   "Set status indicator. nil to hide."
   (let [chat (self.resolve-chat)]
@@ -78,7 +93,8 @@
       (chat.append-message
         {:id (tostring (os.time))
          :content text
-         :prefix "> "})
+         :collapsed? true
+         :collapse-prefix "▸ "})
       ;; Set loading + status
       (chat.set-loading true)
       (chat.set-status "Generating")

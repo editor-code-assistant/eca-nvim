@@ -71,20 +71,29 @@ local function create(buf_id, _3fopts)
   end
   local function stream_append_char(char)
     if (state["streaming-line"] and state["streaming-col"]) then
-      if (char == "\n") then
-        local function _13_()
-          local next_line = (state["streaming-line"] + 1)
-          nvim.nvim_buf_set_lines(buf_id, next_line, next_line, false, {""})
-          state["end-line"] = (state["end-line"] + 1)
-          return on_line_inserted()
+      local buf_lines = nvim.nvim_buf_line_count(buf_id)
+      if (state["streaming-line"] < buf_lines) then
+        local current_line_text = (nvim.nvim_buf_get_lines(buf_id, state["streaming-line"], (state["streaming-line"] + 1), false)[1] or "")
+        local line_len = #current_line_text
+        local col = math.min(state["streaming-col"], line_len)
+        state["streaming-col"] = col
+        if (char == "\n") then
+          local function _13_()
+            local next_line = (state["streaming-line"] + 1)
+            nvim.nvim_buf_set_lines(buf_id, next_line, next_line, false, {""})
+            state["end-line"] = (state["end-line"] + 1)
+            return on_line_inserted()
+          end
+          wrap_write(_13_)
+          state["streaming-line"] = (state["streaming-line"] + 1)
+          state["streaming-col"] = 0
+          return nil
+        else
+          nvim.nvim_buf_set_text(buf_id, state["streaming-line"], state["streaming-col"], state["streaming-line"], state["streaming-col"], {char})
+          state["streaming-col"] = (state["streaming-col"] + #char)
+          return nil
         end
-        wrap_write(_13_)
-        state["streaming-line"] = (state["streaming-line"] + 1)
-        state["streaming-col"] = 0
-        return nil
       else
-        nvim.nvim_buf_set_text(buf_id, state["streaming-line"], state["streaming-col"], state["streaming-line"], state["streaming-col"], {char})
-        state["streaming-col"] = (state["streaming-col"] + #char)
         return nil
       end
     else
@@ -93,13 +102,17 @@ local function create(buf_id, _3fopts)
   end
   local function stream_tick()
     if (#state["streaming-queue"] > 0) then
-      local take = math.min(state["streaming-chars-per-tick"], #state["streaming-queue"])
-      for i = 1, take do
-        local char = string.sub(state["streaming-queue"], i, i)
-        stream_append_char(char)
-        state["streaming-displayed"] = (state["streaming-displayed"] .. char)
+      local function _17_()
+        local take = math.min(state["streaming-chars-per-tick"], #state["streaming-queue"])
+        for i = 1, take do
+          local char = string.sub(state["streaming-queue"], i, i)
+          stream_append_char(char)
+          state["streaming-displayed"] = (state["streaming-displayed"] .. char)
+        end
+        state["streaming-queue"] = string.sub(state["streaming-queue"], (take + 1))
+        return nil
       end
-      state["streaming-queue"] = string.sub(state["streaming-queue"], (take + 1))
+      wrap_write(_17_)
     else
     end
     if (#state["streaming-queue"] > 0) then
@@ -133,6 +146,7 @@ local function create(buf_id, _3fopts)
   end
   local function render()
     local ns = ensure_ns()
+    nvim.nvim_buf_clear_namespace(buf_id, ns, 0, -1)
     nvim.nvim_buf_set_lines(buf_id, state["start-line"], state["end-line"], false, {})
     state["end-line"] = state["start-line"]
     if (0 == #state.messages) then
@@ -164,14 +178,14 @@ local function create(buf_id, _3fopts)
       state["streaming-id"] = msg.id
       state["streaming-displayed"] = ""
       state["streaming-queue"] = (msg.content or "")
-      local function _23_()
+      local function _25_()
         nvim.nvim_buf_set_lines(buf_id, state["end-line"], state["end-line"], false, {"", ""})
         state["streaming-line"] = state["end-line"]
         state["streaming-col"] = 0
         state["end-line"] = (state["end-line"] + 2)
         return nil
       end
-      wrap_write(_23_)
+      wrap_write(_25_)
       return start_streaming_timer()
     else
       if (1 == #state.messages) then

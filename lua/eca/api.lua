@@ -34,8 +34,9 @@ self["chat-open"] = function()
     chat_ui.open()
     self["register-chat"](chat_ui)
     chat_ui["set-welcome"]("Welcome to ECA Chat")
-    chat_ui["update-header"]({{title = "model", value = "claude"}, {title = "behavior", value = "agent"}})
-    return chat_ui["update-footer"]({{value = "Testing assoc-some in @shared."}, {value = "12.4K / 200K ($0.03)"}})
+    chat_ui["update-header"]({{title = "model", value = "claude/opus-4.6"}, {title = "agent", value = "code"}, {title = "variant", value = "-"}, {title = "mcps", value = "1"}})
+    chat_ui["update-footer"]({{value = "~/dev/eca-nvim"}, {value = "\226\143\177 0s"}, {value = "0/200K ($0.00)"}})
+    return chat_ui["add-context"]({text = "@cursor(README.md 3:1)", ["hl-group"] = "EcaContextCursor"})
   else
     return nil
   end
@@ -80,6 +81,22 @@ self["chat-set-model"] = function(model)
     return nil
   end
 end
+self["chat-stop"] = function()
+  local chat = self["resolve-chat"]()
+  if chat then
+    return chat.stop()
+  else
+    return nil
+  end
+end
+self["chat-cancel-steering"] = function()
+  local chat = self["resolve-chat"]()
+  if chat then
+    return chat["cancel-steering"]()
+  else
+    return nil
+  end
+end
 self["chat-set-status"] = function(text)
   local chat = self["resolve-chat"]()
   if chat then
@@ -91,7 +108,7 @@ end
 self["default-on-submit"] = function(text)
   local chat = self["resolve-chat"]()
   if chat then
-    chat["append-message"]({id = tostring(os.time()), content = text, prefix = "> "})
+    chat["append-message"]({id = tostring(os.time()), content = text, ["collapsed?"] = true, ["collapse-prefix"] = "\226\150\184 "})
     chat["set-loading"](true)
     chat["set-status"]("Generating")
     local reply_id = ("reply-" .. tostring(os.time()))
@@ -104,7 +121,7 @@ self["default-on-submit"] = function(text)
       table.insert(chunks, string.sub(full_text, i, end_idx))
       i = (end_idx + 1)
     end
-    local function _11_()
+    local function _13_()
       if chat["is-open?"]() then
         chat["append-message"]({id = reply_id, content = "", ["streaming?"] = true})
         local accumulated = ""
@@ -113,16 +130,16 @@ self["default-on-submit"] = function(text)
           delay = (delay + 50)
           local content_at_send = (accumulated .. chunk)
           accumulated = content_at_send
-          local function _12_()
+          local function _14_()
             if chat["is-open?"]() then
               return chat["update-message"](reply_id, content_at_send)
             else
               return nil
             end
           end
-          vim.defer_fn(_12_, delay)
+          vim.defer_fn(_14_, delay)
         end
-        local function _14_()
+        local function _16_()
           if chat["is-open?"]() then
             chat["finish-streaming"](reply_id)
             chat["set-loading"](false)
@@ -131,12 +148,12 @@ self["default-on-submit"] = function(text)
             return nil
           end
         end
-        return vim.defer_fn(_14_, (delay + 100))
+        return vim.defer_fn(_16_, (delay + 100))
       else
         return nil
       end
     end
-    return vim.defer_fn(_11_, 300)
+    return vim.defer_fn(_13_, 300)
   else
     return nil
   end

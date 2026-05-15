@@ -55,37 +55,50 @@
     "Append a single character to the streaming position using set_text.
      Handles newlines by inserting a new line."
     (when (and state.streaming-line state.streaming-col)
-      (if (= char "\n")
-        ;; Newline: insert new line, prompt shifts down naturally
-        (do
-          (wrap-write
-            (fn []
-              (let [next-line (+ state.streaming-line 1)]
-                (nvim.nvim_buf_set_lines buf-id next-line next-line false [""])
-                (set state.end-line (+ state.end-line 1))
-                (on-line-inserted))))
-          (set state.streaming-line (+ state.streaming-line 1))
-          (set state.streaming-col 0))
-        ;; Regular char: append at current position
-        (do
-          (nvim.nvim_buf_set_text buf-id
-            state.streaming-line state.streaming-col
-            state.streaming-line state.streaming-col
-            [char])
-          (set state.streaming-col (+ state.streaming-col (length char)))))))
+      ;; Guard: ensure the streaming line is still within the buffer
+      (let [buf-lines (nvim.nvim_buf_line_count buf-id)]
+        (when (< state.streaming-line buf-lines)
+          (let [current-line-text (or (. (nvim.nvim_buf_get_lines buf-id
+                                           state.streaming-line
+                                           (+ state.streaming-line 1) false) 1) "")
+                line-len (length current-line-text)
+                col (math.min state.streaming-col line-len)]
+            ;; Sync col in case buffer was re-rendered
+            (set state.streaming-col col)
+            (if (= char "\n")
+              ;; Newline: insert new line, prompt shifts down naturally
+              (do
+                (wrap-write
+                  (fn []
+                    (let [next-line (+ state.streaming-line 1)]
+                      (nvim.nvim_buf_set_lines buf-id next-line next-line false [""])
+                      (set state.end-line (+ state.end-line 1))
+                      (on-line-inserted))))
+                (set state.streaming-line (+ state.streaming-line 1))
+                (set state.streaming-col 0))
+              ;; Regular char: append at current position
+              (do
+                (nvim.nvim_buf_set_text buf-id
+                  state.streaming-line state.streaming-col
+                  state.streaming-line state.streaming-col
+                  [char])
+                (set state.streaming-col (+ state.streaming-col (length char))))))))))
 
   (fn stream-tick []
     "Process one tick: move chars from queue to buffer."
     (when (> (length state.streaming-queue) 0)
-      (let [take (math.min state.streaming-chars-per-tick
-                           (length state.streaming-queue))]
-        (for [i 1 take]
-          (let [char (string.sub state.streaming-queue i i)]
-            (stream-append-char char)
-            (set state.streaming-displayed
-              (.. state.streaming-displayed char))))
-        (set state.streaming-queue
-          (string.sub state.streaming-queue (+ take 1)))))
+      ;; Wrap ALL writes in one batch so edit guard ignores them
+      (wrap-write
+        (fn []
+          (let [take (math.min state.streaming-chars-per-tick
+                               (length state.streaming-queue))]
+            (for [i 1 take]
+              (let [char (string.sub state.streaming-queue i i)]
+                (stream-append-char char)
+                (set state.streaming-displayed
+                  (.. state.streaming-displayed char))))
+            (set state.streaming-queue
+              (string.sub state.streaming-queue (+ take 1)))))))
     ;; Continue or stop
     (if (> (length state.streaming-queue) 0)
       (set state.streaming-timer
@@ -110,6 +123,7 @@
 
   (fn render []
     (let [ns (ensure-ns)]
+      (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
       (nvim.nvim_buf_set_lines buf-id state.start-line state.end-line false [])
       (set state.end-line state.start-line)
       (if (= 0 (length state.messages))
