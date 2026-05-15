@@ -24,8 +24,9 @@
     (apply)
     0)
 
-  ;; Re-apply on focus (needed for global mode after statusline plugin overwrites)
-  (nvim.nvim_create_autocmd :WinEnter
+  ;; Re-apply on focus or after theme change (colorscheme/background change
+  ;; causes statusline plugins to reset, overwriting our statusline)
+  (nvim.nvim_create_autocmd [:WinEnter :ColorScheme]
     {:callback (fn []
                  (when (and active (nvim.nvim_buf_is_valid buf-id))
                    (when (= (nvim.nvim_get_current_buf) buf-id)

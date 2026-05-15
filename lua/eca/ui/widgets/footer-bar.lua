@@ -38,7 +38,7 @@ local function create(buf_id, win_id, initial_items)
       return nil
     end
   end
-  nvim.nvim_create_autocmd("WinEnter", {callback = _3_})
+  nvim.nvim_create_autocmd({"WinEnter", "ColorScheme"}, {callback = _3_})
   local function update(new_items)
     items = new_items
     if active then
