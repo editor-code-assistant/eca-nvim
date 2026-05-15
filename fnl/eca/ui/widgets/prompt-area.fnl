@@ -254,13 +254,27 @@
                        first (or (. lines 1) "")]
                    (when (vim.startswith first idle-prefix.text)
                      (let [stripped (string.sub first (+ (length idle-prefix.text) 1))
-                           reg (or event.regname "\"")]
+                           reg (if (and event.regname (not= event.regname ""))
+                                 event.regname
+                                 "\"")]
                        (tset lines 1 stripped)
                        (vim.schedule
                          (fn []
                            (vim.fn.setreg reg lines event.regtype)
-                           (when (not= reg "+") (vim.fn.setreg "+" lines event.regtype))
-                           (when (not= reg "*") (vim.fn.setreg "*" lines event.regtype))))))))})
+                           (vim.fn.setreg "+" lines event.regtype)
+                           (vim.fn.setreg "*" lines event.regtype)))))))})
+
+  ;; Protect the "> " prefix — keep cursor at col >= 2 on the prompt line.
+  (nvim.nvim_create_autocmd :CursorMovedI
+    {:buffer buf-id
+     :callback (fn []
+                 (let [cursor (nvim.nvim_win_get_cursor 0)
+                       row (. cursor 1)
+                       col (. cursor 2)
+                       total (nvim.nvim_buf_line_count buf-id)
+                       prompt-row (+ state.prompt-start-line 1)]
+                   (when (and (= row prompt-row) (< col (length idle-prefix.text)))
+                     (nvim.nvim_win_set_cursor 0 [row (length idle-prefix.text)]))))})
 
   (fn get-state [] state)
 

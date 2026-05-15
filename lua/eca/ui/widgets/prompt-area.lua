@@ -276,26 +276,37 @@ local function create(buf_id, _3fopts)
     local first = (lines[1] or "")
     if vim.startswith(first, idle_prefix.text) then
       local stripped = string.sub(first, (#idle_prefix.text + 1))
-      local reg = (event.regname or "\"")
-      lines[1] = stripped
-      local function _33_()
-        vim.fn.setreg(reg, lines, event.regtype)
-        if (reg ~= "+") then
-          vim.fn.setreg("+", lines, event.regtype)
-        else
-        end
-        if (reg ~= "*") then
-          return vim.fn.setreg("*", lines, event.regtype)
-        else
-          return nil
-        end
+      local reg
+      if (event.regname and (event.regname ~= "")) then
+        reg = event.regname
+      else
+        reg = "\""
       end
-      return vim.schedule(_33_)
+      lines[1] = stripped
+      local function _34_()
+        vim.fn.setreg(reg, lines, event.regtype)
+        vim.fn.setreg("+", lines, event.regtype)
+        return vim.fn.setreg("*", lines, event.regtype)
+      end
+      return vim.schedule(_34_)
     else
       return nil
     end
   end
   nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _32_})
+  local function _36_()
+    local cursor = nvim.nvim_win_get_cursor(0)
+    local row = cursor[1]
+    local col = cursor[2]
+    local total = nvim.nvim_buf_line_count(buf_id)
+    local prompt_row = (state["prompt-start-line"] + 1)
+    if ((row == prompt_row) and (col < #idle_prefix.text)) then
+      return nvim.nvim_win_set_cursor(0, {row, #idle_prefix.text})
+    else
+      return nil
+    end
+  end
+  nvim.nvim_create_autocmd("CursorMovedI", {buffer = buf_id, callback = _36_})
   local function get_state()
     return state
   end

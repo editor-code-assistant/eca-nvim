@@ -170,7 +170,9 @@ local function create_chat_ui(_14_)
       local total = nvim.nvim_buf_line_count(buf_id)
       local prompt_state = widgets.prompt["get-state"]()
       local prompt_line = (prompt_state["prompt-start-line"] or (total - 1))
-      return nvim.nvim_win_set_cursor(win_id, {(prompt_line + 1), 2})
+      local line_text = (nvim.nvim_buf_get_lines(buf_id, prompt_line, (prompt_line + 1), false)[1] or "> ")
+      local col = #line_text
+      return nvim.nvim_win_set_cursor(win_id, {(prompt_line + 1), col})
     else
       return nil
     end

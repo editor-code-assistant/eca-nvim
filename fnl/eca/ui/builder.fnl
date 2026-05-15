@@ -142,8 +142,11 @@
       (when (and win-id (nvim.nvim_win_is_valid win-id))
         (let [total (nvim.nvim_buf_line_count buf-id)
               prompt-state (widgets.prompt.get-state)
-              prompt-line (or prompt-state.prompt-start-line (- total 1))]
-          (nvim.nvim_win_set_cursor win-id [(+ prompt-line 1) 2]))))
+              prompt-line (or prompt-state.prompt-start-line (- total 1))
+              ;; Position cursor at end of the prompt line, not at col 2
+              line-text (or (. (nvim.nvim_buf_get_lines buf-id prompt-line (+ prompt-line 1) false) 1) "> ")
+              col (length line-text)]
+          (nvim.nvim_win_set_cursor win-id [(+ prompt-line 1) col]))))
 
     (fn make-separator []
       (let [win (vim.fn.bufwinid buf-id)
