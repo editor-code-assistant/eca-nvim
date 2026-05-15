@@ -73,10 +73,6 @@ local function create(buf_id, _3fopts)
     if (state["streaming-line"] and state["streaming-col"]) then
       local buf_lines = nvim.nvim_buf_line_count(buf_id)
       if (state["streaming-line"] < buf_lines) then
-        local current_line_text = (nvim.nvim_buf_get_lines(buf_id, state["streaming-line"], (state["streaming-line"] + 1), false)[1] or "")
-        local line_len = #current_line_text
-        local col = math.min(state["streaming-col"], line_len)
-        state["streaming-col"] = col
         if (char == "\n") then
           local function _13_()
             local next_line = (state["streaming-line"] + 1)
@@ -89,7 +85,7 @@ local function create(buf_id, _3fopts)
           state["streaming-col"] = 0
           return nil
         else
-          nvim.nvim_buf_set_text(buf_id, state["streaming-line"], state["streaming-col"], state["streaming-line"], state["streaming-col"], {char})
+          pcall(nvim.nvim_buf_set_text, buf_id, state["streaming-line"], state["streaming-col"], state["streaming-line"], state["streaming-col"], {char})
           state["streaming-col"] = (state["streaming-col"] + #char)
           return nil
         end
@@ -173,19 +169,23 @@ local function create(buf_id, _3fopts)
     end
   end
   local function append_message(msg)
+    if state["streaming-id"] then
+      __fnl_global__finish_2dstreaming(state["streaming-id"])
+    else
+    end
     table.insert(state.messages, msg)
     if msg["streaming?"] then
       state["streaming-id"] = msg.id
       state["streaming-displayed"] = ""
       state["streaming-queue"] = (msg.content or "")
-      local function _25_()
+      local function _26_()
         nvim.nvim_buf_set_lines(buf_id, state["end-line"], state["end-line"], false, {"", ""})
         state["streaming-line"] = state["end-line"]
         state["streaming-col"] = 0
         state["end-line"] = (state["end-line"] + 2)
         return nil
       end
-      wrap_write(_25_)
+      wrap_write(_26_)
       return start_streaming_timer()
     else
       if (1 == #state.messages) then

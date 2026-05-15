@@ -55,34 +55,26 @@
     "Append a single character to the streaming position using set_text.
      Handles newlines by inserting a new line."
     (when (and state.streaming-line state.streaming-col)
-      ;; Guard: ensure the streaming line is still within the buffer
       (let [buf-lines (nvim.nvim_buf_line_count buf-id)]
         (when (< state.streaming-line buf-lines)
-          (let [current-line-text (or (. (nvim.nvim_buf_get_lines buf-id
-                                           state.streaming-line
-                                           (+ state.streaming-line 1) false) 1) "")
-                line-len (length current-line-text)
-                col (math.min state.streaming-col line-len)]
-            ;; Sync col in case buffer was re-rendered
-            (set state.streaming-col col)
-            (if (= char "\n")
-              ;; Newline: insert new line, prompt shifts down naturally
-              (do
-                (wrap-write
-                  (fn []
-                    (let [next-line (+ state.streaming-line 1)]
-                      (nvim.nvim_buf_set_lines buf-id next-line next-line false [""])
-                      (set state.end-line (+ state.end-line 1))
-                      (on-line-inserted))))
-                (set state.streaming-line (+ state.streaming-line 1))
-                (set state.streaming-col 0))
-              ;; Regular char: append at current position
-              (do
-                (nvim.nvim_buf_set_text buf-id
-                  state.streaming-line state.streaming-col
-                  state.streaming-line state.streaming-col
-                  [char])
-                (set state.streaming-col (+ state.streaming-col (length char))))))))))
+          (if (= char "\n")
+            ;; Newline: insert new line, prompt shifts down naturally
+            (do
+              (wrap-write
+                (fn []
+                  (let [next-line (+ state.streaming-line 1)]
+                    (nvim.nvim_buf_set_lines buf-id next-line next-line false [""])
+                    (set state.end-line (+ state.end-line 1))
+                    (on-line-inserted))))
+              (set state.streaming-line (+ state.streaming-line 1))
+              (set state.streaming-col 0))
+            ;; Regular char: append at current position
+            (do
+              (pcall nvim.nvim_buf_set_text buf-id
+                state.streaming-line state.streaming-col
+                state.streaming-line state.streaming-col
+                [char])
+              (set state.streaming-col (+ state.streaming-col (length char)))))))))
 
   (fn stream-tick []
     "Process one tick: move chars from queue to buffer."
@@ -141,6 +133,9 @@
             (set state.end-line (+ state.end-line lines-written)))))))
 
   (fn append-message [msg]
+    ;; Finish any in-progress streaming before appending a new message
+    (when state.streaming-id
+      (finish-streaming state.streaming-id))
     (table.insert state.messages msg)
     (if msg.streaming?
       ;; Streaming: create an empty line, stream chars into it

@@ -28,30 +28,38 @@
     state.ns-id)
 
   (fn update-status-virt []
-    "Update status virtual text below the separator (before context-area)."
+    "Update status virtual text below the separator."
     (let [ns (ensure-ns)]
+      ;; Always remove old extmark
       (when state.status-extmark-id
         (pcall nvim.nvim_buf_del_extmark buf-id ns state.status-extmark-id)
         (set state.status-extmark-id nil))
+      ;; Recreate at current tracked position
       (when state.status-text
         (let [dots (string.rep "." (+ (% state.status-dots 3) 1))
-              status-str (.. state.status-text dots)]
+              status-str (.. state.status-text dots)
+              total (nvim.nvim_buf_line_count buf-id)
+              anchor (math.min state.status-anchor-line (- total 1))]
           (set state.status-extmark-id
-            (nvim.nvim_buf_set_extmark buf-id ns state.status-anchor-line 0
+            (nvim.nvim_buf_set_extmark buf-id ns anchor 0
               {:virt_lines [[[status-str :EcaSpinner]]]}))))))
 
   (fn update-stop-virt []
     "Update stop virtual text above the prompt line."
     (let [ns (ensure-ns)]
+      ;; Always remove old extmark
       (when state.stop-extmark-id
         (pcall nvim.nvim_buf_del_extmark buf-id ns state.stop-extmark-id)
         (set state.stop-extmark-id nil))
+      ;; Recreate at current tracked position
       (when state.loading?
-        (set state.stop-extmark-id
-          (nvim.nvim_buf_set_extmark buf-id ns state.prompt-start-line 0
-            {:virt_lines_above true
-             :virt_lines [[[loading-prefix.text loading-prefix.hl-group]
-                           ["stop" :EcaStopLabel]]]})))))
+        (let [total (nvim.nvim_buf_line_count buf-id)
+              anchor (math.min state.prompt-start-line (- total 1))]
+          (set state.stop-extmark-id
+            (nvim.nvim_buf_set_extmark buf-id ns anchor 0
+              {:virt_lines_above true
+               :virt_lines [[[loading-prefix.text loading-prefix.hl-group]
+                             ["stop" :EcaStopLabel]]]}))))))
 
   (fn update-virt-lines []
     "Update all virtual lines."

@@ -266,9 +266,10 @@
                                 {:wrap-write with-internal-edit
                                  :on-line-inserted
                                  (fn []
-                                   ;; Prompt physically moved down, update its tracked position
+                                   ;; Everything below the streaming area moved down
                                    (let [s (widgets.prompt.get-state)]
-                                     (set s.prompt-start-line (+ s.prompt-start-line 1))))}))
+                                     (set s.prompt-start-line (+ s.prompt-start-line 1))
+                                     (set s.status-anchor-line (+ s.status-anchor-line 1))))}))
         (when state.welcome
           (widgets.messages.set-welcome
             {:lines [state.welcome ""]
@@ -309,15 +310,22 @@
         (with-internal-edit
           (fn []
             (widgets.messages.append-message msg)
+            ;; Re-render prompt area after message is added.
+            ;; For streaming, this runs after the empty lines are inserted
+            ;; but before the timer starts writing chars, so it's safe.
             (render-prompt-area)))
         (focus-prompt)))
 
     (fn update-message [id content]
       (when (is-open?)
-        (with-internal-edit
-          (fn []
-            (widgets.messages.update-message id content)
-            (render-prompt-area)))))
+        (let [msg-state (widgets.messages.get-state)]
+          (with-internal-edit
+            (fn []
+              (widgets.messages.update-message id content)
+              ;; Don't re-render prompt during streaming updates —
+              ;; it would interfere with char-by-char buffer writes
+              (when (not= id msg-state.streaming-id)
+                (render-prompt-area)))))))
 
     (fn finish-streaming [id]
       (when (is-open?)

@@ -40,7 +40,9 @@ local function create(buf_id, _3fopts)
     if state["status-text"] then
       local dots = string.rep(".", ((state["status-dots"] % 3) + 1))
       local status_str = (state["status-text"] .. dots)
-      state["status-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, state["status-anchor-line"], 0, {virt_lines = {{{status_str, "EcaSpinner"}}}})
+      local total = nvim.nvim_buf_line_count(buf_id)
+      local anchor = math.min(state["status-anchor-line"], (total - 1))
+      state["status-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, anchor, 0, {virt_lines = {{{status_str, "EcaSpinner"}}}})
       return nil
     else
       return nil
@@ -54,7 +56,9 @@ local function create(buf_id, _3fopts)
     else
     end
     if state["loading?"] then
-      state["stop-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, state["prompt-start-line"], 0, {virt_lines_above = true, virt_lines = {{{loading_prefix.text, loading_prefix["hl-group"]}, {"stop", "EcaStopLabel"}}}})
+      local total = nvim.nvim_buf_line_count(buf_id)
+      local anchor = math.min(state["prompt-start-line"], (total - 1))
+      state["stop-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, anchor, 0, {virt_lines_above = true, virt_lines = {{{loading_prefix.text, loading_prefix["hl-group"]}, {"stop", "EcaStopLabel"}}}})
       return nil
     else
       return nil
