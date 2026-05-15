@@ -1,4 +1,4 @@
-;; prompt-prefix component — renders "> " or "⏳ " based on loading state.
+;; prompt-prefix component — renders "> " or "⏳" based on loading state.
 ;; Stateless, pure function.
 
 (fn render [{: loading?}]

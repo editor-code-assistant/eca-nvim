@@ -31,6 +31,7 @@
    :EcaSpinner           {:link "WarningMsg"}
    :EcaButtonAccept      {:link "DiagnosticOk"}
    :EcaButtonReject      {:link "DiagnosticError"}
+   :EcaStopLabel         {:link "Underlined"}
    :EcaTabActive         {:link "TabLineSel"}
    :EcaTabInactive       {:link "TabLine"}
    :EcaTabLoading        {:link "WarningMsg"}})

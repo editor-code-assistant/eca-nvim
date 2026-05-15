@@ -30,7 +30,7 @@
     {:desc "Submit current prompt"})
 
   (nvim.nvim_create_user_command "EcaChatStop"
-    (fn [] (api.chat-set-loading false))
+    (fn [] (api.chat-set-status nil))
     {:desc "Stop current ECA response"})
 
   (nvim.nvim_create_user_command "EcaChatSetModel"

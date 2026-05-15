@@ -30,12 +30,12 @@ self["chat-open"] = function()
   local existing = self["resolve-chat"]()
   if not (existing and existing["is-open?"]()) then
     local builder = require("eca.ui.builder")
-    local chat_ui = builder["create-chat-ui"]({["on-submit"] = (plugin_opts["on-submit"] or self["default-on-submit"]), opts = {ui = (plugin_opts.ui or {}), keymaps = (plugin_opts.keymaps or {{mode = "i", lhs = "<C-s>", rhs = "<cmd>EcaChatSubmit<CR>"}, {mode = "n", lhs = "<CR>", rhs = "<cmd>EcaChatSubmit<CR>"}})}})
+    local chat_ui = builder["create-chat-ui"]({["on-submit"] = (plugin_opts["on-submit"] or self["default-on-submit"]), ["on-stop"] = (plugin_opts["on-stop"] or self["default-on-stop"]), opts = {ui = (plugin_opts.ui or {}), keymaps = (plugin_opts.keymaps or {{mode = "i", lhs = "<C-s>", rhs = "<cmd>EcaChatSubmit<CR>"}, {mode = "n", lhs = "<CR>", rhs = "<cmd>EcaChatSubmit<CR>"}})}})
     chat_ui.open()
     self["register-chat"](chat_ui)
     chat_ui["set-welcome"]("Welcome to ECA Chat")
     chat_ui["update-header"]({{title = "model", value = "claude"}, {title = "behavior", value = "agent"}})
-    return chat_ui["update-footer"]({{value = "ECA Chat"}, {title = "tokens", value = "0/200K"}})
+    return chat_ui["update-footer"]({{value = "Testing assoc-some in @shared."}, {value = "12.4K / 200K ($0.03)"}})
   else
     return nil
   end
@@ -80,10 +80,10 @@ self["chat-set-model"] = function(model)
     return nil
   end
 end
-self["chat-set-loading"] = function(bool)
+self["chat-set-status"] = function(text)
   local chat = self["resolve-chat"]()
   if chat then
-    return chat["set-loading"](bool)
+    return chat["set-status"](text)
   else
     return nil
   end
@@ -93,15 +93,59 @@ self["default-on-submit"] = function(text)
   if chat then
     chat["append-message"]({id = tostring(os.time()), content = text, prefix = "> "})
     chat["set-loading"](true)
+    chat["set-status"]("Generating")
+    local reply_id = ("reply-" .. tostring(os.time()))
+    local full_text = ("You said: " .. text .. "\n\n(This is a mock streaming response)")
+    local chunks = {}
+    local chunk_size = 3
+    local i = 1
+    while (i <= #full_text) do
+      local end_idx = math.min((i + chunk_size + -1), #full_text)
+      table.insert(chunks, string.sub(full_text, i, end_idx))
+      i = (end_idx + 1)
+    end
     local function _11_()
       if chat["is-open?"]() then
-        chat["append-message"]({id = ("reply-" .. tostring(os.time())), content = ("You said: " .. text .. "\n\n(This is a mock response)")})
-        return chat["set-loading"](false)
+        chat["append-message"]({id = reply_id, content = "", ["streaming?"] = true})
+        local accumulated = ""
+        local delay = 0
+        for _, chunk in ipairs(chunks) do
+          delay = (delay + 50)
+          local content_at_send = (accumulated .. chunk)
+          accumulated = content_at_send
+          local function _12_()
+            if chat["is-open?"]() then
+              return chat["update-message"](reply_id, content_at_send)
+            else
+              return nil
+            end
+          end
+          vim.defer_fn(_12_, delay)
+        end
+        local function _14_()
+          if chat["is-open?"]() then
+            chat["finish-streaming"](reply_id)
+            chat["set-loading"](false)
+            return chat["set-status"](nil)
+          else
+            return nil
+          end
+        end
+        return vim.defer_fn(_14_, (delay + 100))
       else
         return nil
       end
     end
-    return vim.defer_fn(_11_, 500)
+    return vim.defer_fn(_11_, 300)
+  else
+    return nil
+  end
+end
+self["default-on-stop"] = function()
+  local chat = self["resolve-chat"]()
+  if chat then
+    chat["set-loading"](false)
+    return chat["set-status"](nil)
   else
     return nil
   end

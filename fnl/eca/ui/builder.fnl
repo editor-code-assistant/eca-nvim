@@ -9,12 +9,30 @@
 
 ;; ── Buffer/window setup ─────────────────────────────────
 
+(fn disable-statusline-plugins []
+  "Try to disable known statusline plugins for eca-chat filetype."
+  ;; Lualine
+  (let [(ok lualine) (pcall require :lualine)]
+    (when ok
+      (let [config (lualine.get_config)
+            disabled (or config.options.disabled_filetypes {})]
+        (when (not disabled.statusline)
+          (tset disabled :statusline []))
+        (var found false)
+        (each [_ ft (ipairs disabled.statusline)]
+          (when (= ft "eca-chat") (set found true)))
+        (when (not found)
+          (table.insert disabled.statusline "eca-chat"))
+        (tset config.options :disabled_filetypes disabled)
+        (lualine.setup config)))))
+
 (fn setup-chat-buffer [buf]
   (nvim.nvim_buf_set_name buf "ECA Chat")
   (nvim.nvim_set_option_value :buftype "nofile" {:buf buf})
   (nvim.nvim_set_option_value :bufhidden "hide" {:buf buf})
   (nvim.nvim_set_option_value :swapfile false {:buf buf})
-  (nvim.nvim_set_option_value :filetype "eca-chat" {:buf buf}))
+  (nvim.nvim_set_option_value :filetype "eca-chat" {:buf buf})
+  (disable-statusline-plugins))
 
 (fn setup-chat-window [win]
   (nvim.nvim_set_option_value :number false {:win win})
@@ -103,7 +121,7 @@
 
 ;; ── Main entry ──────────────────────────────────────────
 
-(fn create-chat-ui [{: on-submit : opts}]
+(fn create-chat-ui [{: on-submit : on-stop : opts}]
   (let [ui-config (or opts.ui {})
         config {:width (or ui-config.width 0.4)
                 :position (or ui-config.position :right)
@@ -126,11 +144,21 @@
            (nvim.nvim_win_is_valid win-id)))
 
     (fn with-internal-edit [f]
-      (when guard (guard.set-internal true))
-      (f)
-      (when guard
-        (guard.set-internal false)
-        (guard.update-expected-count)))
+      ;; Save cursor position, do the write, restore cursor
+      (let [saved-cursor (when (and win-id (nvim.nvim_win_is_valid win-id))
+                           (nvim.nvim_win_get_cursor win-id))]
+        (when guard (guard.set-internal true))
+        (f)
+        (when guard
+          (guard.set-internal false)
+          (guard.update-expected-count))
+        ;; Restore cursor if it was saved and window still valid
+        (when (and saved-cursor win-id (nvim.nvim_win_is_valid win-id))
+          (let [total (nvim.nvim_buf_line_count buf-id)
+                ;; Clamp cursor to valid range
+                line (math.min (. saved-cursor 1) total)
+                col (. saved-cursor 2)]
+            (pcall nvim.nvim_win_set_cursor win-id [line col])))))
 
     (fn focus-prompt []
       (when (and win-id (nvim.nvim_win_is_valid win-id))
@@ -159,12 +187,17 @@
 
     (fn submit-prompt []
       (when (is-open?)
-        (let [text (widgets.prompt.get-text)]
-          (when (and text (not= "" text))
-            (widgets.prompt.add-to-history text)
-            (with-internal-edit (fn [] (widgets.prompt.clear)))
-            (focus-prompt)
-            (when on-submit (on-submit text))))))
+        (let [prompt-state (widgets.prompt.get-state)]
+          (if prompt-state.loading?
+            ;; During loading, Enter/submit triggers stop
+            (when on-stop (on-stop))
+            ;; Normal: submit text
+            (let [text (widgets.prompt.get-text)]
+              (when (and text (not= "" text))
+                (widgets.prompt.add-to-history text)
+                (with-internal-edit (fn [] (widgets.prompt.clear)))
+                (focus-prompt)
+                (when on-submit (on-submit text))))))))
 
     ;; Open
 
@@ -180,13 +213,20 @@
 
         ;; Create widgets
         (set widgets.header (header-bar-widget.create buf-id win-id state.header-items))
-        (set widgets.messages (message-list-widget.create buf-id))
+        (set widgets.messages (message-list-widget.create buf-id
+                                {:wrap-write with-internal-edit
+                                 :on-line-inserted
+                                 (fn []
+                                   ;; Prompt physically moved down, update its tracked position
+                                   (let [s (widgets.prompt.get-state)]
+                                     (set s.prompt-start-line (+ s.prompt-start-line 1))))}))
         (when state.welcome
           (widgets.messages.set-welcome
             {:lines [state.welcome ""]
              :highlights [{:line-idx 0 :hl-group :EcaWelcome :col-start 0
                            :col-end (length state.welcome)}]}))
-        (set widgets.prompt (prompt-area-widget.create buf-id))
+        (set widgets.prompt (prompt-area-widget.create buf-id
+                              {:wrap-write with-internal-edit}))
         (set widgets.footer (footer-bar-widget.create buf-id win-id state.footer-items))
 
         ;; Keymaps
@@ -228,6 +268,14 @@
         (with-internal-edit
           (fn []
             (widgets.messages.update-message id content)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
+
+    (fn finish-streaming [id]
+      (when (is-open?)
+        (with-internal-edit
+          (fn []
+            (widgets.messages.finish-streaming id)
             (let [end-line (widgets.messages.get-end-line)]
               (widgets.prompt.render end-line))))))
 
@@ -283,15 +331,29 @@
           (when (= 0 (length msg-state.messages))
             (with-internal-edit (fn [] (render-all)))))))
 
-    (fn set-loading [bool]
+    (fn set-status [text]
+      "Set status indicator. text=nil to hide."
       (when (is-open?)
-        (with-internal-edit (fn [] (widgets.prompt.set-loading bool)))))
+        (with-internal-edit
+          (fn []
+            (widgets.prompt.set-status text)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
+
+    (fn set-loading [bool]
+      "Toggle loading state. Shows ⏳ stop when loading, > when idle."
+      (when (is-open?)
+        (with-internal-edit
+          (fn []
+            (widgets.prompt.set-loading bool)
+            (let [end-line (widgets.messages.get-end-line)]
+              (widgets.prompt.render end-line))))))
 
     {: open : close : toggle : is-open? : get-buf-id
-     : append-message : update-message : clear-messages
+     : append-message : update-message : finish-streaming : clear-messages
      : update-header : update-header-item
      : update-footer : update-footer-item
      : set-welcome
-     : submit-prompt : set-loading}))
+     : submit-prompt : set-status : set-loading}))
 
 {: create-chat-ui}

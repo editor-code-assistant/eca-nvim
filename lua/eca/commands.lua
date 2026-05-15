@@ -26,7 +26,7 @@ local function setup(api)
   end
   nvim.nvim_create_user_command("EcaChatSubmit", _6_, {desc = "Submit current prompt"})
   local function _7_()
-    return api["chat-set-loading"](false)
+    return api["chat-set-status"](nil)
   end
   nvim.nvim_create_user_command("EcaChatStop", _7_, {desc = "Stop current ECA response"})
   local function _8_(cmd)
