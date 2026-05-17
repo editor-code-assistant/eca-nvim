@@ -191,6 +191,18 @@
       (set state.streaming-line nil)
       (set state.streaming-col nil)))
 
+  (fn abort-streaming [id]
+    "Stop streaming immediately without flushing remaining chars."
+    (when (= id state.streaming-id)
+      (when state.streaming-timer
+        (set state.streaming-timer nil))
+      ;; Discard queue — don't flush
+      (set state.streaming-queue "")
+      ;; Clear streaming state
+      (set state.streaming-id nil)
+      (set state.streaming-line nil)
+      (set state.streaming-col nil)))
+
   (fn clear []
     (set state.messages [])
     (set state.end-line state.start-line)
@@ -206,7 +218,7 @@
   (fn get-state [] state)
   (fn get-end-line [] state.end-line)
 
-  {: render : append-message : update-message : finish-streaming
+  {: render : append-message : update-message : finish-streaming : abort-streaming
    : clear : get-state : get-end-line : set-start-line : set-welcome})
 
 {: create}

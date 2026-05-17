@@ -20,7 +20,7 @@ local function create(buf_id, _3fopts)
     or_4_ = _5_
   end
   wrap_write = or_4_
-  local state = {["prompt-text"] = "", history = {}, ["history-idx"] = 0, ["prompt-start-line"] = 0, ["status-anchor-line"] = 0, ["ns-id"] = nil, ["status-text"] = nil, ["status-timer"] = nil, ["status-dots"] = 0, ["status-extmark-id"] = nil, ["stop-extmark-id"] = nil, ["loading?"] = false}
+  local state = {["prompt-text"] = "", history = {}, ["history-idx"] = 0, ["prompt-start-line"] = 0, ["status-anchor-line"] = 0, ["ns-id"] = nil, ["status-text"] = nil, ["status-timer"] = nil, ["status-dots"] = 0, ["status-extmark-id"] = nil, ["loading?"] = false}
   local idle_prefix = prompt_prefix_component.render({["loading?"] = false})
   local loading_prefix = prompt_prefix_component.render({["loading?"] = true})
   local function ensure_ns()
@@ -48,25 +48,8 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
-  local function update_stop_virt()
-    local ns = ensure_ns()
-    if state["stop-extmark-id"] then
-      pcall(nvim.nvim_buf_del_extmark, buf_id, ns, state["stop-extmark-id"])
-      state["stop-extmark-id"] = nil
-    else
-    end
-    if state["loading?"] then
-      local total = nvim.nvim_buf_line_count(buf_id)
-      local anchor = math.min(state["prompt-start-line"], (total - 1))
-      state["stop-extmark-id"] = nvim.nvim_buf_set_extmark(buf_id, ns, anchor, 0, {virt_lines_above = true, virt_lines = {{{loading_prefix.text, loading_prefix["hl-group"]}, {"stop", "EcaStopLabel"}}}})
-      return nil
-    else
-      return nil
-    end
-  end
   local function update_virt_lines()
-    update_status_virt()
-    return update_stop_virt()
+    return update_status_virt()
   end
   local function find_prompt_line()
     local total = nvim.nvim_buf_line_count(buf_id)
@@ -265,7 +248,7 @@ local function create(buf_id, _3fopts)
       return set_text("")
     end
   end
-  local function _30_()
+  local function _28_()
     local event = vim.v.event
     local lines = event.regcontents
     local first = (lines[1] or "")
@@ -278,18 +261,18 @@ local function create(buf_id, _3fopts)
         reg = "\""
       end
       lines[1] = stripped
-      local function _32_()
+      local function _30_()
         vim.fn.setreg(reg, lines, event.regtype)
         vim.fn.setreg("+", lines, event.regtype)
         return vim.fn.setreg("*", lines, event.regtype)
       end
-      return vim.schedule(_32_)
+      return vim.schedule(_30_)
     else
       return nil
     end
   end
-  nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _30_})
-  local function _34_()
+  nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _28_})
+  local function _32_()
     local cursor = nvim.nvim_win_get_cursor(0)
     local row = cursor[1]
     local col = cursor[2]
@@ -301,7 +284,7 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
-  nvim.nvim_create_autocmd("CursorMovedI", {buffer = buf_id, callback = _34_})
+  nvim.nvim_create_autocmd("CursorMovedI", {buffer = buf_id, callback = _32_})
   local function get_state()
     return state
   end

@@ -245,6 +245,21 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
+  local function abort_streaming(id)
+    if (id == state["streaming-id"]) then
+      if state["streaming-timer"] then
+        state["streaming-timer"] = nil
+      else
+      end
+      state["streaming-queue"] = ""
+      state["streaming-id"] = nil
+      state["streaming-line"] = nil
+      state["streaming-col"] = nil
+      return nil
+    else
+      return nil
+    end
+  end
   local function clear()
     state.messages = {}
     state["end-line"] = state["start-line"]
@@ -265,6 +280,6 @@ local function create(buf_id, _3fopts)
   local function get_end_line()
     return state["end-line"]
   end
-  return {render = render, ["append-message"] = append_message, ["update-message"] = update_message, ["finish-streaming"] = finish_streaming, clear = clear, ["get-state"] = get_state, ["get-end-line"] = get_end_line, ["set-start-line"] = set_start_line, ["set-welcome"] = set_welcome}
+  return {render = render, ["append-message"] = append_message, ["update-message"] = update_message, ["finish-streaming"] = finish_streaming, ["abort-streaming"] = abort_streaming, clear = clear, ["get-state"] = get_state, ["get-end-line"] = get_end_line, ["set-start-line"] = set_start_line, ["set-welcome"] = set_welcome}
 end
 return {create = create}

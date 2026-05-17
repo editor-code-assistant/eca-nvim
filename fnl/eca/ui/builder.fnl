@@ -119,7 +119,9 @@
     (local state {:header-items []
                   :footer-items []
                   :welcome nil
-                  :steering-queue []})
+                  :steering-queue []
+                  :stop-line nil
+                  :stopped-msg-id nil})
 
     (var buf-id nil)
     (var win-id nil)
@@ -167,13 +169,14 @@
       (let [msg-end (widgets.messages.get-end-line)
             ;; Save prompt text before clearing the buffer (safe on first render)
             live-text (widgets.prompt.save-live-text)
-            ;; Build all lines to write at once: separator + context + steering + prompt
+            ;; Build all lines: separator + context + steering + stop + prompt
             sep (make-separator)
             has-ctx? (widgets.context.has-items?)
             has-steering? (widgets.steering.has-items?)
+            is-loading? (. (widgets.prompt.get-state) :loading?)
             prompt-text-lines (vim.split (or live-text "") "\n" {:plain true})
             all-lines [sep]]
-        ;; Context line (if items exist)
+        ;; Context line
         (when has-ctx?
           (let [ctx-items (widgets.context.get-state)
                 parts (icollect [_ item (ipairs ctx-items.items)] item.text)]
@@ -181,12 +184,15 @@
         ;; Steering line (just "-" as real text; rest is virtual)
         (when has-steering?
           (table.insert all-lines "-"))
+        ;; Stop line (just "stop" as real text; ⏳ is virtual)
+        (when is-loading?
+          (table.insert all-lines "stop"))
         ;; Prompt lines ("> " prefix on first line)
         (let [idle-prefix "> "]
           (table.insert all-lines (.. idle-prefix (or (. prompt-text-lines 1) "")))
           (for [i 2 (length prompt-text-lines)]
             (table.insert all-lines (. prompt-text-lines i))))
-        ;; Write everything in one shot — replaces from msg-end to end of buffer
+        ;; Write everything in one shot
         (nvim.nvim_buf_set_lines buf-id msg-end -1 false all-lines)
         ;; Compute line positions
         (var offset 1) ;; 1 = after separator
@@ -196,7 +202,11 @@
               steering-line (when has-steering?
                               (let [l (+ msg-end offset)]
                                 (set offset (+ offset 1)) l))
+              stop-line-pos (when is-loading?
+                              (let [l (+ msg-end offset)]
+                                (set offset (+ offset 1)) l))
               prompt-start (+ msg-end offset)]
+          (set state.stop-line stop-line-pos)
           (widgets.prompt.set-text-internal (or live-text ""))
           ;; Separator highlight
           (let [ns (nvim.nvim_create_namespace "eca-separator")]
@@ -208,9 +218,20 @@
           ;; Context highlight
           (when ctx-line
             (widgets.context.render-highlights ctx-line))
-          ;; Steering highlight (inline virtual text)
+          ;; Steering highlight
           (when steering-line
             (widgets.steering.render-highlights steering-line))
+          ;; Stop highlight (inline virtual text for ⏳ prefix)
+          (when stop-line-pos
+            (let [ns (nvim.nvim_create_namespace "eca-stop-line")]
+              (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
+              ;; ⏳ prefix as inline virtual text
+              (nvim.nvim_buf_set_extmark buf-id ns stop-line-pos 0
+                {:virt_text [["⏳ " :EcaSpinner]]
+                 :virt_text_pos :inline})
+              ;; Highlight "stop" text
+              (nvim.nvim_buf_set_extmark buf-id ns stop-line-pos 0
+                {:end_col 4 :hl_group :EcaStopLabel})))
           ;; Prompt render (just highlights + virt lines, buffer already written)
           (widgets.prompt.render-highlights prompt-start))))
 
@@ -244,13 +265,31 @@
     (fn stop []
       "Stop everything: streaming, loading, status, steering."
       (cancel-steering)
+      ;; Abort any active streaming (don't flush remaining chars)
+      (let [msg-state (widgets.messages.get-state)]
+        (when msg-state.streaming-id
+          (set state.stopped-msg-id msg-state.streaming-id)
+          (with-internal-edit
+            (fn []
+              (widgets.messages.abort-streaming msg-state.streaming-id)
+              (render-prompt-area)))))
       (when on-stop (on-stop)))
+
+    (fn is-on-stop-line? []
+      (and state.stop-line
+           (let [cursor (nvim.nvim_win_get_cursor 0)
+                 row (. cursor 1)]
+             (= row (+ state.stop-line 1)))))
 
     (fn submit-prompt []
       (when (is-open?)
-        (if (widgets.steering.is-on-steering-line?)
+        (if
           ;; Cursor on steering [-] → cancel steering
+          (widgets.steering.is-on-steering-line?)
           (do (cancel-steering) (focus-prompt))
+          ;; Cursor on stop → stop everything
+          (is-on-stop-line?)
+          (stop)
           ;; Normal flow
           (let [prompt-state (widgets.prompt.get-state)
                 text (widgets.prompt.get-text)]
@@ -297,7 +336,9 @@
                                      (set s.status-anchor-line (+ s.status-anchor-line 1))
                                      (when (> st.start-line 0)
                                        (set st.start-line (+ st.start-line 1))
-                                       (set st.end-line (+ st.end-line 1)))))}))
+                                       (set st.end-line (+ st.end-line 1)))
+                                     (when state.stop-line
+                                       (set state.stop-line (+ state.stop-line 1)))))}))
         (when state.welcome
           (widgets.messages.set-welcome
             {:lines [state.welcome ""]
@@ -343,6 +384,9 @@
     ;; Message API
     (fn append-message [msg]
       (when (is-open?)
+        ;; Clear stopped ID when a new message cycle begins
+        (when msg.streaming?
+          (set state.stopped-msg-id nil))
         (with-internal-edit
           (fn []
             (widgets.messages.append-message msg)
@@ -353,7 +397,7 @@
         (focus-prompt)))
 
     (fn update-message [id content]
-      (when (is-open?)
+      (when (and (is-open?) (not= id state.stopped-msg-id))
         (let [msg-state (widgets.messages.get-state)]
           (with-internal-edit
             (fn []
@@ -364,7 +408,7 @@
                 (render-prompt-area)))))))
 
     (fn finish-streaming [id]
-      (when (is-open?)
+      (when (and (is-open?) (not= id state.stopped-msg-id))
         (with-internal-edit
           (fn []
             (widgets.messages.finish-streaming id)
@@ -443,9 +487,11 @@
             (render-prompt-area)))))
 
     (fn set-loading [bool]
-      "Toggle loading state. When turning off, flush queued prompt."
+      "Toggle loading state. When turning off, flush steering queue."
       (when (is-open?)
         (widgets.prompt.set-loading bool)
+        ;; Re-render to add/remove the stop line
+        (with-internal-edit (fn [] (render-prompt-area)))
         (focus-prompt)
         ;; When loading finishes, check for queued steering messages
         (when (and (not bool) (> (length state.steering-queue) 0))
