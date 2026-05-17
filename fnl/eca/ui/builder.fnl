@@ -302,7 +302,14 @@
               (let [s (widgets.prompt.get-state)]
                 {:prompt-start-line (or s.prompt-start-line 0)
                  :loading? s.loading?}))
-            focus-prompt))))
+            focus-prompt))
+
+        ;; Re-render on window resize so separator adjusts to new width
+        (nvim.nvim_create_autocmd :WinResized
+          {:callback (fn []
+                       (when (is-open?)
+                         (with-internal-edit (fn [] (render-prompt-area)))
+                         (focus-prompt)))})))
 
     (fn toggle []
       (if (is-open?) (close) (open)))
