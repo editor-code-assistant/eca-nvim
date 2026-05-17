@@ -5,6 +5,7 @@
 (local header-bar-widget (require :eca.ui.widgets.header-bar))
 (local message-list-widget (require :eca.ui.widgets.message-list))
 (local context-area-widget (require :eca.ui.widgets.context-area))
+(local steering-area-widget (require :eca.ui.widgets.steering-area))
 (local prompt-area-widget (require :eca.ui.widgets.prompt-area))
 (local footer-bar-widget (require :eca.ui.widgets.footer-bar))
 
@@ -118,12 +119,12 @@
     (local state {:header-items []
                   :footer-items []
                   :welcome nil
-                  :queued-prompt nil})
+                  :steering-queue []})
 
     (var buf-id nil)
     (var win-id nil)
     (var guard nil)
-    (local widgets {:header nil :messages nil :context nil :prompt nil :footer nil})
+    (local widgets {:header nil :messages nil :context nil :steering nil :prompt nil :footer nil})
 
     (fn is-open? []
       (and (not= nil buf-id)
@@ -166,16 +167,20 @@
       (let [msg-end (widgets.messages.get-end-line)
             ;; Save prompt text before clearing the buffer (safe on first render)
             live-text (widgets.prompt.save-live-text)
-            ;; Build all lines to write at once: separator + context + prompt
+            ;; Build all lines to write at once: separator + context + steering + prompt
             sep (make-separator)
-            ctx-items (widgets.context.get-state)
             has-ctx? (widgets.context.has-items?)
+            has-steering? (widgets.steering.has-items?)
             prompt-text-lines (vim.split (or live-text "") "\n" {:plain true})
             all-lines [sep]]
         ;; Context line (if items exist)
         (when has-ctx?
-          (let [parts (icollect [_ item (ipairs ctx-items.items)] item.text)]
+          (let [ctx-items (widgets.context.get-state)
+                parts (icollect [_ item (ipairs ctx-items.items)] item.text)]
             (table.insert all-lines (table.concat parts " "))))
+        ;; Steering line (just "-" as real text; rest is virtual)
+        (when has-steering?
+          (table.insert all-lines "-"))
         ;; Prompt lines ("> " prefix on first line)
         (let [idle-prefix "> "]
           (table.insert all-lines (.. idle-prefix (or (. prompt-text-lines 1) "")))
@@ -183,8 +188,15 @@
             (table.insert all-lines (. prompt-text-lines i))))
         ;; Write everything in one shot — replaces from msg-end to end of buffer
         (nvim.nvim_buf_set_lines buf-id msg-end -1 false all-lines)
-        ;; Update prompt internal state
-        (let [prompt-start (+ msg-end (if has-ctx? 2 1))]
+        ;; Compute line positions
+        (var offset 1) ;; 1 = after separator
+        (let [ctx-line (when has-ctx?
+                         (let [l (+ msg-end offset)]
+                           (set offset (+ offset 1)) l))
+              steering-line (when has-steering?
+                              (let [l (+ msg-end offset)]
+                                (set offset (+ offset 1)) l))
+              prompt-start (+ msg-end offset)]
           (widgets.prompt.set-text-internal (or live-text ""))
           ;; Separator highlight
           (let [ns (nvim.nvim_create_namespace "eca-separator")]
@@ -194,8 +206,11 @@
           ;; Status anchors to separator
           (widgets.prompt.set-status-anchor-line msg-end)
           ;; Context highlight
-          (when has-ctx?
-            (widgets.context.render-highlights (+ msg-end 1)))
+          (when ctx-line
+            (widgets.context.render-highlights ctx-line))
+          ;; Steering highlight (inline virtual text)
+          (when steering-line
+            (widgets.steering.render-highlights steering-line))
           ;; Prompt render (just highlights + virt lines, buffer already written)
           (widgets.prompt.render-highlights prompt-start))))
 
@@ -217,13 +232,13 @@
         (set win-id nil)))
 
     (fn cancel-steering []
-      "Cancel queued steering message but keep waiting for response."
-      (when state.queued-prompt
-        (set state.queued-prompt nil)
+      "Cancel all queued steering messages but keep waiting for response."
+      (when (> (length state.steering-queue) 0)
+        (set state.steering-queue [])
         (when (is-open?)
           (with-internal-edit
             (fn []
-              (widgets.prompt.set-steering nil)
+              (widgets.steering.clear)
               (render-prompt-area))))))
 
     (fn stop []
@@ -233,25 +248,29 @@
 
     (fn submit-prompt []
       (when (is-open?)
-        (let [prompt-state (widgets.prompt.get-state)
-              text (widgets.prompt.get-text)]
-          (if prompt-state.loading?
-            ;; During loading: always queue as steering
-            (when (and text (not= "" text))
-              (set state.queued-prompt text)
-              (widgets.prompt.add-to-history text)
-              (with-internal-edit
-                (fn []
-                  (widgets.prompt.clear)
-                  (widgets.prompt.set-steering text)
-                  (render-prompt-area)))
-              (focus-prompt))
-            ;; Normal: submit immediately
-            (when (and text (not= "" text))
-              (widgets.prompt.add-to-history text)
-              (with-internal-edit (fn [] (widgets.prompt.clear)))
-              (focus-prompt)
-              (when on-submit (on-submit text)))))))
+        (if (widgets.steering.is-on-steering-line?)
+          ;; Cursor on steering [-] → cancel steering
+          (do (cancel-steering) (focus-prompt))
+          ;; Normal flow
+          (let [prompt-state (widgets.prompt.get-state)
+                text (widgets.prompt.get-text)]
+            (if prompt-state.loading?
+              ;; During loading: append to steering queue
+              (when (and text (not= "" text))
+                (table.insert state.steering-queue text)
+                (widgets.prompt.add-to-history text)
+                (with-internal-edit
+                  (fn []
+                    (widgets.prompt.clear)
+                    (widgets.steering.set-items state.steering-queue)
+                    (render-prompt-area)))
+                (focus-prompt))
+              ;; Normal: submit immediately
+              (when (and text (not= "" text))
+                (widgets.prompt.add-to-history text)
+                (with-internal-edit (fn [] (widgets.prompt.clear)))
+                (focus-prompt)
+                (when on-submit (on-submit text))))))))
 
     ;; Open
 
@@ -272,15 +291,20 @@
                                  :on-line-inserted
                                  (fn []
                                    ;; Everything below the streaming area moved down
-                                   (let [s (widgets.prompt.get-state)]
+                                   (let [s (widgets.prompt.get-state)
+                                         st (widgets.steering.get-state)]
                                      (set s.prompt-start-line (+ s.prompt-start-line 1))
-                                     (set s.status-anchor-line (+ s.status-anchor-line 1))))}))
+                                     (set s.status-anchor-line (+ s.status-anchor-line 1))
+                                     (when (> st.start-line 0)
+                                       (set st.start-line (+ st.start-line 1))
+                                       (set st.end-line (+ st.end-line 1)))))}))
         (when state.welcome
           (widgets.messages.set-welcome
             {:lines [state.welcome ""]
              :highlights [{:line-idx 0 :hl-group :EcaWelcome :col-start 0
                            :col-end (length state.welcome)}]}))
         (set widgets.context (context-area-widget.create buf-id))
+        (set widgets.steering (steering-area-widget.create buf-id))
         (set widgets.prompt (prompt-area-widget.create buf-id
                               {:wrap-write with-internal-edit}))
         (set widgets.footer (footer-bar-widget.create buf-id win-id state.footer-items))
@@ -423,16 +447,16 @@
       (when (is-open?)
         (widgets.prompt.set-loading bool)
         (focus-prompt)
-        ;; When loading finishes, check for queued steering message
-        (when (and (not bool) state.queued-prompt)
-          (let [queued state.queued-prompt]
-            (set state.queued-prompt nil)
+        ;; When loading finishes, check for queued steering messages
+        (when (and (not bool) (> (length state.steering-queue) 0))
+          (let [combined (table.concat state.steering-queue "\n")]
+            (set state.steering-queue [])
             (with-internal-edit
               (fn []
-                (widgets.prompt.set-steering nil)
+                (widgets.steering.clear)
                 (render-prompt-area)))
-            ;; Submit the queued message
-            (when on-submit (on-submit queued))))))
+            ;; Submit all queued messages as one combined message
+            (when on-submit (on-submit combined))))))
 
     {: open : close : toggle : is-open? : get-buf-id
      : append-message : update-message : finish-streaming : clear-messages

@@ -16,8 +16,7 @@
                 :status-timer nil
                 :status-dots 0
                 :status-extmark-id nil
-                :stop-extmark-id nil
-                :steering-text nil})
+                :stop-extmark-id nil})
 
   (local idle-prefix (prompt-prefix-component.render {:loading? false}))
   (local loading-prefix (prompt-prefix-component.render {:loading? true}))
@@ -66,6 +65,17 @@
     (update-status-virt)
     (update-stop-virt))
 
+  (fn find-prompt-line []
+    "Find the actual prompt line by scanning backwards from end of buffer.
+     Returns 0-based line index or nil."
+    (let [total (nvim.nvim_buf_line_count buf-id)]
+      (var found nil)
+      (for [i (- total 1) 0 -1 &until found]
+        (let [line (or (. (nvim.nvim_buf_get_lines buf-id i (+ i 1) false) 1) "")]
+          (when (vim.startswith line idle-prefix.text)
+            (set found i))))
+      found))
+
   (fn read-live-prompt-text []
     "Read the user's current text from prompt-start-line to end of buffer.
      Supports multi-line input."
@@ -94,7 +104,7 @@
     state.prompt-text)
 
   (fn render [start-line ?skip-read]
-    "Render: steering + stop (if loading) + prompt.
+    "Render: prompt area (stop is virtual text).
      Preserves user's live input text from buffer unless ?skip-read is true."
     ;; Read live text before overwriting (skip when called from builder re-render
     ;; because the buffer was already cleared and state.prompt-text is correct)
@@ -105,13 +115,7 @@
     (let [ns (ensure-ns)
           _ (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
           lines []]
-      ;; 1. Steering line (queued message)
-      (when state.steering-text
-        (let [truncated (if (> (length state.steering-text) 50)
-                          (.. (string.sub state.steering-text 1 50) "...")
-                          state.steering-text)]
-          (table.insert lines (.. "Steering: " truncated " [-]"))))
-      ;; 2. Prompt (always "> " + preserved user text, may be multi-line)
+      ;; 1. Prompt (always "> " + preserved user text, may be multi-line)
       (let [text-lines (vim.split state.prompt-text "\n" {:plain true})]
         (table.insert lines (.. idle-prefix.text (or (. text-lines 1) "")))
         (for [i 2 (length text-lines)]
@@ -123,18 +127,6 @@
       ;; Compute prompt line index (always the last rendered line)
       (let [prompt-line-idx (- (+ start-line (length lines)) 1)]
         (set state.prompt-start-line prompt-line-idx)
-
-        ;; Highlight steering line (one above prompt)
-        (when state.steering-text
-          (let [steering-line-idx (- prompt-line-idx 1)
-                line-text (. lines (+ (- steering-line-idx start-line) 1))
-                cancel-start (- (length line-text) 3)]
-            (nvim.nvim_buf_set_extmark buf-id ns steering-line-idx 0
-              {:end_col (math.min 10 (length line-text))
-               :hl_group :EcaSteeringLabel})
-            (nvim.nvim_buf_set_extmark buf-id ns steering-line-idx cancel-start
-              {:end_col (length line-text)
-               :hl_group :EcaStopLabel})))
 
         ;; Highlight prompt prefix "> "
         (let [buf-line (or (. (nvim.nvim_buf_get_lines buf-id prompt-line-idx (+ prompt-line-idx 1) false) 1) "")]
@@ -197,9 +189,7 @@
     "Set the buffer line where status virtual text should be anchored."
     (set state.status-anchor-line line))
 
-  (fn set-steering [text]
-    "Set steering/queued message text. nil to clear."
-    (set state.steering-text text))
+
 
   ;; ── Text management ───────────────────────────────────
 
@@ -218,17 +208,17 @@
 
   (fn set-text [text]
     (set state.prompt-text (or text ""))
-    (when (not state.loading?)
-      (let [start state.prompt-start-line
-            total (nvim.nvim_buf_line_count buf-id)
-            text-lines (vim.split state.prompt-text "\n" {:plain true})
-            buf-lines []]
-        ;; First line gets the "> " prefix
-        (table.insert buf-lines (.. idle-prefix.text (or (. text-lines 1) "")))
-        ;; Remaining lines go as-is
-        (for [i 2 (length text-lines)]
-          (table.insert buf-lines (. text-lines i)))
-        (nvim.nvim_buf_set_lines buf-id start total false buf-lines))))
+    (let [prompt-line (or (find-prompt-line) state.prompt-start-line)
+          total (nvim.nvim_buf_line_count buf-id)
+          text-lines (vim.split state.prompt-text "\n" {:plain true})
+          buf-lines []]
+      ;; First line gets the "> " prefix
+      (table.insert buf-lines (.. idle-prefix.text (or (. text-lines 1) "")))
+      ;; Remaining lines go as-is
+      (for [i 2 (length text-lines)]
+        (table.insert buf-lines (. text-lines i)))
+      (when (<= prompt-line (- total 1))
+        (nvim.nvim_buf_set_lines buf-id prompt-line total false buf-lines))))
 
   (fn set-text-internal [text]
     "Update internal prompt-text state without writing to the buffer."
@@ -288,7 +278,7 @@
 
   {: render : render-highlights : get-text : save-live-text
    : set-text : set-text-internal : clear
-   : set-status : set-loading : set-steering : set-status-anchor-line
+   : set-status : set-loading : set-status-anchor-line
    : add-to-history : history-prev : history-next
    : get-state})
 

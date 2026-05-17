@@ -20,7 +20,7 @@ local function create(buf_id, _3fopts)
     or_4_ = _5_
   end
   wrap_write = or_4_
-  local state = {["prompt-text"] = "", history = {}, ["history-idx"] = 0, ["prompt-start-line"] = 0, ["status-anchor-line"] = 0, ["ns-id"] = nil, ["status-text"] = nil, ["status-timer"] = nil, ["status-dots"] = 0, ["status-extmark-id"] = nil, ["stop-extmark-id"] = nil, ["steering-text"] = nil, ["loading?"] = false}
+  local state = {["prompt-text"] = "", history = {}, ["history-idx"] = 0, ["prompt-start-line"] = 0, ["status-anchor-line"] = 0, ["ns-id"] = nil, ["status-text"] = nil, ["status-timer"] = nil, ["status-dots"] = 0, ["status-extmark-id"] = nil, ["stop-extmark-id"] = nil, ["loading?"] = false}
   local idle_prefix = prompt_prefix_component.render({["loading?"] = false})
   local loading_prefix = prompt_prefix_component.render({["loading?"] = true})
   local function ensure_ns()
@@ -67,6 +67,19 @@ local function create(buf_id, _3fopts)
   local function update_virt_lines()
     update_status_virt()
     return update_stop_virt()
+  end
+  local function find_prompt_line()
+    local total = nvim.nvim_buf_line_count(buf_id)
+    local found = nil
+    for i = (total - 1), 0, -1 do
+      if found then break end
+      local line = (nvim.nvim_buf_get_lines(buf_id, i, (i + 1), false)[1] or "")
+      if vim.startswith(line, idle_prefix.text) then
+        found = i
+      else
+      end
+    end
+    return found
   end
   local function read_live_prompt_text()
     local total = nvim.nvim_buf_line_count(buf_id)
@@ -115,16 +128,6 @@ local function create(buf_id, _3fopts)
     local ns = ensure_ns()
     local _ = nvim.nvim_buf_clear_namespace(buf_id, ns, 0, -1)
     local lines = {}
-    if state["steering-text"] then
-      local truncated
-      if (#state["steering-text"] > 50) then
-        truncated = (string.sub(state["steering-text"], 1, 50) .. "...")
-      else
-        truncated = state["steering-text"]
-      end
-      table.insert(lines, ("Steering: " .. truncated .. " [-]"))
-    else
-    end
     do
       local text_lines = vim.split(state["prompt-text"], "\n", {plain = true})
       table.insert(lines, (idle_prefix.text .. (text_lines[1] or "")))
@@ -136,14 +139,6 @@ local function create(buf_id, _3fopts)
     do
       local prompt_line_idx = ((start_line + #lines) - 1)
       state["prompt-start-line"] = prompt_line_idx
-      if state["steering-text"] then
-        local steering_line_idx = (prompt_line_idx - 1)
-        local line_text = lines[((steering_line_idx - start_line) + 1)]
-        local cancel_start = (#line_text - 3)
-        nvim.nvim_buf_set_extmark(buf_id, ns, steering_line_idx, 0, {end_col = math.min(10, #line_text), hl_group = "EcaSteeringLabel"})
-        nvim.nvim_buf_set_extmark(buf_id, ns, steering_line_idx, cancel_start, {end_col = #line_text, hl_group = "EcaStopLabel"})
-      else
-      end
       local buf_line = (nvim.nvim_buf_get_lines(buf_id, prompt_line_idx, (prompt_line_idx + 1), false)[1] or "")
       if (#buf_line >= #idle_prefix.text) then
         nvim.nvim_buf_set_extmark(buf_id, ns, prompt_line_idx, 0, {end_col = #idle_prefix.text, hl_group = idle_prefix["hl-group"]})
@@ -207,10 +202,6 @@ local function create(buf_id, _3fopts)
     state["status-anchor-line"] = line
     return nil
   end
-  local function set_steering(text)
-    state["steering-text"] = text
-    return nil
-  end
   local function get_text()
     local total = nvim.nvim_buf_line_count(buf_id)
     local start = state["prompt-start-line"]
@@ -227,16 +218,16 @@ local function create(buf_id, _3fopts)
   end
   local function set_text(text)
     state["prompt-text"] = (text or "")
-    if not state["loading?"] then
-      local start = state["prompt-start-line"]
-      local total = nvim.nvim_buf_line_count(buf_id)
-      local text_lines = vim.split(state["prompt-text"], "\n", {plain = true})
-      local buf_lines = {}
-      table.insert(buf_lines, (idle_prefix.text .. (text_lines[1] or "")))
-      for i = 2, #text_lines do
-        table.insert(buf_lines, text_lines[i])
-      end
-      return nvim.nvim_buf_set_lines(buf_id, start, total, false, buf_lines)
+    local prompt_line = (find_prompt_line() or state["prompt-start-line"])
+    local total = nvim.nvim_buf_line_count(buf_id)
+    local text_lines = vim.split(state["prompt-text"], "\n", {plain = true})
+    local buf_lines = {}
+    table.insert(buf_lines, (idle_prefix.text .. (text_lines[1] or "")))
+    for i = 2, #text_lines do
+      table.insert(buf_lines, text_lines[i])
+    end
+    if (prompt_line <= (total - 1)) then
+      return nvim.nvim_buf_set_lines(buf_id, prompt_line, total, false, buf_lines)
     else
       return nil
     end
@@ -274,7 +265,7 @@ local function create(buf_id, _3fopts)
       return set_text("")
     end
   end
-  local function _32_()
+  local function _30_()
     local event = vim.v.event
     local lines = event.regcontents
     local first = (lines[1] or "")
@@ -287,18 +278,18 @@ local function create(buf_id, _3fopts)
         reg = "\""
       end
       lines[1] = stripped
-      local function _34_()
+      local function _32_()
         vim.fn.setreg(reg, lines, event.regtype)
         vim.fn.setreg("+", lines, event.regtype)
         return vim.fn.setreg("*", lines, event.regtype)
       end
-      return vim.schedule(_34_)
+      return vim.schedule(_32_)
     else
       return nil
     end
   end
-  nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _32_})
-  local function _36_()
+  nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _30_})
+  local function _34_()
     local cursor = nvim.nvim_win_get_cursor(0)
     local row = cursor[1]
     local col = cursor[2]
@@ -310,10 +301,10 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
-  nvim.nvim_create_autocmd("CursorMovedI", {buffer = buf_id, callback = _36_})
+  nvim.nvim_create_autocmd("CursorMovedI", {buffer = buf_id, callback = _34_})
   local function get_state()
     return state
   end
-  return {render = render, ["render-highlights"] = render_highlights, ["get-text"] = get_text, ["save-live-text"] = save_live_text, ["set-text"] = set_text, ["set-text-internal"] = set_text_internal, clear = clear, ["set-status"] = set_status, ["set-loading"] = set_loading, ["set-steering"] = set_steering, ["set-status-anchor-line"] = set_status_anchor_line, ["add-to-history"] = add_to_history, ["history-prev"] = history_prev, ["history-next"] = history_next, ["get-state"] = get_state}
+  return {render = render, ["render-highlights"] = render_highlights, ["get-text"] = get_text, ["save-live-text"] = save_live_text, ["set-text"] = set_text, ["set-text-internal"] = set_text_internal, clear = clear, ["set-status"] = set_status, ["set-loading"] = set_loading, ["set-status-anchor-line"] = set_status_anchor_line, ["add-to-history"] = add_to_history, ["history-prev"] = history_prev, ["history-next"] = history_next, ["get-state"] = get_state}
 end
 return {create = create}
