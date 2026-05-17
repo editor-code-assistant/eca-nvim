@@ -152,13 +152,16 @@ local function create_chat_ui(_14_)
   local function is_open_3f()
     return ((nil ~= buf_id) and nvim.nvim_buf_is_valid(buf_id) and (nil ~= win_id) and nvim.nvim_win_is_valid(win_id))
   end
+  local internal_edit_depth = 0
   local function with_internal_edit(f)
-    if guard then
+    internal_edit_depth = (internal_edit_depth + 1)
+    if (guard and (internal_edit_depth == 1)) then
       guard["set-internal"](true)
     else
     end
     f()
-    if guard then
+    internal_edit_depth = (internal_edit_depth - 1)
+    if (guard and (internal_edit_depth == 0)) then
       guard["set-internal"](false)
       return guard["update-expected-count"]()
     else

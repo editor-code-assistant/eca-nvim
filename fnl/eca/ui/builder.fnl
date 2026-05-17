@@ -131,10 +131,15 @@
            (not= nil win-id)
            (nvim.nvim_win_is_valid win-id)))
 
+    (var internal-edit-depth 0)
+
     (fn with-internal-edit [f]
-      (when guard (guard.set-internal true))
+      (set internal-edit-depth (+ internal-edit-depth 1))
+      (when (and guard (= internal-edit-depth 1))
+        (guard.set-internal true))
       (f)
-      (when guard
+      (set internal-edit-depth (- internal-edit-depth 1))
+      (when (and guard (= internal-edit-depth 0))
         (guard.set-internal false)
         (guard.update-expected-count)))
 
