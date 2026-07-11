@@ -7,39 +7,12 @@ local context_area_widget = require("eca.ui.widgets.context-area")
 local steering_area_widget = require("eca.ui.widgets.steering-area")
 local prompt_area_widget = require("eca.ui.widgets.prompt-area")
 local footer_bar_widget = require("eca.ui.widgets.footer-bar")
-local function disable_statusline_plugins()
-  local ok, lualine = pcall(require, "lualine")
-  if ok then
-    local config = lualine.get_config()
-    local disabled = (config.options.disabled_filetypes or {})
-    if not disabled.statusline then
-      disabled["statusline"] = {}
-    else
-    end
-    local found = false
-    for _, ft in ipairs(disabled.statusline) do
-      if (ft == "eca-chat") then
-        found = true
-      else
-      end
-    end
-    if not found then
-      table.insert(disabled.statusline, "eca-chat")
-    else
-    end
-    config.options["disabled_filetypes"] = disabled
-    return lualine.setup(config)
-  else
-    return nil
-  end
-end
 local function setup_chat_buffer(buf)
   nvim.nvim_buf_set_name(buf, "ECA Chat")
   nvim.nvim_set_option_value("buftype", "nofile", {buf = buf})
   nvim.nvim_set_option_value("bufhidden", "hide", {buf = buf})
   nvim.nvim_set_option_value("swapfile", false, {buf = buf})
-  nvim.nvim_set_option_value("filetype", "eca-chat", {buf = buf})
-  return disable_statusline_plugins()
+  return nvim.nvim_set_option_value("filetype", "eca-chat", {buf = buf})
 end
 local function setup_chat_window(win)
   nvim.nvim_set_option_value("number", false, {win = win})
@@ -113,7 +86,7 @@ local function setup_edit_guard(buf_id, render_all_fn, get_prompt_state, focus_p
       local lines_deleted_3f = (last_line > new_last_line)
       local damaged_3f = ((first_line < prompt_line) or ((first_line <= prompt_line) and lines_deleted_3f))
       if damaged_3f then
-        local function _10_()
+        local function _6_()
           if nvim.nvim_buf_is_valid(buf) then
             local user_lines = salvage_user_text(buf, prompt_line)
             return restore_with_user_text(buf, user_lines)
@@ -121,7 +94,7 @@ local function setup_edit_guard(buf_id, render_all_fn, get_prompt_state, focus_p
             return nil
           end
         end
-        return vim.schedule(_10_)
+        return vim.schedule(_6_)
       else
         return nil
       end
@@ -139,10 +112,10 @@ local function setup_edit_guard(buf_id, render_all_fn, get_prompt_state, focus_p
   end
   return {["set-internal"] = set_internal, ["update-expected-count"] = update_expected_count}
 end
-local function create_chat_ui(_14_)
-  local on_submit = _14_["on-submit"]
-  local on_stop = _14_["on-stop"]
-  local opts = _14_.opts
+local function create_chat_ui(_10_)
+  local on_submit = _10_["on-submit"]
+  local on_stop = _10_["on-stop"]
+  local opts = _10_.opts
   local ui_config = (opts.ui or {})
   local config = {width = (ui_config.width or 0.4), position = (ui_config.position or "right"), keymaps = (opts.keymaps or {})}
   local state = {["header-items"] = {}, ["footer-items"] = {}, welcome = nil, ["steering-queue"] = {}, ["stop-line"] = nil, ["stopped-msg-id"] = nil}
@@ -287,7 +260,7 @@ local function create_chat_ui(_14_)
     return widgets.prompt["render-highlights"](prompt_start)
   end
   local function render_all()
-    local function _29_()
+    local function _25_()
       do
         local header_lines = widgets.header.render()
         widgets.messages["set-start-line"](header_lines)
@@ -300,7 +273,7 @@ local function create_chat_ui(_14_)
         return nil
       end
     end
-    return with_internal_edit(_29_)
+    return with_internal_edit(_25_)
   end
   local function close()
     if is_open_3f() then
@@ -315,11 +288,11 @@ local function create_chat_ui(_14_)
     if (#state["steering-queue"] > 0) then
       state["steering-queue"] = {}
       if is_open_3f() then
-        local function _32_()
+        local function _28_()
           widgets.steering.clear()
           return render_prompt_area()
         end
-        return with_internal_edit(_32_)
+        return with_internal_edit(_28_)
       else
         return nil
       end
@@ -333,11 +306,11 @@ local function create_chat_ui(_14_)
       local msg_state = widgets.messages["get-state"]()
       if msg_state["streaming-id"] then
         state["stopped-msg-id"] = msg_state["streaming-id"]
-        local function _35_()
+        local function _31_()
           widgets.messages["abort-streaming"](msg_state["streaming-id"])
           return render_prompt_area()
         end
-        with_internal_edit(_35_)
+        with_internal_edit(_31_)
       else
       end
     end
@@ -348,13 +321,13 @@ local function create_chat_ui(_14_)
     end
   end
   local function is_on_stop_line_3f()
-    local and_38_ = state["stop-line"]
-    if and_38_ then
+    local and_34_ = state["stop-line"]
+    if and_34_ then
       local cursor = nvim.nvim_win_get_cursor(0)
       local row = cursor[1]
-      and_38_ = (row == (state["stop-line"] + 1))
+      and_34_ = (row == (state["stop-line"] + 1))
     end
-    return and_38_
+    return and_34_
   end
   local function submit_prompt()
     if is_open_3f() then
@@ -370,12 +343,12 @@ local function create_chat_ui(_14_)
           if (text and ("" ~= text)) then
             table.insert(state["steering-queue"], text)
             widgets.prompt["add-to-history"](text)
-            local function _40_()
+            local function _36_()
               widgets.prompt.clear()
               widgets.steering["set-items"](state["steering-queue"])
               return render_prompt_area()
             end
-            with_internal_edit(_40_)
+            with_internal_edit(_36_)
             return focus_prompt()
           else
             return nil
@@ -383,10 +356,10 @@ local function create_chat_ui(_14_)
         else
           if (text and ("" ~= text)) then
             widgets.prompt["add-to-history"](text)
-            local function _42_()
+            local function _38_()
               return widgets.prompt.clear()
             end
-            with_internal_edit(_42_)
+            with_internal_edit(_38_)
             focus_prompt()
             if on_submit then
               return on_submit(text)
@@ -413,7 +386,7 @@ local function create_chat_ui(_14_)
       setup_chat_buffer(buf_id)
       setup_chat_window(win_id)
       widgets.header = header_bar_widget.create(buf_id, win_id, state["header-items"])
-      local function _48_()
+      local function _44_()
         local s = widgets.prompt["get-state"]()
         local st = widgets.steering["get-state"]()
         s["prompt-start-line"] = (s["prompt-start-line"] + 1)
@@ -430,7 +403,7 @@ local function create_chat_ui(_14_)
           return nil
         end
       end
-      widgets.messages = message_list_widget.create(buf_id, {["wrap-write"] = with_internal_edit, ["on-line-inserted"] = _48_})
+      widgets.messages = message_list_widget.create(buf_id, {["wrap-write"] = with_internal_edit, ["on-line-inserted"] = _44_})
       if state.welcome then
         widgets.messages["set-welcome"]({lines = {state.welcome, ""}, highlights = {{["line-idx"] = 0, ["hl-group"] = "EcaWelcome", ["col-start"] = 0, ["col-end"] = #state.welcome}}})
       else
@@ -445,23 +418,23 @@ local function create_chat_ui(_14_)
       nvim.nvim_buf_set_lines(buf_id, 0, -1, false, {""})
       render_all()
       focus_prompt()
-      local function _52_()
+      local function _48_()
         local s = widgets.prompt["get-state"]()
         return {["prompt-start-line"] = (s["prompt-start-line"] or 0), ["loading?"] = s["loading?"]}
       end
-      guard = setup_edit_guard(buf_id, render_all, _52_, focus_prompt)
-      local function _53_()
+      guard = setup_edit_guard(buf_id, render_all, _48_, focus_prompt)
+      local function _49_()
         if is_open_3f() then
-          local function _54_()
+          local function _50_()
             return render_prompt_area()
           end
-          with_internal_edit(_54_)
+          with_internal_edit(_50_)
           return focus_prompt()
         else
           return nil
         end
       end
-      return nvim.nvim_create_autocmd("WinResized", {callback = _53_})
+      return nvim.nvim_create_autocmd("WinResized", {callback = _49_})
     else
       return nil
     end
@@ -482,11 +455,11 @@ local function create_chat_ui(_14_)
         state["stopped-msg-id"] = nil
       else
       end
-      local function _59_()
+      local function _55_()
         widgets.messages["append-message"](msg)
         return render_prompt_area()
       end
-      with_internal_edit(_59_)
+      with_internal_edit(_55_)
       return focus_prompt()
     else
       return nil
@@ -495,7 +468,7 @@ local function create_chat_ui(_14_)
   local function update_message(id, content)
     if (is_open_3f() and (id ~= state["stopped-msg-id"])) then
       local msg_state = widgets.messages["get-state"]()
-      local function _61_()
+      local function _57_()
         widgets.messages["update-message"](id, content)
         if (id ~= msg_state["streaming-id"]) then
           return render_prompt_area()
@@ -503,29 +476,29 @@ local function create_chat_ui(_14_)
           return nil
         end
       end
-      return with_internal_edit(_61_)
+      return with_internal_edit(_57_)
     else
       return nil
     end
   end
   local function finish_streaming(id)
     if (is_open_3f() and (id ~= state["stopped-msg-id"])) then
-      local function _64_()
+      local function _60_()
         widgets.messages["finish-streaming"](id)
         return render_prompt_area()
       end
-      return with_internal_edit(_64_)
+      return with_internal_edit(_60_)
     else
       return nil
     end
   end
   local function clear_messages()
     if is_open_3f() then
-      local function _66_()
+      local function _62_()
         widgets.messages.clear()
         return render_prompt_area()
       end
-      return with_internal_edit(_66_)
+      return with_internal_edit(_62_)
     else
       return nil
     end
@@ -533,10 +506,10 @@ local function create_chat_ui(_14_)
   local function update_header(new_items)
     state["header-items"] = new_items
     if is_open_3f() then
-      local function _68_()
+      local function _64_()
         return widgets.header.update(new_items)
       end
-      return with_internal_edit(_68_)
+      return with_internal_edit(_64_)
     else
       return nil
     end
@@ -555,10 +528,10 @@ local function create_chat_ui(_14_)
     else
     end
     if is_open_3f() then
-      local function _72_()
+      local function _68_()
         return widgets.header.update(state["header-items"])
       end
-      return with_internal_edit(_72_)
+      return with_internal_edit(_68_)
     else
       return nil
     end
@@ -566,10 +539,10 @@ local function create_chat_ui(_14_)
   local function update_footer(new_items)
     state["footer-items"] = new_items
     if is_open_3f() then
-      local function _74_()
+      local function _70_()
         return widgets.footer.update(new_items)
       end
-      return with_internal_edit(_74_)
+      return with_internal_edit(_70_)
     else
       return nil
     end
@@ -588,10 +561,10 @@ local function create_chat_ui(_14_)
     else
     end
     if is_open_3f() then
-      local function _78_()
+      local function _74_()
         return widgets.footer.update(state["footer-items"])
       end
-      return with_internal_edit(_78_)
+      return with_internal_edit(_74_)
     else
       return nil
     end
@@ -602,10 +575,10 @@ local function create_chat_ui(_14_)
       widgets.messages["set-welcome"]({lines = {text, ""}, highlights = {{["line-idx"] = 0, ["hl-group"] = "EcaWelcome", ["col-start"] = 0, ["col-end"] = #text}}})
       local msg_state = widgets.messages["get-state"]()
       if (0 == #msg_state.messages) then
-        local function _80_()
+        local function _76_()
           return render_all()
         end
-        return with_internal_edit(_80_)
+        return with_internal_edit(_76_)
       else
         return nil
       end
@@ -622,11 +595,11 @@ local function create_chat_ui(_14_)
   end
   local function add_context(ctx)
     if is_open_3f() then
-      local function _84_()
+      local function _80_()
         widgets.context.add(ctx)
         return render_prompt_area()
       end
-      with_internal_edit(_84_)
+      with_internal_edit(_80_)
       return focus_prompt()
     else
       return nil
@@ -634,11 +607,11 @@ local function create_chat_ui(_14_)
   end
   local function remove_context(name)
     if is_open_3f() then
-      local function _86_()
+      local function _82_()
         widgets.context.remove(name)
         return render_prompt_area()
       end
-      return with_internal_edit(_86_)
+      return with_internal_edit(_82_)
     else
       return nil
     end
@@ -646,19 +619,19 @@ local function create_chat_ui(_14_)
   local function set_loading(bool)
     if is_open_3f() then
       widgets.prompt["set-loading"](bool)
-      local function _88_()
+      local function _84_()
         return render_prompt_area()
       end
-      with_internal_edit(_88_)
+      with_internal_edit(_84_)
       focus_prompt()
       if (not bool and (#state["steering-queue"] > 0)) then
         local combined = table.concat(state["steering-queue"], "\n")
         state["steering-queue"] = {}
-        local function _89_()
+        local function _85_()
           widgets.steering.clear()
           return render_prompt_area()
         end
-        with_internal_edit(_89_)
+        with_internal_edit(_85_)
         if on_submit then
           return on_submit(combined)
         else

@@ -1,36 +1,40 @@
-;; footer-bar widget — statusline footer.
-;; Applies our statusline when chat is focused.
-;; Other plugins handle statusline for non-chat windows naturally.
+(import-macros {: if-let} :eca.nfnl.macros)
 
-(local nvim vim.api)
-(local bar (require :eca.ui.components.bar-items))
+(local {: assoc : constantly : get : vals : concat} (require :eca.nfnl.core))
+(local bar-items (require :eca.ui.components.bar-items))
+(local lualine (require :eca.ui.components.lualine))
+
+(comment ; ; (fn lualine-extension [lualine] ;   (let [; config (lualine.get_config) ;         ; extensions (get config :extensions {}) ;         sections {:lualine_a ["~/dev/eca-nvim"] ;                   :lualine_y ["⏱ 0s"] ;                   :lualine_z ["0/200K ($0.00)"]} ;         eca-chat-extension {:init (fn [] (print :hi)) ;                             :filetypes [:eca-chat] ;                             : sections ;                             :inactive_sections sections} ;         ; extensions+eca-chat (assoc extensions :eca-chat eca-chat-extension)
+  ;         ] ;     {:extensions [{:filetypes [:eca-chat] ;                    :sections {:lualine_a ["%#EcaHeaderValue#Teste"]}}]}))
+  (if ;
+      (lualine.enabled?)
+      (lualine.setup [{:value "~/dev/eca-nvim"}
+                      {:value "⏱ 0s"}
+                      {:value "0/200K ($0.00)"}])
+      (vim.notify "no lualine"))
+  ;
+  )
 
 (fn create [buf-id win-id initial-items]
   (var items (or initial-items []))
   (var active false)
 
-  (fn is-global? []
-    (= 3 (nvim.nvim_get_option_value :laststatus {})))
-
   (fn apply []
-    (let [str (bar.render {:items items})]
-      (if (is-global?)
-        (nvim.nvim_set_option_value :statusline str {})
-        (when (and win-id (nvim.nvim_win_is_valid win-id))
-          (nvim.nvim_set_option_value :statusline str {:win win-id})))))
+    (if-let [(ok lualine) (pcall require :lualine)]
+            (let [my-extension {:sections {:lualine_a [:mode]}}]
+              (constantly nil))
+            (let [str (bar-items.render {: items})]
+              (vim.api.nvim_set_option_value :statusline str {}))))
+
+  (vim.api.nvim_create_autocmd [:WinEnter :ColorScheme]
+                               {:callback (fn []
+                                            (when active
+                                              (vim.defer_fn apply 10)))})
 
   (fn render []
     (set active true)
     (apply)
     0)
-
-  ;; Re-apply on focus or after theme change (colorscheme/background change
-  ;; causes statusline plugins to reset, overwriting our statusline)
-  (nvim.nvim_create_autocmd [:WinEnter :ColorScheme]
-    {:callback (fn []
-                 (when (and active (nvim.nvim_buf_is_valid buf-id))
-                   (when (= (nvim.nvim_get_current_buf) buf-id)
-                     (vim.defer_fn (fn [] (apply)) 10))))})
 
   (fn update [new-items]
     (set items new-items)
