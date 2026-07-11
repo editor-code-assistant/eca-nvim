@@ -7,6 +7,19 @@ on:
     branches: [ main ]
 
 jobs:
+  compile-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Neovim
+      uses: rhysd/action-setup-vim@v1
+      with:
+        neovim: true
+
+    - name: Check compiled Lua is in sync with Fennel sources
+      run: make check-compiled
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -19,7 +32,7 @@ jobs:
     - name: Install Neovim
       uses: rhysd/action-setup-vim@v1
       with:
-        neovim: true
+        neovim: ${{ matrix.neovim_version }}
 
     - name: Run tests
       run: make test
