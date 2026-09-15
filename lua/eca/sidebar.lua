@@ -1302,7 +1302,18 @@ function M:handle_chat_content_received(params)
     if details and type(details) == "table" and details.type == "fileChange" then
       local path = details.path
       if path and path ~= "" then
-        local filename = vim.fn.fnamemodify(path, ":t")
+        local absolute_path = vim.fn.fnamemodify(path, ":p")
+
+        -- If this file is already loaded in a buffer, refresh it so users see
+        -- server-side edits immediately without needing :e or :checktime.
+        local bufnr = vim.fn.bufnr(absolute_path)
+        if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) then
+          vim.api.nvim_buf_call(bufnr, function()
+            vim.cmd("checktime")
+          end)
+        end
+
+        local filename = vim.fn.fnamemodify(absolute_path, ":t")
         if filename and filename ~= "" then
           -- Avoid duplicating the filename if it is already present
           if tool_text and tool_text ~= "" then
