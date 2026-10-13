@@ -105,6 +105,8 @@
 
   ;; ── Public API ────────────────────────────────────────
 
+  (var finish-streaming nil)
+
   (fn set-start-line [line]
     (set state.start-line line)
     (when (= state.end-line 0)
@@ -173,7 +175,7 @@
           ;; Non-streaming: re-render
           (render)))))
 
-  (fn finish-streaming [id]
+  (set finish-streaming (fn [id]
     (when (= id state.streaming-id)
       ;; Stop timer
       (when state.streaming-timer
@@ -189,7 +191,7 @@
       ;; Clear streaming state
       (set state.streaming-id nil)
       (set state.streaming-line nil)
-      (set state.streaming-col nil)))
+      (set state.streaming-col nil))))
 
   (fn abort-streaming [id]
     "Stop streaming immediately without flushing remaining chars."

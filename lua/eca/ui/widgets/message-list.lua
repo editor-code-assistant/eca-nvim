@@ -127,6 +127,7 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
+  local finish_streaming = nil
   local function set_start_line(line)
     state["start-line"] = line
     if (state["end-line"] == 0) then
@@ -170,7 +171,7 @@ local function create(buf_id, _3fopts)
   end
   local function append_message(msg)
     if state["streaming-id"] then
-      __fnl_global__finish_2dstreaming(state["streaming-id"])
+      finish_streaming(state["streaming-id"])
     else
     end
     table.insert(state.messages, msg)
@@ -222,7 +223,7 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
-  local function finish_streaming(id)
+  local function _33_(id)
     if (id == state["streaming-id"]) then
       if state["streaming-timer"] then
         state["streaming-timer"] = nil
@@ -245,6 +246,7 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
+  finish_streaming = _33_
   local function abort_streaming(id)
     if (id == state["streaming-id"]) then
       if state["streaming-timer"] then
