@@ -36,3 +36,20 @@ jobs:
 
     - name: Run tests
       run: make test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Lua
+      uses: leafo/gh-actions-lua@v13
+
+    - name: Install LuaRocks
+      uses: leafo/gh-actions-luarocks@v6
+
+    - name: Install fennel-ls
+      run: luarocks install fennel-ls 0.2.1-1
+
+    - name: Run lint
+      run: make lint

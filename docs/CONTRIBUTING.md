@@ -17,7 +17,13 @@
 - `make lint` runs fennel-ls diagnostics; it needs fennel-ls. Override the executable with `FENNEL_LS=/path` or the files with `LINT_FILES="a.fnl b.fnl"`. The unused-definition lint is disabled because fennel-ls cannot see exports registered by the aniseed `module`/`defn` macros.
 - `make clean` removes `deps/`.
 
-CI runs `make check-compiled` and `make test`. The test job uses this Neovim matrix:
+## Tooling setup
+
+Install fennel-ls with Mason in Neovim or with `luarocks install fennel-ls 0.2.1-1`, the version used in CI. For a non-PATH install, set `FENNEL_LS=/path` (for example, Mason's `~/.local/share/nvim/mason/bin/fennel-ls`). `make lint` runs in CI and must pass.
+
+Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settings from `flsproject.fnl`. Formatter setup (`make fmt` / `make fmt-check`) will be added with the formatter.
+
+CI runs `make check-compiled`, `make test`, and `make lint`. The test job uses this Neovim matrix:
 
 - `v0.9.5`
 - `v0.10.0`
