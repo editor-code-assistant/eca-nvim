@@ -75,7 +75,7 @@ The footer bar is a reference example:
 
 ## Tests
 
-Specs use plenary busted and luassert through the project macros in `fnl/spec/eca/macros.fnl`. It is the only file that references the test and assertion libraries, so they can be swapped later.
+Specs use plenary busted and luassert through the project macros in `fnl/spec/eca/macros.fnlm`. It is the only file that references the test and assertion libraries, so they can be swapped later.
 
 ```fennel
 (import-macros {: deftest : testing : is} :spec.eca.macros)

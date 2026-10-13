@@ -1,4 +1,4 @@
-;; [nfnl-macro] This is the single place that binds the test and assertion libraries (plenary.busted and luassert).
+;; This is the single place that binds the test and assertion libraries (plenary.busted and luassert).
 
 (fn deftest [name ...]
   `((. (require :plenary.busted) :describe) ,(tostring name) (fn [] ,...)))
