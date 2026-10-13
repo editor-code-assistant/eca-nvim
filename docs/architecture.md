@@ -48,8 +48,8 @@ The architecture has four distinct layers, each with a clear responsibility:
 
 ### 1. `api.fnl` — Neovim Adapter
 
-A flat module of functions that wrap `vim.api.*`. This is the **only file** in the
-project that calls Neovim APIs directly. Everything else goes through it.
+A flat module of functions that wrap `vim.api.*`. It provides shared Neovim API
+helpers for code that uses them.
 
 ```fennel
 ;; Example usage:
@@ -59,8 +59,7 @@ project that calls Neovim APIs directly. Everything else goes through it.
 (api.create-user-command "EcaChat" my-fn {})
 ```
 
-This keeps the codebase portable and testable — you can mock `api` in tests
-without touching Neovim internals.
+Code can also use Neovim APIs directly when it needs them.
 
 ### 2. Components — Stateless Render Functions
 
@@ -91,8 +90,9 @@ through an injected **canvas**.
 (widget.update {:model "gpt-4o"})
 ```
 
-Widgets receive the canvas at creation time via dependency injection. They never
-import `api.fnl` or `vim.api` directly.
+Widgets receive the canvas at creation time via dependency injection. Some widgets
+also call `vim.api` directly for their own buffer, window, option, and related UI
+work; they do not import `eca.api`.
 
 ### 4. Builder — Orchestrator
 
