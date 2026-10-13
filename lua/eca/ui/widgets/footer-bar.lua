@@ -36,7 +36,7 @@ local function get_state(state)
 end
 local create
 do
-  local function create0(buf_id, win_id, initial_items)
+  local function create0(_buf_id, _win_id, initial_items)
     local state = {items = (initial_items or {}), active = false}
     local function _3_()
       if core.get(state, "active") then

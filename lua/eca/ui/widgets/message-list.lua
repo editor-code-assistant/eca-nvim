@@ -201,7 +201,7 @@ local function create(buf_id, _3fopts)
   local function update_message(id, new_content)
     local msg = find_message(id)
     if msg then
-      msg["content"] = new_content
+      msg.content = new_content
       if (id == state["streaming-id"]) then
         local already = (#state["streaming-displayed"] + #state["streaming-queue"])
         local new_chars

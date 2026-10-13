@@ -162,7 +162,7 @@
   (fn update-message [id new-content]
     (let [msg (find-message id)]
       (when msg
-        (tset msg :content new-content)
+        (set msg.content new-content)
         (if (= id state.streaming-id)
           ;; Queue only NEW characters
           (let [already (+ (length state.streaming-displayed)

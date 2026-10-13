@@ -14,7 +14,7 @@
 - `make compile` compiles the Fennel sources.
 - `make check-compiled` checks that generated Lua is current.
 - `make test` runs the specs.
-- `make lint` runs fennel-ls diagnostics; it needs fennel-ls. Override the executable with `FENNEL_LS=/path` or the files with `LINT_FILES="a.fnl b.fnl"`. It is not run in CI yet.
+- `make lint` runs fennel-ls diagnostics; it needs fennel-ls. Override the executable with `FENNEL_LS=/path` or the files with `LINT_FILES="a.fnl b.fnl"`. The unused-definition lint is disabled because fennel-ls cannot see exports registered by the aniseed `module`/`defn` macros.
 - `make clean` removes `deps/`.
 
 CI runs `make check-compiled` and `make test`. The test job uses this Neovim matrix:

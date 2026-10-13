@@ -14,8 +14,8 @@
 (defn- with-lualine-plugin
   [plugin f]
   (let [original (. package.loaded :lualine)]
-    (tset package.loaded :lualine plugin)
-    (with-cleanup (fn [] (tset package.loaded :lualine original)) f)))
+    (set (. package.loaded :lualine) plugin)
+    (with-cleanup (fn [] (set (. package.loaded :lualine) original)) f)))
 
 (defn- installed-plugin-scenario
   []

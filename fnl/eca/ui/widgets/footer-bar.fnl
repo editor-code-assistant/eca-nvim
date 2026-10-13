@@ -30,7 +30,7 @@
   (core.get state :items))
 
 (defn create
-  [buf-id win-id initial-items]
+  [_buf-id _win-id initial-items]
   (let [state {:items (or initial-items []) :active false}]
     (vim.api.nvim_create_autocmd [:WinEnter :ColorScheme]
                                  {:callback (fn []

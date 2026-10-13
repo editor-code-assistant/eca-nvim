@@ -74,7 +74,7 @@ end
 local function capture_set_option(f)
   local captured = {value = nil}
   local function _14_(name, value, opts)
-    captured["value"] = {name, value, opts}
+    captured.value = {name, value, opts}
     return nil
   end
   local function _15_()

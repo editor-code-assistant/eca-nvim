@@ -79,7 +79,7 @@ local function setup_edit_guard(buf_id, render_all_fn, get_prompt_state, focus_p
       return nil
     end
   end
-  local function on_lines_handler(_, buf, changedtick, first_line, last_line, new_last_line)
+  local function on_lines_handler(_, buf, _changedtick, first_line, last_line, new_last_line)
     if not internal_edit then
       local prompt_state = get_prompt_state()
       local prompt_line = (prompt_state["prompt-start-line"] or 0)
@@ -518,7 +518,7 @@ local function create_chat_ui(_10_)
     local found = false
     for _, item in ipairs(state["header-items"]) do
       if (item.title == title) then
-        item["value"] = new_value
+        item.value = new_value
         found = true
       else
       end
@@ -551,7 +551,7 @@ local function create_chat_ui(_10_)
     local found = false
     for _, item in ipairs(state["footer-items"]) do
       if (item.title == title) then
-        item["value"] = new_value
+        item.value = new_value
         found = true
       else
       end

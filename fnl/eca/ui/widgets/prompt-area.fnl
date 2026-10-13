@@ -4,7 +4,6 @@
 (local prompt-prefix-component (require :eca.ui.components.prompt-prefix))
 
 (fn create [buf-id ?opts]
-  (local wrap-write (or (?. ?opts :wrap-write) (fn [f] (f))))
   (local state {:prompt-text ""
                 :loading? false
                 :history []
@@ -18,7 +17,6 @@
                 :status-extmark-id nil})
 
   (local idle-prefix (prompt-prefix-component.render {:loading? false}))
-  (local loading-prefix (prompt-prefix-component.render {:loading? true}))
 
   (fn ensure-ns []
     (when (= nil state.ns-id)
@@ -250,7 +248,6 @@
                  (let [cursor (nvim.nvim_win_get_cursor 0)
                        row (. cursor 1)
                        col (. cursor 2)
-                       total (nvim.nvim_buf_line_count buf-id)
                        prompt-row (+ state.prompt-start-line 1)]
                    (when (and (= row prompt-row) (< col (length idle-prefix.text)))
                      (nvim.nvim_win_set_cursor 0 [row (length idle-prefix.text)]))))})

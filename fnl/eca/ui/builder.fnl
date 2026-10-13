@@ -61,7 +61,7 @@
     (set internal-edit false)
     (when focus-prompt-fn (focus-prompt-fn)))
 
-  (fn on-lines-handler [_ buf changedtick first-line last-line new-last-line]
+  (fn on-lines-handler [_ buf _changedtick first-line last-line new-last-line]
     (when (not internal-edit)
       (let [prompt-state (get-prompt-state)
             prompt-line (or prompt-state.prompt-start-line 0)
@@ -419,7 +419,7 @@
       (var found false)
       (each [_ item (ipairs state.header-items)]
         (when (= item.title title)
-          (tset item :value new-value)
+          (set item.value new-value)
           (set found true)))
       (when (not found)
         (table.insert state.header-items {: title :value new-value}))
@@ -435,7 +435,7 @@
       (var found false)
       (each [_ item (ipairs state.footer-items)]
         (when (= item.title title)
-          (tset item :value new-value)
+          (set item.value new-value)
           (set found true)))
       (when (not found)
         (table.insert state.footer-items {: title :value new-value}))

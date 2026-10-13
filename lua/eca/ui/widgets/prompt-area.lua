@@ -2,27 +2,8 @@
 local nvim = vim.api
 local prompt_prefix_component = require("eca.ui.components.prompt-prefix")
 local function create(buf_id, _3fopts)
-  local wrap_write
-  local _2_
-  do
-    local t_1_ = _3fopts
-    if (nil ~= t_1_) then
-      t_1_ = t_1_["wrap-write"]
-    else
-    end
-    _2_ = t_1_
-  end
-  local or_4_ = _2_
-  if not or_4_ then
-    local function _5_(f)
-      return f()
-    end
-    or_4_ = _5_
-  end
-  wrap_write = or_4_
   local state = {["prompt-text"] = "", history = {}, ["history-idx"] = 0, ["prompt-start-line"] = 0, ["status-anchor-line"] = 0, ["ns-id"] = nil, ["status-text"] = nil, ["status-timer"] = nil, ["status-dots"] = 0, ["status-extmark-id"] = nil, ["loading?"] = false}
   local idle_prefix = prompt_prefix_component.render({["loading?"] = false})
-  local loading_prefix = prompt_prefix_component.render({["loading?"] = true})
   local function ensure_ns()
     if (nil == state["ns-id"]) then
       state["ns-id"] = nvim.nvim_create_namespace("eca-prompt-area")
@@ -248,7 +229,7 @@ local function create(buf_id, _3fopts)
       return set_text("")
     end
   end
-  local function _28_()
+  local function _23_()
     local event = vim.v.event
     local lines = event.regcontents
     local first = (lines[1] or "")
@@ -261,22 +242,21 @@ local function create(buf_id, _3fopts)
         reg = "\""
       end
       lines[1] = stripped
-      local function _30_()
+      local function _25_()
         vim.fn.setreg(reg, lines, event.regtype)
         vim.fn.setreg("+", lines, event.regtype)
         return vim.fn.setreg("*", lines, event.regtype)
       end
-      return vim.schedule(_30_)
+      return vim.schedule(_25_)
     else
       return nil
     end
   end
-  nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _28_})
-  local function _32_()
+  nvim.nvim_create_autocmd("TextYankPost", {buffer = buf_id, callback = _23_})
+  local function _27_()
     local cursor = nvim.nvim_win_get_cursor(0)
     local row = cursor[1]
     local col = cursor[2]
-    local total = nvim.nvim_buf_line_count(buf_id)
     local prompt_row = (state["prompt-start-line"] + 1)
     if ((row == prompt_row) and (col < #idle_prefix.text)) then
       return nvim.nvim_win_set_cursor(0, {row, #idle_prefix.text})
@@ -284,7 +264,7 @@ local function create(buf_id, _3fopts)
       return nil
     end
   end
-  nvim.nvim_create_autocmd("CursorMovedI", {buffer = buf_id, callback = _32_})
+  nvim.nvim_create_autocmd("CursorMovedI", {buffer = buf_id, callback = _27_})
   local function get_state()
     return state
   end

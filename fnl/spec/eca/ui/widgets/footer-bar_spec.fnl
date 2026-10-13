@@ -64,7 +64,7 @@
   [f]
   (let [captured {:value nil}]
     (with-api-stub :nvim_set_option_value
-      (fn [name value opts] (tset captured :value [name value opts]))
+      (fn [name value opts] (set captured.value [name value opts]))
       (fn []
         (f)
         (. captured :value)))))
