@@ -1,4 +1,7 @@
-.PHONY: test deps clean compile check-compiled
+.PHONY: test deps clean compile check-compiled lint
+
+FENNEL_LS ?= $(shell command -v fennel-ls 2>/dev/null || printf '%s' '$(HOME)/.local/share/nvim/mason/bin/fennel-ls')
+LINT_FILES ?= $(shell find fnl -type f \( -name '*.fnl' -o -name '*.fnlm' \) ! -path 'fnl/eca/nfnl/*' -exec sh -c 'head -n 1 "$$1" | grep -qF '[nfnl-macro]' || printf "%s " "$$1"' _ {} \;)
 
 deps: deps/plenary.nvim
 
@@ -15,6 +18,13 @@ compile:
 check-compiled: compile
 	@git diff --exit-code -- lua/ || \
   	  { echo "ERROR: compiled .lua is stale — run 'make compile' and commit the result"; exit 1; }
+
+lint:
+	@if ! command -v "$(FENNEL_LS)" >/dev/null 2>&1; then \
+	  echo "fennel-ls not found; install it (e.g. via Mason or luarocks) or set FENNEL_LS=/path"; \
+	  exit 1; \
+	fi
+	"$(FENNEL_LS)" --lint $(LINT_FILES)
 
 test: deps
 	nvim --headless --noplugin -u scripts/minimal_init.lua \
