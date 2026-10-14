@@ -3,11 +3,11 @@
 (module fennel-extras.rules)
 
 (local built-ins
-     {:fn [[:inner 0]] :lambda [[:inner 0]] :macro [[:inner 0]]
-   :let [[:block 1]] :when [[:block 1]] :when-let [[:block 1]] :if-let [[:block 1]]
-   :each [[:block 1]] :for [[:block 1]] :icollect [[:block 1]] :collect [[:block 1]]
-   :accumulate [[:block 1]] :case [[:block 1]] :match [[:block 1]] :while [[:block 1]]
-   :with-open [[:block 1]] :do [[:block 0]]})
+       {:fn [[:inner 0]] :lambda [[:inner 0]] :macro [[:inner 0]]
+        :let [[:block 1]] :when [[:block 1]] :when-let [[:block 1]] :if-let [[:block 1]]
+        :each [[:block 1]] :for [[:block 1]] :icollect [[:block 1]] :collect [[:block 1]]
+        :accumulate [[:block 1]] :case [[:block 1]] :match [[:block 1]] :while [[:block 1]]
+        :with-open [[:block 1]] :do [[:block 0]]})
 
 (local allowed-keys {:indents true :format-as true :indent-patterns true})
 (var resolve-name nil)
@@ -75,41 +75,41 @@
           (error "indentation patterns must be a list"))))
 
 (set resolve-name
-  (fn [config name seen]
-    (let [indents (or (. config :indents) {}) aliases (or (. config :format-as) {}) patterns (or (. config :indent-patterns) {})]
-      (if (. indents name)
-          (values (. indents name) nil true)
-          (if (. aliases name)
-              (alias-rule config name seen)
-              (do
-                (var result nil)
-                (var found false)
-                (each [_ entry (ipairs patterns)]
-                  (if (and (not found) (string.match name (. entry 1)))
-                      (do (set result (. entry 2)) (set found true))))
-                (if found
-                  (values result nil true)
-                  (if (. built-ins name)
-                      (values (. built-ins name) nil true)
-                      (if (and (= (string.find name "." 1 true) nil) (string.match name "^def"))
-                          (values [[:inner 0]] nil true)
-                          (if (and (= (string.find name "." 1 true) nil) (string.match name "^with-"))
-                              (values [[:block 1]] nil true)
-                              (values nil nil false)))))))))))
+     (fn [config name seen]
+       (let [indents (or (. config :indents) {}) aliases (or (. config :format-as) {}) patterns (or (. config :indent-patterns) {})]
+         (if (. indents name)
+             (values (. indents name) nil true)
+             (if (. aliases name)
+                 (alias-rule config name seen)
+                 (do
+                   (var result nil)
+                   (var found false)
+                   (each [_ entry (ipairs patterns)]
+                     (if (and (not found) (string.match name (. entry 1)))
+                         (do (set result (. entry 2)) (set found true))))
+                   (if found
+                       (values result nil true)
+                       (if (. built-ins name)
+                           (values (. built-ins name) nil true)
+                           (if (and (= (string.find name "." 1 true) nil) (string.match name "^def"))
+                               (values [[:inner 0]] nil true)
+                               (if (and (= (string.find name "." 1 true) nil) (string.match name "^with-"))
+                                   (values [[:block 1]] nil true)
+                                   (values nil nil false)))))))))))
 
 (set alias-rule
-  (fn [config name seen]
-    (if (. seen name)
-        (values nil (error "format-as alias cycle"))
-        (let [target (. (. config :format-as) name)]
-          (tset seen name true)
-          (let [(rule err found) (resolve-name config target seen)]
-            (tset seen name nil)
-            (if err
-                (values nil err)
-                (if found
-                    (values rule nil true)
-                    (values nil (error "format-as target has no indentation rule")))))))))
+     (fn [config name seen]
+       (if (. seen name)
+           (values nil (error "format-as alias cycle"))
+           (let [target (. (. config :format-as) name)]
+             (tset seen name true)
+             (let [(rule err found) (resolve-name config target seen)]
+               (tset seen name nil)
+               (if err
+                   (values nil err)
+                   (if found
+                       (values rule nil true)
+                       (values nil (error "format-as target has no indentation rule")))))))))
 
 (defn validate [config]
   (if (= config nil)

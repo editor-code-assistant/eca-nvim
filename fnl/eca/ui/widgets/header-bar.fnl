@@ -8,8 +8,8 @@
 
   (fn render []
     (nvim.nvim_set_option_value :winbar
-      (bar-items.render {:items items}) {:win win-id})
-    ;; Blank line for spacing
+                                (bar-items.render {:items items}) {:win win-id})
+      ;; Blank line for spacing
     (nvim.nvim_buf_set_lines buf-id 0 1 false [""])
     1)
 

@@ -178,12 +178,12 @@
 
 (defn- assign-output-columns [tokens line-number line indent strip-leading?]
   (each [_ token (ipairs tokens)]
-          (if (= token.line line-number)
-            (do
-              (set (. token :out-col)
-                   (output-column token line indent strip-leading?))
-              (if (= token.kind :open)
-                  (set (. token :line-indent) indent))))))
+    (if (= token.line line-number)
+        (do
+          (set (. token :out-col)
+               (output-column token line indent strip-leading?))
+          (if (= token.kind :open)
+              (set (. token :line-indent) indent))))))
 
 (defn- process-line [line-number line nodes tokens config]
   (let [string-line? (string-on-line? tokens line-number)
@@ -206,10 +206,10 @@
                   (assign-output-columns tokens line-number line 0 false)
                   line)
                 (let [indent (indent-for node first-token line-number config)
-                  spaces (leading-spaces line)
-                  body (string.sub line (+ spaces 1))]
-              (assign-output-columns tokens line-number line indent true)
-              (.. (string.rep " " indent) body)))))))
+                      spaces (leading-spaces line)
+                      body (string.sub line (+ spaces 1))]
+                  (assign-output-columns tokens line-number line indent true)
+                  (.. (string.rep " " indent) body)))))))
 
 (defn reindent [source config]
   (let [config-error (rules.validate config)]

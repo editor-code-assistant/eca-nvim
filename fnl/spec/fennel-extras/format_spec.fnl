@@ -123,47 +123,47 @@
 
 (deftest verifier
   (testing "indent-only accepts pure reindent"
-           (is (. (verifier-scenario) :indent-same)))
+    (is (. (verifier-scenario) :indent-same)))
   (testing "indent-only rejects changed string contents"
-           (is (not (. (verifier-scenario) :indent-string))))
+    (is (not (. (verifier-scenario) :indent-string))))
   (testing "indent-only rejects changed trailing whitespace"
-           (is (not (. (verifier-scenario) :indent-trailing))))
+    (is (not (. (verifier-scenario) :indent-trailing))))
   (testing "indent-only rejects changed line count"
-           (is (not (. (verifier-scenario) :indent-lines))))
+    (is (not (. (verifier-scenario) :indent-lines))))
   (testing "indent-only rejects changed non-whitespace characters"
-           (is (not (. (verifier-scenario) :indent-char))))
+    (is (not (. (verifier-scenario) :indent-char))))
   (testing "ast-equal accepts differently indented equivalent forms"
-           (is (. (verifier-scenario) :ast-same)))
+    (is (. (verifier-scenario) :ast-same)))
   (testing "ast-equal rejects changed symbols"
-           (is (not (. (verifier-scenario) :ast-symbol))))
+    (is (not (. (verifier-scenario) :ast-symbol))))
   (testing "ast-equal rejects changed comment text"
-           (is (not (. (verifier-scenario) :ast-comment))))
+    (is (not (. (verifier-scenario) :ast-comment))))
   (testing "ast-equal compares every top-level form"
-           (is (not (. (verifier-scenario) :ast-second)))))
+    (is (not (. (verifier-scenario) :ast-second)))))
 
 (deftest format-string
   (testing "formats a simple conditional golden"
-           (is (= "(when x\n  y)"
-                  (. (format-summary "(when x\ny)" {:indents {}}) :value))))
+    (is (= "(when x\n  y)"
+           (. (format-summary "(when x\ny)" {:indents {}}) :value))))
   (testing "returns a structured error for unbalanced input"
-           (let [result (format-summary "(missing" {:indents {}})]
-             (is (= {:value? false :has-message true}
-                    {:value? (. result :value?)
-                     :has-message (. result :has-message)}))))
+    (let [result (format-summary "(missing" {:indents {}})]
+      (is (= {:value? false :has-message true}
+             {:value? (. result :value?)
+              :has-message (. result :has-message)}))))
   (testing "returns a structured error for an invalid config"
-           (let [result (format-summary "(x\ny)" {:indents {"x" [[:inner 1]]}})]
-             (is (= {:value? false :has-message true}
-                    {:value? (. result :value?)
-                     :has-message (. result :has-message)})))))
+    (let [result (format-summary "(x\ny)" {:indents {"x" [[:inner 1]]}})]
+      (is (= {:value? false :has-message true}
+             {:value? (. result :value?)
+              :has-message (. result :has-message)})))))
 
 (deftest repo-properties
   (testing "format-string succeeds for every project Fennel source"
-           (is (= [] (. (repo-scenario) :format))))
+    (is (= [] (. (repo-scenario) :format))))
   (testing "format-string is idempotent for every project Fennel source"
-           (is (= [] (. (repo-scenario) :idempotence))))
+    (is (= [] (. (repo-scenario) :idempotence))))
   (testing "formatted output passes indent-only verification for every project source"
-           (is (= [] (. (repo-scenario) :indent))))
+    (is (= [] (. (repo-scenario) :indent))))
   (testing "formatted output preserves ASTs for every project source"
-           (is (= [] (. (repo-scenario) :ast))))
+    (is (= [] (. (repo-scenario) :ast))))
   (testing "hand-styled files remain fixed points"
-           (is (= [] (. (repo-scenario) :fixed-point)))))
+    (is (= [] (. (repo-scenario) :fixed-point)))))

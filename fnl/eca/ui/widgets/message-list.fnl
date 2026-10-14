@@ -6,7 +6,7 @@
 
 (fn create [buf-id ?opts]
   (local wrap-write (or (?. ?opts :wrap-write) (fn [f] (f))))
-  ;; Called when streaming inserts a new line (so prompt can adjust)
+    ;; Called when streaming inserts a new line (so prompt can adjust)
   (local on-line-inserted (or (?. ?opts :on-line-inserted) (fn [] nil)))
 
   (local state {:messages []
@@ -33,8 +33,8 @@
     (let [ns (ensure-ns)]
       (each [_ hl (ipairs highlights)]
         (nvim.nvim_buf_set_extmark buf-id ns
-          (+ lines-offset hl.line-idx) hl.col-start
-          {:end_col hl.col-end :hl_group hl.hl-group}))))
+                                   (+ lines-offset hl.line-idx) hl.col-start
+                                   {:end_col hl.col-end :hl_group hl.hl-group}))))
 
   (fn render-single-message [msg start-line]
     (let [rendered (message-component.render msg)]
@@ -49,7 +49,7 @@
         (set found msg)))
     found)
 
-  ;; ── Streaming ─────────────────────────────────────────
+    ;; ── Streaming ─────────────────────────────────────────
 
   (fn stream-append-char [char]
     "Append a single character to the streaming position using set_text.
@@ -58,52 +58,52 @@
       (let [buf-lines (nvim.nvim_buf_line_count buf-id)]
         (when (< state.streaming-line buf-lines)
           (if (= char "\n")
-            ;; Newline: insert new line, prompt shifts down naturally
-            (do
-              (wrap-write
-                (fn []
-                  (let [next-line (+ state.streaming-line 1)]
-                    (nvim.nvim_buf_set_lines buf-id next-line next-line false [""])
-                    (set state.end-line (+ state.end-line 1))
-                    (on-line-inserted))))
-              (set state.streaming-line (+ state.streaming-line 1))
-              (set state.streaming-col 0))
-            ;; Regular char: append at current position
-            (do
-              (pcall nvim.nvim_buf_set_text buf-id
-                state.streaming-line state.streaming-col
-                state.streaming-line state.streaming-col
-                [char])
-              (set state.streaming-col (+ state.streaming-col (length char)))))))))
+              ;; Newline: insert new line, prompt shifts down naturally
+              (do
+                (wrap-write
+                 (fn []
+                   (let [next-line (+ state.streaming-line 1)]
+                     (nvim.nvim_buf_set_lines buf-id next-line next-line false [""])
+                     (set state.end-line (+ state.end-line 1))
+                     (on-line-inserted))))
+                (set state.streaming-line (+ state.streaming-line 1))
+                (set state.streaming-col 0))
+              ;; Regular char: append at current position
+              (do
+                (pcall nvim.nvim_buf_set_text buf-id
+                       state.streaming-line state.streaming-col
+                       state.streaming-line state.streaming-col
+                       [char])
+                (set state.streaming-col (+ state.streaming-col (length char)))))))))
 
   (fn stream-tick []
     "Process one tick: move chars from queue to buffer."
     (when (> (length state.streaming-queue) 0)
-      ;; Wrap ALL writes in one batch so edit guard ignores them
+          ;; Wrap ALL writes in one batch so edit guard ignores them
       (wrap-write
-        (fn []
-          (let [take (math.min state.streaming-chars-per-tick
-                               (length state.streaming-queue))]
-            (for [i 1 take]
-              (let [char (string.sub state.streaming-queue i i)]
-                (stream-append-char char)
-                (set state.streaming-displayed
-                  (.. state.streaming-displayed char))))
-            (set state.streaming-queue
-              (string.sub state.streaming-queue (+ take 1)))))))
-    ;; Continue or stop
+       (fn []
+         (let [take (math.min state.streaming-chars-per-tick
+                              (length state.streaming-queue))]
+           (for [i 1 take]
+             (let [char (string.sub state.streaming-queue i i)]
+               (stream-append-char char)
+               (set state.streaming-displayed
+                    (.. state.streaming-displayed char))))
+           (set state.streaming-queue
+                (string.sub state.streaming-queue (+ take 1)))))))
+      ;; Continue or stop
     (if (> (length state.streaming-queue) 0)
-      (set state.streaming-timer
-        (vim.defer_fn stream-tick state.streaming-tick-ms))
-      (set state.streaming-timer nil)))
+        (set state.streaming-timer
+             (vim.defer_fn stream-tick state.streaming-tick-ms))
+        (set state.streaming-timer nil)))
 
   (fn start-streaming-timer []
     (when (and (not state.streaming-timer)
                (> (length state.streaming-queue) 0))
       (set state.streaming-timer
-        (vim.defer_fn stream-tick state.streaming-tick-ms))))
+           (vim.defer_fn stream-tick state.streaming-tick-ms))))
 
-  ;; ── Public API ────────────────────────────────────────
+    ;; ── Public API ────────────────────────────────────────
 
   (var finish-streaming nil)
 
@@ -121,86 +121,86 @@
       (nvim.nvim_buf_set_lines buf-id state.start-line state.end-line false [])
       (set state.end-line state.start-line)
       (if (= 0 (length state.messages))
-        (when state.welcome-lines
-          (nvim.nvim_buf_set_lines buf-id state.start-line state.start-line false
-            state.welcome-lines.lines)
-          (apply-highlights state.start-line (or state.welcome-lines.highlights []))
-          (set state.end-line (+ state.start-line (length state.welcome-lines.lines))))
-        (each [_ msg (ipairs state.messages)]
-          (let [;; For streaming msg, render with displayed content
-                render-msg (if (= msg.id state.streaming-id)
-                             (vim.tbl_extend :force msg {:content state.streaming-displayed})
-                             msg)
-                lines-written (render-single-message render-msg state.end-line)]
-            (set state.end-line (+ state.end-line lines-written)))))))
+          (when state.welcome-lines
+            (nvim.nvim_buf_set_lines buf-id state.start-line state.start-line false
+                                     state.welcome-lines.lines)
+            (apply-highlights state.start-line (or state.welcome-lines.highlights []))
+            (set state.end-line (+ state.start-line (length state.welcome-lines.lines))))
+          (each [_ msg (ipairs state.messages)]
+            (let [;; For streaming msg, render with displayed content
+                  render-msg (if (= msg.id state.streaming-id)
+                                 (vim.tbl_extend :force msg {:content state.streaming-displayed})
+                                 msg)
+                  lines-written (render-single-message render-msg state.end-line)]
+              (set state.end-line (+ state.end-line lines-written)))))))
 
   (fn append-message [msg]
-    ;; Finish any in-progress streaming before appending a new message
+      ;; Finish any in-progress streaming before appending a new message
     (when state.streaming-id
       (finish-streaming state.streaming-id))
     (table.insert state.messages msg)
     (if msg.streaming?
-      ;; Streaming: create an empty line, stream chars into it
-      (do
-        (set state.streaming-id msg.id)
-        (set state.streaming-displayed "")
-        (set state.streaming-queue (or msg.content ""))
-        ;; Insert one empty line for the streaming message + trailing blank
-        (wrap-write
-          (fn []
-            (nvim.nvim_buf_set_lines buf-id state.end-line state.end-line false ["" ""])
-            (set state.streaming-line state.end-line)
-            (set state.streaming-col 0)
-            (set state.end-line (+ state.end-line 2))))
-        (start-streaming-timer))
-      ;; Non-streaming: render immediately
-      (if (= 1 (length state.messages))
-        (render)
-        (let [lines-written (render-single-message msg state.end-line)]
-          (set state.end-line (+ state.end-line lines-written))))))
+        ;; Streaming: create an empty line, stream chars into it
+        (do
+          (set state.streaming-id msg.id)
+          (set state.streaming-displayed "")
+          (set state.streaming-queue (or msg.content ""))
+          ;; Insert one empty line for the streaming message + trailing blank
+          (wrap-write
+           (fn []
+             (nvim.nvim_buf_set_lines buf-id state.end-line state.end-line false ["" ""])
+             (set state.streaming-line state.end-line)
+             (set state.streaming-col 0)
+             (set state.end-line (+ state.end-line 2))))
+          (start-streaming-timer))
+        ;; Non-streaming: render immediately
+        (if (= 1 (length state.messages))
+            (render)
+            (let [lines-written (render-single-message msg state.end-line)]
+              (set state.end-line (+ state.end-line lines-written))))))
 
   (fn update-message [id new-content]
     (let [msg (find-message id)]
       (when msg
         (set msg.content new-content)
         (if (= id state.streaming-id)
-          ;; Queue only NEW characters
-          (let [already (+ (length state.streaming-displayed)
-                           (length state.streaming-queue))
-                new-chars (when (> (length new-content) already)
-                            (string.sub new-content (+ already 1)))]
-            (when (and new-chars (> (length new-chars) 0))
-              (set state.streaming-queue (.. state.streaming-queue new-chars))
-              (start-streaming-timer)))
-          ;; Non-streaming: re-render
-          (render)))))
+            ;; Queue only NEW characters
+            (let [already (+ (length state.streaming-displayed)
+                             (length state.streaming-queue))
+                  new-chars (when (> (length new-content) already)
+                              (string.sub new-content (+ already 1)))]
+              (when (and new-chars (> (length new-chars) 0))
+                (set state.streaming-queue (.. state.streaming-queue new-chars))
+                (start-streaming-timer)))
+            ;; Non-streaming: re-render
+            (render)))))
 
   (set finish-streaming (fn [id]
-    (when (= id state.streaming-id)
-      ;; Stop timer
-      (when state.streaming-timer
-        (set state.streaming-timer nil))
-      ;; Flush remaining queue char by char (fast, no timer)
-      (when (> (length state.streaming-queue) 0)
-        (for [i 1 (length state.streaming-queue)]
-          (let [char (string.sub state.streaming-queue i i)]
-            (stream-append-char char)))
-        (set state.streaming-displayed
-          (.. state.streaming-displayed state.streaming-queue))
-        (set state.streaming-queue ""))
-      ;; Clear streaming state
-      (set state.streaming-id nil)
-      (set state.streaming-line nil)
-      (set state.streaming-col nil))))
+                          (when (= id state.streaming-id)
+                                ;; Stop timer
+                            (when state.streaming-timer
+                              (set state.streaming-timer nil))
+                                ;; Flush remaining queue char by char (fast, no timer)
+                            (when (> (length state.streaming-queue) 0)
+                              (for [i 1 (length state.streaming-queue)]
+                                (let [char (string.sub state.streaming-queue i i)]
+                                  (stream-append-char char)))
+                              (set state.streaming-displayed
+                                   (.. state.streaming-displayed state.streaming-queue))
+                              (set state.streaming-queue ""))
+                                ;; Clear streaming state
+                            (set state.streaming-id nil)
+                            (set state.streaming-line nil)
+                            (set state.streaming-col nil))))
 
   (fn abort-streaming [id]
     "Stop streaming immediately without flushing remaining chars."
     (when (= id state.streaming-id)
       (when state.streaming-timer
         (set state.streaming-timer nil))
-      ;; Discard queue — don't flush
+          ;; Discard queue — don't flush
       (set state.streaming-queue "")
-      ;; Clear streaming state
+          ;; Clear streaming state
       (set state.streaming-id nil)
       (set state.streaming-line nil)
       (set state.streaming-col nil)))

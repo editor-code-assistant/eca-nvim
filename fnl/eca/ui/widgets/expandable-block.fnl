@@ -6,20 +6,20 @@
    initial-state: {: id : label : icon-expanded : icon-collapsed : content : expanded?}
    Returns {: render : toggle : expand : collapse : update-label : get-state}."
   (local state (vim.tbl_extend :force
-                 {:id nil
-                  :label ""
-                  :icon-expanded "⏷"
-                  :icon-collapsed "⏵"
-                  :content []
-                  :expanded? false
-                  :start-line 0
-                  :ns-id nil}
-                 (or initial-state {})))
+                               {:id nil
+                                :label ""
+                                :icon-expanded "⏷"
+                                :icon-collapsed "⏵"
+                                :content []
+                                :expanded? false
+                                :start-line 0
+                                :ns-id nil}
+                               (or initial-state {})))
 
   (fn ensure-ns []
     (when (= nil state.ns-id)
       (set state.ns-id (canvas:create-namespace
-                         (.. "eca-expandable-" (or state.id "unknown")))))
+                        (.. "eca-expandable-" (or state.id "unknown")))))
     state.ns-id)
 
   (fn build-label []
@@ -37,8 +37,8 @@
           (table.insert lines (.. "  " line))))
       (canvas:set-lines start-line start-line lines)
       (canvas:add-extmark ns start-line 0
-        {:end_col (length label-line)
-         :hl_group :EcaExpandableLabel})
+                          {:end_col (length label-line)
+                           :hl_group :EcaExpandableLabel})
       (length lines)))
 
   (fn toggle []

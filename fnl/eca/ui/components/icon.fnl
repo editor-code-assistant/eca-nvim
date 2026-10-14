@@ -2,16 +2,16 @@
 ;; Stateless, pure function. Handles UI concepts, not business logic.
 
 (local icons
-  {:collapsed  "⏵"
-   :expanded   "⏷"
-   :loading    "⏳"
-   :success    "✅"
-   :error      "❌"
-   :warning    "⚠️"
-   :info       "ℹ️"
-   :stop       "⏹"
-   :new        "+"
-   :close      "×"})
+       {:collapsed  "⏵"
+        :expanded   "⏷"
+        :loading    "⏳"
+        :success    "✅"
+        :error      "❌"
+        :warning    "⚠️"
+        :info       "ℹ️"
+        :stop       "⏹"
+        :new        "+"
+        :close      "×"})
 
 (fn render [{: name : text : hl-group}]
   "Render an icon by semantic name or direct text.

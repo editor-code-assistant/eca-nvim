@@ -6,37 +6,37 @@
 (fn setup [api]
   "Register all :Eca* user commands."
   (nvim.nvim_create_user_command "EcaChat"
-    (fn [] (api.chat-toggle))
-    {:desc "Toggle ECA Chat window"})
+                                 (fn [] (api.chat-toggle))
+                                 {:desc "Toggle ECA Chat window"})
 
   (nvim.nvim_create_user_command "EcaChatOpen"
-    (fn [] (api.chat-open))
-    {:desc "Open ECA Chat window"})
+                                 (fn [] (api.chat-open))
+                                 {:desc "Open ECA Chat window"})
 
   (nvim.nvim_create_user_command "EcaChatClose"
-    (fn [] (api.chat-close))
-    {:desc "Close ECA Chat window"})
+                                 (fn [] (api.chat-close))
+                                 {:desc "Close ECA Chat window"})
 
   (nvim.nvim_create_user_command "EcaChatClear"
-    (fn [] (api.chat-clear))
-    {:desc "Clear current chat messages"})
+                                 (fn [] (api.chat-clear))
+                                 {:desc "Clear current chat messages"})
 
   (nvim.nvim_create_user_command "EcaChatNew"
-    (fn [] (api.chat-open))
-    {:desc "Open a new ECA Chat"})
+                                 (fn [] (api.chat-open))
+                                 {:desc "Open a new ECA Chat"})
 
   (nvim.nvim_create_user_command "EcaChatSubmit"
-    (fn [] (api.chat-submit))
-    {:desc "Submit current prompt"})
+                                 (fn [] (api.chat-submit))
+                                 {:desc "Submit current prompt"})
 
   (nvim.nvim_create_user_command "EcaChatStop"
-    (fn [] (api.chat-stop))
-    {:desc "Stop current ECA response"})
+                                 (fn [] (api.chat-stop))
+                                 {:desc "Stop current ECA response"})
 
   (nvim.nvim_create_user_command "EcaChatSetModel"
-    (fn [cmd]
-      (when (and cmd.args (not= "" cmd.args))
-        (api.chat-set-model cmd.args)))
-    {:desc "Set the model" :nargs 1}))
+                                 (fn [cmd]
+                                   (when (and cmd.args (not= "" cmd.args))
+                                     (api.chat-set-model cmd.args)))
+                                 {:desc "Set the model" :nargs 1}))
 
 {: setup}

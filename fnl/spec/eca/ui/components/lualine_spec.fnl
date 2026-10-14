@@ -46,18 +46,18 @@
 
 (deftest plugin
   (testing "returns the lualine module when the plugin is installed"
-           (let [{: expected : actual} (installed-plugin-scenario)]
-             (is (identical? expected actual))))
+    (let [{: expected : actual} (installed-plugin-scenario)]
+      (is (identical? expected actual))))
   (testing "returns nil when the plugin is missing"
-           (is (nil? (missing-plugin-scenario)))))
+    (is (nil? (missing-plugin-scenario)))))
 
 (deftest setup
   (testing "registers the eca-chat extension without touching other config"
-           (let [captured (setup-scenario)]
-             (is (= {:extensions [{:filetypes [:other]}
-                                  {:filetypes [:eca-chat]
-                                   :sections {:lualine_a ["%#EcaHeaderValue#~/dev/eca-nvim"]
-                                              :lualine_x ["%#EcaHeaderValue#⏱ 0s"]
-                                              :lualine_y ["%#EcaHeaderValue#0/200K ($0.00)"]}}]
-                     :options {:theme :gruvbox}}
-                    captured)))))
+    (let [captured (setup-scenario)]
+      (is (= {:extensions [{:filetypes [:other]}
+                           {:filetypes [:eca-chat]
+                            :sections {:lualine_a ["%#EcaHeaderValue#~/dev/eca-nvim"]
+                                       :lualine_x ["%#EcaHeaderValue#⏱ 0s"]
+                                       :lualine_y ["%#EcaHeaderValue#0/200K ($0.00)"]}}]
+              :options {:theme :gruvbox}}
+             captured)))))

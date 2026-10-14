@@ -6,8 +6,8 @@
    Returns {: text : hl-group}.
    Format: 'Label (keybind)' or just 'Label'."
   (let [display (if keybind
-                  (.. label " (" keybind ")")
-                  label)]
+                    (.. label " (" keybind ")")
+                    label)]
     {:text display
      :hl-group (or hl-group :EcaButtonAccept)}))
 

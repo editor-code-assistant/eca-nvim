@@ -12,8 +12,8 @@
         hv (or hl-value :EcaHeaderValue)
         parts (icollect [_ item (ipairs (or items []))]
                 (if item.title
-                  (.. "%#" hk "#" item.title "%#" hv "#:" item.value)
-                  (.. "%#" hv "#" item.value)))
+                    (.. "%#" hk "#" item.title "%#" hv "#:" item.value)
+                    (.. "%#" hv "#" item.value)))
         count (length parts)]
     (case count
       0 ""
