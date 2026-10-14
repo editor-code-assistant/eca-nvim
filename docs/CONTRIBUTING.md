@@ -27,24 +27,31 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
 
 - `make fmt` rewrites files. `make fmt-check` is used in CI: it exits 1 if a file would change and 2 on errors.
 - Both commands run `scripts/fennel-extras` with `nvim --headless -l`; no extra formatter install is needed.
-- Dot-directories and dotfiles (including `.fnl-extras.fnl`) are not discovered. Explicit symlinked paths and unreadable directories are reported; discovered symlink entries are skipped rather than followed, and symlinks are not supported. If staging fails (for example, because of permissions), no file is changed; files are then replaced one by one with rename, so a rare rename failure may leave earlier files already formatted.
-- Formatter configuration is data only in `.fnl-extras.fnl` at the repository root; never run this file. The keys are:
-  - `:indents`: cljfmt-style rules such as `[:block n]` and `[:inner 0 i]`; the first argument has index 0.
-  - `:format-as`: format macro X like form Y.
-  - `:indent-patterns`: Lua patterns for matching form names.
-  - `:paths`: files or directories to format.
-  - `:exclude`: paths to skip.
+- Formatter configuration is data only in `.fnl-extras.fnl` at the repository root; never run this file. Dotfiles are skipped by default, and `.git` is always skipped. The keys are:
+  - `:indents` (default `{}`): exact form-name to rule-list map. Rules are `[:block n]` or `[:inner 0 i]`; argument indexes start at 0.
+  - `:format-as` (default `{}`): exact form-name to form-name map. The source form uses the target form's rule.
+  - `:indent-patterns` (default `[]`): list of `[lua-pattern rule-list]` entries.
+  - `:paths` (default `["."]`): list of file or directory paths to scan.
+  - `:exclude` (default `[]`): list of path prefixes to skip. `.git` is skipped even when it is not listed.
+  - `:indent-width` (default `2`): positive integer used for continuation indentation.
+  - `:builtins` (default `true`): `true`, `false`, or a map of form names to rule lists. Built-ins include rules for forms such as `fn`, `let`, `when`, and `do`.
+  - `:prefix-fallbacks` (default `{"def" [[:inner 0]] "with-" [[:block 1]]}`): `false` or a map of prefixes to rule lists. The built-in prefixes are `def` and `with-`.
+  - `:extensions` (default `[".fnl" ".fnlm"]`): non-empty list of strings, each starting with `.`.
+  - `:skip-dotfiles` (default `true`): boolean. When true, skip dotfiles and dot-directories during scans. The discovered `.fnl-extras.fnl` config file is never formatted, even when this is `false`.
+  - `:follow-symlinks` (default `false`): boolean. When true, follow links, write to the real target, and process each real path once.
+  - `:parser` (default none): string module name for the parser. The `--parser` flag overrides this setting.
+
+Indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > built-ins > prefix fallbacks > default. The default is no special rule. The formatter only changes leading indentation. It never breaks or joins lines, so one-line forms stay one line.
 
 For example, the repository configuration contains:
 
 ```fennel
 {:indents {"deftest" [[:block 1]]
            "testing" [[:block 1]]}
+ :parser "eca.nfnl.fennel"
  :paths ["fnl"]
  :exclude ["fnl/eca/nfnl"]}
 ```
-
-The formatter changes only indentation: line breaks, comments, strings, and trailing spaces are kept. By default, continuation lines align with the first argument when it is on the same line as the call; otherwise they align with the call name. Built-in rules cover forms such as `fn`, `let`, `when`, `do`, and related forms. `if` has no built-in rule.
 
 To add a rule for a new macro, add one line such as `"deftest" [[:block 1]]` under `:indents`.
 

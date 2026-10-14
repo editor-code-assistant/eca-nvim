@@ -27,10 +27,10 @@ lint:
 	"$(FENNEL_LS)" --lint $(LINT_FILES)
 
 fmt:
-	scripts/fennel-extras format --write --parser eca.nfnl.fennel
+	scripts/fennel-extras format --write
 
 fmt-check:
-	scripts/fennel-extras format --check --parser eca.nfnl.fennel
+	scripts/fennel-extras format --check
 
 test: deps
 	nvim --headless --noplugin -u scripts/minimal_init.lua \
