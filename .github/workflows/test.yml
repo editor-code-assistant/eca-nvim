@@ -20,6 +20,9 @@ jobs:
     - name: Check compiled Lua is in sync with Fennel sources
       run: make check-compiled
 
+    - name: Check Fennel formatting
+      run: make fmt-check
+
   test:
     runs-on: ubuntu-latest
     strategy:

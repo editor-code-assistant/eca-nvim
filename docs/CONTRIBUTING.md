@@ -21,9 +21,36 @@
 
 Install fennel-ls with Mason in Neovim or with `luarocks install fennel-ls 0.2.1-1`, the version used in CI. For a non-PATH install, set `FENNEL_LS=/path` (for example, Mason's `~/.local/share/nvim/mason/bin/fennel-ls`). `make lint` runs in CI and must pass.
 
-Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settings from `flsproject.fnl`. Formatter setup (`make fmt` / `make fmt-check`) will be added with the formatter.
+Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settings from `flsproject.fnl`.
 
-CI runs `make check-compiled`, `make test`, and `make lint`. The test job uses this Neovim matrix:
+### Formatting
+
+- `make fmt` rewrites files. `make fmt-check` is used in CI: it exits 1 if a file would change and 2 on errors.
+- Both commands run `scripts/fennel-extras` with `nvim --headless -l`; no extra formatter install is needed.
+- Dot-directories and dotfiles (including `.fnl-extras.fnl`) are not discovered. Explicit symlinked paths and unreadable directories are reported; discovered symlink entries are skipped rather than followed, and symlinks are not supported. If staging fails (for example, because of permissions), no file is changed; files are then replaced one by one with rename, so a rare rename failure may leave earlier files already formatted.
+- Formatter configuration is data only in `.fnl-extras.fnl` at the repository root; never run this file. The keys are:
+  - `:indents`: cljfmt-style rules such as `[:block n]` and `[:inner 0 i]`; the first argument has index 0.
+  - `:format-as`: format macro X like form Y.
+  - `:indent-patterns`: Lua patterns for matching form names.
+  - `:paths`: files or directories to format.
+  - `:exclude`: paths to skip.
+
+For example, the repository configuration contains:
+
+```fennel
+{:indents {"deftest" [[:block 1]]
+           "testing" [[:block 1]]}
+ :paths ["fnl"]
+ :exclude ["fnl/eca/nfnl"]}
+```
+
+The formatter changes only indentation: line breaks, comments, strings, and trailing spaces are kept. By default, continuation lines align with the first argument when it is on the same line as the call; otherwise they align with the call name. Built-in rules cover forms such as `fn`, `let`, `when`, `do`, and related forms. `if` has no built-in rule.
+
+To add a rule for a new macro, add one line such as `"deftest" [[:block 1]]` under `:indents`.
+
+For editor use, run `make fmt` or `scripts/fennel-extras format --write <file>`. An LSP integration will come later.
+
+CI runs `make check-compiled`, `make fmt-check`, `make test`, and `make lint`. The test job uses this Neovim matrix:
 
 - `v0.9.5`
 - `v0.10.0`
