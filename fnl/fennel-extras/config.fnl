@@ -139,21 +139,108 @@
           (set index (+ index 1)))
         valid)))
 
+(defn- integer? [value]
+  (and (= (type value) :number) (= value (math.floor value))))
+
+(defn- valid-rule? [rule]
+  (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
+      (let [kind (. rule 1) value (. rule 2) index (. rule 3)]
+        (if (= kind :block)
+            (and (integer? value) (>= value 0) (= index nil))
+            (if (= kind :inner)
+                (and (= value 0)
+                     (or (= index nil) (and (integer? index) (>= index 0))))
+                false)))
+      false))
+
+(defn- valid-rule-list? [value]
+  (if (= (type value) :table)
+      (let []
+        (var valid true)
+        (each [_ rule (ipairs value)]
+          (if (not (valid-rule? rule))
+              (set valid false)))
+        valid)
+      false))
+
+(defn- rule-map-error [value prefix]
+  (if (= (type value) :table)
+      (let []
+        (var failure nil)
+        (each [name rule (pairs value)]
+          (if (= failure nil)
+              (if (not (valid-rule-list? rule))
+                  (set failure {:message (.. prefix name ": invalid indentation rule")}))))
+        failure)
+      {:message (.. prefix ": invalid indentation rule")}))
+
+(defn- boolean? [value]
+  (or (= value true) (= value false)))
+
+(defn- extensions? [value]
+  (if (and (= (type value) :table) (> (length value) 0))
+      (let []
+        (var valid true)
+        (each [_ extension (ipairs value)]
+          (if (or (not= (type extension) :string)
+                  (not (= (string.sub extension 1 1) ".")))
+              (set valid false)))
+        valid)
+      false))
+
+(defn- configuration-error [tbl]
+  (let [width (. tbl :indent-width)
+        builtins (. tbl :builtins)
+        fallbacks (. tbl :prefix-fallbacks)
+        extensions (. tbl :extensions)
+        skip-dotfiles (. tbl :skip-dotfiles)
+        follow-symlinks (. tbl :follow-symlinks)
+        parser (. tbl :parser)]
+    (var failure nil)
+    (if (and (= failure nil) (not= width nil)
+             (not (and (integer? width) (> width 0))))
+        (set failure {:message "indent-width must be a positive integer"}))
+    (if (and (= failure nil) (not= builtins nil)
+             (not (= builtins true)) (not (= builtins false))
+             (not= (type builtins) :table))
+        (set failure {:message "builtins must be true, false, or a table of rules"}))
+    (if (and (= failure nil) (= (type builtins) :table))
+        (set failure (rule-map-error builtins "builtins rule ")))
+    (if (and (= failure nil) (not= fallbacks nil)
+             (not (= fallbacks false)) (not= (type fallbacks) :table))
+        (set failure {:message "prefix-fallbacks must be false or a table of rules"}))
+    (if (and (= failure nil) (= (type fallbacks) :table))
+        (set failure (rule-map-error fallbacks "prefix-fallbacks rule ")))
+    (if (and (= failure nil) (not= extensions nil) (not (extensions? extensions)))
+        (set failure {:message "extensions must be a non-empty list of strings starting with \".\""}))
+    (if (and (= failure nil) (not= skip-dotfiles nil) (not (boolean? skip-dotfiles)))
+        (set failure {:message "skip-dotfiles must be a boolean"}))
+    (if (and (= failure nil) (not= follow-symlinks nil) (not (boolean? follow-symlinks)))
+        (set failure {:message "follow-symlinks must be a boolean"}))
+    (if (and (= failure nil) (not= parser nil) (not= (type parser) :string))
+        (set failure {:message "parser must be a string"}))
+    failure))
+
 (defn validate [tbl]
   (if (not= (type tbl) :table)
       (values nil {:message "configuration must be a table"})
-      (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true}]
+      (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true
+                     :indent-width true :builtins true :prefix-fallbacks true :extensions true
+                     :skip-dotfiles true :follow-symlinks true :parser true}]
         (var failure nil)
         (each [key _ (pairs tbl)]
           (if (not (. allowed key))
               (set failure {:message (.. "unknown configuration key: " key)})))
         (if failure
             (values nil failure)
-            (if (and (. tbl :paths) (not (array-of-strings? (. tbl :paths))))
-                (values nil {:message "paths must be an array of strings"})
-                (if (and (. tbl :exclude) (not (array-of-strings? (. tbl :exclude))))
-                    (values nil {:message "exclude must be an array of strings"})
-                    tbl))))))
+            (let [new-error (configuration-error tbl)]
+              (if new-error
+                  (values nil new-error)
+                  (if (and (. tbl :paths) (not (array-of-strings? (. tbl :paths))))
+                      (values nil {:message "paths must be an array of strings"})
+                      (if (and (. tbl :exclude) (not (array-of-strings? (. tbl :exclude))))
+                          (values nil {:message "exclude must be an array of strings"})
+                          tbl))))))))
 
 (defn- join-path [dir name]
   (if (= (string.sub dir -1) "/")

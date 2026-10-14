@@ -217,13 +217,129 @@ local function array_of_strings_3f(value)
     return valid
   end
 end
+local function integer_3f(value)
+  return ((type(value) == "number") and (value == math.floor(value)))
+end
+local function valid_rule_3f(rule)
+  if ((type(rule) == "table") and (type(rule[1]) == "string")) then
+    local kind = rule[1]
+    local value = rule[2]
+    local index = rule[3]
+    if (kind == "block") then
+      return (integer_3f(value) and (value >= 0) and (index == nil))
+    else
+      if (kind == "inner") then
+        return ((value == 0) and ((index == nil) or (integer_3f(index) and (index >= 0))))
+      else
+        return false
+      end
+    end
+  else
+    return false
+  end
+end
+local function valid_rule_list_3f(value)
+  if (type(value) == "table") then
+    local valid = true
+    for _, rule in ipairs(value) do
+      if not valid_rule_3f(rule) then
+        valid = false
+      else
+      end
+    end
+    return valid
+  else
+    return false
+  end
+end
+local function rule_map_error(value, prefix)
+  if (type(value) == "table") then
+    local failure = nil
+    for name, rule in pairs(value) do
+      if (failure == nil) then
+        if not valid_rule_list_3f(rule) then
+          failure = {message = (prefix .. name .. ": invalid indentation rule")}
+        else
+        end
+      else
+      end
+    end
+    return failure
+  else
+    return {message = (prefix .. ": invalid indentation rule")}
+  end
+end
+local function boolean_3f(value)
+  return ((value == true) or (value == false))
+end
+local function extensions_3f(value)
+  if ((type(value) == "table") and (#value > 0)) then
+    local valid = true
+    for _, extension in ipairs(value) do
+      if ((type(extension) ~= "string") or not (string.sub(extension, 1, 1) == ".")) then
+        valid = false
+      else
+      end
+    end
+    return valid
+  else
+    return false
+  end
+end
+local function configuration_error(tbl)
+  local width = tbl["indent-width"]
+  local builtins = tbl.builtins
+  local fallbacks = tbl["prefix-fallbacks"]
+  local extensions = tbl.extensions
+  local skip_dotfiles = tbl["skip-dotfiles"]
+  local follow_symlinks = tbl["follow-symlinks"]
+  local parser = tbl.parser
+  local failure = nil
+  if ((failure == nil) and (width ~= nil) and not (integer_3f(width) and (width > 0))) then
+    failure = {message = "indent-width must be a positive integer"}
+  else
+  end
+  if ((failure == nil) and (builtins ~= nil) and not (builtins == true) and not (builtins == false) and (type(builtins) ~= "table")) then
+    failure = {message = "builtins must be true, false, or a table of rules"}
+  else
+  end
+  if ((failure == nil) and (type(builtins) == "table")) then
+    failure = rule_map_error(builtins, "builtins rule ")
+  else
+  end
+  if ((failure == nil) and (fallbacks ~= nil) and not (fallbacks == false) and (type(fallbacks) ~= "table")) then
+    failure = {message = "prefix-fallbacks must be false or a table of rules"}
+  else
+  end
+  if ((failure == nil) and (type(fallbacks) == "table")) then
+    failure = rule_map_error(fallbacks, "prefix-fallbacks rule ")
+  else
+  end
+  if ((failure == nil) and (extensions ~= nil) and not extensions_3f(extensions)) then
+    failure = {message = "extensions must be a non-empty list of strings starting with \".\""}
+  else
+  end
+  if ((failure == nil) and (skip_dotfiles ~= nil) and not boolean_3f(skip_dotfiles)) then
+    failure = {message = "skip-dotfiles must be a boolean"}
+  else
+  end
+  if ((failure == nil) and (follow_symlinks ~= nil) and not boolean_3f(follow_symlinks)) then
+    failure = {message = "follow-symlinks must be a boolean"}
+  else
+  end
+  if ((failure == nil) and (parser ~= nil) and (type(parser) ~= "string")) then
+    failure = {message = "parser must be a string"}
+  else
+  end
+  return failure
+end
 local validate
 do
   local function validate0(tbl)
     if (type(tbl) ~= "table") then
       return nil, {message = "configuration must be a table"}
     else
-      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true}
+      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, parser = true}
       local failure = nil
       for key, _ in pairs(tbl) do
         if not allowed[key] then
@@ -234,13 +350,18 @@ do
       if failure then
         return nil, failure
       else
-        if (tbl.paths and not array_of_strings_3f(tbl.paths)) then
-          return nil, {message = "paths must be an array of strings"}
+        local new_error = configuration_error(tbl)
+        if new_error then
+          return nil, new_error
         else
-          if (tbl.exclude and not array_of_strings_3f(tbl.exclude)) then
-            return nil, {message = "exclude must be an array of strings"}
+          if (tbl.paths and not array_of_strings_3f(tbl.paths)) then
+            return nil, {message = "paths must be an array of strings"}
           else
-            return tbl
+            if (tbl.exclude and not array_of_strings_3f(tbl.exclude)) then
+              return nil, {message = "exclude must be an array of strings"}
+            else
+              return tbl
+            end
           end
         end
       end
@@ -330,10 +451,10 @@ do
       local text = file:read("*a")
       file:close()
       local ok, parsed_or_error
-      local function _50_()
+      local function _70_()
         return parse_string(text)
       end
-      ok, parsed_or_error = pcall(_50_)
+      ok, parsed_or_error = pcall(_70_)
       if not ok then
         return nil, parsed_or_error
       else

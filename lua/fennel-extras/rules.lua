@@ -5,8 +5,9 @@ do
   pkg_1_auto.loaded["fennel-extras.rules"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.rules"]
 end
-local built_ins = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}}
-local allowed_keys = {indents = true, ["format-as"] = true, ["indent-patterns"] = true}
+local built_in_rules = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}}
+local prefix_rules = {def = {{"inner", 0}}, ["with-"] = {{"block", 1}}}
+local allowed_keys = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true}
 local resolve_name = nil
 local alias_rule = nil
 local function error(message)
@@ -111,10 +112,40 @@ local function validate_patterns(patterns)
     end
   end
 end
-local function _19_(config, name, seen)
+local function effective_builtins(config)
+  local setting = config.builtins
+  if (setting == nil) then
+    return built_in_rules
+  else
+    if (setting == true) then
+      return built_in_rules
+    else
+      if (setting == false) then
+        return {}
+      else
+        return setting
+      end
+    end
+  end
+end
+local function effective_prefix_rules(config)
+  local setting = config["prefix-fallbacks"]
+  if (setting == nil) then
+    return prefix_rules
+  else
+    if (setting == false) then
+      return {}
+    else
+      return setting
+    end
+  end
+end
+local function _24_(config, name, seen)
   local indents = (config.indents or {})
   local aliases = (config["format-as"] or {})
   local patterns = (config["indent-patterns"] or {})
+  local builtins = effective_builtins(config)
+  local prefixes = effective_prefix_rules(config)
   if indents[name] then
     return indents[name], nil, true
   else
@@ -133,25 +164,34 @@ local function _19_(config, name, seen)
       if found then
         return result, nil, true
       else
-        if built_ins[name] then
-          return built_ins[name], nil, true
+        if builtins[name] then
+          return builtins[name], nil, true
         else
-          if ((string.find(name, ".", 1, true) == nil) and string.match(name, "^def")) then
-            return {{"inner", 0}}, nil, true
-          else
-            if ((string.find(name, ".", 1, true) == nil) and string.match(name, "^with-")) then
-              return {{"block", 1}}, nil, true
+          if (string.find(name, ".", 1, true) == nil) then
+            local result0 = nil
+            local found0 = false
+            for prefix, rule in pairs(prefixes) do
+              if (not found0 and ((string.sub(name, 1, string.len(prefix)) == prefix) or ((string.sub(prefix, -1) == "-") and (name == string.sub(prefix, 1, -2))))) then
+                result0 = rule
+                found0 = true
+              else
+              end
+            end
+            if found0 then
+              return result0, nil, true
             else
               return nil, nil, false
             end
+          else
+            return nil, nil, false
           end
         end
       end
     end
   end
 end
-resolve_name = _19_
-local function _27_(config, name, seen)
+resolve_name = _24_
+local function _33_(config, name, seen)
   if seen[name] then
     return nil, error("format-as alias cycle")
   else
@@ -170,7 +210,49 @@ local function _27_(config, name, seen)
     end
   end
 end
-alias_rule = _27_
+alias_rule = _33_
+local function validate_custom_map(items, prefix)
+  if (type(items) == "table") then
+    local failure = nil
+    for name, value in pairs(items) do
+      if (failure == nil) then
+        if (type(name) ~= "string") then
+          failure = error("indentation names must be strings")
+        else
+          if (validate_rule_list(value) ~= nil) then
+            failure = error((prefix .. name .. ": invalid indentation rule"))
+          else
+          end
+        end
+      else
+      end
+    end
+    return failure
+  else
+    return error((prefix .. " must be a table of rules"))
+  end
+end
+local function validate_custom_config(config)
+  local builtins = config.builtins
+  local fallbacks = config["prefix-fallbacks"]
+  if ((builtins ~= nil) and not (builtins == true) and not (builtins == false) and (type(builtins) ~= "table")) then
+    return error("builtins must be true, false, or a table of rules")
+  else
+    if ((type(builtins) == "table") and validate_custom_map(builtins, "builtins rule ")) then
+      return validate_custom_map(builtins, "builtins rule ")
+    else
+      if ((fallbacks ~= nil) and not (fallbacks == false) and (type(fallbacks) ~= "table")) then
+        return error("prefix-fallbacks must be false or a table of rules")
+      else
+        if ((type(fallbacks) == "table") and validate_custom_map(fallbacks, "prefix-fallbacks rule ")) then
+          return validate_custom_map(fallbacks, "prefix-fallbacks rule ")
+        else
+          return nil
+        end
+      end
+    end
+  end
+end
 local validate
 do
   local function validate0(config)
@@ -195,6 +277,18 @@ do
         end
         if (failure == nil) then
           failure = validate_patterns(config["indent-patterns"])
+        else
+        end
+        if (failure == nil) then
+          local width = config["indent-width"]
+          if ((width ~= nil) and not (integer_3f(width) and (width > 0))) then
+            failure = error("indent-width must be a positive integer")
+          else
+          end
+        else
+        end
+        if (failure == nil) then
+          failure = validate_custom_config(config)
         else
         end
         if (failure == nil) then

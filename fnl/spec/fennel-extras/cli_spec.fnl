@@ -184,6 +184,212 @@
               :line-count (length lines)
               :mentions-config (not (not (string.match line "fnl%-extras")))})))))
 
+(defn- extension-scenario
+  [extension]
+  (let [root (vim.fn.tempname)
+        path (.. root "/source" extension)
+        config-path (.. root "/.fnl-extras.fnl")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file config-path (.. "{:extensions [\"" extension "\"]}"))
+        (if (= extension ".fnl")
+            (do
+              (write-file path "(when x\ny)\n")
+              (write-file (.. root "/source.fnlm") "(when y\nz)\n"))
+            (write-file path "(when x\ny)\n"))
+        (let [result (run-cli root ["format" "--check"])]
+          {:code (. result :code)
+           :lines (. result :lines)})))))
+
+(defn- default-path-scenario []
+  (let [root (vim.fn.tempname)
+        path (.. root "/source.fnl")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file path "(when x\ny)\n")
+        (let [result (run-cli root ["format" "--write"])]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :content (read-file path)})))))
+
+(defn- dotfiles-scenario []
+  (let [root (vim.fn.tempname)
+        fnl-dir (.. root "/fnl")
+        hidden-dir (.. fnl-dir "/.hidden")
+        hidden-file (.. fnl-dir "/.hidden.fnl")
+        nested-file (.. hidden-dir "/nested.fnl")
+        git-dir (.. fnl-dir "/.git")
+        git-file (.. git-dir "/ignored.fnl")]
+    (vim.fn.mkdir hidden-dir "p")
+    (vim.fn.mkdir git-dir "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file (.. root "/.fnl-extras.fnl") "{:paths [\"fnl\"] :skip-dotfiles false}")
+        (write-file hidden-file "(when x\ny)\n")
+        (write-file nested-file "(when x\ny)\n")
+        (write-file git-file "(when x\ny)\n")
+        (let [result (run-cli root ["format" "--check"])]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :hidden (. (vim.loop.fs_stat hidden-file) :type)
+           :nested (. (vim.loop.fs_stat nested-file) :type)
+           :git (read-file git-file)})))))
+
+(defn- follow-symlink-scenario []
+  (let [root (vim.fn.tempname)
+        outside (vim.fn.tempname)
+        fnl-dir (.. root "/fnl")
+        link (.. fnl-dir "/link.fnl")
+        target (.. outside "/outside.fnl")]
+    (vim.fn.mkdir fnl-dir "p")
+    (vim.fn.mkdir outside "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn []
+       (vim.fn.delete root "rf")
+       (vim.fn.delete outside "rf"))
+      (fn []
+        (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
+        (write-file target "(when x\ny)\n")
+        (assert (vim.loop.fs_symlink target link))
+        (let [result (run-cli root ["format" "--write"])]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :link-type (. (vim.loop.fs_lstat link) :type)
+           :target (read-file target)})))))
+
+(defn- follow-directory-symlink-scenario
+  [mode]
+  (let [root (vim.fn.tempname)
+        outside (vim.fn.tempname)
+        link (.. root "/linkdir")
+        target (.. outside "/a.fnl")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir outside "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn []
+       (vim.fn.delete root "rf")
+       (vim.fn.delete outside "rf"))
+      (fn []
+        (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
+        (write-file target "(when x\ny)\n")
+        (assert (vim.loop.fs_symlink outside link))
+        (let [result (run-cli root (if (= mode :check)
+                                       ["format" "--check"]
+                                       ["format" "--write"]))]
+          (if (= mode :check)
+              {:code (. result :code)
+               :lines (. result :lines)
+               :target (read-file target)}
+              {:code (. result :code)
+               :link-type (. (vim.loop.fs_lstat link) :type)
+               :target (read-file target)}))))))
+
+(defn- parser-scenario
+  [mode]
+  (let [root (vim.fn.tempname)
+        path (.. root "/a.fnl")
+        config-path (.. root "/.fnl-extras.fnl")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file path "(when x\ny)\n")
+        (write-file config-path "{:parser \"missing.parser.module\"}")
+        (let [result (run-cli root (if (= mode :config)
+                                       ["format" "--check" "a.fnl"]
+                                       ["format" "--check" "--parser" "eca.nfnl.fennel" "a.fnl"]))]
+          {:code (. result :code)
+           :lines (. result :lines)})))))
+
+(defn- rule-config-scenario
+  [config source expected]
+  (let [root (vim.fn.tempname)
+        path (.. root "/a.fnl")
+        config-path (.. root "/.fnl-extras.fnl")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file config-path config)
+        (write-file path source)
+        (let [result (run-cli root ["format" "--write" "a.fnl"])]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :content (read-file path)
+           :expected expected})))))
+
+(defn- config-discovery-scenario
+  [mode]
+  (let [root (vim.fn.tempname)
+        config-path (.. root "/.fnl-extras.fnl")
+        source-path (.. root "/a.fnl")
+        config "{:skip-dotfiles false\n:paths [\".\"]}\n"]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file config-path config)
+        (write-file source-path "(when x\ny)\n")
+        (let [result (run-cli root (if (= mode :check)
+                                       ["format" "--check"]
+                                       ["format" "--write"]))]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :config (read-file config-path)
+           :source (read-file source-path)})))))
+
+(deftest new-configuration
+  (testing "uses only configured extensions during discovery"
+    (is (= {:code 1 :lines ["source.fnl"]}
+           (extension-scenario ".fnl"))))
+  (testing "discovers a configured non-default extension"
+    (is (= {:code 1 :lines ["source.fnlx"]}
+           (extension-scenario ".fnlx"))))
+  (testing "walks the current directory when paths are absent from config and CLI"
+    (is (= {:code 0 :lines ["source.fnl"] :content "(when x\n  y)\n"}
+           (default-path-scenario))))
+  (testing "formats dotfiles and dot-directories when skip-dotfiles is false but never .git"
+    (is (= {:code 1
+            :lines ["fnl/.hidden.fnl" "fnl/.hidden/nested.fnl"]
+            :hidden "file"
+            :nested "file"
+            :git "(when x\ny)\n"}
+           (dotfiles-scenario))))
+  (testing "follows file symlinks to real targets and preserves the symlink"
+    (is (= {:code 0
+            :lines ["fnl/link.fnl"]
+            :link-type "link"
+            :target "(when x\n  y)\n"}
+           (follow-symlink-scenario))))
+  (testing "reports files under followed directory symlinks by logical path"
+    (is (= {:code 1
+            :lines ["linkdir/a.fnl"]
+            :target "(when x\ny)\n"}
+           (follow-directory-symlink-scenario :check))))
+  (testing "writes files under followed directory symlinks to their real targets"
+    (is (= {:code 0
+            :link-type "link"
+            :target "(when x\n  y)\n"}
+           (follow-directory-symlink-scenario :write))))
+  (testing "uses the parser named by config when no CLI parser is given"
+    (is (= {:code 2 :lines ["could not require parser module: missing.parser.module"]}
+           (parser-scenario :config))))
+  (testing "CLI parser overrides the parser named by config"
+    (is (= {:code 1 :lines ["a.fnl"]}
+           (parser-scenario :flag)))))
+
 (defn- symlink-loop-scenario []
   (let [root (vim.fn.tempname)
         fnl-dir (.. root "/fnl")
@@ -278,6 +484,57 @@
            :link-type (. (vim.loop.fs_lstat link) :type)
            :target (read-file target)})))))
 
+(defn- follow-symlink-dedupe-scenario []
+  (let [root (vim.fn.tempname)
+        target (.. root "/a.fnl")
+        link (.. root "/b.fnl")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
+        (write-file target "(when x\ny)\n")
+        (assert (vim.loop.fs_symlink target link))
+        (let [result (run-cli root ["format" "--write"])]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :link-type (. (vim.loop.fs_lstat link) :type)
+           :target (read-file target)})))))
+
+(defn- follow-symlink-cycle-scenario []
+  (let [root (vim.fn.tempname)
+        directory (.. root "/d")
+        file (.. directory "/x.fnl")
+        loop-path (.. directory "/loop")]
+    (vim.fn.mkdir directory "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
+        (write-file file "(when x\ny)\n")
+        (assert (vim.loop.fs_symlink root loop-path))
+        (let [result (run-cli root ["format" "--check"])]
+          {:code (. result :code)
+           :lines (. result :lines)})))))
+
+(defn- follow-symlink-explicit-scenario []
+  (let [root (vim.fn.tempname)
+        target (.. root "/real.fnl")
+        link (.. root "/link.fnl")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
+        (write-file target "(when x\ny)\n")
+        (assert (vim.loop.fs_symlink target link))
+        (let [result (run-cli root ["format" "--check" "link.fnl"])]
+          {:code (. result :code)
+           :lines (. result :lines)})))))
+
 (defn- unreadable-directory-scenario []
   (let [root (vim.fn.tempname)
         fnl-dir (.. root "/fnl")
@@ -299,6 +556,35 @@
                     lines (. result :lines)]
                 {:code (. result :code)
                  :mentions-read-error (not (not (string.match (or (. lines 1) "") "cannot read directory")))})))))))
+
+(deftest configured-formatting-rules
+  (testing "uses configured indent-width"
+    (is (= {:code 0 :lines ["a.fnl"] :content "(when x\n    y)\n"
+            :expected "(when x\n    y)\n"}
+           (rule-config-scenario "{:indent-width 4}" "(when x\ny)\n"
+                                 "(when x\n    y)\n"))))
+  (testing "disables built-in indentation rules when builtins is false"
+    (is (= {:code 0 :lines ["a.fnl"] :content "(let [x 1]\n     x)\n"
+            :expected "(let [x 1]\n     x)\n"}
+           (rule-config-scenario "{:builtins false}" "(let [x 1]\nx)\n"
+                                 "(let [x 1]\n     x)\n"))))
+  (testing "disables prefix fallback indentation rules when prefix-fallbacks is false"
+    (is (= {:code 0 :lines ["a.fnl"] :content "(defn x\n      y)\n"
+            :expected "(defn x\n      y)\n"}
+           (rule-config-scenario "{:prefix-fallbacks false}" "(defn x\ny)\n"
+                                 "(defn x\n      y)\n")))))
+
+(deftest config-file-discovery
+  (testing "does not report the discovered config file as a formatting target"
+    (is (= {:code 1 :lines ["a.fnl"]
+            :config "{:skip-dotfiles false\n:paths [\".\"]}\n"
+            :source "(when x\ny)\n"}
+           (config-discovery-scenario :check))))
+  (testing "does not rewrite the discovered config file"
+    (is (= {:code 0 :lines ["a.fnl"]
+            :config "{:skip-dotfiles false\n:paths [\".\"]}\n"
+            :source "(when x\n  y)\n"}
+           (config-discovery-scenario :write)))))
 
 (deftest edge-cases
   (testing "does not recurse through directory symlinks"
@@ -333,4 +619,16 @@
       (is (= (if (. result :skipped-root)
                  {:skipped-root true}
                  {:code 2 :mentions-read-error true})
-             result)))))
+             result))))
+  (testing "processes a real file only once when a symlink points to it"
+    (is (= {:code 0
+            :lines ["a.fnl"]
+            :link-type "link"
+            :target "(when x\n  y)\n"}
+           (follow-symlink-dedupe-scenario))))
+  (testing "terminates when a followed directory symlink forms a cycle"
+    (is (= {:code 1 :lines ["d/x.fnl"]}
+           (follow-symlink-cycle-scenario))))
+  (testing "follows an explicitly named symlink file"
+    (is (= {:code 1 :lines ["link.fnl"]}
+           (follow-symlink-explicit-scenario)))))

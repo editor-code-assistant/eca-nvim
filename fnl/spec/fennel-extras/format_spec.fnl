@@ -168,6 +168,50 @@
   (testing "hand-styled files remain fixed points"
     (is (= [] (. (repo-scenario) :fixed-point)))))
 
+(deftest configuration-formatting
+  (testing "indent width four changes block indentation"
+    (is (= "(let [x 1]\n    x)"
+           (. (format-summary "(let [x 1]\nx)" {:indent-width 4}) :value))))
+  (testing "indent width four changes inner indentation"
+    (is (= "(fn [x]\n    x)"
+           (. (format-summary "(fn [x]\nx)" {:indent-width 4}) :value))))
+  (testing "the default indent width preserves today's output"
+    (is (= "(let [x 1]\n  x)"
+           (. (format-summary "(let [x 1]\nx)" {}) :value))))
+  (testing "builtins false disables the let block rule"
+    (is (= "(let [x 1]\n     x)"
+           (. (format-summary "(let [x 1]\nx)" {:builtins false}) :value))))
+  (testing "a custom builtins table replaces the built-in table"
+    (is (= "(let [x 1]\n     x)"
+           (. (format-summary "(let [x 1]\nx)"
+                              {:builtins {"when" [[:block 1]]}}) :value))))
+  (testing "a custom builtins table supplies its replacement rule"
+    (is (= "(when x\n  y)"
+           (. (format-summary "(when x\ny)"
+                              {:builtins {"when" [[:block 1]]}}) :value))))
+  (testing "prefix fallbacks false disables the def fallback"
+    (is (= "(defn x\n      y)"
+           (. (format-summary "(defn x\ny)" {:prefix-fallbacks false}) :value))))
+  (testing "a custom prefix fallback table replaces the defaults"
+    (is (= "(defn x\n      y)"
+           (. (format-summary "(defn x\ny)"
+                              {:prefix-fallbacks {"with-" [[:block 1]]}}) :value))))
+  (testing "a custom prefix fallback table supplies its replacement rule"
+    (is (= "(foo x\n  y)"
+           (. (format-summary "(foo x\ny)"
+                              {:prefix-fallbacks {"foo-" [[:block 1]]}}) :value))))
+  (testing "a long one-line form stays exactly one line"
+    (is (= "(when x (print :a) (print :b) (let [y 1] y))"
+           (. (format-summary "(when x (print :a) (print :b) (let [y 1] y))" {}) :value))))
+  (testing "a nested one-line fn stays exactly one line"
+    (is (= "(fn [x] (fn [y] (+ x y)))"
+           (. (format-summary "(fn [x] (fn [y] (+ x y)))" {}) :value))))
+  (testing "a multi-line form keeps its line count"
+    (is (= 3
+           (let [value (. (format-summary "(when x\n(print :a)\n(print :b))" {}) :value)
+                 (_ count) (string.gsub value "\n" "")]
+             (+ count 1))))))
+
 (defn- format-summary-with-parser [source config]
   (let [format (load-format)
         parser (load-parser)]

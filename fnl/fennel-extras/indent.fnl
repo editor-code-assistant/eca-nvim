@@ -136,9 +136,9 @@
                                 selected (. entry 3)]
                             (if (and (= kind :inner) (= value 0)
                                      (or (= selected nil) (= selected arg-index)))
-                                (set result (+ node.open.out-col 2))
+                                (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
                                 (if (and (= kind :block) (>= arg-index value))
-                                    (set result (+ node.open.out-col 2)))))))
+                                    (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
                     result)
                   nil))
             nil))

@@ -346,6 +346,110 @@ local function _55_()
   return require("plenary.busted").it("hand-styled files remain fixed points", _60_)
 end
 require("plenary.busted").describe("repo-properties", _55_)
+local function _61_()
+  local function _62_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [x 1]\n    x)"
+    local actual_7_auto = format_summary("(let [x 1]\nx)", {["indent-width"] = 4}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("indent width four changes block indentation", _62_)
+  local function _63_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(fn [x]\n    x)"
+    local actual_7_auto = format_summary("(fn [x]\nx)", {["indent-width"] = 4}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("indent width four changes inner indentation", _63_)
+  local function _64_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [x 1]\n  x)"
+    local actual_7_auto = format_summary("(let [x 1]\nx)", {}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("the default indent width preserves today's output", _64_)
+  local function _65_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [x 1]\n     x)"
+    local actual_7_auto = format_summary("(let [x 1]\nx)", {builtins = false}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("builtins false disables the let block rule", _65_)
+  local function _66_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [x 1]\n     x)"
+    local actual_7_auto = format_summary("(let [x 1]\nx)", {builtins = {when = {{"block", 1}}}}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a custom builtins table replaces the built-in table", _66_)
+  local function _67_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(when x\n  y)"
+    local actual_7_auto = format_summary("(when x\ny)", {builtins = {when = {{"block", 1}}}}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a custom builtins table supplies its replacement rule", _67_)
+  local function _68_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(defn x\n      y)"
+    local actual_7_auto = format_summary("(defn x\ny)", {["prefix-fallbacks"] = false}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("prefix fallbacks false disables the def fallback", _68_)
+  local function _69_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(defn x\n      y)"
+    local actual_7_auto = format_summary("(defn x\ny)", {["prefix-fallbacks"] = {["with-"] = {{"block", 1}}}}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a custom prefix fallback table replaces the defaults", _69_)
+  local function _70_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(foo x\n  y)"
+    local actual_7_auto = format_summary("(foo x\ny)", {["prefix-fallbacks"] = {["foo-"] = {{"block", 1}}}}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a custom prefix fallback table supplies its replacement rule", _70_)
+  local function _71_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(when x (print :a) (print :b) (let [y 1] y))"
+    local actual_7_auto = format_summary("(when x (print :a) (print :b) (let [y 1] y))", {}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a long one-line form stays exactly one line", _71_)
+  local function _72_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(fn [x] (fn [y] (+ x y)))"
+    local actual_7_auto = format_summary("(fn [x] (fn [y] (+ x y)))", {}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a nested one-line fn stays exactly one line", _72_)
+  local function _73_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 3
+    local actual_7_auto
+    do
+      local value = format_summary("(when x\n(print :a)\n(print :b))", {}).value
+      local _, count = string.gsub(value, "\n", "")
+      actual_7_auto = (count + 1)
+    end
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("a multi-line form keeps its line count", _73_)
+end
+require("plenary.busted").describe("configuration-formatting", _61_)
 local function format_summary_with_parser(source, config)
   local format = load_format()
   local parser = load_parser()
@@ -353,38 +457,38 @@ local function format_summary_with_parser(source, config)
     return {value = nil, ["value?"] = false}
   else
     local ok, value, err
-    local function _61_()
+    local function _74_()
       return format["format-string"](source, {config = config, parser = parser})
     end
-    ok, value, err = pcall(_61_)
+    ok, value, err = pcall(_74_)
     return {["value?"] = (ok and (nil ~= value)), ["has-message"] = (ok and (nil == value) and err and ("string" == type(err.message))), value = value}
   end
 end
 local function symbol_key_safety_scenario()
   local parser = load_parser()
   local format = load_format()
-  local _63_
+  local _76_
   if (parser.error or format.error) then
-    _63_ = false
+    _76_ = false
   else
-    _63_ = format["ast-equal?"](parser, "{a 1}", "{a 1}")
+    _76_ = format["ast-equal?"](parser, "{a 1}", "{a 1}")
   end
-  local _65_
+  local _78_
   if (parser.error or format.error) then
-    _65_ = false
+    _78_ = false
   else
-    _65_ = format["ast-equal?"](parser, "{a 1}", "{a 2}")
+    _78_ = format["ast-equal?"](parser, "{a 1}", "{a 2}")
   end
-  local _67_
+  local _80_
   if (parser.error or format.error) then
-    _67_ = false
+    _80_ = false
   else
-    _67_ = format["ast-equal?"](parser, "{a 1}", "{b 1}")
+    _80_ = format["ast-equal?"](parser, "{a 1}", "{b 1}")
   end
-  return {same = _63_, ["different-value"] = _65_, ["different-key"] = _67_}
+  return {same = _76_, ["different-value"] = _78_, ["different-key"] = _80_}
 end
-local function _69_()
-  local function _70_()
+local function _82_()
+  local function _83_()
     local result = format_summary_with_parser("{target true}", {})
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, value = "{target true}"}
@@ -392,8 +496,8 @@ local function _69_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("format-string preserves an unchanged symbol-keyed table", _70_)
-  local function _71_()
+  require("plenary.busted").it("format-string preserves an unchanged symbol-keyed table", _83_)
+  local function _84_()
     local result = format_summary_with_parser("(let [visited {target true}]\nvisited)", {})
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, value = "(let [visited {target true}]\n  visited)"}
@@ -401,20 +505,20 @@ local function _69_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("format-string reindents a let containing a symbol-keyed table", _71_)
-  local function _72_()
+  require("plenary.busted").it("format-string reindents a let containing a symbol-keyed table", _84_)
+  local function _85_()
     local assert_28_auto = require("luassert")
     local value_29_auto = not symbol_key_safety_scenario()["different-value"]
     assert_28_auto.is_truthy(value_29_auto, "(not (. (symbol-key-safety-scenario) \"different-value\"))")
     return true
   end
-  require("plenary.busted").it("ast-equal rejects a changed value with symbol keys", _72_)
-  local function _73_()
+  require("plenary.busted").it("ast-equal rejects a changed value with symbol keys", _85_)
+  local function _86_()
     local assert_28_auto = require("luassert")
     local value_29_auto = not symbol_key_safety_scenario()["different-key"]
     assert_28_auto.is_truthy(value_29_auto, "(not (. (symbol-key-safety-scenario) \"different-key\"))")
     return true
   end
-  return require("plenary.busted").it("ast-equal rejects a changed key with symbol keys", _73_)
+  return require("plenary.busted").it("ast-equal rejects a changed key with symbol keys", _86_)
 end
-return require("plenary.busted").describe("symbol-keyed-tables", _69_)
+return require("plenary.busted").describe("symbol-keyed-tables", _82_)

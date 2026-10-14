@@ -182,10 +182,10 @@ local function rule_indent(node, first_token, line_number, config)
             local value = entry[2]
             local selected = entry[3]
             if ((kind == "inner") and (value == 0) and ((selected == nil) or (selected == arg_index))) then
-              result = (node.open["out-col"] + 2)
+              result = (node.open["out-col"] + ((config and config["indent-width"]) or 2))
             else
               if ((kind == "block") and (arg_index >= value)) then
-                result = (node.open["out-col"] + 2)
+                result = (node.open["out-col"] + ((config and config["indent-width"]) or 2))
               else
               end
             end

@@ -59,6 +59,17 @@
                              (= :table (type err))
                              (= :string (type (. err :message))))}))))
 
+(defn- validation-error-message
+  [text]
+  (let [config (load-config)
+        value (parse-value text)]
+    (if (or (. config :module-missing) (= value nil))
+        nil
+        (let [(ok result err) (pcall (fn [] (config.validate value)))]
+          (if (and ok (= result nil) err)
+              (. err :message)
+              nil)))))
+
 (defn- write-file
   [path text]
   (let [file (assert (io.open path :w))]
@@ -172,3 +183,78 @@
   (testing "load returns a structured error for a missing path"
     (is (= {:value? false :has-message true}
            (. (find-load-scenario) :missing)))))
+
+(deftest new-configuration
+  (testing "accepts an indent width of four"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:indent-width 4}))))
+  (testing "accepts the default builtins setting"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:builtins true}))))
+  (testing "accepts disabling builtins"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:builtins false}))))
+  (testing "accepts a replacement builtins table"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:builtins {"foo" [[:block 1]]}}))))
+  (testing "accepts disabling prefix fallbacks"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:prefix-fallbacks false}))))
+  (testing "accepts a replacement prefix fallback table"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:prefix-fallbacks {"foo-" [[:block 1]]}}))))
+  (testing "rejects zero indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width 0}")]
+      (is (= "indent-width must be a positive integer" message))))
+  (testing "rejects negative indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width -1}")]
+      (is (= "indent-width must be a positive integer" message))))
+  (testing "rejects non-integer indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width 2.5}")]
+      (is (= "indent-width must be a positive integer" message))))
+  (testing "rejects string indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width \"4\"}")]
+      (is (= "indent-width must be a positive integer" message))))
+  (testing "rejects malformed builtins with a specific validation message"
+    (let [message (validation-error-message "{:builtins 1}")]
+      (is (= "builtins must be true, false, or a table of rules" message))))
+  (testing "rejects malformed prefix fallbacks with a specific validation message"
+    (let [message (validation-error-message "{:prefix-fallbacks 1}")]
+      (is (= "prefix-fallbacks must be false or a table of rules" message))))
+  (testing "rejects malformed builtins rules with a specific validation message"
+    (let [message (validation-error-message "{:builtins {\"foo\" 1}}")]
+      (is (= "builtins rule foo: invalid indentation rule" message))))
+  (testing "rejects malformed prefix fallback rules with a specific validation message"
+    (let [message (validation-error-message "{:prefix-fallbacks {\"foo-\" 1}}")]
+      (is (= "prefix-fallbacks rule foo-: invalid indentation rule" message)))))
+
+(deftest extensions
+  (testing "accepts a non-empty list of dotted extension strings"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:extensions [".fnl" ".fnlm"]}))))
+  (testing "rejects an empty extensions list with the exact validation message"
+    (is (= "extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions []}"))))
+  (testing "rejects non-string extensions with the exact validation message"
+    (is (= "extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions [1]}"))))
+  (testing "rejects extensions without a leading dot with the exact validation message"
+    (is (= "extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions [\"fnl\"]}"))))
+  (testing "rejects a non-list extensions value with the exact validation message"
+    (is (= "extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions \".fnl\"}")))))
+
+(deftest new-keys
+  (testing "accepts the default paths behavior without a paths key"
+    (is (= {:value? true :has-message false}
+           (validate-summary {}))))
+  (testing "rejects a non-boolean skip-dotfiles value with the exact validation message"
+    (is (= "skip-dotfiles must be a boolean"
+           (validation-error-message "{:skip-dotfiles 1}"))))
+  (testing "rejects a non-boolean follow-symlinks value with the exact validation message"
+    (is (= "follow-symlinks must be a boolean"
+           (validation-error-message "{:follow-symlinks 1}"))))
+  (testing "rejects a non-string parser value with the exact validation message"
+    (is (= "parser must be a string"
+           (validation-error-message "{:parser 1}")))))

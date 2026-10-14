@@ -2,14 +2,16 @@
 
 (module fennel-extras.rules)
 
-(local built-ins
+(local built-in-rules
        {:fn [[:inner 0]] :lambda [[:inner 0]] :macro [[:inner 0]]
         :let [[:block 1]] :when [[:block 1]] :when-let [[:block 1]] :if-let [[:block 1]]
         :each [[:block 1]] :for [[:block 1]] :icollect [[:block 1]] :collect [[:block 1]]
         :accumulate [[:block 1]] :case [[:block 1]] :match [[:block 1]] :while [[:block 1]]
         :with-open [[:block 1]] :do [[:block 0]]})
 
-(local allowed-keys {:indents true :format-as true :indent-patterns true})
+(local prefix-rules {:def [[:inner 0]] :with- [[:block 1]]})
+(local allowed-keys {:indents true :format-as true :indent-patterns true
+                     :indent-width true :builtins true :prefix-fallbacks true})
 (var resolve-name nil)
 (var alias-rule nil)
 
@@ -74,9 +76,25 @@
             failure)
           (error "indentation patterns must be a list"))))
 
+(defn- effective-builtins [config]
+  (let [setting (. config :builtins)]
+    (if (= setting nil)
+        built-in-rules
+        (if (= setting true)
+            built-in-rules
+            (if (= setting false) {} setting)))))
+
+(defn- effective-prefix-rules [config]
+  (let [setting (. config :prefix-fallbacks)]
+    (if (= setting nil)
+        prefix-rules
+        (if (= setting false) {} setting))))
+
 (set resolve-name
      (fn [config name seen]
-       (let [indents (or (. config :indents) {}) aliases (or (. config :format-as) {}) patterns (or (. config :indent-patterns) {})]
+       (let [indents (or (. config :indents) {}) aliases (or (. config :format-as) {})
+             patterns (or (. config :indent-patterns) {}) builtins (effective-builtins config)
+             prefixes (effective-prefix-rules config)]
          (if (. indents name)
              (values (. indents name) nil true)
              (if (. aliases name)
@@ -89,13 +107,22 @@
                          (do (set result (. entry 2)) (set found true))))
                    (if found
                        (values result nil true)
-                       (if (. built-ins name)
-                           (values (. built-ins name) nil true)
-                           (if (and (= (string.find name "." 1 true) nil) (string.match name "^def"))
-                               (values [[:inner 0]] nil true)
-                               (if (and (= (string.find name "." 1 true) nil) (string.match name "^with-"))
-                                   (values [[:block 1]] nil true)
-                                   (values nil nil false)))))))))))
+                       (if (. builtins name)
+                           (values (. builtins name) nil true)
+                           (if (= (string.find name "." 1 true) nil)
+                               (let []
+                                 (var result nil)
+                                 (var found false)
+                                 (each [prefix rule (pairs prefixes)]
+                                   (if (and (not found)
+                                            (or (= (string.sub name 1 (string.len prefix)) prefix)
+                                                (and (= (string.sub prefix -1) "-")
+                                                     (= name (string.sub prefix 1 -2)))))
+                                       (do (set result rule) (set found true))))
+                                 (if found
+                                     (values result nil true)
+                                     (values nil nil false)))
+                               (values nil nil false))))))))))
 
 (set alias-rule
      (fn [config name seen]
@@ -111,6 +138,34 @@
                        (values rule nil true)
                        (values nil (error "format-as target has no indentation rule")))))))))
 
+(defn- validate-custom-map [items prefix]
+  (if (= (type items) :table)
+      (let []
+        (var failure nil)
+        (each [name value (pairs items)]
+          (if (= failure nil)
+              (if (not= (type name) :string)
+                  (set failure (error "indentation names must be strings"))
+                  (if (not= (validate-rule-list value) nil)
+                      (set failure (error (.. prefix name ": invalid indentation rule")))))))
+        failure)
+      (error (.. prefix " must be a table of rules"))))
+
+(defn- validate-custom-config [config]
+  (let [builtins (. config :builtins) fallbacks (. config :prefix-fallbacks)]
+    (if (and (not= builtins nil) (not (= builtins true)) (not (= builtins false))
+             (not= (type builtins) :table))
+        (error "builtins must be true, false, or a table of rules")
+        (if (and (= (type builtins) :table) (validate-custom-map builtins "builtins rule "))
+            (validate-custom-map builtins "builtins rule ")
+            (if (and (not= fallbacks nil) (not (= fallbacks false))
+                     (not= (type fallbacks) :table))
+                (error "prefix-fallbacks must be false or a table of rules")
+                (if (and (= (type fallbacks) :table)
+                         (validate-custom-map fallbacks "prefix-fallbacks rule "))
+                    (validate-custom-map fallbacks "prefix-fallbacks rule ")
+                    nil))))))
+
 (defn validate [config]
   (if (= config nil)
       nil
@@ -123,6 +178,11 @@
             (if (= failure nil) (set failure (validate-map (. config :indents) true)))
             (if (= failure nil) (set failure (validate-map (. config :format-as) false)))
             (if (= failure nil) (set failure (validate-patterns (. config :indent-patterns))))
+            (if (= failure nil)
+                (let [width (. config :indent-width)]
+                  (if (and (not= width nil) (not (and (integer? width) (> width 0))))
+                      (set failure (error "indent-width must be a positive integer")))))
+            (if (= failure nil) (set failure (validate-custom-config config)))
             (if (= failure nil)
                 (each [name _ (pairs (or (. config :format-as) {}))]
                   (if (= failure nil)
