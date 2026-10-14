@@ -1,4 +1,4 @@
-.PHONY: test deps clean compile check-compiled lint
+.PHONY: test deps clean compile check-compiled lint fmt fmt-check
 
 FENNEL_LS ?= $(shell command -v fennel-ls 2>/dev/null || printf '%s' '$(HOME)/.local/share/nvim/mason/bin/fennel-ls')
 LINT_FILES ?= $(shell find fnl -type f \( -name '*.fnl' -o -name '*.fnlm' \) ! -path 'fnl/eca/nfnl/*' -exec sh -c 'head -n 1 "$$1" | grep -qF '[nfnl-macro]' || printf "%s " "$$1"' _ {} \;)
@@ -25,6 +25,12 @@ lint:
 	  exit 1; \
 	fi
 	"$(FENNEL_LS)" --lint $(LINT_FILES)
+
+fmt:
+	scripts/fennel-extras format --write --parser eca.nfnl.fennel
+
+fmt-check:
+	scripts/fennel-extras format --check --parser eca.nfnl.fennel
 
 test: deps
 	nvim --headless --noplugin -u scripts/minimal_init.lua \
