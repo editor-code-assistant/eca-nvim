@@ -345,4 +345,76 @@ local function _55_()
   end
   return require("plenary.busted").it("hand-styled files remain fixed points", _60_)
 end
-return require("plenary.busted").describe("repo-properties", _55_)
+require("plenary.busted").describe("repo-properties", _55_)
+local function format_summary_with_parser(source, config)
+  local format = load_format()
+  local parser = load_parser()
+  if (format.error or parser.error) then
+    return {value = nil, ["value?"] = false}
+  else
+    local ok, value, err
+    local function _61_()
+      return format["format-string"](source, {config = config, parser = parser})
+    end
+    ok, value, err = pcall(_61_)
+    return {["value?"] = (ok and (nil ~= value)), ["has-message"] = (ok and (nil == value) and err and ("string" == type(err.message))), value = value}
+  end
+end
+local function symbol_key_safety_scenario()
+  local parser = load_parser()
+  local format = load_format()
+  local _63_
+  if (parser.error or format.error) then
+    _63_ = false
+  else
+    _63_ = format["ast-equal?"](parser, "{a 1}", "{a 1}")
+  end
+  local _65_
+  if (parser.error or format.error) then
+    _65_ = false
+  else
+    _65_ = format["ast-equal?"](parser, "{a 1}", "{a 2}")
+  end
+  local _67_
+  if (parser.error or format.error) then
+    _67_ = false
+  else
+    _67_ = format["ast-equal?"](parser, "{a 1}", "{b 1}")
+  end
+  return {same = _63_, ["different-value"] = _65_, ["different-key"] = _67_}
+end
+local function _69_()
+  local function _70_()
+    local result = format_summary_with_parser("{target true}", {})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {["value?"] = true, value = "{target true}"}
+    local actual_7_auto = {["value?"] = result["value?"], value = result.value}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("format-string preserves an unchanged symbol-keyed table", _70_)
+  local function _71_()
+    local result = format_summary_with_parser("(let [visited {target true}]\nvisited)", {})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {["value?"] = true, value = "(let [visited {target true}]\n  visited)"}
+    local actual_7_auto = {["value?"] = result["value?"], value = result.value}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("format-string reindents a let containing a symbol-keyed table", _71_)
+  local function _72_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = not symbol_key_safety_scenario()["different-value"]
+    assert_28_auto.is_truthy(value_29_auto, "(not (. (symbol-key-safety-scenario) \"different-value\"))")
+    return true
+  end
+  require("plenary.busted").it("ast-equal rejects a changed value with symbol keys", _72_)
+  local function _73_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = not symbol_key_safety_scenario()["different-key"]
+    assert_28_auto.is_truthy(value_29_auto, "(not (. (symbol-key-safety-scenario) \"different-key\"))")
+    return true
+  end
+  return require("plenary.busted").it("ast-equal rejects a changed key with symbol keys", _73_)
+end
+return require("plenary.busted").describe("symbol-keyed-tables", _69_)

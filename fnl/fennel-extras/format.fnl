@@ -39,19 +39,59 @@
       (= key "filename") (= key "line") (= key "col") (= key "bytestart")
       (= key "byteend") (= key "endline") (= key "endcol") (= key "closer")))
 
+(defn- symbol? [value]
+  (let [meta (and (= (type value) :table) (getmetatable value))]
+    (and meta (= (tostring (. meta 1)) "SYMBOL"))))
+
+(defn- equal-key? [a b]
+  (if (and (symbol? a) (symbol? b))
+      (= (tostring a) (tostring b))
+      (= a b)))
+
+(defn- entries [value]
+  (let [result []]
+    (each [key item (pairs value)]
+      (if (not (ignored? key))
+          (table.insert result {:key key :value item})))
+    result))
+
+(defn- matching-entry [equal parser entry right]
+  (var found-index nil)
+  (each [index candidate (ipairs right)]
+    (if (and (= found-index nil)
+             (equal-key? (. entry :key) (. candidate :key))
+             (equal parser (. entry :value) (. candidate :value)))
+        (set found-index index)))
+  found-index)
+
+(defn- remove-and-continue [continue equal parser left right found-index]
+  (table.remove right found-index)
+  (continue equal parser left right))
+
+(defn- continue-equal-entries [continue equal parser left right found-index]
+  (if found-index
+      (remove-and-continue continue equal parser left right found-index)
+      false))
+
+(defn- equal-entries? [equal parser left right]
+  (if (= (length left) 0)
+      true
+      (let [entry (table.remove left 1)
+            found-index (matching-entry equal parser entry right)]
+        (continue-equal-entries equal-entries? equal parser left right found-index))))
+
+(defn- equal-table? [equal parser a b]
+  (let [left (entries a) right (entries b)]
+    (and (= (length left) (length right))
+         (equal-entries? equal parser left right))))
+
 (defn- equal-value [parser a b]
   (if (not= (type a) (type b))
       false
       (if (= (type a) :table)
-          (if (or (parser.sym? a) (parser.comment? a))
+          (if (or (symbol? a) (parser.comment? a))
               (= (tostring a) (tostring b))
-              (do
-                (var same true)
-                (each [key value (pairs a)]
-                  (if (not (ignored? key))
-                      (if (not (equal-value parser value (. b key)))
-                          (set same false))))
-                same))
+              (equal-table? equal-value parser a b))
           (= a b))))
 
 (defn- parse-all [parser source]

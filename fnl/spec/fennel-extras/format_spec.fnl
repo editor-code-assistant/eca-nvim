@@ -167,3 +167,40 @@
     (is (= [] (. (repo-scenario) :ast))))
   (testing "hand-styled files remain fixed points"
     (is (= [] (. (repo-scenario) :fixed-point)))))
+
+(defn- format-summary-with-parser [source config]
+  (let [format (load-format)
+        parser (load-parser)]
+    (if (or (. format :error) (. parser :error))
+        {:value? false :value nil}
+        (let [(ok value err) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
+          {:value? (and ok (not= nil value))
+           :has-message (and ok (= nil value) err (= :string (type (. err :message))))
+           :value value}))))
+
+(defn- symbol-key-safety-scenario []
+  (let [parser (load-parser)
+        format (load-format)]
+    {:same (if (or (. parser :error) (. format :error))
+               false
+               (format.ast-equal? parser "{a 1}" "{a 1}"))
+     :different-value (if (or (. parser :error) (. format :error))
+                          false
+                          (format.ast-equal? parser "{a 1}" "{a 2}"))
+     :different-key (if (or (. parser :error) (. format :error))
+                        false
+                        (format.ast-equal? parser "{a 1}" "{b 1}"))}))
+
+(deftest symbol-keyed-tables
+  (testing "format-string preserves an unchanged symbol-keyed table"
+    (let [result (format-summary-with-parser "{target true}" {})]
+      (is (= {:value? true :value "{target true}"}
+             {:value? (. result :value?) :value (. result :value)}))))
+  (testing "format-string reindents a let containing a symbol-keyed table"
+    (let [result (format-summary-with-parser "(let [visited {target true}]\nvisited)" {})]
+      (is (= {:value? true :value "(let [visited {target true}]\n  visited)"}
+             {:value? (. result :value?) :value (. result :value)}))))
+  (testing "ast-equal rejects a changed value with symbol keys"
+    (is (not (. (symbol-key-safety-scenario) :different-value))))
+  (testing "ast-equal rejects a changed key with symbol keys"
+    (is (not (. (symbol-key-safety-scenario) :different-key)))))

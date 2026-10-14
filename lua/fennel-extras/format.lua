@@ -51,25 +51,71 @@ end
 local function ignored_3f(key)
   return ((key == "filename") or (key == "line") or (key == "col") or (key == "bytestart") or (key == "byteend") or (key == "endline") or (key == "endcol") or (key == "closer") or (key == "filename") or (key == "line") or (key == "col") or (key == "bytestart") or (key == "byteend") or (key == "endline") or (key == "endcol") or (key == "closer"))
 end
+local function symbol_3f(value)
+  local meta = ((type(value) == "table") and getmetatable(value))
+  return (meta and (tostring(meta[1]) == "SYMBOL"))
+end
+local function equal_key_3f(a, b)
+  if (symbol_3f(a) and symbol_3f(b)) then
+    return (tostring(a) == tostring(b))
+  else
+    return (a == b)
+  end
+end
+local function entries(value)
+  local result = {}
+  for key, item in pairs(value) do
+    if not ignored_3f(key) then
+      table.insert(result, {key = key, value = item})
+    else
+    end
+  end
+  return result
+end
+local function matching_entry(equal, parser, entry, right)
+  local found_index = nil
+  for index, candidate in ipairs(right) do
+    if ((found_index == nil) and equal_key_3f(entry.key, candidate.key) and equal(parser, entry.value, candidate.value)) then
+      found_index = index
+    else
+    end
+  end
+  return found_index
+end
+local function remove_and_continue(continue, equal, parser, left, right, found_index)
+  table.remove(right, found_index)
+  return continue(equal, parser, left, right)
+end
+local function continue_equal_entries(continue, equal, parser, left, right, found_index)
+  if found_index then
+    return remove_and_continue(continue, equal, parser, left, right, found_index)
+  else
+    return false
+  end
+end
+local function equal_entries_3f(equal, parser, left, right)
+  if (#left == 0) then
+    return true
+  else
+    local entry = table.remove(left, 1)
+    local found_index = matching_entry(equal, parser, entry, right)
+    return continue_equal_entries(equal_entries_3f, equal, parser, left, right, found_index)
+  end
+end
+local function equal_table_3f(equal, parser, a, b)
+  local left = entries(a)
+  local right = entries(b)
+  return ((#left == #right) and equal_entries_3f(equal, parser, left, right))
+end
 local function equal_value(parser, a, b)
   if (type(a) ~= type(b)) then
     return false
   else
     if (type(a) == "table") then
-      if (parser["sym?"](a) or parser["comment?"](a)) then
+      if (symbol_3f(a) or parser["comment?"](a)) then
         return (tostring(a) == tostring(b))
       else
-        local same = true
-        for key, value in pairs(a) do
-          if not ignored_3f(key) then
-            if not equal_value(parser, value, b[key]) then
-              same = false
-            else
-            end
-          else
-          end
-        end
-        return same
+        return equal_table_3f(equal_value, parser, a, b)
       end
     else
       return (a == b)
@@ -94,7 +140,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _9_()
+    local function _12_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -110,7 +156,7 @@ do
         return same
       end
     end
-    ok, result = pcall(_9_)
+    ok, result = pcall(_12_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
