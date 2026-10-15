@@ -7,8 +7,14 @@ do
 end
 local config = require("fennel-extras.config")
 local formatter = require("fennel-extras.format")
+local lint_run = require("fennel-extras.lint.run")
+local lint_selection = require("fennel-extras.lint.selection")
 local function emit(printer, line)
   return printer(line)
+end
+local function default_print(line)
+  io.write((string.gsub(line, "\n+$", "") .. "\n"))
+  return io.flush()
 end
 local function cwd()
   return ((vim and vim.loop and vim.loop.cwd()) or (vim and vim.uv and vim.uv.cwd()) or ".")
@@ -302,55 +308,145 @@ local function error_line(path, error)
     return (path .. ": " .. message)
   end
 end
+local function append_path(paths, path)
+  local result = {}
+  for _, value in ipairs(paths) do
+    table.insert(result, value)
+  end
+  table.insert(result, path)
+  return result
+end
+local function parse_lint_value(args, index, state, key)
+  if (index >= #args) then
+    return nil, ("missing argument for " .. key)
+  else
+    local value = args[(index + 1)]
+    if (key == "--format") then
+      if ((value ~= "text") and (value ~= "json")) then
+        return nil, "format must be text or json"
+      else
+        return (index + 2), {all = state.all, base = state.base, format = value, ["format-seen"] = true, paths = state.paths}
+      end
+    else
+      local _ = key
+      return (index + 2), {all = state.all, base = value, format = state.format, ["format-seen"] = state["format-seen"], paths = state.paths}
+    end
+  end
+end
+local function parse_lint_args_step(args, index, state)
+  if (index > #args) then
+    return state, nil
+  else
+    local arg = args[index]
+    if (arg == "--all") then
+      if state.all then
+        return nil, "unknown or duplicate lint flag: --all"
+      else
+        return parse_lint_args_step(args, (index + 1), {all = true, base = state.base, format = state.format, ["format-seen"] = state["format-seen"], paths = state.paths})
+      end
+    elseif (arg == "--base") then
+      if state.base then
+        return nil, "unknown or duplicate lint flag: --base"
+      else
+        local next_index, next_state_or_error = parse_lint_value(args, index, state, "--base")
+        if next_index then
+          return parse_lint_args_step(args, next_index, next_state_or_error)
+        else
+          return nil, next_state_or_error
+        end
+      end
+    elseif (arg == "--format") then
+      if state["format-seen"] then
+        return nil, "unknown or duplicate lint flag: --format"
+      else
+        local next_index, next_state_or_error = parse_lint_value(args, index, state, "--format")
+        if next_index then
+          return parse_lint_args_step(args, next_index, next_state_or_error)
+        else
+          return nil, next_state_or_error
+        end
+      end
+    elseif (arg == "--write") then
+      return nil, "unsupported lint flag: --write"
+    elseif (arg == "--check") then
+      return nil, "unsupported lint flag: --check"
+    elseif (arg == "--parser") then
+      return nil, "unsupported lint flag: --parser"
+    else
+      local _ = arg
+      if (string.sub(arg, 1, 2) == "--") then
+        return nil, ("unknown flag: " .. arg)
+      else
+        return parse_lint_args_step(args, (index + 1), {all = state.all, base = state.base, format = state.format, ["format-seen"] = state["format-seen"], paths = append_path(state.paths, arg)})
+      end
+    end
+  end
+end
+local function parse_lint_args(args)
+  local state, failure = parse_lint_args_step(args, 2, {base = nil, format = "text", paths = {}, all = false, ["format-seen"] = false})
+  if failure then
+    return nil, failure
+  else
+    if (state.all and state.base) then
+      return nil, "--base cannot be used with --all"
+    else
+      return state
+    end
+  end
+end
 local function parse_args(args)
   local command = args[1]
-  if (command ~= "format") then
-    return nil, ("unknown command: " .. (command or ""))
+  if (command == "lint") then
+    return parse_lint_args(args)
   else
-    local mode = nil
-    local parser_name = nil
-    local paths = {}
-    local i = 2
-    local failure = nil
-    while ((i <= #args) and not failure) do
-      do
-        local arg = args[i]
-        if ((arg == "--check") or (arg == "--write")) then
-          if mode then
-            failure = "unknown or duplicate mode flag"
-          else
-            if (arg == "--check") then
-              mode = "check"
+    if (command ~= "format") then
+      return nil, ("unknown command: " .. (command or ""))
+    else
+      local mode = nil
+      local parser_name = nil
+      local paths = {}
+      local i = 2
+      local failure = nil
+      while ((i <= #args) and not failure) do
+        do
+          local arg = args[i]
+          if ((arg == "--check") or (arg == "--write")) then
+            if mode then
+              failure = "unknown or duplicate mode flag"
             else
-              mode = "write"
-            end
-          end
-        else
-          if (arg == "--parser") then
-            if (i >= #args) then
-              failure = "missing argument for --parser"
-            else
-              i = (i + 1)
-              parser_name = args[i]
+              if (arg == "--check") then
+                mode = "check"
+              else
+                mode = "write"
+              end
             end
           else
-            if (string.sub(arg, 1, 2) == "--") then
-              failure = ("unknown flag: " .. arg)
+            if (arg == "--parser") then
+              if (i >= #args) then
+                failure = "missing argument for --parser"
+              else
+                i = (i + 1)
+                parser_name = args[i]
+              end
             else
-              table.insert(paths, arg)
+              if (string.sub(arg, 1, 2) == "--") then
+                failure = ("unknown flag: " .. arg)
+              else
+                table.insert(paths, arg)
+              end
             end
           end
         end
+        i = (i + 1)
       end
-      i = (i + 1)
-    end
-    if failure then
-      return nil, failure
-    else
-      if not mode then
-        return nil, "missing --check or --write"
+      if failure then
+        return nil, failure
       else
-        return {mode = mode, parser = parser_name, paths = paths}
+        if not mode then
+          return nil, "missing --check or --write"
+        else
+          return {mode = mode, parser = parser_name, paths = paths}
+        end
       end
     end
   end
@@ -456,10 +552,10 @@ local function run_files(root, mode, parser, cfg, files, printer)
         failure = {path = file.relative, error = read_error}
       else
         local ok, output, error
-        local function _67_()
+        local function _81_()
           return formatter["format-string"](source, {parser = parser, config = formatter_config(cfg)})
         end
-        ok, output, error = pcall(_67_)
+        ok, output, error = pcall(_81_)
         if not ok then
           failure = {path = file.relative, error = output}
         else
@@ -539,56 +635,329 @@ local function run_files(root, mode, parser, cfg, files, printer)
     end
   end
 end
+local function read_lint_files(files, index, result)
+  if (index > #files) then
+    return result, nil
+  else
+    local file = files[index]
+    local source, error = read_file(file.absolute)
+    if error then
+      return nil, {path = file.relative, error = error}
+    else
+      local function _96_()
+        table.insert(result, {path = file.relative, source = source})
+        return result
+      end
+      return read_lint_files(files, (index + 1), _96_())
+    end
+  end
+end
+local function lint_discovery_error(printer, error)
+  emit(printer, error)
+  return 2
+end
+local function lint_no_files(printer)
+  emit(printer, "no files found")
+  return 2
+end
+local function lint_policy_error(root, config_path, printer, error)
+  emit(printer, error_line(relative(root, (config_path or ".fnl-extras.fnl")), error))
+  return 2
+end
+local function lint_read_error(printer, error)
+  emit(printer, error_line(error.path, error.error))
+  return 2
+end
+local function lint_run_error(printer, error)
+  emit(printer, error_line(error.path, error))
+  return 2
+end
+local function lint_result(printer, result)
+  for _, line in ipairs(result.lines) do
+    emit(printer, line)
+  end
+  return result.status
+end
+local function parse_error_result(printer, error)
+  emit(printer, error)
+  return 2
+end
+local function discovery_error_result(printer, error)
+  emit(printer, error)
+  return 2
+end
+local function no_files_result(printer)
+  emit(printer, "no files found")
+  return 2
+end
+local function parser_error_result(printer, error)
+  emit(printer, error)
+  return 2
+end
+local function trim_newlines(text)
+  return string.gsub(text, "\n+$", "")
+end
+local function git_command(root, args)
+  local _99_
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, arg in ipairs(args) do
+      local val_28_ = vim.fn.shellescape(arg)
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    _99_ = tbl_26_
+  end
+  return ("git -C " .. vim.fn.shellescape(root) .. " " .. table.concat(_99_, " "))
+end
+local function git_call(root, args)
+  local file = io.popen((git_command(root, args) .. " </dev/null 2>&1; printf '\\n__ECA_STATUS__%s' $?"))
+  local output
+  if file then
+    output = file:read("*a")
+  else
+    output = ""
+  end
+  if file then
+    file:close()
+  else
+  end
+  local marker = string.find(output, "\n__ECA_STATUS__")
+  if marker then
+    return string.sub(output, 1, (marker - 1)), tonumber(string.sub(output, (marker + 15)))
+  else
+    return output, 2
+  end
+end
+local function git_root(start)
+  local output, status = git_call(start, {"rev-parse", "--show-toplevel"})
+  if (status == 0) then
+    return trim_newlines(output)
+  else
+    return nil
+  end
+end
+local function git_error(message)
+  return {message = message}
+end
+local function git_plan_changed(root, parsed)
+  local base = (parsed.base or "HEAD")
+  local resolved, resolved_status = git_call(root, {"rev-parse", "--verify", (base .. "^{commit}")})
+  if (resolved_status ~= 0) then
+    return nil, git_error(("unknown base ref: " .. base))
+  else
+    local status_text, status_code = git_call(root, {"diff", "--name-status", "-z", "--find-renames", "--find-copies", base, "--"})
+    local untracked_text, untracked_code = git_call(root, {"ls-files", "--others", "--exclude-standard", "-z"})
+    if ((status_code ~= 0) or (untracked_code ~= 0)) then
+      return nil, git_error("could not inspect Git changes")
+    else
+      local records = lint_selection["parse-name-status"](status_text)
+      local untracked = lint_selection["parse-untracked"](untracked_text)
+      return {root = root, records = records, untracked = untracked, plan = lint_selection.plan(records, untracked)}, nil
+    end
+  end
+end
+local function git_plan(start, parsed)
+  local root = git_root(start)
+  if (root == nil) then
+    return nil, git_error("lint requires a Git repository")
+  else
+    local shallow, shallow_status = git_call(root, {"rev-parse", "--is-shallow-repository"})
+    if ((shallow_status == 0) and (trim_newlines(shallow) == "true")) then
+      return nil, git_error("lint requires a full clone; shallow repositories are not supported")
+    else
+      if parsed.all then
+        return {root = root}, nil
+      else
+        return git_plan_changed(root, parsed)
+      end
+    end
+  end
+end
+local function path_present_3f(paths, path, index)
+  if (index > #paths) then
+    return false
+  else
+    if (path == paths[index]) then
+      return true
+    else
+      return path_present_3f(paths, path, (index + 1))
+    end
+  end
+end
+local function changed_file(root, base, file, whole_3f)
+  if whole_3f then
+    return {path = file.path, source = file.source, selection = true}
+  else
+    local patch, status = git_call(root, {"diff", "--unified=0", "--no-color", "--no-ext-diff", base, "--", file.path})
+    if (status == 0) then
+      return {path = file.path, source = file.source, selection = lint_selection["parse-hunks"](patch)}
+    else
+      return nil
+    end
+  end
+end
+local function append_selected(result, selected)
+  table.insert(result, selected)
+  return result
+end
+local function changed_files(root, base, files, plan, index, result)
+  if (index > #files) then
+    return result
+  else
+    local file = files[index]
+    local whole_3f = path_present_3f(plan.whole, file.path, 1)
+    local hunk_3f = path_present_3f(plan.hunks, file.path, 1)
+    if (whole_3f or hunk_3f) then
+      local selected = changed_file(root, base, file, whole_3f)
+      if selected then
+        return changed_files(root, base, files, plan, (index + 1), append_selected(result, selected))
+      else
+        return changed_files(root, base, files, plan, (index + 1), result)
+      end
+    else
+      return changed_files(root, base, files, plan, (index + 1), result)
+    end
+  end
+end
+local function emit_git_error(printer, error)
+  emit(printer, error.message)
+  return 2
+end
+local function scope_paths(plan)
+  local result = {}
+  for _, path in ipairs(plan.whole) do
+    table.insert(result, path)
+  end
+  for _, path in ipairs(plan.hunks) do
+    table.insert(result, path)
+  end
+  for _, path in ipairs(plan.deleted) do
+    table.insert(result, path)
+  end
+  return result
+end
+local function run_lint(root, parsed, cfg, config_path, printer, require_git_3f)
+  local git_info, git_error_value
+  if require_git_3f then
+    git_info, git_error_value = git_plan(root, parsed)
+  else
+    git_info, git_error_value = {root = root}, nil
+  end
+  if git_error_value then
+    return emit_git_error(printer, git_error_value)
+  else
+    local git_info0 = (git_info or {root = root, plan = {whole = {}, hunks = {}, deleted = {}}})
+    local git_root_path = git_info0.root
+    local inputs
+    if (#parsed.paths > 0) then
+      inputs = parsed.paths
+    else
+      inputs = (cfg.paths or {"."})
+    end
+    local extensions = (cfg.extensions or {".fnl", ".fnlm"})
+    local skip_dotfiles
+    if (cfg["skip-dotfiles"] == nil) then
+      skip_dotfiles = true
+    else
+      skip_dotfiles = cfg["skip-dotfiles"]
+    end
+    local follow_symlinks
+    if (cfg["follow-symlinks"] == nil) then
+      follow_symlinks = false
+    else
+      follow_symlinks = cfg["follow-symlinks"]
+    end
+    local discovered, discovery_error = sorted_files(git_root_path, inputs, (cfg.exclude or {}), extensions, skip_dotfiles, follow_symlinks)
+    local files = (discovered and without_config_file(discovered, config_path))
+    if discovery_error then
+      return lint_discovery_error(printer, discovery_error)
+    else
+      local policy, policy_error = config["lint-policy"](cfg)
+      if policy_error then
+        return lint_policy_error(git_root_path, config_path, printer, policy_error)
+      else
+        local sources, read_error = read_lint_files(files, 1, {})
+        if read_error then
+          return lint_read_error(printer, read_error)
+        else
+          local selected
+          if parsed.all then
+            selected = sources
+          else
+            selected = changed_files(git_root_path, (parsed.base or "HEAD"), sources, git_info0.plan, 1, {})
+          end
+          local paths
+          if parsed.all then
+            paths = nil
+          else
+            paths = scope_paths(git_info0.plan)
+          end
+          local result, error = lint_run["lint-files"](selected, policy, (config_path and relative(git_root_path, config_path)), parsed.format, paths)
+          if error then
+            return lint_run_error(printer, error)
+          else
+            return lint_result(printer, result)
+          end
+        end
+      end
+    end
+  end
+end
 local run
 do
   local function run0(args, opts)
     local opts0 = (opts or {})
-    local printer = (opts0.print or print)
+    local printer = (opts0.print or default_print)
     local root = (opts0.cwd or cwd())
     local parsed, parse_error = parse_args(args)
     if parse_error then
-      emit(printer, parse_error)
-      return 2
+      return parse_error_result(printer, parse_error)
     else
       local cfg, config_error, config_path = config_for(root, printer)
       if config_error then
         return 2
       else
-        local inputs
-        if (#parsed.paths > 0) then
-          inputs = parsed.paths
+        if (args[1] == "lint") then
+          return run_lint(root, parsed, cfg, config_path, printer, not opts0.print)
         else
-          inputs = (cfg.paths or {"."})
-        end
-        local extensions = (cfg.extensions or {".fnl", ".fnlm"})
-        local skip_dotfiles
-        if (cfg["skip-dotfiles"] == nil) then
-          skip_dotfiles = true
-        else
-          skip_dotfiles = cfg["skip-dotfiles"]
-        end
-        local follow_symlinks
-        if (cfg["follow-symlinks"] == nil) then
-          follow_symlinks = false
-        else
-          follow_symlinks = cfg["follow-symlinks"]
-        end
-        local discovered, discovery_error = sorted_files(root, inputs, (cfg.exclude or {}), extensions, skip_dotfiles, follow_symlinks)
-        local files = (discovered and without_config_file(discovered, config_path))
-        if discovery_error then
-          emit(printer, discovery_error)
-          return 2
-        else
-          if (#files == 0) then
-            emit(printer, "no files found")
-            return 2
+          local inputs
+          if (#parsed.paths > 0) then
+            inputs = parsed.paths
           else
-            local parser, parser_error = load_parser((parsed.parser or cfg.parser))
-            if parser_error then
-              emit(printer, parser_error)
-              return 2
+            inputs = (cfg.paths or {"."})
+          end
+          local extensions = (cfg.extensions or {".fnl", ".fnlm"})
+          local skip_dotfiles
+          if (cfg["skip-dotfiles"] == nil) then
+            skip_dotfiles = true
+          else
+            skip_dotfiles = cfg["skip-dotfiles"]
+          end
+          local follow_symlinks
+          if (cfg["follow-symlinks"] == nil) then
+            follow_symlinks = false
+          else
+            follow_symlinks = cfg["follow-symlinks"]
+          end
+          local discovered, discovery_error = sorted_files(root, inputs, (cfg.exclude or {}), extensions, skip_dotfiles, follow_symlinks)
+          local files = (discovered and without_config_file(discovered, config_path))
+          if discovery_error then
+            return discovery_error_result(printer, discovery_error)
+          else
+            if (#files == 0) then
+              return no_files_result(printer)
             else
-              return run_files(root, parsed.mode, parser, cfg, files, printer)
+              local parser, parser_error = load_parser((parsed.parser or cfg.parser))
+              if parser_error then
+                return parser_error_result(printer, parser_error)
+              else
+                return run_files(root, parsed.mode, parser, cfg, files, printer)
+              end
             end
           end
         end

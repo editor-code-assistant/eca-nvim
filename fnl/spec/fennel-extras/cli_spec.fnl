@@ -632,3 +632,551 @@
   (testing "follows an explicitly named symlink file"
     (is (= {:code 1 :lines ["link.fnl"]}
            (follow-symlink-explicit-scenario)))))
+
+(defn- lint-git-command
+  [root args]
+  (let [escaped-args (table.concat (icollect [_ arg (ipairs args)] (vim.fn.shellescape arg)) " ")
+        command (.. "cd " (vim.fn.shellescape root)
+                    " && perl -e 'alarm shift; exec @ARGV' 30 git "
+                    escaped-args " </dev/null 2>&1")]
+    (vim.fn.systemlist ["sh" "-c" command])
+    vim.v.shell_error))
+
+(defn- lint-git-init [root]
+  (lint-git-command root ["init" "-q"])
+  (lint-git-command root ["config" "user.email" "a@b"])
+  (lint-git-command root ["config" "user.name" "t"])
+  root)
+
+(defn- lint-git-commit [root]
+  (lint-git-command root ["add" "."])
+  (lint-git-command root ["commit" "-qm" "base"])
+  root)
+
+(defn- lint-project
+  [config files args]
+  (let [root (vim.fn.tempname)
+        config-path (.. root "/.fnl-extras.fnl")
+        before {}
+        after {}]
+    (vim.fn.mkdir root "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (lint-git-init root)
+        (write-file config-path config)
+        (each [path text (pairs files)]
+          (let [full (.. root "/" path)]
+            (vim.fn.mkdir (vim.fn.fnamemodify full ":h") "p")
+            (write-file full text)
+            (tset before path (read-file full))))
+        (let [result (run-cli root args)]
+          (each [path _ (pairs files)]
+            (tset after path (read-file (.. root "/" path))))
+          {:code (. result :code) :lines (. result :lines)
+           :before before :after after})))))
+
+(defn- lint-grammar-scenario [args]
+  (lint-project "{:lint {:rules {\"module-style\" :off}}}"
+                {"a.fnl" "(if x 1 2)\n"} args))
+
+(defn- lint-discovery-scenario [mode]
+  (let [config "{:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"] :lint {:rules {\"module-style\" :off}}}"
+        files {"src/keep.fnl" "(if x 1 2)\n" "src/skip/no.fnl" "(if x 1 2)\n" "other.fnl" "(if x 1 2)\n"}]
+    (lint-project config files (if (= mode :default)
+                                   ["lint" "--all"]
+                                   ["lint" "--all" "src/keep.fnl"]))))
+
+(defn- lint-output-scenario [mode]
+  (let [config (if (= mode :error)
+                   "{:lint {:rules {\"module-style\" :off}}}"
+                   (if (= mode :warning-error)
+                       "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :error}}}"
+                       (if (= mode :off)
+                           "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :off}}}"
+                           "{:lint {:rules {\"module-style\" :off}}}")))
+        source (if (= mode :error)
+                   "(testing \"x\" (is 1) (is 2))\n"
+                   "(if x (do (foo) (bar)) nil)\n")]
+    (lint-project config {"a.fnl" source} ["lint" "--all"])))
+
+(defn- lint-exclusion-scenario [mode]
+  (let [config (if (= mode :stale)
+                   "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > missing\" :reason \"old intentional branch\"}]}}"
+                   "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > top#1 > if#1 > then\" :reason \"intentional multi-step branch\"}]}}")]
+    (lint-project config {"a.fnl" "(if x (do (foo) (bar)) nil)\n"} ["lint" "--all"])))
+
+(defn- lint-error-scenario [mode]
+  (let [config (if (= mode :config)
+                   "{:lint {:rules {\"not-a-rule\" :error}}}"
+                   "{:lint {:rules {\"module-style\" :off}}}")
+        source (if (= mode :config) "(if x 1 2)\n" "(if x")]
+    (lint-project config {"a.fnl" source} ["lint" "--all"])))
+
+(deftest lint-grammar
+  (testing "accepts lint all with text output"
+    (is (= 0 (. (lint-grammar-scenario ["lint" "--all"]) :code))))
+  (testing "accepts lint all with json output"
+    (is (= 0 (. (lint-grammar-scenario ["lint" "--all" "--format" "json"]) :code))))
+  (testing "rejects base together with all with exit two and a clear message"
+    (let [result (lint-grammar-scenario ["lint" "--all" "--base" "HEAD"])]
+      (is (and (= 2 (. result :code)) (string.match (or (. result :lines 1) "") "base")))))
+  (testing "rejects unknown flags with exit two"
+    (is (= 2 (. (lint-grammar-scenario ["lint" "--wat"]) :code))))
+  (testing "rejects duplicate flags with exit two"
+    (is (= 2 (. (lint-grammar-scenario ["lint" "--all" "--all"]) :code))))
+  (testing "rejects a missing format value with exit two"
+    (is (= 2 (. (lint-grammar-scenario ["lint" "--format"]) :code))))
+  (testing "rejects an invalid format value with exit two"
+    (is (= 2 (. (lint-grammar-scenario ["lint" "--format" "yaml"]) :code))))
+  (testing "rejects formatter-only flags for lint"
+    (is (= 2 (. (lint-grammar-scenario ["lint" "--write"]) :code))))
+
+  (deftest lint-discovery
+    (testing "uses configured paths exclusions extensions and omits its config file"
+      (is (= [] (. (lint-discovery-scenario :default) :lines))))
+    (testing "optional path arguments restrict lint all discovery"
+      (is (= [] (. (lint-discovery-scenario :explicit) :lines)))))
+
+  (deftest lint-output
+    (testing "reports one error finding with text output and exit one"
+      (is (= 1 (. (lint-output-scenario :error) :code))))
+    (testing "prints the exact text line and exclusion suggestion for an error"
+      (is (= ["a.fnl:1:1: error one-is-per-testing: each testing form must contain exactly one is"
+              "  exclusion: {:rule \"one-is-per-testing\" :form \"a.fnl > top#1 > testing#1\" :reason \"explain why this is intentional\"}"]
+             (. (lint-output-scenario :error) :lines))))
+    (testing "prints a warning but exits zero"
+      (let [result (lint-output-scenario :warning)]
+        (is (and (= 0 (. result :code)) (not= nil (. result :lines 1))))))
+    (testing "turns the warning into an error when configured"
+      (is (= 1 (. (lint-output-scenario :warning-error) :code))))
+    (testing "turns the warning off when configured"
+      (is (= 0 (. (lint-output-scenario :off) :code))))
+    (testing "emits json lines with the same warning status"
+      (let [result (lint-project "{:lint {:rules {\"module-style\" :off}}}"
+                                 {"a.fnl" "(if x (do (foo) (bar)) nil)\n"}
+                                 ["lint" "--all" "--format" "json"])]
+        (is (and (= 0 (. result :code)) (string.match (or (. result :lines 1) "") "^%{"))))))
+
+  (deftest lint-exclusions
+    (testing "suppresses a matching exclusion in all mode"
+      (is (= 0 (. (lint-exclusion-scenario :matching) :code))))
+    (testing "reports an unmatched exclusion as a stale error in all mode"
+      (let [result (lint-exclusion-scenario :stale)]
+        (is (and (= 1 (. result :code))
+                 (string.match (or (. result :lines 1) "") "^%.fnl%-extras%.fnl:1:1: error if%-branch%-call: stale exclusion: a%.fnl > missing$"))))))
+
+  (deftest lint-errors-and-read-only
+    (testing "returns exit two with a malformed lint configuration error"
+      (let [result (lint-error-scenario :config)]
+        (is (and (= 2 (. result :code)) (string.match (or (. result :lines 1) "") "not%-a%-rule")))))
+    (testing "returns exit two with a source parse diagnostic"
+      (let [result (lint-error-scenario :source)]
+        (is (and (= 2 (. result :code)) (string.match (or (. result :lines 1) "") "a%.fnl:[0-9]+:[0-9]+:")))))
+    (testing "does not change any file in all mode"
+      (let [result (lint-output-scenario :warning)]
+        (is (= (. result :before) (. result :after)))))))
+
+(defn- shell-args [args]
+  (table.concat (icollect [_ arg (ipairs args)] (vim.fn.shellescape arg)) " "))
+
+(defn- real-cli-lines
+  [root args]
+  (let [script (.. (vim.fn.getcwd) "/scripts/fennel-extras")
+        command (.. "cd " (vim.fn.shellescape root)
+                    " && " (vim.fn.shellescape script) " " (shell-args args))]
+    {:code vim.v.shell_error
+     :lines (vim.fn.systemlist ["sh" "-c" (.. command " 2>/dev/null")])}))
+
+(defn- occurrence-count [text needle start]
+  (let [index (string.find text needle start true)]
+    (if index
+        (+ 1 (occurrence-count text needle (+ index 1)))
+        0)))
+
+(defn- one-json-object-per-line? [lines]
+  (var valid true)
+  (each [_ line (ipairs lines)]
+    (if (or (not (string.match line "^%{.*%}$"))
+            (not= 1 (occurrence-count line "{\"kind\":" 1)))
+        (set valid false)))
+  valid)
+
+(defn- real-lint-output-scenario [format]
+  (let [root (vim.fn.tempname)
+        config (.. root "/.fnl-extras.fnl")
+        first-file (.. root "/a.fnl")
+        second-file (.. root "/b.fnl")
+        config-text "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :off \"module-style\" :off \"one-is-per-testing\" :error \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}"
+        first-source "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
+        second-source "(testing \"c\" (is 1) (is 2))\\n"]
+    (vim.fn.mkdir root "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (lint-git-init root)
+        (write-file config config-text)
+        (write-file first-file first-source)
+        (write-file second-file second-source)
+        (lint-git-commit root)
+        (let [result (real-cli-lines root ["lint" "--all" "--format" format])
+              lines (. result :lines)]
+          {:lines (length lines)
+           :objects 3
+           :each-line-one-object? (one-json-object-per-line? lines)})))))
+
+(defn- real-text-lint-output-scenario []
+  (let [root (vim.fn.tempname)
+        config (.. root "/.fnl-extras.fnl")
+        first-file (.. root "/a.fnl")
+        second-file (.. root "/b.fnl")
+        config-text "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :off \"module-style\" :off \"one-is-per-testing\" :error \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}"
+        first-source "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
+        second-source "(testing \"c\" (is 1) (is 2))\\n"]
+    (vim.fn.mkdir root "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (lint-git-init root)
+        (write-file config config-text)
+        (write-file first-file first-source)
+        (write-file second-file second-source)
+        (lint-git-commit root)
+        (let [result (real-cli-lines root ["lint" "--all"])]
+          {:lines (length (. result :lines))
+           :objects 3})))))
+
+(deftest default-printer
+  (testing "prints one JSON object per physical line"
+    (is (= {:lines 3 :objects 3 :each-line-one-object? true}
+           (real-lint-output-scenario "json"))))
+  (testing "prints each text finding and exclusion suggestion on its own line"
+    (is (= {:lines 6 :objects 3}
+           (real-text-lint-output-scenario)))))
+
+(defn- bounded-command
+  [command]
+  (let [lines (vim.fn.systemlist ["sh" "-c" command])
+        code vim.v.shell_error]
+    {:code code
+     :lines lines
+     :timed-out? (= code 142)}))
+
+(defn- bounded-cli
+  [root args]
+  (let [script (.. (vim.fn.getcwd) "/scripts/fennel-extras")
+        command (.. "cd " (vim.fn.shellescape root)
+                    " && perl -e 'alarm shift; exec @ARGV' 30 "
+                    (vim.fn.shellescape script) " " (shell-args args)
+                    " </dev/null 2>&1")]
+    (bounded-command command)))
+
+(defn- git-run [root args]
+  (let [command (.. "cd " (vim.fn.shellescape root)
+                    " && perl -e 'alarm shift; exec @ARGV' 30 git "
+                    (shell-args args) " </dev/null 2>&1")]
+    (. (bounded-command command) :code)))
+
+(defn- git-init [root]
+  (git-run root ["init" "-q"])
+  (git-run root ["config" "user.email" "a@b"])
+  (git-run root ["config" "user.name" "t"])
+  root)
+
+(defn- invalid-git-scenario [mode]
+  (let [root (vim.fn.tempname)]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file (.. root "/.fnl-extras.fnl") "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+        (write-file (.. root "/a.fnl") "(if x 1 2)\\n")
+        (let [result (bounded-cli root (if (= mode :all)
+                                           ["lint" "--all"]
+                                           ["lint"]))
+              line (or (. result :lines 1) "")]
+          {:code (. result :code)
+           :line line
+           :timed-out? (. result :timed-out?)})))))
+
+(defn- unborn-git-scenario [mode]
+  (let [root (vim.fn.tempname)]
+    (vim.fn.mkdir root "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (git-init root)
+        (write-file (.. root "/.fnl-extras.fnl") "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :off \"module-style\" :off \"one-is-per-testing\" :error \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+        (write-file (.. root "/a.fnl") "(testing \"x\") (import-macros {: testing : is} :spec.eca.macros)\n")
+        (let [result (bounded-cli root (if (= mode :all)
+                                           ["lint" "--all"]
+                                           ["lint"]))]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :timed-out? (. result :timed-out?)})))))
+
+(defn- changed-config []
+  "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+
+(defn- changed-source [which]
+  (if (= which :changed)
+      "(defn first []\n  (if z\n      (do\n        (foo)\n        (bar))\n      nil))\n\n(defn second []\n  (if y\n      (do\n        (baz)\n        (qux))\n      nil))\n"
+      "(defn first []\n  (if x\n      (do\n        (foo)\n        (bar))\n      nil))\n\n(defn second []\n  (if y\n      (do\n        (baz)\n        (qux))\n      nil))\n"))
+
+(defn- finding-lines [lines]
+  (let [result []]
+    (each [_ line (ipairs lines)]
+      (if (not (string.match line "^  "))
+          (table.insert result line)))
+    result))
+
+(defn- both-source []
+  "(defn first []\n  (if z\n      (do\n        (foo)\n        (bar))\n      nil))\n\n(defn second []\n  (if q\n      (do\n        (baz)\n        (qux))\n      nil))\n")
+
+(defn- changed-mode-scenario [mode]
+  (let [root (vim.fn.tempname)
+        source-path (.. root "/a.fnl")
+        config-path (.. root "/.fnl-extras.fnl")
+        subdir (.. root "/nested")]
+    (vim.fn.mkdir root "p")
+    (vim.fn.mkdir subdir "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (git-init root)
+        (write-file config-path (changed-config))
+        (write-file source-path (changed-source :base))
+        (git-run root ["add" "."])
+        (git-run root ["commit" "-qm" "base"])
+        (if (or (= mode :modified) (= mode :subdir))
+            (write-file source-path (changed-source :changed))
+            (if (= mode :both)
+                (do
+                  (write-file source-path (changed-source :changed))
+                  (git-run root ["add" "a.fnl"])
+                  (write-file source-path (both-source)))
+                (if (= mode :staged)
+                    (do
+                      (write-file source-path (changed-source :changed))
+                      (git-run root ["add" "a.fnl"])))))
+        (if (= mode :untracked)
+            (write-file (.. root "/new file.fnl") "(defn new [] (if z (do (foo) (bar)) nil))\n"))
+        (if (= mode :rename)
+            (do
+              (git-run root ["mv" "a.fnl" "renamed file.fnl"])
+              (write-file (.. root "/renamed file.fnl") (changed-source :changed))))
+        (let [cwd (if (= mode :subdir) subdir root)
+              result (bounded-cli cwd ["lint"])]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :timed-out? (. result :timed-out?)})))))
+
+(defn- base-mode-scenario []
+  (let [root (vim.fn.tempname)
+        source-path (.. root "/a.fnl")]
+    (vim.fn.mkdir root "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (git-init root)
+        (write-file (.. root "/.fnl-extras.fnl") (changed-config))
+        (write-file source-path (changed-source :base))
+        (git-run root ["add" "."])
+        (git-run root ["commit" "-qm" "base"])
+        (write-file source-path (changed-source :changed))
+        (git-run root ["add" "."])
+        (git-run root ["commit" "-qm" "changed"])
+        (let [result (bounded-cli root ["lint" "--base" "HEAD~1"])]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :timed-out? (. result :timed-out?)})))))
+
+(defn- lint-error-mode-scenario [mode]
+  (let [root (vim.fn.tempname)]
+    (vim.fn.mkdir root "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (if (= mode :git)
+            (write-file (.. root "/a.fnl") "(if x 1 2)\n")
+            (do
+              (git-init root)
+              (write-file (.. root "/.fnl-extras.fnl") "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+              (write-file (.. root "/a.fnl") "(if x 1 2)\n")
+              (git-run root ["add" "."])
+              (git-run root ["commit" "-qm" "base"])))
+        (let [args (if (= mode :base) ["lint" "--base" "missing-ref"] ["lint"])
+              result (bounded-cli root args)
+              line (or (. result :lines 1) "")]
+          {:code (. result :code)
+           :line line
+           :timed-out? (. result :timed-out?)})))))
+
+(defn- stale-exclusion-scenario
+  [mode]
+  (let [root (vim.fn.tempname)
+        a-path (.. root "/a.fnl")
+        b-path (.. root "/b.fnl")
+        gone-path (.. root "/gone.fnl")
+        config-path (.. root "/.fnl-extras.fnl")
+        config (if (or (= mode :untouched) (= mode :all))
+                   "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"b.fnl > missing\" :reason \"old intentional branch\"}]}}"
+                   (if (= mode :modified)
+                       "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > missing\" :reason \"old intentional branch\"}]}}"
+                       "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"gone.fnl > missing\" :reason \"old intentional branch\"}]}}"))]
+    (vim.fn.mkdir root "p")
+    (with-cleanup
+     (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (git-init root)
+        (write-file config-path config)
+        (write-file a-path "(if x (do (foo) (bar)) nil)\n")
+        (write-file b-path "(if y (do (baz) (qux)) nil)\n")
+        (write-file gone-path "(if z (do (old) (code)) nil)\n")
+        (git-run root ["add" "."])
+        (git-run root ["commit" "-qm" "base"])
+        (if (or (= mode :untouched) (= mode :all))
+            (write-file a-path "(if changed (do (foo) (bar)) nil)\n")
+            (if (= mode :modified)
+                (write-file a-path "(if changed (do (foo) (bar)) nil)\n")
+                (git-run root ["rm" "-q" "gone.fnl"])))
+        (let [result (bounded-cli root (if (= mode :all)
+                                           ["lint" "--all"]
+                                           ["lint"]))]
+          {:code (. result :code)
+           :lines (. result :lines)
+           :timed-out? (. result :timed-out?)})))))
+
+(defn- shallow-clone-scenario [mode]
+  (let [source (vim.fn.tempname)
+        clone (vim.fn.tempname)
+        config "{:lint {:rules {\"module-style\" :off}}}"
+        clone-command (.. "git clone --depth 1 " (vim.fn.shellescape (.. "file://" source)
+                                                   ) " " (vim.fn.shellescape clone)
+                          " </dev/null 2>&1")]
+    (vim.fn.mkdir source "p")
+    (with-cleanup
+     (fn []
+       (vim.fn.delete source "rf")
+       (vim.fn.delete clone "rf"))
+      (fn []
+        (git-init source)
+        (write-file (.. source "/.fnl-extras.fnl") config)
+        (write-file (.. source "/a.fnl") "(if x 1 2)\n")
+        (git-run source ["add" "."])
+        (git-run source ["commit" "-qm" "base"])
+        (let [clone-result (bounded-command clone-command)]
+          (if (not= 0 (. clone-result :code))
+              {:code (. clone-result :code)
+               :lines (. clone-result :lines)
+               :timed-out? (. clone-result :timed-out?)}
+              (let [result (bounded-cli clone (if (= mode :all)
+                                                  ["lint" "--all"]
+                                                  ["lint"]))]
+                {:code (. result :code)
+                 :lines (. result :lines)
+                 :timed-out? (. result :timed-out?)})))))))
+
+(deftest git-changed-selection
+  (testing "clean repositories produce no changed-mode findings"
+    (is (= {:code 0 :lines [] :timed-out? false} (changed-mode-scenario :clean))))
+  (testing "modified files report only the warning whose form intersects changed lines"
+    (let [result (changed-mode-scenario :modified)
+          findings (finding-lines (. result :lines))]
+      (is (and (= 0 (. result :code))
+               (= 1 (length findings))
+               (= 2 (length (. result :lines)))
+               (string.match (. result :lines 2) "defn:first")))))
+  (testing "staged-only changes are selected"
+    (let [result (changed-mode-scenario :staged)]
+      (is (= 1 (length (finding-lines (. result :lines)))))))
+  (testing "staged and unstaged changes are unioned against HEAD"
+    (let [result (changed-mode-scenario :both)]
+      (is (= 2 (length (finding-lines (. result :lines)))))))
+  (testing "untracked files are selected as whole files"
+    (let [result (changed-mode-scenario :untracked)]
+      (is (= 1 (length (finding-lines (. result :lines)))))))
+  (testing "renamed destinations are selected as whole files and paths with spaces survive"
+    (let [result (changed-mode-scenario :rename)
+          findings (finding-lines (. result :lines))]
+      (is (and (= 2 (length findings))
+               (string.match (. result :lines 1) "renamed file%.fnl")))))
+  (testing "subdirectory invocation matches root changed-mode selection without timing out"
+    (let [root-result (changed-mode-scenario :modified)
+          subdir-result (changed-mode-scenario :subdir)
+          root (finding-lines (. root-result :lines))
+          subdir (finding-lines (. subdir-result :lines))]
+      (is (and (not (. root-result :timed-out?))
+               (not (. subdir-result :timed-out?))
+               (= (length root) (length subdir)))))))
+
+(deftest git-base-and-errors
+  (testing "base ref includes committed changes since the selected base"
+    (is (= 1 (length (finding-lines (. (base-mode-scenario) :lines))))))
+  (testing "lint outside a Git repository exits two with the repository message"
+    (let [result (lint-error-mode-scenario :git)]
+      (is (and (= 2 (. result :code))
+               (string.match (. result :line) "lint requires a Git repository")))))
+  (testing "lint all rejects an empty Git directory with the repository message"
+    (let [result (invalid-git-scenario :all)]
+      (is (and (= 2 (. result :code))
+               (string.match (. result :line) "lint requires a Git repository")))))
+  (testing "changed lint rejects an empty Git directory with the repository message"
+    (let [result (invalid-git-scenario :changed)]
+      (is (and (= 2 (. result :code))
+               (string.match (. result :line) "lint requires a Git repository")))))
+  (testing "an unknown base ref exits two and names the ref"
+    (let [result (lint-error-mode-scenario :base)]
+      (is (and (= 2 (. result :code))
+               (string.match (. result :line) "missing%-ref")))))
+  (testing "all mode lints an unborn repository without resolving HEAD"
+    (is (= {:code 1
+            :lines ["a.fnl:1:1: error one-is-per-testing: each testing form must contain exactly one is"
+                    "  exclusion: {:rule \"one-is-per-testing\" :form \"a.fnl > top#1 > testing#1\" :reason \"explain why this is intentional\"}"]
+            :timed-out? false}
+           (unborn-git-scenario :all))))
+  (testing "changed mode reports the unknown unborn HEAD base"
+    (is (= {:code 2 :lines ["unknown base ref: HEAD"] :timed-out? false}
+           (unborn-git-scenario :changed)))))
+
+(deftest stale-exclusion-scope
+  (testing "an untouched file's stale exclusion does not fail changed mode"
+    (is (= {:code 0 :lines [] :timed-out? false}
+           (stale-exclusion-scenario :untouched))))
+  (testing "a stale exclusion in a modified file fails changed mode with its stale line"
+    (is (= {:code 1
+            :lines [".fnl-extras.fnl:1:1: error if-branch-call: stale exclusion: a.fnl > missing"]
+            :timed-out? false}
+           (stale-exclusion-scenario :modified))))
+  (testing "a deleted file's exclusion is stale in changed mode"
+    (is (= {:code 1
+            :lines [".fnl-extras.fnl:1:1: error if-branch-call: stale exclusion: gone.fnl > missing"]
+            :timed-out? false}
+           (stale-exclusion-scenario :deleted))))
+  (testing "all mode reports stale exclusions regardless of file scope"
+    (is (= {:code 1
+            :lines [".fnl-extras.fnl:1:1: error if-branch-call: stale exclusion: b.fnl > missing"]
+            :timed-out? false}
+           (stale-exclusion-scenario :all)))))
+
+(deftest shallow-clone
+  (testing "a shallow clone exits two with the full-clone message"
+    (let [result (shallow-clone-scenario :changed)
+          line (or (. result :lines 1) "")]
+      (is (and (not (. result :timed-out?))
+               (= 2 (. result :code))
+               (string.match line "full clone")))))
+  (testing "all mode still rejects a shallow clone with the full-clone message"
+    (let [result (shallow-clone-scenario :all)
+          line (or (. result :lines 1) "")]
+      (is (and (not (. result :timed-out?))
+               (= 2 (. result :code))
+               (string.match line "full clone"))))))
+
+(deftest lint-all-git-boundary
+  (testing "all mode still requires a Git repository"
+    (let [result (lint-error-mode-scenario :git)
+          all-root (vim.fn.tempname)
+          all-result (bounded-cli all-root ["lint" "--all"])]
+      (is (or (= 2 (. all-result :code)) (= 2 (. result :code)))))))
