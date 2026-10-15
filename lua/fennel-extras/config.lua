@@ -5,7 +5,225 @@ do
   pkg_1_auto.loaded["fennel-extras.config"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.config"]
 end
+local core = require("eca.nfnl.core")
 local reader = require("fennel-extras.reader")
+local lint_rules = require("fennel-extras.lint.rules")
+local sequence_marker = "fennel-extras-sequence"
+local table_marker = "fennel-extras-table"
+local function marked_sequence(value)
+  return setmetatable(value, {[sequence_marker] = true})
+end
+local function marked_table(value)
+  return setmetatable(value, {[table_marker] = true})
+end
+local function plain_sequence_step(value, key, count, maximum)
+  local next_key, next_value = next(value, key)
+  if (next_key == nil) then
+    return ((count == maximum) and (count == #value))
+  else
+    return ((type(next_key) == "number") and (next_key == math.floor(next_key)) and (next_key > 0) and (next_value ~= nil) and plain_sequence_step(value, next_key, (count + 1), math.max(maximum, next_key)))
+  end
+end
+local function sequence_3f(value)
+  local and_2_ = (type(value) == "table")
+  if and_2_ then
+    local metadata = getmetatable(value)
+    and_2_ = ((metadata and metadata[sequence_marker]) or ((metadata == nil) and plain_sequence_step(value, nil, 0, 0)))
+  end
+  return and_2_
+end
+local function parsed_table_3f(value)
+  local and_4_ = (type(value) == "table")
+  if and_4_ then
+    local metadata = getmetatable(value)
+    and_4_ = (metadata and metadata[table_marker])
+  end
+  return and_4_
+end
+local function lint_rule_known_3f(rule)
+  return lint_rules.defaults()[rule]
+end
+local function lint_severity_3f(severity)
+  return ((severity == "error") or (severity == "warning") or (severity == "off"))
+end
+local function lint_key_sort_value(key)
+  return (type(key) .. ":" .. tostring(key))
+end
+local function first_unknown_lint_key(lint, key, candidate)
+  local next_key = next(lint, key)
+  if (next_key == nil) then
+    return candidate
+  else
+    if ((next_key == "rules") or (next_key == "exclusions")) then
+      return first_unknown_lint_key(lint, next_key, candidate)
+    else
+      if ((candidate == nil) or (lint_key_sort_value(next_key) < lint_key_sort_value(candidate))) then
+        return first_unknown_lint_key(lint, next_key, next_key)
+      else
+        return first_unknown_lint_key(lint, next_key, candidate)
+      end
+    end
+  end
+end
+local function unknown_lint_key_error(key)
+  if key then
+    return {message = ("unknown lint key: " .. tostring(key))}
+  else
+    return nil
+  end
+end
+local function blank_3f(text)
+  return (string.match(text, "^%s*$") == text)
+end
+local function first_lint_rule_error(rules, key)
+  local next_key, next_value = next(rules, key)
+  if (next_key == nil) then
+    return nil
+  else
+    if not lint_rule_known_3f(next_key) then
+      return {message = ("unknown lint rule: " .. tostring(next_key))}
+    else
+      if not lint_severity_3f(next_value) then
+        return {message = ("lint rule " .. tostring(next_key) .. " must be error, warning, or off")}
+      else
+        return first_lint_rule_error(rules, next_key)
+      end
+    end
+  end
+end
+local function next_exclusion_key_error(exclusion, index, key, next_error)
+  return next_error(exclusion, index, next(exclusion, key))
+end
+local function exclusion_keys_error(exclusion, index, key)
+  if (key == nil) then
+    return nil
+  else
+    if ((key == "rule") or (key == "form") or (key == "reason")) then
+      return next_exclusion_key_error(exclusion, index, key, exclusion_keys_error)
+    else
+      return {message = ("lint exclusion " .. index .. ": unknown key " .. tostring(key))}
+    end
+  end
+end
+local function duplicate_exclusion_index_entry(exclusions, index, rule, form, candidate, entry, next_index)
+  if ((entry.rule == rule) and (entry.form == form)) then
+    return index
+  else
+    return next_index(exclusions, (index + 1), rule, form, candidate)
+  end
+end
+local function duplicate_exclusion_index(exclusions, index, rule, form, candidate)
+  if (index >= candidate) then
+    return nil
+  else
+    return duplicate_exclusion_index_entry(exclusions, index, rule, form, candidate, exclusions[index], duplicate_exclusion_index)
+  end
+end
+local function exclusion_duplicate_error(exclusions, index, duplicate, next_error)
+  if duplicate then
+    return {message = ("lint exclusion " .. index .. ": duplicate of exclusion " .. duplicate)}
+  else
+    return next_error(exclusions, (index + 1))
+  end
+end
+local function exclusion_rule_known_error(exclusions, index, rule, form, reason, duplicate, next_error)
+  if not lint_rule_known_3f(rule) then
+    return {message = ("lint exclusion " .. index .. ": unknown rule " .. rule)}
+  else
+    return exclusion_duplicate_error(exclusions, index, duplicate, next_error)
+  end
+end
+local function exclusion_reason_error(exclusions, index, rule, form, reason, duplicate, next_error)
+  if blank_3f(reason) then
+    return {message = ("lint exclusion " .. index .. ": reason must not be blank")}
+  else
+    return exclusion_rule_known_error(exclusions, index, rule, form, reason, duplicate, next_error)
+  end
+end
+local function exclusion_form_error(exclusions, index, rule, form, reason, duplicate, next_error)
+  if (type(reason) ~= "string") then
+    return {message = ("lint exclusion " .. index .. ": reason must be a string")}
+  else
+    return exclusion_reason_error(exclusions, index, rule, form, reason, duplicate, next_error)
+  end
+end
+local function exclusion_rule_error(exclusions, index, rule, form, reason, duplicate, next_error)
+  if (type(form) ~= "string") then
+    return {message = ("lint exclusion " .. index .. ": form must be a string")}
+  else
+    return exclusion_form_error(exclusions, index, rule, form, reason, duplicate, next_error)
+  end
+end
+local function first_exclusion_error_entry(exclusions, index, exclusion, next_error)
+  local unknown_key = next(exclusion, nil)
+  local rule = exclusion.rule
+  local form = exclusion.form
+  local reason = exclusion.reason
+  local duplicate = duplicate_exclusion_index(exclusions, 1, rule, form, index)
+  local or_22_ = exclusion_keys_error(exclusion, index, unknown_key)
+  if not or_22_ then
+    if (type(rule) ~= "string") then
+      or_22_ = {message = ("lint exclusion " .. index .. ": rule must be a string")}
+    else
+      or_22_ = exclusion_rule_error(exclusions, index, rule, form, reason, duplicate, next_error)
+    end
+  end
+  return or_22_
+end
+local function first_exclusion_error(exclusions, index)
+  local exclusion = exclusions[index]
+  if (exclusion == nil) then
+    return nil
+  else
+    if (type(exclusion) ~= "table") then
+      return {message = ("lint exclusion " .. index .. " must be a table")}
+    else
+      return first_exclusion_error_entry(exclusions, index, exclusion, first_exclusion_error)
+    end
+  end
+end
+local function lint_table_error(rules, exclusions, unknown_key)
+  local or_26_ = unknown_lint_key_error(unknown_key)
+  if not or_26_ then
+    if (rules and ((type(rules) ~= "table") or (sequence_3f(rules) and ((getmetatable(rules) ~= nil) or (#rules > 0))))) then
+      or_26_ = {message = "lint rules must be a table"}
+    else
+      or_26_ = nil
+    end
+  end
+  if not or_26_ then
+    if rules then
+      or_26_ = first_lint_rule_error(rules, nil)
+    else
+      or_26_ = nil
+    end
+  end
+  if not or_26_ then
+    if (exclusions and not sequence_3f(exclusions)) then
+      or_26_ = {message = "lint exclusions must be a list"}
+    else
+      or_26_ = nil
+    end
+  end
+  if not or_26_ then
+    if exclusions then
+      or_26_ = first_exclusion_error(exclusions, 1)
+    else
+      or_26_ = nil
+    end
+  end
+  return or_26_
+end
+local function lint_error(lint)
+  if (type(lint) ~= "table") then
+    return {message = "lint must be a table"}
+  else
+    local rules = lint.rules
+    local exclusions = lint.exclusions
+    local unknown_key = first_unknown_lint_key(lint, nil, nil)
+    return lint_table_error(rules, exclusions, unknown_key)
+  end
+end
 local function error_at(message, token)
   return {message = message, line = token.line, col = token.col}
 end
@@ -112,7 +330,7 @@ local function convert(node)
       if failure then
         return error(failure, 0)
       else
-        return result
+        return marked_table(result)
       end
     end
   else
@@ -133,7 +351,7 @@ local function convert(node)
       if failure then
         return error(failure, 0)
       else
-        return result
+        return marked_sequence(result)
       end
     else
       if (node.kind == "list") then
@@ -165,7 +383,7 @@ local parse_string
 do
   local function parse_string0(text)
     local ok, result
-    local function _27_()
+    local function _58_()
       local root, reader_error = reader.parse(text)
       if reader_error then
         return {error = reader_error}
@@ -187,7 +405,7 @@ do
         end
       end
     end
-    ok, result = pcall(_27_)
+    ok, result = pcall(_58_)
     if not ok then
       return nil, result
     else
@@ -286,6 +504,9 @@ local function extensions_3f(value)
     return false
   end
 end
+local function configuration_error_with_lint(failure, lint)
+  return (failure or (lint and lint_error(lint)))
+end
 local function configuration_error(tbl)
   local width = tbl["indent-width"]
   local builtins = tbl.builtins
@@ -294,6 +515,7 @@ local function configuration_error(tbl)
   local skip_dotfiles = tbl["skip-dotfiles"]
   local follow_symlinks = tbl["follow-symlinks"]
   local parser = tbl.parser
+  local lint = tbl.lint
   local failure = nil
   if ((failure == nil) and (width ~= nil) and not (integer_3f(width) and (width > 0))) then
     failure = {message = "indent-width must be a positive integer"}
@@ -331,7 +553,7 @@ local function configuration_error(tbl)
     failure = {message = "parser must be a string"}
   else
   end
-  return failure
+  return configuration_error_with_lint(failure, lint)
 end
 local validate
 do
@@ -339,7 +561,7 @@ do
     if (type(tbl) ~= "table") then
       return nil, {message = "configuration must be a table"}
     else
-      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, parser = true}
+      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, parser = true, lint = true}
       local failure = nil
       for key, _ in pairs(tbl) do
         if not allowed[key] then
@@ -369,6 +591,25 @@ do
   end
   _2amodule_2a["validate"] = validate0
   validate = _2amodule_2a.validate
+end
+local function valid_lint_policy(cfg)
+  local lint = cfg.lint
+  local overrides = ((lint and lint.rules) or {})
+  local exclusions = ((lint and lint.exclusions) or {})
+  return {rules = core.merge(lint_rules.defaults(), overrides), exclusions = exclusions}
+end
+local lint_policy
+do
+  local function lint_policy0(cfg)
+    local valid, error = validate(cfg)
+    if error then
+      return nil, error
+    else
+      return valid_lint_policy(valid)
+    end
+  end
+  _2amodule_2a["lint-policy"] = lint_policy0
+  lint_policy = _2amodule_2a["lint-policy"]
 end
 local function join_path(dir, name)
   if (string.sub(dir, -1) == "/") then
@@ -451,10 +692,10 @@ do
       local text = file:read("*a")
       file:close()
       local ok, parsed_or_error
-      local function _70_()
+      local function _102_()
         return parse_string(text)
       end
-      ok, parsed_or_error = pcall(_70_)
+      ok, parsed_or_error = pcall(_102_)
       if not ok then
         return nil, parsed_or_error
       else

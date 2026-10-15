@@ -2,7 +2,163 @@
 
 (module fennel-extras.config)
 
+(local core (require :eca.nfnl.core))
 (local reader (require :fennel-extras.reader))
+(local lint-rules (require :fennel-extras.lint.rules))
+
+(local sequence-marker :fennel-extras-sequence)
+(local table-marker :fennel-extras-table)
+
+(defn- marked-sequence [value]
+  (setmetatable value {sequence-marker true}))
+
+(defn- marked-table [value]
+  (setmetatable value {table-marker true}))
+
+(defn- plain-sequence-step [value key count maximum]
+  (let [(next-key next-value) (next value key)]
+    (if (= next-key nil)
+        (and (= count maximum) (= count (length value)))
+        (and (= (type next-key) :number)
+             (= next-key (math.floor next-key))
+             (> next-key 0)
+             (not= next-value nil)
+             (plain-sequence-step value next-key (+ count 1) (math.max maximum next-key))))))
+
+(defn- sequence? [value]
+  (and (= (type value) :table)
+       (let [metadata (getmetatable value)]
+         (or (and metadata (. metadata sequence-marker))
+             (and (= metadata nil)
+                  (plain-sequence-step value nil 0 0))))))
+
+(defn- parsed-table? [value]
+  (and (= (type value) :table)
+       (let [metadata (getmetatable value)]
+         (and metadata (. metadata table-marker)))))
+
+(defn- lint-rule-known? [rule]
+  (. (lint-rules.defaults) rule))
+
+(defn- lint-severity? [severity]
+  (or (= severity "error") (= severity "warning") (= severity "off")))
+
+(defn- lint-key-sort-value [key]
+  (.. (type key) ":" (tostring key)))
+
+(defn- first-unknown-lint-key [lint key candidate]
+  (let [(next-key) (next lint key)]
+    (if (= next-key nil)
+        candidate
+        (if (or (= next-key :rules) (= next-key :exclusions))
+            (first-unknown-lint-key lint next-key candidate)
+            (if (or (= candidate nil)
+                    (< (lint-key-sort-value next-key) (lint-key-sort-value candidate)))
+                (first-unknown-lint-key lint next-key next-key)
+                (first-unknown-lint-key lint next-key candidate))))))
+
+(defn- unknown-lint-key-error [key]
+  (if key
+      {:message (.. "unknown lint key: " (tostring key))}
+      nil))
+
+(defn- blank? [text]
+  (= (string.match text "^%s*$") text))
+
+(defn- first-lint-rule-error [rules key]
+  (let [(next-key next-value) (next rules key)]
+    (if (= next-key nil)
+        nil
+        (if (not (lint-rule-known? next-key))
+            {:message (.. "unknown lint rule: " (tostring next-key))}
+            (if (not (lint-severity? next-value))
+                {:message (.. "lint rule " (tostring next-key) " must be error, warning, or off")}
+                (first-lint-rule-error rules next-key))))))
+
+(defn- next-exclusion-key-error [exclusion index key next-error]
+  (next-error exclusion index (next exclusion key)))
+
+(defn- exclusion-keys-error [exclusion index key]
+  (if (= key nil)
+      nil
+      (if (or (= key :rule) (= key :form) (= key :reason))
+          (next-exclusion-key-error exclusion index key exclusion-keys-error)
+          {:message (.. "lint exclusion " index ": unknown key " (tostring key))})))
+
+(defn- duplicate-exclusion-index-entry [exclusions index rule form candidate entry next-index]
+  (if (and (= (. entry :rule) rule) (= (. entry :form) form))
+      index
+      (next-index exclusions (+ index 1) rule form candidate)))
+
+(defn- duplicate-exclusion-index [exclusions index rule form candidate]
+  (if (>= index candidate)
+      nil
+      (duplicate-exclusion-index-entry exclusions index rule form candidate (. exclusions index) duplicate-exclusion-index)))
+
+(defn- exclusion-duplicate-error [exclusions index duplicate next-error]
+  (if duplicate
+      {:message (.. "lint exclusion " index ": duplicate of exclusion " duplicate)}
+      (next-error exclusions (+ index 1))))
+
+(defn- exclusion-rule-known-error [exclusions index rule form reason duplicate next-error]
+  (if (not (lint-rule-known? rule))
+      {:message (.. "lint exclusion " index ": unknown rule " rule)}
+      (exclusion-duplicate-error exclusions index duplicate next-error)))
+
+(defn- exclusion-reason-error [exclusions index rule form reason duplicate next-error]
+  (if (blank? reason)
+      {:message (.. "lint exclusion " index ": reason must not be blank")}
+      (exclusion-rule-known-error exclusions index rule form reason duplicate next-error)))
+
+(defn- exclusion-form-error [exclusions index rule form reason duplicate next-error]
+  (if (not= (type reason) :string)
+      {:message (.. "lint exclusion " index ": reason must be a string")}
+      (exclusion-reason-error exclusions index rule form reason duplicate next-error)))
+
+(defn- exclusion-rule-error [exclusions index rule form reason duplicate next-error]
+  (if (not= (type form) :string)
+      {:message (.. "lint exclusion " index ": form must be a string")}
+      (exclusion-form-error exclusions index rule form reason duplicate next-error)))
+
+(defn- first-exclusion-error-entry [exclusions index exclusion next-error]
+  (let [(unknown-key) (next exclusion nil)
+        rule (. exclusion :rule)
+        form (. exclusion :form)
+        reason (. exclusion :reason)
+        duplicate (duplicate-exclusion-index exclusions 1 rule form index)]
+    (or (exclusion-keys-error exclusion index unknown-key)
+        (if (not= (type rule) :string)
+            {:message (.. "lint exclusion " index ": rule must be a string")}
+            (exclusion-rule-error exclusions index rule form reason duplicate next-error)))))
+
+(defn- first-exclusion-error [exclusions index]
+  (let [exclusion (. exclusions index)]
+    (if (= exclusion nil)
+        nil
+        (if (not= (type exclusion) :table)
+            {:message (.. "lint exclusion " index " must be a table")}
+            (first-exclusion-error-entry exclusions index exclusion first-exclusion-error)))))
+
+(defn- lint-table-error [rules exclusions unknown-key]
+  (or (unknown-lint-key-error unknown-key)
+      (if (and rules
+               (or (not= (type rules) :table)
+                   (and (sequence? rules)
+                        (or (not= (getmetatable rules) nil)
+                            (> (length rules) 0)))))
+          {:message "lint rules must be a table"})
+      (if rules (first-lint-rule-error rules nil))
+      (if (and exclusions (not (sequence? exclusions)))
+          {:message "lint exclusions must be a list"})
+      (if exclusions (first-exclusion-error exclusions 1))))
+
+(defn- lint-error [lint]
+  (if (not= (type lint) :table)
+      {:message "lint must be a table"}
+      (let [rules (. lint :rules)
+            exclusions (. lint :exclusions)
+            unknown-key (first-unknown-lint-key lint nil nil)]
+        (lint-table-error rules exclusions unknown-key))))
 
 (defn- error-at [message token]
   {:message message :line token.line :col token.col})
@@ -80,7 +236,7 @@
                 (set i (+ i 2)))
               (if failure
                   (error failure 0)
-                  result))))
+                  (marked-table result)))))
       (if (= node.kind :sequence)
           (let [result []]
             (var failure nil)
@@ -92,7 +248,7 @@
                         (table.insert result value)))))
             (if failure
                 (error failure 0)
-                result))
+                (marked-sequence result)))
           (if (= node.kind :list)
               (error (error-at "lists are not allowed" node.open) 0)
               (if (= node.kind :string)
@@ -188,6 +344,9 @@
         valid)
       false))
 
+(defn- configuration-error-with-lint [failure lint]
+  (or failure (and lint (lint-error lint))))
+
 (defn- configuration-error [tbl]
   (let [width (. tbl :indent-width)
         builtins (. tbl :builtins)
@@ -195,7 +354,8 @@
         extensions (. tbl :extensions)
         skip-dotfiles (. tbl :skip-dotfiles)
         follow-symlinks (. tbl :follow-symlinks)
-        parser (. tbl :parser)]
+        parser (. tbl :parser)
+        lint (. tbl :lint)]
     (var failure nil)
     (if (and (= failure nil) (not= width nil)
              (not (and (integer? width) (> width 0))))
@@ -219,14 +379,14 @@
         (set failure {:message "follow-symlinks must be a boolean"}))
     (if (and (= failure nil) (not= parser nil) (not= (type parser) :string))
         (set failure {:message "parser must be a string"}))
-    failure))
+    (configuration-error-with-lint failure lint)))
 
 (defn validate [tbl]
   (if (not= (type tbl) :table)
       (values nil {:message "configuration must be a table"})
       (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true
                      :indent-width true :builtins true :prefix-fallbacks true :extensions true
-                     :skip-dotfiles true :follow-symlinks true :parser true}]
+                     :skip-dotfiles true :follow-symlinks true :parser true :lint true}]
         (var failure nil)
         (each [key _ (pairs tbl)]
           (if (not (. allowed key))
@@ -241,6 +401,19 @@
                       (if (and (. tbl :exclude) (not (array-of-strings? (. tbl :exclude))))
                           (values nil {:message "exclude must be an array of strings"})
                           tbl))))))))
+
+(defn- valid-lint-policy [cfg]
+  (let [lint (. cfg :lint)
+        overrides (or (and lint (. lint :rules)) {})
+        exclusions (or (and lint (. lint :exclusions)) [])]
+    {:rules (core.merge (lint-rules.defaults) overrides)
+     :exclusions exclusions}))
+
+(defn lint-policy [cfg]
+  (let [(valid error) (validate cfg)]
+    (if error
+        (values nil error)
+        (valid-lint-policy valid))))
 
 (defn- join-path [dir name]
   (if (= (string.sub dir -1) "/")

@@ -70,6 +70,37 @@
               (. err :message)
               nil)))))
 
+(defn- validation-call-summary
+  [text-or-value]
+  (let [config (load-config)
+        value (if (= :string (type text-or-value))
+                  (parse-value text-or-value)
+                  text-or-value)]
+    (if (or (. config :module-missing) (= value nil))
+        {:crashed? false :message nil}
+        (let [(ok result err) (pcall (fn [] (config.validate value)))]
+          {:crashed? (not ok)
+           :message (and ok (= nil result) err (. err :message))}))))
+
+(defn- lint-policy-summary
+  [value]
+  (let [config (load-config)]
+    (if (. config :module-missing)
+        config
+        (let [(ok policy err) (pcall (fn [] (config.lint-policy value)))]
+          {:value-nil? (and ok (= nil policy))
+           :message (and ok (= nil policy) err (. err :message))}))))
+
+(defn- unknown-lint-key-summary
+  [value]
+  (let [config (load-config)]
+    (if (. config :module-missing)
+        config
+        (let [(ok result err) (pcall (fn [] (config.validate value)))
+              message (and ok (= nil result) err (. err :message))]
+          {:unknown-key? (and message
+                              (= "unknown lint key: " (string.sub message 1 18)))}))))
+
 (defn- write-file
   [path text]
   (let [file (assert (io.open path :w))]
@@ -258,3 +289,198 @@
   (testing "rejects a non-string parser value with the exact validation message"
     (is (= "parser must be a string"
            (validation-error-message "{:parser 1}")))))
+
+(defn- formatter-projection
+  [config]
+  {:indents (. config :indents)
+   :format-as (. config :format-as)
+   :indent-patterns (. config :indent-patterns)
+   :indent-width (. config :indent-width)
+   :builtins (. config :builtins)
+   :prefix-fallbacks (. config :prefix-fallbacks)})
+
+(defn- format-with-config
+  [source config]
+  (let [(ok format) (pcall require :fennel-extras.format)]
+    (if (not ok)
+        {:module-missing true}
+        (let [(ok value err) (pcall (fn [] (format.format-string source {:config config})))]
+          {:value value :error err :ok ok}))))
+
+(deftest lint-configuration
+  (testing "accepts an empty lint table from parsed Fennel"
+    (is (= {:lint {}}
+           (parse-value "{:lint {}}"))))
+  (testing "parses an empty lint rules table from Fennel"
+    (is (= {:lint {:rules {}}}
+           (parse-value "{:lint {:rules {}}}"))))
+  (testing "accepts an empty lint rules table through validate"
+    (is (= {:lint {:rules {}}}
+           (let [config (load-config)]
+             (if (. config :module-missing)
+                 config
+                 (config.validate {:lint {:rules {}}}))))))
+  (testing "accepts a known lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"if-branch-call" "error"}}}
+           (parse-value "{:lint {:rules {\"if-branch-call\" :error}}}"))))
+  (testing "accepts an exclusion from parsed Fennel"
+    (is (= {:lint {:exclusions [{:rule "if-branch-call"
+                                 :form "fnl/a.fnl > top#1"
+                                 :reason "why"}]}}
+           (parse-value "{:lint {:exclusions [{:rule \"if-branch-call\" :form \"fnl/a.fnl > top#1\" :reason \"why\"}]}}"))))
+  (testing "accepts an empty lint table through validate"
+    (is (= {:lint {}}
+           (let [config (load-config)]
+             (if (. config :module-missing)
+                 config
+                 (config.validate {:lint {}}))))))
+  (testing "accepts a lint rule through validate"
+    (is (= {:lint {:rules {"if-branch-call" "error"}}}
+           (let [config (load-config)]
+             (if (. config :module-missing)
+                 config
+                 (config.validate {:lint {:rules {"if-branch-call" "error"}}}))))))
+  (testing "accepts an exclusion through validate"
+    (is (= {:lint {:exclusions [{:rule "if-branch-call"
+                                 :form "fnl/a.fnl > top#1"
+                                 :reason "why"}]}}
+           (let [config (load-config)]
+             (if (. config :module-missing)
+                 config
+                 (config.validate {:lint {:exclusions [{:rule "if-branch-call"
+                                                        :form "fnl/a.fnl > top#1"
+                                                        :reason "why"}]} }))))))
+  (testing "rejects a non-table lint value"
+    (is (= "lint must be a table"
+           (validation-error-message "{:lint 1}"))))
+  (testing "rejects a numeric lint key without crashing"
+    (is (= {:crashed? false :message "unknown lint key: 1"}
+           (validation-call-summary "{:lint {1 true :z 1}}"))))
+  (testing "rejects a boolean lint rule key without crashing"
+    (is (= {:crashed? false :message "unknown lint rule: true"}
+           (validation-call-summary "{:lint {:rules {true :error}}}"))))
+  (testing "rejects a boolean lint key without crashing"
+    (is (= {:crashed? false :message "unknown lint key: true"}
+           (validation-call-summary "{:lint {true 1}}"))))
+  (testing "rejects a numeric lint exclusion key without crashing"
+    (is (= {:crashed? false :message "lint exclusion 1: unknown key 1"}
+           (validation-call-summary "{:lint {:exclusions [{1 \"x\" :rule \"if-branch-call\" :form \"f\" :reason \"r\"}]}}"))))
+  (testing "rejects a boolean lint exclusion key without crashing"
+    (is (= {:crashed? false :message "lint exclusion 1: unknown key true"}
+           (validation-call-summary "{:lint {:exclusions [{true \"x\" :rule \"if-branch-call\" :form \"f\" :reason \"r\"}]}}"))))
+  (testing "rejects a table lint exclusion key without crashing"
+    (let [key {}
+          exclusion {:rule "if-branch-call"
+                     :form "f"
+                     :reason "r"}
+          value {:lint {:exclusions [exclusion]}}]
+      (tset exclusion key "x")
+      (let [summary (validation-call-summary value)
+            message (. summary :message)
+            prefix "lint exclusion 1: unknown key table"]
+        (is (= {:crashed? false
+                :prefix-ok? (and message
+                                 (= prefix (string.sub message 1 35)))}
+               {:crashed? (. summary :crashed?)
+                :prefix-ok? (and message
+                                 (= prefix (string.sub message 1 35)))})))))
+  (testing "rejects a lint rule with a table severity without crashing"
+    (is (= {:crashed? false
+            :message "lint rule if-branch-call must be error, warning, or off"}
+           (validation-call-summary "{:lint {:rules {\"if-branch-call\" {}}}}"))))
+  (testing "rejects a list-valued lint exclusion without crashing"
+    (is (= {:crashed? false :message "lint exclusion 1: unknown key 1"}
+           (validation-call-summary "{:lint {:exclusions [[1 2]]}}"))))
+  (testing "rejects a lint exclusion with a table rule without crashing"
+    (is (= {:crashed? false
+            :message "lint exclusion 1: rule must be a string"}
+           (validation-call-summary "{:lint {:exclusions [{:rule {} :form \"f\" :reason \"r\"}]}}"))))
+  (testing "rejects an unknown lint key"
+    (is (= "unknown lint key: extra"
+           (validation-error-message "{:lint {:extra true}}"))))
+  (testing "rejects an unknown lint key after lint exclusions"
+    (is (= "unknown lint key: extra"
+           (validation-error-message "{:lint {:exclusions [] :extra true}}"))))
+  (testing "rejects an unknown lint key after lint rules"
+    (is (= "unknown lint key: extra"
+           (validation-error-message "{:lint {:rules {} :extra true}}"))))
+  (testing "rejects an unknown lint key among multiple lint keys"
+    (is (= {:unknown-key? true}
+           (unknown-lint-key-summary {:lint {:rules {} :exclusions [] :a 1 :b 2 :c 3}}))))
+  (testing "rejects a non-table lint rules value"
+    (is (= "lint rules must be a table"
+           (validation-error-message "{:lint {:rules []}}"))))
+  (testing "rejects an unknown lint rule"
+    (is (= "unknown lint rule: nope"
+           (validation-error-message "{:lint {:rules {\"nope\" :error}}}"))))
+  (testing "rejects an invalid lint rule severity"
+    (is (= "lint rule if-branch-call must be error, warning, or off"
+           (validation-error-message "{:lint {:rules {\"if-branch-call\" :debug}}}"))))
+  (testing "rejects a non-list lint exclusions value"
+    (is (= "lint exclusions must be a list"
+           (validation-error-message "{:lint {:exclusions {}}}"))))
+  (testing "rejects a numeric-keyed lint exclusions map"
+    (is (= "lint exclusions must be a list"
+           (validation-error-message "{:lint {:exclusions {1 {:rule \"if-branch-call\" :form \"x\" :reason \"ok\"}}}}"))))
+  (testing "rejects a lint exclusions map with two numeric keys"
+    (is (= "lint exclusions must be a list"
+           (validation-error-message "{:lint {:exclusions {1 {:rule \"if-branch-call\" :form \"x\" :reason \"ok\"} 2 {:rule \"if-branch-call\" :form \"y\" :reason \"ok\"}}}}"))))
+  (testing "accepts a non-empty lint exclusions list from parsed Fennel"
+    (is (= {:value? true :has-message false}
+           (validate-summary (parse-value "{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"ok\"}]}}")))))
+  (testing "accepts an empty lint exclusions list from parsed Fennel"
+    (is (= {:value? true :has-message false}
+           (validate-summary (parse-value "{:lint {:exclusions []}}")))))
+  (testing "rejects a non-table lint exclusion"
+    (is (= "lint exclusion 1 must be a table"
+           (validation-error-message "{:lint {:exclusions [1]}}"))))
+  (testing "rejects an unknown lint exclusion key"
+    (is (= "lint exclusion 1: unknown key fingerprint"
+           (validation-error-message "{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"why\" :fingerprint \"old\"}]}}"))))
+  (testing "rejects a non-string lint exclusion field"
+    (is (= "lint exclusion 1: rule must be a string"
+           (validation-error-message "{:lint {:exclusions [{:rule 1 :form \"x\" :reason \"why\"}]}}"))))
+  (testing "rejects a blank lint exclusion reason"
+    (is (= "lint exclusion 1: reason must not be blank"
+           (validation-error-message "{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"\\t\"}]}}"))))
+  (testing "rejects an unknown lint exclusion rule"
+    (is (= "lint exclusion 1: unknown rule nope"
+           (validation-error-message "{:lint {:exclusions [{:rule \"nope\" :form \"x\" :reason \"why\"}]}}"))))
+  (testing "rejects duplicate lint exclusions"
+    (is (= "lint exclusion 2: duplicate of exclusion 1"
+           (validation-error-message "{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"one\"} {:rule \"if-branch-call\" :form \"x\" :reason \"two\"}]}}")))))
+
+(deftest lint-policy
+  (testing "returns a validation error for a malformed lint rule key"
+    (is (= {:value-nil? true :message "unknown lint rule: true"}
+           (lint-policy-summary {:lint {:rules {true "error"}}}))))
+  (testing "returns a validation error for a blank lint exclusion reason"
+    (is (= {:value-nil? true :message "lint exclusion 1: reason must not be blank"}
+           (lint-policy-summary {:lint {:exclusions [{:rule "if-branch-call"
+                                                      :form "x"
+                                                      :reason ""}]}}))))
+  (testing "normalizes lint defaults and overrides without formatter keys"
+    (let [config (load-config)]
+      (is (= {:rules {"module-style" "error"
+                      "spec-macro-import" "error"
+                      "spec-no-module" "error"
+                      "spec-direct-require" "error"
+                      "one-is-per-testing" "error"
+                      "if-branch-call" "warning"
+                      "core-require" "off"}
+              :exclusions [{:rule "if-branch-call" :form "x" :reason "why"}]}
+             (if (. config :module-missing)
+                 config
+                 (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:rules {"core-require" "off"}
+                                                                            :exclusions [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
+                   (if ok value {:missing-lint-policy true}))))))))
+
+(deftest formatter-isolation
+  (testing "lint configuration does not change formatter output"
+    (let [source "(when condition\n(foo)\n(bar))"
+          without-lint {:indents {"when" [[:block 1]]}}
+          with-lint {:indents {"when" [[:block 1]]}
+                     :lint {:rules {"if-branch-call" "off"}}}
+          plain-result (format-with-config source (formatter-projection without-lint))
+          lint-result (format-with-config source (formatter-projection with-lint))]
+      (is (= (. plain-result :value) (. lint-result :value))))))
