@@ -1,5 +1,6 @@
-.PHONY: test deps clean compile check-compiled lint fmt fmt-check
+.PHONY: test deps clean compile check-compiled lint fmt fmt-check style
 
+STYLE_FLAGS ?=
 FENNEL_LS ?= $(shell command -v fennel-ls 2>/dev/null || printf '%s' '$(HOME)/.local/share/nvim/mason/bin/fennel-ls')
 LINT_FILES ?= $(shell find fnl -type f \( -name '*.fnl' -o -name '*.fnlm' \) ! -path 'fnl/eca/nfnl/*' -exec sh -c 'head -n 1 "$$1" | grep -qF '[nfnl-macro]' || printf "%s " "$$1"' _ {} \;)
 
@@ -31,6 +32,9 @@ fmt:
 
 fmt-check:
 	scripts/fennel-extras format --check
+
+style:
+	scripts/fennel-extras lint $(STYLE_FLAGS)
 
 test: deps
 	nvim --headless --noplugin -u scripts/minimal_init.lua \

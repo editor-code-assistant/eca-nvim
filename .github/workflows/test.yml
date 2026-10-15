@@ -56,3 +56,19 @@ jobs:
 
     - name: Run lint
       run: make lint
+
+  style:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Neovim
+      uses: rhysd/action-setup-vim@v1
+      with:
+        neovim: true
+
+    - name: Run style lint
+      run: make style STYLE_FLAGS="--base ${{ github.event.pull_request.base.sha }}"

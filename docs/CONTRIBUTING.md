@@ -57,6 +57,26 @@ To add a rule for a new macro, add one line such as `"deftest" [[:block 1]]` und
 
 For editor use, run `make fmt` or `scripts/fennel-extras format --write <file>`. An LSP integration will come later.
 
+### Project style lint
+
+`make style` runs `scripts/fennel-extras lint` in changed mode against `HEAD`. Use `make style STYLE_FLAGS="--base <ref>"` to compare with another base, or `make style STYLE_FLAGS=--all` to audit all files. Add `--format json` for JSON Lines output.
+
+The seven rules are:
+
+- `module-style` (error): non-spec files use the module style.
+- `spec-macro-import` (error): specs import `deftest`, `testing`, and `is` from `spec.eca.macros`.
+- `spec-no-module` (error): specs do not declare a module.
+- `spec-direct-require` (error): specs use the shared macros instead of requiring `plenary.busted` or `luassert` directly.
+- `one-is-per-testing` (error): each `testing` form contains exactly one `is`.
+- `if-branch-call` (warning): multi-expression `if` branches are moved to a named helper.
+- `core-require` (error): `eca.nfnl.core` is required as `core`.
+
+Module-style is a convert-on-touch rule. When a change selects a legacy module, convert that file to module style. `--all` reports all remaining legacy files.
+
+Lint configuration uses `:lint` with optional `:rules` and `:exclusions` keys. Set rule severities under `:rules` to `error`, `warning`, or `off`. Add `:exclusions` entries as `{:rule :form :reason}`; copy the printed exclusion snippet. A stale exclusion (one that no longer matches a finding) fails the command when its file is in the checked scope; `--all` checks every exclusion.
+
+Exit code 0 means no errors, 1 means an error or stale exclusion, and 2 means a command, configuration, Git, read, parse, or internal failure. Lint requires a full Git clone. Findings are written to stdout. CI runs `make style` on pull requests to `main`.
+
 CI runs `make check-compiled`, `make fmt-check`, `make test`, and `make lint`. The test job uses this Neovim matrix:
 
 - `v0.9.5`
