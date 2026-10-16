@@ -19,19 +19,20 @@
 (defn- spaces-only? [line]
   (= line (string.rep " " (string.len line))))
 
+(defn- indentation-lines-equal? [left right]
+  (var same true)
+  (each [i line (ipairs left)]
+    (let [other (. right i)
+          body (string.sub line (+ (leading-spaces line) 1))
+          spaces (string.sub other 1 (leading-spaces other))]
+      (if (not (or (= line other) (= other (.. spaces body))
+                   (and (= other "") (spaces-only? line))))
+          (set same false))))
+  same)
 (defn indent-only? [before after]
   (let [left (split-lines before) right (split-lines after)]
     (if (not= (length left) (length right)) false
-        (do
-          (var same true)
-          (each [i line (ipairs left)]
-            (let [other (. right i)
-                  body (string.sub line (+ (leading-spaces line) 1))
-                  spaces (string.sub other 1 (leading-spaces other))]
-              (if (not (or (= line other) (= other (.. spaces body))
-                           (and (= other "") (spaces-only? line))))
-                  (set same false))))
-          same))))
+        (indentation-lines-equal? left right))))
 
 (defn- ignored? [key]
   (or (= key :filename) (= key :line) (= key :col) (= key :bytestart)
@@ -102,16 +103,17 @@
         (if ok (table.insert forms form) (set done true))))
     forms))
 
+(defn- forms-equal? [parser left right]
+  (var same true)
+  (each [i form (ipairs left)]
+    (if (not (equal-value parser form (. right i)))
+        (set same false)))
+  same)
 (defn ast-equal? [parser a b]
   (let [(ok result) (pcall (fn []
                              (let [left (parse-all parser a) right (parse-all parser b)]
                                (if (not= (length left) (length right)) false
-                                   (do
-                                     (var same true)
-                                     (each [i form (ipairs left)]
-                                       (if (not (equal-value parser form (. right i)))
-                                           (set same false)))
-                                     same)))))]
+                                   (forms-equal? parser left right)))))]
     (and ok result)))
 
 (defn format-string [source opts]

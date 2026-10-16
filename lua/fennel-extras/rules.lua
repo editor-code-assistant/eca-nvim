@@ -42,71 +42,80 @@ local function validate_rule(rule)
     return error("invalid indentation rule")
   end
 end
+local function validate_rule_items(value)
+  local failure = nil
+  for _, rule in ipairs(value) do
+    if (failure == nil) then
+      failure = validate_rule(rule)
+    else
+    end
+  end
+  return failure
+end
 local function validate_rule_list(value)
   if (type(value) == "table") then
-    local failure = nil
-    for _, rule in ipairs(value) do
-      if (failure == nil) then
-        failure = validate_rule(rule)
-      else
-      end
-    end
-    return failure
+    return validate_rule_items(value)
   else
     return error("indentation rules must be a list")
   end
+end
+local function validate_map_items(items, rules_3f)
+  local failure = nil
+  for name, value in pairs(items) do
+    if (failure == nil) then
+      if (type(name) ~= "string") then
+        failure = error("indentation names must be strings")
+      else
+        if rules_3f then
+          failure = validate_rule_list(value)
+        else
+          if (type(value) ~= "string") then
+            failure = error("format-as targets must be strings")
+          else
+          end
+        end
+      end
+    else
+    end
+  end
+  return failure
 end
 local function validate_map(items, rules_3f)
   if (items == nil) then
     return nil
   else
     if (type(items) == "table") then
-      local failure = nil
-      for name, value in pairs(items) do
-        if (failure == nil) then
-          if (type(name) ~= "string") then
-            failure = error("indentation names must be strings")
-          else
-            if rules_3f then
-              failure = validate_rule_list(value)
-            else
-              if (type(value) ~= "string") then
-                failure = error("format-as targets must be strings")
-              else
-              end
-            end
-          end
-        else
-        end
-      end
-      return failure
+      return validate_map_items(items, rules_3f)
     else
       return error("indentation configuration must be a table")
     end
   end
+end
+local function validate_pattern_items(patterns)
+  local failure = nil
+  for _, entry in ipairs(patterns) do
+    if (failure == nil) then
+      if ((type(entry) == "table") and (type(entry[1]) == "string")) then
+        local ok, _0 = pcall(string.match, "", entry[1])
+        if not ok then
+          failure = error("invalid indentation pattern")
+        else
+          failure = validate_rule_list(entry[2])
+        end
+      else
+        failure = error("invalid indentation pattern")
+      end
+    else
+    end
+  end
+  return failure
 end
 local function validate_patterns(patterns)
   if (patterns == nil) then
     return nil
   else
     if (type(patterns) == "table") then
-      local failure = nil
-      for _, entry in ipairs(patterns) do
-        if (failure == nil) then
-          if ((type(entry) == "table") and (type(entry[1]) == "string")) then
-            local ok, _0 = pcall(string.match, "", entry[1])
-            if not ok then
-              failure = error("invalid indentation pattern")
-            else
-              failure = validate_rule_list(entry[2])
-            end
-          else
-            failure = error("invalid indentation pattern")
-          end
-        else
-        end
-      end
-      return failure
+      return validate_pattern_items(patterns)
     else
       return error("indentation patterns must be a list")
     end
@@ -140,7 +149,36 @@ local function effective_prefix_rules(config)
     end
   end
 end
-local function _24_(config, name, seen)
+local function found_rule(rule)
+  return rule, true
+end
+local function resolve_pattern(patterns, name)
+  local result = nil
+  local found = false
+  for _, entry in ipairs(patterns) do
+    if (not found and string.match(name, entry[1])) then
+      local new_result, new_found = found_rule(entry[2])
+      result = new_result
+      found = new_found
+    else
+    end
+  end
+  return result, found
+end
+local function resolve_prefix(prefixes, name)
+  local result = nil
+  local found = false
+  for prefix, rule in pairs(prefixes) do
+    if (not found and ((string.sub(name, 1, string.len(prefix)) == prefix) or ((string.sub(prefix, -1) == "-") and (name == string.sub(prefix, 1, -2))))) then
+      local new_result, new_found = found_rule(rule)
+      result = new_result
+      found = new_found
+    else
+    end
+  end
+  return result, found
+end
+local function _26_(config, name, seen)
   local indents = (config.indents or {})
   local aliases = (config["format-as"] or {})
   local patterns = (config["indent-patterns"] or {})
@@ -152,15 +190,7 @@ local function _24_(config, name, seen)
     if aliases[name] then
       return alias_rule(config, name, seen)
     else
-      local result = nil
-      local found = false
-      for _, entry in ipairs(patterns) do
-        if (not found and string.match(name, entry[1])) then
-          result = entry[2]
-          found = true
-        else
-        end
-      end
+      local result, found = resolve_pattern(patterns, name)
       if found then
         return result, nil, true
       else
@@ -168,15 +198,7 @@ local function _24_(config, name, seen)
           return builtins[name], nil, true
         else
           if (string.find(name, ".", 1, true) == nil) then
-            local result0 = nil
-            local found0 = false
-            for prefix, rule in pairs(prefixes) do
-              if (not found0 and ((string.sub(name, 1, string.len(prefix)) == prefix) or ((string.sub(prefix, -1) == "-") and (name == string.sub(prefix, 1, -2))))) then
-                result0 = rule
-                found0 = true
-              else
-              end
-            end
+            local result0, found0 = resolve_prefix(prefixes, name)
             if found0 then
               return result0, nil, true
             else
@@ -190,7 +212,7 @@ local function _24_(config, name, seen)
     end
   end
 end
-resolve_name = _24_
+resolve_name = _26_
 local function _33_(config, name, seen)
   if seen[name] then
     return nil, error("format-as alias cycle")
@@ -253,6 +275,62 @@ local function validate_custom_config(config)
     end
   end
 end
+local function validate_config_table(config)
+  local failure = nil
+  for key, _ in pairs(config) do
+    if ((failure == nil) and not allowed_keys[key]) then
+      failure = error("unknown indentation configuration key")
+    else
+    end
+  end
+  if (failure == nil) then
+    failure = validate_map(config.indents, true)
+  else
+  end
+  if (failure == nil) then
+    failure = validate_map(config["format-as"], false)
+  else
+  end
+  if (failure == nil) then
+    failure = validate_patterns(config["indent-patterns"])
+  else
+  end
+  if (failure == nil) then
+    local width = config["indent-width"]
+    if ((width ~= nil) and not (integer_3f(width) and (width > 0))) then
+      failure = error("indent-width must be a positive integer")
+    else
+    end
+  else
+  end
+  if (failure == nil) then
+    failure = validate_custom_config(config)
+  else
+  end
+  if (failure == nil) then
+    for name, _ in pairs((config["format-as"] or {})) do
+      if (failure == nil) then
+        local _0, err = resolve_name(config, name, {})
+        if err then
+          failure = err
+        else
+        end
+      else
+      end
+    end
+  else
+  end
+  if (failure == nil) then
+    for name, _ in pairs((config.indents or {})) do
+      if ((failure == nil) and (config["format-as"] or {})[name]) then
+        failure = error("name has both indent and format-as rule")
+      else
+      end
+    end
+  else
+  end
+  return failure
+end
 local validate
 do
   local function validate0(config)
@@ -260,60 +338,7 @@ do
       return nil
     else
       if (type(config) == "table") then
-        local failure = nil
-        for key, _ in pairs(config) do
-          if ((failure == nil) and not allowed_keys[key]) then
-            failure = error("unknown indentation configuration key")
-          else
-          end
-        end
-        if (failure == nil) then
-          failure = validate_map(config.indents, true)
-        else
-        end
-        if (failure == nil) then
-          failure = validate_map(config["format-as"], false)
-        else
-        end
-        if (failure == nil) then
-          failure = validate_patterns(config["indent-patterns"])
-        else
-        end
-        if (failure == nil) then
-          local width = config["indent-width"]
-          if ((width ~= nil) and not (integer_3f(width) and (width > 0))) then
-            failure = error("indent-width must be a positive integer")
-          else
-          end
-        else
-        end
-        if (failure == nil) then
-          failure = validate_custom_config(config)
-        else
-        end
-        if (failure == nil) then
-          for name, _ in pairs((config["format-as"] or {})) do
-            if (failure == nil) then
-              local _0, err = resolve_name(config, name, {})
-              if err then
-                failure = err
-              else
-              end
-            else
-            end
-          end
-        else
-        end
-        if (failure == nil) then
-          for name, _ in pairs((config.indents or {})) do
-            if ((failure == nil) and (config["format-as"] or {})[name]) then
-              failure = error("name has both indent and format-as rule")
-            else
-            end
-          end
-        else
-        end
-        return failure
+        return validate_config_table(config)
       else
         return error("indentation configuration must be a table")
       end

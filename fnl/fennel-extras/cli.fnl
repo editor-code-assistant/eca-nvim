@@ -78,51 +78,61 @@
         ""
         rel)))
 
+(defn- record-file [path rel result seen dedupe]
+  (tset seen dedupe true)
+  (table.insert result {:relative rel :absolute path}))
+
 (defn- add-file [root path rel result seen excludes extensions dedupe]
   (if (and (fnl-file? rel extensions)
            (not (excluded? rel excludes))
            (not (. seen dedupe)))
-      (do (tset seen dedupe true)
-        (table.insert result {:relative rel :absolute path}))))
+      (record-file path rel result seen dedupe)))
+
+(defn- walk-target [walk-fn root target rel result seen excludes extensions skip-dotfiles follow-symlinks visited]
+  (tset visited target true)
+  (let [(walk-result error) (walk-fn root target rel result seen excludes extensions
+                                     skip-dotfiles follow-symlinks rel visited)]
+    (if error (values nil error) (values result nil))))
+
+(defn- walk-scan [walk-fn root directory prefix result seen excludes extensions skip-dotfiles follow-symlinks error-prefix visited uv handle]
+  (var scanning true)
+  (var failure nil)
+  (while (and scanning (not failure))
+    (let [(name type) (uv.fs_scandir_next handle)]
+      (if (not name)
+          (set scanning false)
+          (if (and skip-dotfiles (hidden? name))
+              nil
+              (let [path (join directory name)
+                    rel (if (= prefix "") name (.. prefix "/" name))]
+                (if (or (and (= type "directory") (not (= name ".git")))
+                        (= type "file")
+                        (and follow-symlinks (= type "link")))
+                    (let [target (if (= type "link") (realpath uv path) path)
+                          target-stat (and target (uv.fs_stat target))]
+                      (if (and target-stat (= target-stat.type "directory")
+                               (not (excluded? rel excludes))
+                               (not (. visited target)))
+                          (let [(walk-result error) (walk-target walk-fn root target rel result seen excludes extensions
+                                                                 skip-dotfiles follow-symlinks visited)]
+                            (if error (set failure error)))
+                          (if (and target-stat (= target-stat.type "file"))
+                              (add-file root target rel result seen excludes extensions
+                                        (if follow-symlinks target (relative root path)))))
+                      (if (= type "file")
+                          (let [target (if follow-symlinks (realpath uv path) path)
+                                target-stat (and target (uv.fs_stat target))]
+                            (if (and target-stat (= target-stat.type "file"))
+                                (add-file root target rel result seen excludes extensions
+                                          (if follow-symlinks target (relative root path)))))))))))))
+  (if failure (values nil failure) (values result nil)))
 
 (defn- walk [root directory prefix result seen excludes extensions skip-dotfiles follow-symlinks error-prefix visited]
   (let [uv (or vim.uv vim.loop)
         (handle scan-error) (uv.fs_scandir directory)]
     (if (not handle)
         (values nil (.. "cannot read directory " (or error-prefix (if (= prefix "") "." prefix))))
-        (do
-          (var scanning true)
-          (var failure nil)
-          (while (and scanning (not failure))
-            (let [(name type) (uv.fs_scandir_next handle)]
-              (if (not name)
-                  (set scanning false)
-                  (if (and skip-dotfiles (hidden? name))
-                      nil
-                      (let [path (join directory name)
-                            rel (if (= prefix "") name (.. prefix "/" name))]
-                        (if (or (and (= type "directory") (not (= name ".git")))
-                                (= type "file")
-                                (and follow-symlinks (= type "link")))
-                            (let [target (if (= type "link") (realpath uv path) path)
-                                  target-stat (and target (uv.fs_stat target))]
-                              (if (and target-stat (= target-stat.type "directory")
-                                       (not (excluded? rel excludes))
-                                       (not (. visited target)))
-                                  (do (tset visited target true)
-                                    (let [(walk-result error) (walk root target rel result seen excludes extensions
-                                                                    skip-dotfiles follow-symlinks rel visited)]
-                                      (if error (set failure error))))
-                                  (if (and target-stat (= target-stat.type "file"))
-                                      (add-file root target rel result seen excludes extensions
-                                                (if follow-symlinks target (relative root path)))))
-                              (if (= type "file")
-                                  (let [target (if follow-symlinks (realpath uv path) path)
-                                        target-stat (and target (uv.fs_stat target))]
-                                    (if (and target-stat (= target-stat.type "file"))
-                                        (add-file root target rel result seen excludes extensions
-                                                  (if follow-symlinks target (relative root path)))))))))))))
-          (if failure (values nil failure) (values result nil))))))
+        (walk-scan walk root directory prefix result seen excludes extensions skip-dotfiles follow-symlinks error-prefix visited uv handle))))
 
 (defn- add-path [root input result seen excludes extensions skip-dotfiles follow-symlinks]
   (let [uv (or vim.uv vim.loop)
@@ -149,6 +159,10 @@
                     nil)))
         nil)))
 
+(defn- sorted-files-success [result]
+  (table.sort result (fn [a b] (< a.relative b.relative)))
+  (values result nil))
+
 (defn- sorted-files [root inputs excludes extensions skip-dotfiles follow-symlinks]
   (let [result [] seen {}]
     (var failure nil)
@@ -158,8 +172,7 @@
             (if error (set failure error)))))
     (if failure
         (values nil failure)
-        (do (table.sort result (fn [a b] (< a.relative b.relative)))
-          (values result nil)))))
+        (sorted-files-success result))))
 
 (defn- read-file [path]
   (let [file (io.open path :r)]
@@ -235,6 +248,9 @@
             (values nil "--base cannot be used with --all")
             state))))
 
+(defn- parse-parser-option [args index]
+  (values (+ index 1) (. args (+ index 1))))
+
 (defn- parse-args [args]
   (let [command (. args 1)]
     (if (= command "lint")
@@ -256,7 +272,9 @@
                       (if (= arg "--parser")
                           (if (>= i (length args))
                               (set failure "missing argument for --parser")
-                              (do (set i (+ i 1)) (set parser-name (. args i))))
+                              (let [(next-index next-parser) (parse-parser-option args i)]
+                                (set i next-index)
+                                (set parser-name next-parser)))
                           (if (= (string.sub arg 1 2) "--")
                               (set failure (.. "unknown flag: " arg))
                               (table.insert paths arg)))))
@@ -273,13 +291,16 @@
         (if ok parser (values nil (.. "could not require parser module: " name))))
       nil))
 
+(defn- config-load-error [printer path error]
+  (emit printer (.. path ": " (or (. error :message) (tostring error))))
+  (values nil true nil))
+
 (defn- config-for [root printer]
   (let [path (config.find root)]
     (if path
         (let [(loaded error) (config.load path)]
           (if error
-              (do (emit printer (.. path ": " (or (. error :message) (tostring error))))
-                (values nil true nil))
+              (config-load-error printer path error)
               (values loaded nil path)))
         (values {} nil nil))))
 
@@ -311,6 +332,15 @@
         result)
       files))
 
+(defn- temp-open-attempt [error max-attempts]
+  (if (string.match (tostring error) "EEXIST")
+      nil
+      max-attempts))
+
+(defn- temp-write-error [temp write-error close-error]
+  (os.remove temp)
+  (values nil (or write-error close-error "could not write temporary file")))
+
 (defn- temp-write [path text]
   (let [uv (or vim.uv vim.loop)
         max-attempts 10]
@@ -324,76 +354,109 @@
       (let [(ok fd error) (pcall uv.fs_open temp "wx" 420)]
         (if (and ok fd)
             (set file fd)
-            (do
+            (let [next-attempt (temp-open-attempt error max-attempts)]
               (set open-error error)
-              (if (not (string.match (tostring error) "EEXIST"))
-                  (set attempt max-attempts))))))
+              (if next-attempt (set attempt next-attempt))))))
     (if (not file)
         (values nil (or open-error "could not open temporary file"))
         (let [(write-ok written write-error) (pcall uv.fs_write file text)
               (close-ok close-result close-error) (pcall uv.fs_close file)]
           (if (or (not write-ok) (not written) write-error (not close-ok) (not close-result) close-error)
-              (do (os.remove temp)
-                (values nil (or write-error close-error "could not write temporary file")))
+              (temp-write-error temp write-error close-error)
               (values temp nil))))))
+
+(defn- record-formatted [formatted changed file source output]
+  (table.insert formatted {:path file.absolute :relative file.relative :source source :text output})
+  (if (not= source output)
+      (table.insert changed file.relative)))
+
+(defn- run-files-error [printer failure]
+  (emit printer (error-line failure.path failure.error))
+  2)
+
+(defn- check-files [changed printer]
+  (each [_ path (ipairs changed)] (emit printer path))
+  (if (> (length changed) 0) 1 0))
+
+(defn- write-failure-result [temps write-failure printer]
+  (each [_ item (ipairs temps)] (os.remove item.temp))
+  (emit printer (.. write-failure.path ": " write-failure.error))
+  2)
+
+(defn- rename-files [temps]
+  (var rename-failure nil)
+       ;; Cross-file atomicity is limited to the staging phase.
+  (each [_ item (ipairs temps)]
+    (if (not rename-failure)
+        (let [(ok renamed error) (pcall os.rename item.temp item.path)]
+          (if (or (not ok) (not renamed))
+              (set rename-failure {:path item.relative
+                                   :error (or error "could not rename temporary file")})))))
+  rename-failure)
+
+(defn- rename-failure-result [temps rename-failure printer]
+  (each [_ item (ipairs temps)] (os.remove item.temp))
+  (emit printer (.. rename-failure.path ": " rename-failure.error))
+  2)
+
+(defn- format-file [parser cfg file]
+  (let [(source read-error) (read-file file.absolute)]
+    (if read-error
+        (values nil {:path file.relative :error read-error})
+        (let [(ok output error) (pcall
+                                 (fn []
+                                   ((. formatter :format-string) source
+                                    {:parser parser
+                                     :config (formatter-config cfg)})))]
+          (if (not ok)
+              (values nil {:path file.relative :error output})
+              (if error
+                  (values nil {:path file.relative :error error})
+                  (values {:path file.absolute :relative file.relative :source source :text output} nil)))))))
+
+(defn- append-formatted [formatted changed item]
+  (table.insert formatted item)
+  (if (not= item.source item.text)
+      (table.insert changed item.relative)))
+
+(defn- write-success-result [changed printer]
+  (each [_ path (ipairs changed)] (emit printer path))
+  0)
+
+(defn- write-files-result [formatted changed printer]
+  (var write-failure nil)
+  (local temps [])
+  (each [_ item (ipairs formatted)]
+    (if (and (not write-failure) (not= item.source item.text))
+        (let [(temp error) (temp-write item.path item.text)]
+          (if temp
+              (table.insert temps {:path item.path :relative item.relative :temp temp})
+              (set write-failure {:path item.relative :error error})))))
+  (if write-failure
+      (write-failure-result temps write-failure printer)
+      (let [rename-failure (rename-files temps)]
+        (if rename-failure
+            (rename-failure-result temps rename-failure printer)
+            (write-success-result changed printer)))))
+
+(defn- process-files-result [mode formatted changed printer]
+  (table.sort changed)
+  (if (= mode :check)
+      (check-files changed printer)
+      (write-files-result formatted changed printer)))
 
 (defn- run-files [root mode parser cfg files printer]
   (let [formatted [] changed []]
     (var failure nil)
     (each [_ file (ipairs files)]
       (if (not failure)
-          (let [(source read-error) (read-file file.absolute)]
-            (if read-error
-                (set failure {:path file.relative :error read-error})
-                (let [(ok output error) (pcall
-                                         (fn []
-                                           ((. formatter :format-string) source
-                                            {:parser parser
-                                             :config (formatter-config cfg)})))]
-                  (if (not ok)
-                      (set failure {:path file.relative :error output})
-                      (let []
-                        (if error
-                            (set failure {:path file.relative :error error})
-                            (do
-                              (table.insert formatted {:path file.absolute :relative file.relative :source source :text output})
-                              (if (not= source output)
-                                  (table.insert changed file.relative)))))))))))
+          (let [(item error) (format-file parser cfg file)]
+            (if error
+                (set failure error)
+                (append-formatted formatted changed item)))))
     (if failure
-        (do (emit printer (error-line failure.path failure.error)) 2)
-        (do
-          (table.sort changed)
-          (if (= mode :check)
-              (do (each [_ path (ipairs changed)] (emit printer path)) (if (> (length changed) 0) 1 0))
-              (do
-                (var write-failure nil)
-                (local temps [])
-                (each [_ item (ipairs formatted)]
-                  (if (and (not write-failure) (not= item.source item.text))
-                      (let [(temp error) (temp-write item.path item.text)]
-                        (if temp
-                            (table.insert temps {:path item.path :relative item.relative :temp temp})
-                            (set write-failure {:path item.relative :error error})))))
-                (if write-failure
-                    (do
-                      (each [_ item (ipairs temps)] (os.remove item.temp))
-                      (emit printer (.. write-failure.path ": " write-failure.error))
-                      2)
-                    (do
-                      (var rename-failure nil)
-                      ;; Cross-file atomicity is limited to the staging phase.
-                      (each [_ item (ipairs temps)]
-                        (if (not rename-failure)
-                            (let [(ok renamed error) (pcall os.rename item.temp item.path)]
-                              (if (or (not ok) (not renamed))
-                                  (set rename-failure {:path item.relative
-                                                       :error (or error "could not rename temporary file")})))))
-                      (if rename-failure
-                          (do
-                            (each [_ item (ipairs temps)] (os.remove item.temp))
-                            (emit printer (.. rename-failure.path ": " rename-failure.error))
-                            2)
-                          (do (each [_ path (ipairs changed)] (emit printer path)) 0))))))))))
+        (run-files-error printer failure)
+        (process-files-result mode formatted changed printer))))
 
 (defn- read-lint-files [files index result]
   (if (> index (length files))

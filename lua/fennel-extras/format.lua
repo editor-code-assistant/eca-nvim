@@ -24,6 +24,19 @@ end
 local function spaces_only_3f(line)
   return (line == string.rep(" ", string.len(line)))
 end
+local function indentation_lines_equal_3f(left, right)
+  local same = true
+  for i, line in ipairs(left) do
+    local other = right[i]
+    local body = string.sub(line, (leading_spaces(line) + 1))
+    local spaces = string.sub(other, 1, leading_spaces(other))
+    if not ((line == other) or (other == (spaces .. body)) or ((other == "") and spaces_only_3f(line))) then
+      same = false
+    else
+    end
+  end
+  return same
+end
 local indent_only_3f
 do
   local function indent_only_3f0(before, after)
@@ -32,17 +45,7 @@ do
     if (#left ~= #right) then
       return false
     else
-      local same = true
-      for i, line in ipairs(left) do
-        local other = right[i]
-        local body = string.sub(line, (leading_spaces(line) + 1))
-        local spaces = string.sub(other, 1, leading_spaces(other))
-        if not ((line == other) or (other == (spaces .. body)) or ((other == "") and spaces_only_3f(line))) then
-          same = false
-        else
-        end
-      end
-      return same
+      return indentation_lines_equal_3f(left, right)
     end
   end
   _2amodule_2a["indent-only?"] = indent_only_3f0
@@ -136,27 +139,30 @@ local function parse_all(parser, source)
   end
   return forms
 end
+local function forms_equal_3f(parser, left, right)
+  local same = true
+  for i, form in ipairs(left) do
+    if not equal_value(parser, form, right[i]) then
+      same = false
+    else
+    end
+  end
+  return same
+end
 local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _12_()
+    local function _13_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
         return false
       else
-        local same = true
-        for i, form in ipairs(left) do
-          if not equal_value(parser, form, right[i]) then
-            same = false
-          else
-          end
-        end
-        return same
+        return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_12_)
+    ok, result = pcall(_13_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0

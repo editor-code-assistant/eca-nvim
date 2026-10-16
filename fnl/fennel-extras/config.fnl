@@ -180,6 +180,9 @@
           (table.insert result child)))
     result))
 
+(defn- append-decoded-char [result c]
+  (table.insert result c))
+
 (defn- decode-string [token]
   (let [text token.text
         n (string.len text)
@@ -199,8 +202,7 @@
                               (table.insert result "\t")
                               (error (error-at "unsupported string escape" token) 0)))))
               (set i (+ i 2)))
-            (do
-              (table.insert result c)
+            (let [_ (append-decoded-char result c)]
               (set i (+ i 1))))))
     (table.concat result)))
 
@@ -216,24 +218,27 @@
                     nil
                     (error (error-at "symbols are not allowed" token) 0)))))))
 
+(defn- convert-table-children [convert-fn children result]
+  (var i 1)
+  (var failure nil)
+  (while (and (<= i (length children)) (not failure))
+    (let [(key key-error) (convert-fn (. children i))
+          (value value-error) (convert-fn (rawget children (+ i 1)))]
+      (if key-error
+          (set failure key-error)
+          (if value-error
+              (set failure value-error)
+              (tset result key value))))
+    (set i (+ i 2)))
+  failure)
+
 (defn- convert [node]
   (if (= node.kind :table)
       (let [children (meaningful-children node.children)
             result {}]
-        (var i 1)
-        (var failure nil)
         (if (= (math.fmod (length children) 2) 1)
             (error (error-at "table must contain key/value pairs" node.open) 0)
-            (do
-              (while (and (<= i (length children)) (not failure))
-                (let [(key key-error) (convert (. children i))
-                      (value value-error) (convert (rawget children (+ i 1)))]
-                  (if key-error
-                      (set failure key-error)
-                      (if value-error
-                          (set failure value-error)
-                          (tset result key value))))
-                (set i (+ i 2)))
+            (let [failure (convert-table-children convert children result)]
               (if failure
                   (error failure 0)
                   (marked-table result)))))
@@ -420,13 +425,17 @@
       (.. dir name)
       (.. dir "/" name)))
 
+(defn- close-file [file]
+  (file:close)
+  true)
+
 (defn- exists? [path]
   (let [uv (or (and vim vim.loop) (and vim vim.uv))]
     (if uv
         (not= nil (uv.fs_stat path))
         (let [file (io.open path :r)]
           (if file
-              (do (file:close) true)
+              (close-file file)
               false)))))
 
 (defn- git-marker? [dir]
@@ -442,6 +451,9 @@
         (if (= parent "") "/" parent)
         nil)))
 
+(defn- found-config [candidate]
+  (values candidate false))
+
 (defn find [start-dir]
   (var dir start-dir)
   (var result nil)
@@ -449,7 +461,9 @@
   (while searching
     (let [candidate (join-path dir ".fnl-extras.fnl")]
       (if (exists? candidate)
-          (do (set result candidate) (set searching false))
+          (let [(new-result new-searching) (found-config candidate)]
+            (set result new-result)
+            (set searching new-searching))
           (if (git-marker? dir)
               (set searching false)
               (let [parent (parent-dir dir)]

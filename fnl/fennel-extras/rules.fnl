@@ -33,47 +33,50 @@
                 (error "unknown indentation rule"))))
       (error "invalid indentation rule")))
 
+(defn- validate-rule-items [value]
+  (var failure nil)
+  (each [_ rule (ipairs value)]
+    (if (= failure nil) (set failure (validate-rule rule))))
+  failure)
 (defn- validate-rule-list [value]
   (if (= (type value) :table)
-      (do
-        (var failure nil)
-        (each [_ rule (ipairs value)]
-          (if (= failure nil) (set failure (validate-rule rule))))
-        failure)
+      (validate-rule-items value)
       (error "indentation rules must be a list")))
 
+(defn- validate-map-items [items rules?]
+  (var failure nil)
+  (each [name value (pairs items)]
+    (if (= failure nil)
+        (if (not= (type name) :string)
+            (set failure (error "indentation names must be strings"))
+            (if rules?
+                (set failure (validate-rule-list value))
+                (if (not= (type value) :string)
+                    (set failure (error "format-as targets must be strings")))))))
+  failure)
 (defn- validate-map [items rules?]
   (if (= items nil)
       nil
       (if (= (type items) :table)
-          (do
-            (var failure nil)
-            (each [name value (pairs items)]
-              (if (= failure nil)
-                  (if (not= (type name) :string)
-                      (set failure (error "indentation names must be strings"))
-                      (if rules?
-                          (set failure (validate-rule-list value))
-                          (if (not= (type value) :string)
-                              (set failure (error "format-as targets must be strings")))))))
-            failure)
+          (validate-map-items items rules?)
           (error "indentation configuration must be a table"))))
 
+(defn- validate-pattern-items [patterns]
+  (var failure nil)
+  (each [_ entry (ipairs patterns)]
+    (if (= failure nil)
+        (if (and (= (type entry) :table) (= (type (. entry 1)) :string))
+            (let [(ok _) (pcall string.match "" (. entry 1))]
+              (if (not ok)
+                  (set failure (error "invalid indentation pattern"))
+                  (set failure (validate-rule-list (. entry 2)))))
+            (set failure (error "invalid indentation pattern")))))
+  failure)
 (defn- validate-patterns [patterns]
   (if (= patterns nil)
       nil
       (if (= (type patterns) :table)
-          (do
-            (var failure nil)
-            (each [_ entry (ipairs patterns)]
-              (if (= failure nil)
-                  (if (and (= (type entry) :table) (= (type (. entry 1)) :string))
-                      (let [(ok _) (pcall string.match "" (. entry 1))]
-                        (if (not ok)
-                            (set failure (error "invalid indentation pattern"))
-                            (set failure (validate-rule-list (. entry 2)))))
-                      (set failure (error "invalid indentation pattern")))))
-            failure)
+          (validate-pattern-items patterns)
           (error "indentation patterns must be a list"))))
 
 (defn- effective-builtins [config]
@@ -90,6 +93,31 @@
         prefix-rules
         (if (= setting false) {} setting))))
 
+(defn- found-rule [rule]
+  (values rule true))
+
+(defn- resolve-pattern [patterns name]
+  (var result nil)
+  (var found false)
+  (each [_ entry (ipairs patterns)]
+    (if (and (not found) (string.match name (. entry 1)))
+        (let [(new-result new-found) (found-rule (. entry 2))]
+          (set result new-result)
+          (set found new-found))))
+  (values result found))
+
+(defn- resolve-prefix [prefixes name]
+  (var result nil)
+  (var found false)
+  (each [prefix rule (pairs prefixes)]
+    (if (and (not found)
+             (or (= (string.sub name 1 (string.len prefix)) prefix)
+                 (and (= (string.sub prefix -1) "-")
+                      (= name (string.sub prefix 1 -2)))))
+        (let [(new-result new-found) (found-rule rule)]
+          (set result new-result)
+          (set found new-found))))
+  (values result found))
 (set resolve-name
      (fn [config name seen]
        (let [indents (or (. config :indents) {}) aliases (or (. config :format-as) {})
@@ -99,26 +127,13 @@
              (values (. indents name) nil true)
              (if (. aliases name)
                  (alias-rule config name seen)
-                 (do
-                   (var result nil)
-                   (var found false)
-                   (each [_ entry (ipairs patterns)]
-                     (if (and (not found) (string.match name (. entry 1)))
-                         (do (set result (. entry 2)) (set found true))))
+                 (let [(result found) (resolve-pattern patterns name)]
                    (if found
                        (values result nil true)
                        (if (. builtins name)
                            (values (. builtins name) nil true)
                            (if (= (string.find name "." 1 true) nil)
-                               (let []
-                                 (var result nil)
-                                 (var found false)
-                                 (each [prefix rule (pairs prefixes)]
-                                   (if (and (not found)
-                                            (or (= (string.sub name 1 (string.len prefix)) prefix)
-                                                (and (= (string.sub prefix -1) "-")
-                                                     (= name (string.sub prefix 1 -2)))))
-                                       (do (set result rule) (set found true))))
+                               (let [(result found) (resolve-prefix prefixes name)]
                                  (if found
                                      (values result nil true)
                                      (values nil nil false)))
@@ -166,33 +181,34 @@
                     (validate-custom-map fallbacks "prefix-fallbacks rule ")
                     nil))))))
 
+(defn- validate-config-table [config]
+  (var failure nil)
+  (each [key _ (pairs config)]
+    (if (and (= failure nil) (not (. allowed-keys key)))
+        (set failure (error "unknown indentation configuration key"))))
+  (if (= failure nil) (set failure (validate-map (. config :indents) true)))
+  (if (= failure nil) (set failure (validate-map (. config :format-as) false)))
+  (if (= failure nil) (set failure (validate-patterns (. config :indent-patterns))))
+  (if (= failure nil)
+      (let [width (. config :indent-width)]
+        (if (and (not= width nil) (not (and (integer? width) (> width 0))))
+            (set failure (error "indent-width must be a positive integer")))))
+  (if (= failure nil) (set failure (validate-custom-config config)))
+  (if (= failure nil)
+      (each [name _ (pairs (or (. config :format-as) {}))]
+        (if (= failure nil)
+            (let [(_ err) (resolve-name config name {})]
+              (if err (set failure err))))))
+  (if (= failure nil)
+      (each [name _ (pairs (or config.indents {}))]
+        (if (and (= failure nil) (. (or (. config :format-as) {}) name))
+            (set failure (error "name has both indent and format-as rule")))))
+  failure)
 (defn validate [config]
   (if (= config nil)
       nil
       (if (= (type config) :table)
-          (do
-            (var failure nil)
-            (each [key _ (pairs config)]
-              (if (and (= failure nil) (not (. allowed-keys key)))
-                  (set failure (error "unknown indentation configuration key"))))
-            (if (= failure nil) (set failure (validate-map (. config :indents) true)))
-            (if (= failure nil) (set failure (validate-map (. config :format-as) false)))
-            (if (= failure nil) (set failure (validate-patterns (. config :indent-patterns))))
-            (if (= failure nil)
-                (let [width (. config :indent-width)]
-                  (if (and (not= width nil) (not (and (integer? width) (> width 0))))
-                      (set failure (error "indent-width must be a positive integer")))))
-            (if (= failure nil) (set failure (validate-custom-config config)))
-            (if (= failure nil)
-                (each [name _ (pairs (or (. config :format-as) {}))]
-                  (if (= failure nil)
-                      (let [(_ err) (resolve-name config name {})]
-                        (if err (set failure err))))))
-            (if (= failure nil)
-                (each [name _ (pairs (or config.indents {}))]
-                  (if (and (= failure nil) (. (or (. config :format-as) {}) name))
-                      (set failure (error "name has both indent and format-as rule")))))
-            failure)
+          (validate-config-table config)
           (error "indentation configuration must be a table"))))
 
 (defn resolve [config name]

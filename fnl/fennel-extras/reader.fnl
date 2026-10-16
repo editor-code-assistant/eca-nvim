@@ -29,6 +29,8 @@
     "@" :at
     _ :atom))
 
+(defn- close-string [j]
+  (values true (+ j 1)))
 (defn- scan-string [source i]
   (let [n (string.len source)]
     (var j (+ i 1))
@@ -43,7 +45,9 @@
                     (set error {:message "carriage return is not allowed" :offset (+ j 1)})
                     (set j (+ j 2))))
             (if (= c "\"")
-                (do (set closed true) (set j (+ j 1)))
+                (let [(new-closed new-j) (close-string j)]
+                  (set closed new-closed)
+                  (set j new-j))
                 (if (= c "\r")
                     (set error {:message "carriage return is not allowed" :offset j})
                     (set j (+ j 1)))))))
@@ -90,6 +94,8 @@
       (string.match text "^[0-9][0-9_]*[eE][+-][0-9][0-9_]*$")
       (string.match text "^%-[0-9][0-9_]*[eE][+-][0-9][0-9_]*$")))
 
+(defn- advance-line [line col]
+  (values (+ line 1) 1))
 (defn- advance-position [text line col]
   (var j 1)
   (var current-line line)
@@ -97,7 +103,9 @@
   (let [n (string.len text)]
     (while (<= j n)
       (if (= (string.sub text j j) "\n")
-          (do (set current-line (+ current-line 1)) (set current-col 1))
+          (let [(new-line new-col) (advance-line current-line current-col)]
+            (set current-line new-line)
+            (set current-col new-col))
           (set current-col (+ current-col 1)))
       (set j (+ j 1))))
   (values current-line current-col))
@@ -139,6 +147,19 @@
           (fail "invalid comma-at reader syntax" line col)
           (values (token :prefix (string.sub source i i) line col) (+ i 1))))))
 
+(defn- push-open-node [node stack tok]
+  (let [child {:kind (case tok.text "(" :list "[" :sequence "{" :table) :open tok :children []}]
+    (table.insert node.children child)
+    (table.insert stack {:node child :open tok})))
+
+(defn- advance-token [tokens tok line col]
+  (table.insert tokens tok)
+  (advance-position tok.text line col))
+
+(defn- close-matching-node [stack tok]
+  (let [top (. stack (length stack))]
+    (set top.node.close tok)
+    (table.remove stack)))
 (defn tokenize [source]
   (let [tokens []
         n (string.len source)]
@@ -152,11 +173,9 @@
         (if tok
             (if (<= end-or-error old-i)
                 (set error {:message "tokenizer made no progress" :line line :col col})
-                (do
-                  (table.insert tokens tok)
-                  (let [(new-line new-col) (advance-position tok.text line col)]
-                    (set line new-line)
-                    (set col new-col))
+                (let [(new-line new-col) (advance-token tokens tok line col)]
+                  (set line new-line)
+                  (set col new-col)
                   (set i end-or-error)))
             (set error end-or-error))))
     (if error
@@ -187,15 +206,13 @@
                 (let [frame (. stack (length stack))
                       node frame.node]
                   (if (= tok.kind :open)
-                      (let [child {:kind (node-kind tok.text) :open tok :children []}]
-                        (table.insert node.children child)
-                        (table.insert stack {:node child :open tok}))
+                      (push-open-node node stack tok)
                       (if (= tok.kind :close)
                           (if (= (length stack) 1)
                               (set failure {:message "unexpected closing delimiter" :line tok.line :col tok.col})
                               (let [top (. stack (length stack))]
                                 (if (= tok.text (matching-close top.open.text))
-                                    (do (set top.node.close tok) (table.remove stack))
+                                    (close-matching-node stack tok)
                                     (set failure {:message "mismatched closing delimiter" :line tok.line :col tok.col}))))
                           (table.insert node.children tok))))))
           (if failure
@@ -205,17 +222,19 @@
                     (fail "missing closing delimiter" top.open.line top.open.col))
                   root))))))
 
+(defn- stringify-container [stringify node buffer]
+  (table.insert buffer node.open.text)
+  (each [_ child (ipairs node.children)]
+    (stringify child buffer))
+  (table.insert buffer node.close.text))
+
 (defn- stringify [node buffer]
   (if (= node.kind :root)
       (each [_ child (ipairs node.children)]
         (stringify child buffer))
       (if node.text
           (table.insert buffer node.text)
-          (do
-            (table.insert buffer node.open.text)
-            (each [_ child (ipairs node.children)]
-              (stringify child buffer))
-            (table.insert buffer node.close.text)))))
+          (stringify-container stringify node buffer))))
 
 (defn to-string [node]
   (let [buffer []]

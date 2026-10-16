@@ -51,6 +51,9 @@ local function classify(c)
     return "atom"
   end
 end
+local function close_string(j)
+  return true, (j + 1)
+end
 local function scan_string(source, i)
   local n = string.len(source)
   local j = (i + 1)
@@ -70,8 +73,9 @@ local function scan_string(source, i)
       end
     else
       if (c == "\"") then
-        closed = true
-        j = (j + 1)
+        local new_closed, new_j = close_string(j)
+        closed = new_closed
+        j = new_j
       else
         if (c == "\r") then
           error = {message = "carriage return is not allowed", offset = j}
@@ -118,6 +122,9 @@ end
 local function number_3f(text)
   return (string.match(text, "^[0-9][0-9_]*$") or string.match(text, "^%-[0-9][0-9_]*$") or string.match(text, "^[0-9][0-9_]*%.[0-9][0-9_]*$") or string.match(text, "^%-[0-9][0-9_]*%.[0-9][0-9_]*$") or string.match(text, "^[0-9][0-9_]*%.[0-9][0-9_]*[eE][0-9][0-9_]*$") or string.match(text, "^%-[0-9][0-9_]*%.[0-9][0-9_]*[eE][0-9][0-9_]*$") or string.match(text, "^[0-9][0-9_]*%.[0-9][0-9_]*[eE][+-][0-9][0-9_]*$") or string.match(text, "^%-[0-9][0-9_]*%.[0-9][0-9_]*[eE][+-][0-9][0-9_]*$") or string.match(text, "^0[xX][0-9A-Fa-f][0-9A-Fa-f_]*$") or string.match(text, "^%-0[xX][0-9A-Fa-f][0-9A-Fa-f_]*$") or string.match(text, "^[0-9][0-9_]*[eE][0-9][0-9_]*$") or string.match(text, "^%-[0-9][0-9_]*[eE][0-9][0-9_]*$") or string.match(text, "^[0-9][0-9_]*[eE][+-][0-9][0-9_]*$") or string.match(text, "^%-[0-9][0-9_]*[eE][+-][0-9][0-9_]*$"))
 end
+local function advance_line(line, col)
+  return (line + 1), 1
+end
 local function advance_position(text, line, col)
   local j = 1
   local current_line = line
@@ -126,8 +133,9 @@ local function advance_position(text, line, col)
     local n = string.len(text)
     while (j <= n) do
       if (string.sub(text, j, j) == "\n") then
-        current_line = (current_line + 1)
-        current_col = 1
+        local new_line, new_col = advance_line(current_line, current_col)
+        current_line = new_line
+        current_col = new_col
       else
         current_col = (current_col + 1)
       end
@@ -189,6 +197,34 @@ local function next_token(source, i, line, col)
     return nil
   end
 end
+local function push_open_node(node, stack, tok)
+  local child
+  local _17_
+  do
+    local case_16_ = tok.text
+    if (case_16_ == "(") then
+      _17_ = "list"
+    elseif (case_16_ == "[") then
+      _17_ = "sequence"
+    elseif (case_16_ == "{") then
+      _17_ = "table"
+    else
+      _17_ = nil
+    end
+  end
+  child = {kind = _17_, open = tok, children = {}}
+  table.insert(node.children, child)
+  return table.insert(stack, {node = child, open = tok})
+end
+local function advance_token(tokens, tok, line, col)
+  table.insert(tokens, tok)
+  return advance_position(tok.text, line, col)
+end
+local function close_matching_node(stack, tok)
+  local top = stack[#stack]
+  top.node.close = tok
+  return table.remove(stack)
+end
 local tokenize
 do
   local function tokenize0(source)
@@ -205,12 +241,9 @@ do
         if (end_or_error <= old_i) then
           error = {message = "tokenizer made no progress", line = line, col = col}
         else
-          table.insert(tokens, tok)
-          do
-            local new_line, new_col = advance_position(tok.text, line, col)
-            line = new_line
-            col = new_col
-          end
+          local new_line, new_col = advance_token(tokens, tok, line, col)
+          line = new_line
+          col = new_col
           i = end_or_error
         end
       else
@@ -263,9 +296,7 @@ do
           local frame = stack[#stack]
           local node = frame.node
           if (tok.kind == "open") then
-            local child = {kind = node_kind(tok.text), open = tok, children = {}}
-            table.insert(node.children, child)
-            table.insert(stack, {node = child, open = tok})
+            push_open_node(node, stack, tok)
           else
             if (tok.kind == "close") then
               if (#stack == 1) then
@@ -273,8 +304,7 @@ do
               else
                 local top = stack[#stack]
                 if (tok.text == matching_close(top.open.text)) then
-                  top.node.close = tok
-                  table.remove(stack)
+                  close_matching_node(stack, tok)
                 else
                   failure = {message = "mismatched closing delimiter", line = tok.line, col = tok.col}
                 end
@@ -301,6 +331,13 @@ do
   _2amodule_2a["parse"] = parse0
   parse = _2amodule_2a.parse
 end
+local function stringify_container(stringify, node, buffer)
+  table.insert(buffer, node.open.text)
+  for _, child in ipairs(node.children) do
+    stringify(child, buffer)
+  end
+  return table.insert(buffer, node.close.text)
+end
 local function stringify(node, buffer)
   if (node.kind == "root") then
     for _, child in ipairs(node.children) do
@@ -311,11 +348,7 @@ local function stringify(node, buffer)
     if node.text then
       return table.insert(buffer, node.text)
     else
-      table.insert(buffer, node.open.text)
-      for _, child in ipairs(node.children) do
-        stringify(child, buffer)
-      end
-      return table.insert(buffer, node.close.text)
+      return stringify_container(stringify, node, buffer)
     end
   end
 end

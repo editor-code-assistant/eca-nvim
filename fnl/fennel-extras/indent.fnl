@@ -16,6 +16,9 @@
       (set i (+ i 1))))
   width)
 
+(defn- append-line [lines source start end]
+  (table.insert lines (string.sub source start (- end 1)))
+  (+ end 1))
 (defn- split-lines [source]
   (let [lines []]
     (var start 1)
@@ -23,9 +26,7 @@
     (local n (string.len source))
     (while (<= i n)
       (if (= (string.sub source i i) "\n")
-          (do
-            (table.insert lines (string.sub source start (- i 1)))
-            (set start (+ i 1)))
+          (set start (append-line lines source start i))
           nil)
       (set i (+ i 1)))
     (if (or (<= start n) (= n 0))
@@ -65,12 +66,14 @@
         (set result true)))
   result)
 
+(defn- collect-node-entry [node nodes tokens depth]
+  (set node.depth depth)
+  (table.insert nodes node)
+  (table.insert tokens node.open))
+
 (defn- collect-node [node nodes tokens depth]
   (if (not= node.kind :root)
-      (do
-        (set node.depth depth)
-        (table.insert nodes node)
-        (table.insert tokens node.open)))
+      (collect-node-entry node nodes tokens depth))
   (each [_ child (ipairs node.children)]
     (if child.text
         (table.insert tokens child)
@@ -119,6 +122,17 @@
             (set result (- index 2)))))
     result))
 
+(defn- matching-rule-indent [rule node arg-index config]
+  (var result nil)
+  (each [_ entry (ipairs rule)]
+    (if (= result nil)
+        (let [kind (. entry 1) value (. entry 2) selected (. entry 3)]
+          (if (and (= kind :inner) (= value 0)
+                   (or (= selected nil) (= selected arg-index)))
+              (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
+              (if (and (= kind :block) (>= arg-index value))
+                  (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
+  result)
 (defn- rule-indent [node first-token line-number config]
   (if (and node (= node.kind :list) (> line-number node.open.line))
       (let [children (nontrivia-children node)
@@ -127,19 +141,7 @@
             (let [rule (rules.resolve config head.text)
                   arg-index (argument-index node first-token)]
               (if (and rule arg-index)
-                  (do
-                    (var result nil)
-                    (each [_ entry (ipairs rule)]
-                      (if (= result nil)
-                          (let [kind (. entry 1)
-                                value (. entry 2)
-                                selected (. entry 3)]
-                            (if (and (= kind :inner) (= value 0)
-                                     (or (= selected nil) (= selected arg-index)))
-                                (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
-                                (if (and (= kind :block) (>= arg-index value))
-                                    (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
-                    result)
+                  (matching-rule-indent rule node arg-index config)
                   nil))
             nil))
       nil))
@@ -176,35 +178,41 @@
   (or (rule-indent node first-token line-number config)
       (default-indent-for node first-token line-number)))
 
+(defn- assign-token-output [token line indent strip-leading?]
+  (set (. token :out-col) (output-column token line indent strip-leading?))
+  (if (= token.kind :open)
+      (set (. token :line-indent) indent)))
+
 (defn- assign-output-columns [tokens line-number line indent strip-leading?]
   (each [_ token (ipairs tokens)]
     (if (= token.line line-number)
-        (do
-          (set (. token :out-col)
-               (output-column token line indent strip-leading?))
-          (if (= token.kind :open)
-              (set (. token :line-indent) indent))))))
+        (assign-token-output token line indent strip-leading?))))
 
+(defn- process-string-line [line-number line tokens]
+  (assign-output-columns tokens line-number line 0 false)
+  line)
+
+(defn- process-empty-line [line-number line tokens]
+  (assign-output-columns tokens line-number line 0 true)
+  "")
+
+(defn- process-unchanged-line [line-number line tokens]
+  (assign-output-columns tokens line-number line 0 false)
+  line)
 (defn- process-line [line-number line nodes tokens config]
   (let [string-line? (string-on-line? tokens line-number)
         first-token (first-token-on-line tokens line-number)
         node (active-node nodes line-number)]
     (if string-line?
-        (do
-          (assign-output-columns tokens line-number line 0 false)
-          line)
+        (process-string-line line-number line tokens)
         (if (= first-token nil)
-            (do
-              (assign-output-columns tokens line-number line 0 true)
-              "")
+            (process-empty-line line-number line tokens)
             (if (and node
                      (> (. node.open :col) 1)
                      (or (= first-token.kind :close)
                          (and (= first-token.kind :number)
                               (> (leading-spaces line) 20))))
-                (do
-                  (assign-output-columns tokens line-number line 0 false)
-                  line)
+                (process-unchanged-line line-number line tokens)
                 (let [indent (indent-for node first-token line-number config)
                       spaces (leading-spaces line)
                       body (string.sub line (+ spaces 1))]

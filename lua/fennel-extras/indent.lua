@@ -25,6 +25,10 @@ local function codepoint_width(text)
   end
   return width
 end
+local function append_line(lines, source, start, _end)
+  table.insert(lines, string.sub(source, start, (_end - 1)))
+  return (_end + 1)
+end
 local function split_lines(source)
   local lines = {}
   local start = 1
@@ -32,8 +36,7 @@ local function split_lines(source)
   local n = string.len(source)
   while (i <= n) do
     if (string.sub(source, i, i) == "\n") then
-      table.insert(lines, string.sub(source, start, (i - 1)))
-      start = (i + 1)
+      start = append_line(lines, source, start, i)
     else
     end
     i = (i + 1)
@@ -89,11 +92,14 @@ local function string_on_line_3f(tokens, line)
   end
   return result
 end
+local function collect_node_entry(node, nodes, tokens, depth)
+  node.depth = depth
+  table.insert(nodes, node)
+  return table.insert(tokens, node.open)
+end
 local function collect_node(node, nodes, tokens, depth)
   if (node.kind ~= "root") then
-    node.depth = depth
-    table.insert(nodes, node)
-    table.insert(tokens, node.open)
+    collect_node_entry(node, nodes, tokens, depth)
   else
   end
   for _, child in ipairs(node.children) do
@@ -167,6 +173,26 @@ local function argument_index(node, first_token)
   end
   return result
 end
+local function matching_rule_indent(rule, node, arg_index, config)
+  local result = nil
+  for _, entry in ipairs(rule) do
+    if (result == nil) then
+      local kind = entry[1]
+      local value = entry[2]
+      local selected = entry[3]
+      if ((kind == "inner") and (value == 0) and ((selected == nil) or (selected == arg_index))) then
+        result = (node.open["out-col"] + ((config and config["indent-width"]) or 2))
+      else
+        if ((kind == "block") and (arg_index >= value)) then
+          result = (node.open["out-col"] + ((config and config["indent-width"]) or 2))
+        else
+        end
+      end
+    else
+    end
+  end
+  return result
+end
 local function rule_indent(node, first_token, line_number, config)
   if (node and (node.kind == "list") and (line_number > node.open.line)) then
     local children = nontrivia_children(node)
@@ -175,24 +201,7 @@ local function rule_indent(node, first_token, line_number, config)
       local rule = rules.resolve(config, head.text)
       local arg_index = argument_index(node, first_token)
       if (rule and arg_index) then
-        local result = nil
-        for _, entry in ipairs(rule) do
-          if (result == nil) then
-            local kind = entry[1]
-            local value = entry[2]
-            local selected = entry[3]
-            if ((kind == "inner") and (value == 0) and ((selected == nil) or (selected == arg_index))) then
-              result = (node.open["out-col"] + ((config and config["indent-width"]) or 2))
-            else
-              if ((kind == "block") and (arg_index >= value)) then
-                result = (node.open["out-col"] + ((config and config["indent-width"]) or 2))
-              else
-              end
-            end
-          else
-          end
-        end
-        return result
+        return matching_rule_indent(rule, node, arg_index, config)
       else
         return nil
       end
@@ -249,34 +258,48 @@ end
 local function indent_for(node, first_token, line_number, config)
   return (rule_indent(node, first_token, line_number, config) or default_indent_for(node, first_token, line_number))
 end
+local function assign_token_output(token, line, indent, strip_leading_3f)
+  token["out-col"] = output_column(token, line, indent, strip_leading_3f)
+  if (token.kind == "open") then
+    token["line-indent"] = indent
+    return nil
+  else
+    return nil
+  end
+end
 local function assign_output_columns(tokens, line_number, line, indent, strip_leading_3f)
   for _, token in ipairs(tokens) do
     if (token.line == line_number) then
-      token["out-col"] = output_column(token, line, indent, strip_leading_3f)
-      if (token.kind == "open") then
-        token["line-indent"] = indent
-      else
-      end
+      assign_token_output(token, line, indent, strip_leading_3f)
     else
     end
   end
   return nil
+end
+local function process_string_line(line_number, line, tokens)
+  assign_output_columns(tokens, line_number, line, 0, false)
+  return line
+end
+local function process_empty_line(line_number, line, tokens)
+  assign_output_columns(tokens, line_number, line, 0, true)
+  return ""
+end
+local function process_unchanged_line(line_number, line, tokens)
+  assign_output_columns(tokens, line_number, line, 0, false)
+  return line
 end
 local function process_line(line_number, line, nodes, tokens, config)
   local string_line_3f = string_on_line_3f(tokens, line_number)
   local first_token = first_token_on_line(tokens, line_number)
   local node = active_node(nodes, line_number)
   if string_line_3f then
-    assign_output_columns(tokens, line_number, line, 0, false)
-    return line
+    return process_string_line(line_number, line, tokens)
   else
     if (first_token == nil) then
-      assign_output_columns(tokens, line_number, line, 0, true)
-      return ""
+      return process_empty_line(line_number, line, tokens)
     else
       if (node and (node.open.col > 1) and ((first_token.kind == "close") or ((first_token.kind == "number") and (leading_spaces(line) > 20)))) then
-        assign_output_columns(tokens, line_number, line, 0, false)
-        return line
+        return process_unchanged_line(line_number, line, tokens)
       else
         local indent = indent_for(node, first_token, line_number, config)
         local spaces = leading_spaces(line)

@@ -248,6 +248,9 @@ local function meaningful_children(children)
   end
   return result
 end
+local function append_decoded_char(result, c)
+  return table.insert(result, c)
+end
 local function decode_string(token)
   local text = token.text
   local n = string.len(text)
@@ -276,7 +279,7 @@ local function decode_string(token)
       end
       i = (i + 2)
     else
-      table.insert(result, c)
+      local _ = append_decoded_char(result, c)
       i = (i + 1)
     end
   end
@@ -302,31 +305,35 @@ local function convert_symbol(token)
     end
   end
 end
+local function convert_table_children(convert_fn, children, result)
+  local i = 1
+  local failure = nil
+  while ((i <= #children) and not failure) do
+    do
+      local key, key_error = convert_fn(children[i])
+      local value, value_error = convert_fn(rawget(children, (i + 1)))
+      if key_error then
+        failure = key_error
+      else
+        if value_error then
+          failure = value_error
+        else
+          result[key] = value
+        end
+      end
+    end
+    i = (i + 2)
+  end
+  return failure
+end
 local function convert(node)
   if (node.kind == "table") then
     local children = meaningful_children(node.children)
     local result = {}
-    local i = 1
-    local failure = nil
     if (math.fmod(#children, 2) == 1) then
       return error(error_at("table must contain key/value pairs", node.open), 0)
     else
-      while ((i <= #children) and not failure) do
-        do
-          local key, key_error = convert(children[i])
-          local value, value_error = convert(rawget(children, (i + 1)))
-          if key_error then
-            failure = key_error
-          else
-            if value_error then
-              failure = value_error
-            else
-              result[key] = value
-            end
-          end
-        end
-        i = (i + 2)
-      end
+      local failure = convert_table_children(convert, children, result)
       if failure then
         return error(failure, 0)
       else
@@ -618,6 +625,10 @@ local function join_path(dir, name)
     return (dir .. "/" .. name)
   end
 end
+local function close_file(file)
+  file:close()
+  return true
+end
 local function exists_3f(path)
   local uv = ((vim and vim.loop) or (vim and vim.uv))
   if uv then
@@ -625,8 +636,7 @@ local function exists_3f(path)
   else
     local file = io.open(path, "r")
     if file then
-      file:close()
-      return true
+      return close_file(file)
     else
       return false
     end
@@ -653,6 +663,9 @@ local function parent_dir(dir)
     return nil
   end
 end
+local function found_config(candidate)
+  return candidate, false
+end
 local find
 do
   local function find0(start_dir)
@@ -662,8 +675,9 @@ do
     while searching do
       local candidate = join_path(dir, ".fnl-extras.fnl")
       if exists_3f(candidate) then
-        result = candidate
-        searching = false
+        local new_result, new_searching = found_config(candidate)
+        result = new_result
+        searching = new_searching
       else
         if git_marker_3f(dir) then
           searching = false
