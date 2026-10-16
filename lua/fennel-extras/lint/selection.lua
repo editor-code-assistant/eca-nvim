@@ -116,19 +116,17 @@ local function split_lines(text)
   end
   return tbl_26_
 end
+local function hunk_count(new_count)
+  if (new_count == "") then
+    return 1
+  else
+    return tonumber(new_count)
+  end
+end
 local function hunk_line(line)
   local new_start, new_count = string.match(line, "^@@ %-[0-9]+,?[0-9]* %+(%d+),?(%d*)")
-  local count
-  if (new_count == "") then
-    count = 1
-  else
-    count = tonumber(new_count)
-  end
-  if new_start then
-    return {start = tonumber(new_start), ["end"] = (tonumber(new_start) + math.max(count, 1) + -1)}
-  else
-    return nil
-  end
+  local count = hunk_count(new_count)
+  return (new_start and {start = tonumber(new_start), ["end"] = (tonumber(new_start) + math.max(count, 1) + -1)})
 end
 local parse_hunks
 do
@@ -182,35 +180,25 @@ local function append_if_new(seen, items, value)
     return {seen = core.assoc(seen, value, true), items = append_item(items, value)}
   end
 end
-local function add_record(state, record)
-  if ((record.status == "A") or (record.status == "R") or (record.status == "C")) then
-    if not state["whole-set"][record.path] then
-      local result = append_if_new(state["whole-set"], state.whole, record.path)
-      return core.assoc(state, "whole-set", result.seen, "whole", result.items)
-    else
-      return state
-    end
+local function add_record_path(state, seen_key, items_key, path)
+  if state[seen_key][path] then
+    return state
   else
-    if (record.status == "D") then
-      if not state["deleted-set"][record.path] then
-        local result = append_if_new(state["deleted-set"], state.deleted, record.path)
-        return core.assoc(state, "deleted-set", result.seen, "deleted", result.items)
-      else
-        return state
-      end
-    else
-      if (record.status == "M") then
-        if not state["hunks-set"][record.path] then
-          local result = append_if_new(state["hunks-set"], state.hunks, record.path)
-          return core.assoc(state, "hunks-set", result.seen, "hunks", result.items)
-        else
-          return state
-        end
-      else
-        return state
-      end
-    end
+    local result = append_if_new(state[seen_key], state[items_key], path)
+    return core.assoc(core.assoc(state, seen_key, result.seen), items_key, result.items)
   end
+end
+local function add_whole_record(state, record)
+  return (((record.status == "A") or (record.status == "R") or (record.status == "C")) and add_record_path(state, "whole-set", "whole", record.path))
+end
+local function add_deleted_record(state, record)
+  return ((record.status == "D") and add_record_path(state, "deleted-set", "deleted", record.path))
+end
+local function add_hunk_record(state, record)
+  return ((record.status == "M") and add_record_path(state, "hunks-set", "hunks", record.path))
+end
+local function add_record(state, record)
+  return (add_whole_record(state, record) or add_deleted_record(state, record) or add_hunk_record(state, record) or state)
 end
 local function add_old_path(state, record)
   if (((record.status == "R") or (record.status == "C")) and record["old-path"] and not state["deleted-set"][record["old-path"]]) then
@@ -220,43 +208,48 @@ local function add_old_path(state, record)
     return state
   end
 end
+local function add_untracked_path(state, path)
+  if ((path == nil) or state["whole-set"][path]) then
+    return state
+  else
+    local result = append_if_new(state["whole-set"], state.whole, path)
+    return core.assoc(state, "whole-set", result.seen, "whole", result.items)
+  end
+end
+local function add_records(initial, records)
+  local state = initial
+  for _, record in ipairs(records) do
+    state = add_record(state, record)
+  end
+  return state
+end
+local function add_old_paths(initial, records)
+  local state = initial
+  for _, record in ipairs(records) do
+    state = add_old_path(state, record)
+  end
+  return state
+end
+local function add_untracked_paths(initial, untracked)
+  local state = initial
+  for _, path in ipairs(untracked) do
+    state = add_untracked_path(state, path)
+  end
+  return state
+end
+local function plan_state(records, untracked)
+  return add_old_paths(add_records(add_untracked_paths({["whole-set"] = {}, ["hunks-set"] = {}, ["deleted-set"] = {}, whole = {}, hunks = {}, deleted = {}}, untracked), records), records)
+end
+local function plan_result(final_state)
+  table.sort(final_state.whole)
+  table.sort(final_state.hunks)
+  table.sort(final_state.deleted)
+  return {whole = final_state.whole, hunks = final_state.hunks, deleted = final_state.deleted}
+end
 local plan
 do
   local function plan0(records, untracked)
-    local initial = {["whole-set"] = {}, ["hunks-set"] = {}, ["deleted-set"] = {}, whole = {}, hunks = {}, deleted = {}}
-    local with_untracked
-    do
-      local state = initial
-      for _, path in ipairs(untracked) do
-        if ((path == nil) or state["whole-set"][path]) then
-          state = state
-        else
-          local result = append_if_new(state["whole-set"], state.whole, path)
-          state = core.assoc(state, "whole-set", result.seen, "whole", result.items)
-        end
-      end
-      with_untracked = state
-    end
-    local with_records
-    do
-      local state = with_untracked
-      for _, record in ipairs(records) do
-        state = add_record(state, record)
-      end
-      with_records = state
-    end
-    local final_state
-    do
-      local state = with_records
-      for _, record in ipairs(records) do
-        state = add_old_path(state, record)
-      end
-      final_state = state
-    end
-    table.sort(final_state.whole)
-    table.sort(final_state.hunks)
-    table.sort(final_state.deleted)
-    return {whole = final_state.whole, hunks = final_state.hunks, deleted = final_state.deleted}
+    return plan_result(plan_state(records, untracked))
   end
   _2amodule_2a["plan"] = plan0
   plan = _2amodule_2a.plan

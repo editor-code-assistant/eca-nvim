@@ -12,8 +12,7 @@
 (defn- excluded? [exclusions finding index]
   (if (> index (length exclusions))
       false
-      (if (exclusion-match? (. exclusions index) finding)
-          true
+      (or (exclusion-match? (. exclusions index) finding)
           (excluded? exclusions finding (+ index 1)))))
 
 (defn- keep-finding [findings exclusions index result]
@@ -27,8 +26,7 @@
 (defn- matching-exclusion? [exclusion findings index]
   (if (> index (length findings))
       false
-      (if (exclusion-match? exclusion (. findings index))
-          true
+      (or (exclusion-match? exclusion (. findings index))
           (matching-exclusion? exclusion findings (+ index 1)))))
 
 (defn- stale-exclusion [exclusion config-path]
@@ -51,8 +49,8 @@
 
 (defn- normalized-form [finding]
   (if (= finding.rule "one-is-per-testing")
-      (if (string.match finding.form " > top#[0-9]+$")
-          (.. finding.form " > testing#1")
+      (or (and (string.match finding.form " > top#[0-9]+$")
+               (.. finding.form " > testing#1"))
           finding.form)
       (let [form (string.gsub finding.form " > (top#[0-9]+) > (then.*)$" " > %1 > if#1 > %2")]
         form)))
@@ -100,8 +98,7 @@
 (defn- path-in-scope? [paths path index]
   (if (> index (length paths))
       false
-      (if (= path (. paths index))
-          true
+      (or (= path (. paths index))
           (path-in-scope? paths path (+ index 1)))))
 
 (defn- scoped-exclusions [exclusions paths index result]
@@ -120,23 +117,28 @@
             (table.insert result finding))
         (keep-non-warning findings (+ index 1) result))))
 
+(defn- diagnostic-source [filtered policy stale scope-paths]
+  (if (and (> (length policy.exclusions) 0)
+           (or scope-paths (> (length stale) 0)))
+      (keep-non-warning filtered 1 [])
+      filtered))
+
+(defn- append-stale-findings [source stale]
+  (each [_ finding (ipairs stale)]
+    (table.insert source finding))
+  source)
+
 (defn- diagnostics [findings policy config-path scope-paths]
   (let [exclusions (scoped-exclusions policy.exclusions scope-paths 1 [])
         filtered (keep-finding findings exclusions 1 [])
         stale (append-stale exclusions findings config-path 1 [])
-        source (if (and (> (length policy.exclusions) 0)
-                        (or scope-paths (> (length stale) 0)))
-                   (keep-non-warning filtered 1 [])
-                   filtered)]
-    (output.sort (do (each [_ finding (ipairs stale)]
-                       (table.insert source finding))
-                   source))))
+        source (diagnostic-source filtered policy stale scope-paths)]
+    (output.sort (append-stale-findings source stale))))
 
 (defn- has-errors? [findings index]
   (if (> index (length findings))
       false
-      (if (= (. (. findings index) :severity) "error")
-          true
+      (or (= (. (. findings index) :severity) "error")
           (has-errors? findings (+ index 1)))))
 
 (defn- render [findings format]
@@ -144,9 +146,12 @@
       (output.json-lines findings)
       (output.text-lines findings)))
 
+(defn- result-status [findings]
+  (if (has-errors? findings 1) 1 0))
+
 (defn- result [findings format]
   {:lines (render findings format)
-   :status (if (has-errors? findings 1) 1 0)})
+   :status (result-status findings)})
 
 (defn lint-files [files policy config-path format scope-paths]
   (let [(findings error) (lint-files-at files policy 1 [])]

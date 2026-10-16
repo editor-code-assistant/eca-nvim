@@ -467,6 +467,7 @@
                       "spec-direct-require" "error"
                       "one-is-per-testing" "error"
                       "if-branch-call" "warning"
+                      "function-shape" "warning"
                       "core-require" "off"}
               :exclusions [{:rule "if-branch-call" :form "x" :reason "why"}]}
              (if (. config :module-missing)

@@ -652,25 +652,327 @@ local function _36_()
   return require("plenary.busted").describe("if-branch-call", _63_)
 end
 require("plenary.busted").describe("spec-shape", _36_)
+local function function_findings(source)
+  return findings_for_rule(source, "fnl/app.fnl", "function-shape", {["module-style"] = "off"})
+end
 local function _86_()
   local function _87_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn f [x] (set x (if x 1 2)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a nested if in a set value reports the outer set form", _87_)
+  local function _88_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn f [] (do a b))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a multi-expression do body reports the outer do form", _88_)
+  local function _89_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn f [] (foo (fn [] a) (do a b)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("nested function and do forms report one outer offending form", _89_)
+  local function _90_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"function-shape", "fnl/app.fnl > defn:f > sequence#1", "warning"}}
+    local actual_7_auto = function_findings("(defn f [] [1 (if a b c)])")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a nested if in a sequence reports the sequence form", _90_)
+  local function _91_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"function-shape", "fnl/app.fnl > defn:f > table#1", "warning"}}
+    local actual_7_auto = function_findings("(defn f [] {:k (if a b c)})")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a nested if in a table reports the table form", _91_)
+  local function _92_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn f [] (local y (let [z 1] z)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a nested let in a local value reports the outer local form", _92_)
+  local function _93_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn f [x] (set x (g x)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a set with a leaf call value is clean", _93_)
+  local function _94_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn f [] [1 (g a)])")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a sequence with a leaf call is clean", _94_)
+  local function _95_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn f [] {:k (g a)})")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a table with a leaf call is clean", _95_)
+  local function _96_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn f [] '(if a b c))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("quoted control forms are clean", _96_)
+  local function _97_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"function-shape", "fnl/app.fnl > defn-:join > if#1 > else > if#1", "warning"}}
+    local actual_7_auto = function_findings("(defn- join [xs]\n  (if (= xs [])\n      nil\n      (if (= (length xs) 1)\n          (first xs)\n          (table.concat (icollect [_ x (ipairs xs)] x) \" \"))))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("the user's nested inner if is the single function-shape finding", _97_)
+  local function _98_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn- join [xs]\n  (if (= xs [])\n      nil\n      (let [parts (icollect [_ x (ipairs xs)] x)]\n        (table.concat parts \" \"))))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("the fixed join form is clean", _98_)
+  local function _99_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [x]\n  (let [a x b 1]\n    (+ a b)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a first let with leaf bindings and body is clean", _99_)
+  local function _100_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [x]\n  (let [a (if x 1 2)] a))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("an if in a let binding value is reported", _100_)
+  local function _101_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [x]\n  x\n  (let [a 1] a))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a let after the first body expression is reported", _101_)
+  local function _102_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [x]\n  (let [a x]\n    (let [b a] b)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a second nested let is reported", _102_)
+  local function _103_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [x]\n  (if x 1 y 2 3))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a multi-clause flat if is clean", _103_)
+  local function _104_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [x]\n  (case x 1 :one 2 :two :other))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a case with leaf clauses is clean", _104_)
+  local function _105_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [x]\n  (case x 1 (if x :one :other) :other))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a nested if in a case clause is reported", _105_)
+  local function _106_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [x]\n  (match x 1 :one 2 :two :other))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a match with leaf clauses is clean", _106_)
+  local function _107_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [x]\n  (match x 1 (if x :one :other) _ :other))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a nested if in a match clause is reported", _107_)
+  local function _108_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [x]\n  (when x (print x) (print :done)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a when with several leaf steps is clean", _108_)
+  local function _109_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [xs]\n  (each [_ x (ipairs xs)] (print x)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a loop with a leaf body is clean", _109_)
+  local function _110_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [xs]\n  (each [_ x (ipairs xs)] (if x (print x) (print :none))))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a loop with an if in its body is reported", _110_)
+  local function _111_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [] (pcall (fn [] (leaf))))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a function literal passed to pcall is clean", _111_)
+  local function _112_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [xs]\n  (table.concat (icollect [_ x (ipairs xs)] (f x)) \" \"))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("an icollect passed to table.concat is clean", _112_)
+  local function _113_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [] (fn [] (if ok (if nested a b) c)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("an anonymous function body is checked independently", _113_)
+  local function _114_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [] (lambda [] (if ok (if nested a b) c)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a lambda body is checked independently", _114_)
+  local function _115_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #function_findings("(defn run [] (\206\187 [] (if ok (if nested a b) c)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a unicode lambda body is checked independently", _115_)
+  local function _116_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [x]\n  (while x (set x false)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a while with a leaf body is clean", _116_)
+  local function _117_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [x]\n  (print x)\n  (+ x 1)\n  x)")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("several leaf body expressions are clean", _117_)
+  local function _118_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = function_findings("(defn run [] '(if x (let [a 1] a) b))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("quoted data is never flagged", _118_)
+  local function _119_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"function-shape", "fnl/app.fnl > defn:run > if#1 > then > if#1", "warning"}}
+    local actual_7_auto = function_findings("(defn run [] (if x (if y a b) c))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("function-shape defaults to warning", _119_)
+  local function _120_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "function body is too deep; move this into a named private function"
+    local actual_7_auto = finding_summary(check_source("(defn run [] (if x (if y a b) c))", "fnl/app.fnl", {["module-style"] = "off"}))[1].message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("function-shape uses the approved move-to-private-function message", _120_)
+  local function _121_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"function-shape", "fnl/app.fnl > defn:run > if#1 > then > if#1", "error"}}
+    local actual_7_auto = findings_for_rule("(defn run [] (if x (if y a b) c))", "fnl/app.fnl", "function-shape", {["module-style"] = "off", ["function-shape"] = "error"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("function-shape severity can be overridden to error", _121_)
+  local function _122_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = findings_for_rule("(defn run [] (if x (if y a b) c))", "fnl/app.fnl", "function-shape", {["module-style"] = "off", ["function-shape"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("function-shape can be disabled", _122_)
+  local function _123_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"function-shape", "fnl/app.fnl > defn:run > if#1 > then > if#1", "warning"}, {"function-shape", "fnl/app.fnl > defn:run > if#1 > else > if#1", "warning"}}
+    local actual_7_auto = function_findings("(defn run []\n  (if x (if y a b) (if z c d)))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("function-shape findings are unique and deterministic", _123_)
+end
+require("plenary.busted").describe("function-shape", _86_)
+local function _124_()
+  local function _125_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["module-style"] = 24, ["spec-macro-import"] = 0, ["spec-no-module"] = 0, ["spec-direct-require"] = 0, ["one-is-per-testing"] = 0, ["core-require"] = 0}
     local actual_7_auto = repo_scenario().counts
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("project Fennel files have the approved rule counts", _87_)
-  local function _88_()
+  require("plenary.busted").it("project Fennel files have the approved rule counts", _125_)
+  local function _126_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = repo_scenario()["lint-files"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("lint implementation files are clean", _88_)
+  return require("plenary.busted").it("lint implementation files are clean", _126_)
 end
-require("plenary.busted").describe("repo-properties", _86_)
+require("plenary.busted").describe("repo-properties", _124_)
 local function check_context(source, ctx)
   local lint = load_lint()
   if lint["module-missing"] then
@@ -694,21 +996,21 @@ local function first_finding_form(findings, rule)
   end
   return result
 end
-local function _92_()
+local function _130_()
   local source = "(defn run [] (if ok (do a b) c))"
   local path = "fnl/app.fnl"
   local rules = {["module-style"] = "off"}
   local baseline = check_context(source, {path = path, rules = rules})
   local form = first_finding_form(baseline, "if-branch-call")
-  local function _93_()
+  local function _131_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = check_context(source, {path = path, rules = rules, exclusions = {{rule = "if-branch-call", form = form, reason = "intentional"}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("an exclusion suppresses only an exact rule and form match", _93_)
-  local function _94_()
+  require("plenary.busted").it("an exclusion suppresses only an exact rule and form match", _131_)
+  local function _132_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {"if-branch-call"}
     local actual_7_auto
@@ -728,8 +1030,8 @@ local function _92_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("an exclusion with the same form but a different rule does not suppress", _94_)
-  local function _96_()
+  require("plenary.busted").it("an exclusion with the same form but a different rule does not suppress", _132_)
+  local function _134_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {"if-branch-call"}
     local actual_7_auto
@@ -749,6 +1051,6 @@ local function _92_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exclusion with the same rule but a different form does not suppress", _96_)
+  return require("plenary.busted").it("an exclusion with the same rule but a different form does not suppress", _134_)
 end
-return require("plenary.busted").describe("exclusions", _92_)
+return require("plenary.busted").describe("exclusions", _130_)

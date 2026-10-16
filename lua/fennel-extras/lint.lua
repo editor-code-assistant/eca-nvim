@@ -15,25 +15,16 @@ local function excluded_3f(exclusions, finding, index)
   if (index > #exclusions) then
     return false
   else
-    if exclusion_match_3f(exclusions[index], finding) then
-      return true
-    else
-      return excluded_3f(exclusions, finding, (index + 1))
-    end
+    return ((exclusion_match_3f(exclusions[index], finding) and true) or excluded_3f(exclusions, finding, (index + 1)))
   end
 end
+local function branch_base(form, suffix)
+  return string.gsub(form, suffix, "")
+end
 local function branch_form(form)
-  local then_base = string.gsub(form, " > then$", "")
-  local else_base = string.gsub(form, " > else$", "")
-  if (then_base ~= form) then
-    return then_base
-  else
-    if (else_base ~= form) then
-      return else_base
-    else
-      return nil
-    end
-  end
+  local then_base = branch_base(form, " > then$")
+  local else_base = branch_base(form, " > else$")
+  return (((then_base ~= form) and then_base) or ((else_base ~= form) and else_base))
 end
 local function selected_form_3f(forms, target, scope, index)
   if (index > #forms) then
@@ -47,25 +38,19 @@ local function selected_form_3f(forms, target, scope, index)
     end
   end
 end
-local function selected_3f(finding, forms, scope)
-  if (scope == nil) then
-    return true
+local function selected_branch_3f(finding, forms, scope)
+  local branch = branch_form(finding.form)
+  return (branch and selected_form_3f(forms, branch, scope, 1))
+end
+local function selected_scope_3f(finding, forms, scope)
+  if ((finding.rule == "module-style") or (finding.rule == "spec-macro-import")) then
+    return (#scope > 0)
   else
-    if (scope == true) then
-      return true
-    else
-      if ((finding.rule == "module-style") or (finding.rule == "spec-macro-import")) then
-        return (#scope > 0)
-      else
-        local or_7_ = selection["form-selected?"](finding, scope)
-        if not or_7_ then
-          local branch = branch_form(finding.form)
-          or_7_ = (branch and selected_form_3f(forms, branch, scope, 1))
-        end
-        return or_7_
-      end
-    end
+    return (selection["form-selected?"](finding, scope) or selected_branch_3f(finding, forms, scope))
   end
+end
+local function selected_3f(finding, forms, scope)
+  return ((scope == nil) or (scope == true) or selected_scope_3f(finding, forms, scope))
 end
 local function filter_findings(findings, forms, exclusions, scope, index, result)
   if (index > #findings) then

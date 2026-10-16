@@ -23,8 +23,9 @@
           (sort-severities entries)))))
 
 (deftest defaults
-  (testing "all seven lint rules have the approved default severities"
+  (testing "all eight lint rules have the approved default severities"
     (is (= [["core-require" "error"]
+            ["function-shape" "warning"]
             ["if-branch-call" "warning"]
             ["module-style" "error"]
             ["one-is-per-testing" "error"]

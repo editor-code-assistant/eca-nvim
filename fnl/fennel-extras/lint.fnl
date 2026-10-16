@@ -13,16 +13,17 @@
 (defn- excluded? [exclusions finding index]
   (if (> index (length exclusions))
       false
-      (if (exclusion-match? (. exclusions index) finding)
-          true
+      (or (and (exclusion-match? (. exclusions index) finding) true)
           (excluded? exclusions finding (+ index 1)))))
 
+(defn- branch-base [form suffix]
+  (string.gsub form suffix ""))
+
 (defn- branch-form [form]
-  (let [then-base (string.gsub form " > then$" "")
-        else-base (string.gsub form " > else$" "")]
-    (if (not= then-base form)
-        then-base
-        (if (not= else-base form) else-base nil))))
+  (let [then-base (branch-base form " > then$")
+        else-base (branch-base form " > else$")]
+    (or (and (not= then-base form) then-base)
+        (and (not= else-base form) else-base))))
 
 (defn- selected-form? [forms target scope index]
   (if (> index (length forms))
@@ -32,16 +33,20 @@
             (selection.form-selected? form scope)
             (selected-form? forms target scope (+ index 1))))))
 
+(defn- selected-branch? [finding forms scope]
+  (let [branch (branch-form finding.form)]
+    (and branch (selected-form? forms branch scope 1))))
+
+(defn- selected-scope? [finding forms scope]
+  (if (or (= finding.rule "module-style") (= finding.rule "spec-macro-import"))
+      (> (length scope) 0)
+      (or (selection.form-selected? finding scope)
+          (selected-branch? finding forms scope))))
+
 (defn- selected? [finding forms scope]
-  (if (= scope nil)
-      true
-      (if (= scope true)
-          true
-          (if (or (= finding.rule "module-style") (= finding.rule "spec-macro-import"))
-              (> (length scope) 0)
-              (or (selection.form-selected? finding scope)
-                  (let [branch (branch-form finding.form)]
-                    (and branch (selected-form? forms branch scope 1))))))))
+  (or (= scope nil)
+      (= scope true)
+      (selected-scope? finding forms scope)))
 
 (defn- filter-findings [findings forms exclusions scope index result]
   (if (> index (length findings))

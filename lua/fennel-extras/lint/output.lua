@@ -42,27 +42,39 @@ do
   _2amodule_2a["sort"] = sort0
   sort = _2amodule_2a.sort
 end
+local function escape_control_carriage(character)
+  if (character == carriage_return) then
+    return (slash .. "r")
+  else
+    return string.format((slash .. "u00%02X"), string.byte(character))
+  end
+end
+local function escape_control_whitespace(character)
+  if (character == tab) then
+    return (slash .. "t")
+  else
+    return escape_control_carriage(character)
+  end
+end
+local function escape_control_newline(character)
+  if (character == newline) then
+    return (slash .. "n")
+  else
+    return escape_control_whitespace(character)
+  end
+end
+local function escape_control_tail(character)
+  if (character == slash) then
+    return (slash .. slash)
+  else
+    return escape_control_newline(character)
+  end
+end
 local function escape_control(character)
   if (character == double_quote) then
     return (slash .. double_quote)
   else
-    if (character == slash) then
-      return (slash .. slash)
-    else
-      if (character == newline) then
-        return (slash .. "n")
-      else
-        if (character == tab) then
-          return (slash .. "t")
-        else
-          if (character == carriage_return) then
-            return (slash .. "r")
-          else
-            return string.format((slash .. "u00%02X"), string.byte(character))
-          end
-        end
-      end
-    end
+    return escape_control_tail(character)
   end
 end
 local function valid_continuation_3f(byte)

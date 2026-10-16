@@ -15,6 +15,9 @@
            (= node.kind :tab)
            (= node.kind :cr))))
 
+(defn- meaningful-child [child]
+  (when (not (trivia? child)) child))
+
 (defn- container? [node]
   (or (= node.kind :list)
       (= node.kind :sequence)
@@ -22,7 +25,7 @@
 
 (defn- meaningful-children [node]
   (icollect [_ child (ipairs node.children)]
-    (when (not (trivia? child)) child)))
+    (meaningful-child child)))
 
 (defn- symbol-text [node]
   (if (and node (= node.kind :symbol))
@@ -73,13 +76,16 @@
   (let [children (meaningful-children node)]
     (or (symbol-text (. children 1)) "list")))
 
+(defn- anonymous-container-kind [node]
+  (case node.kind
+    :sequence "sequence"
+    :table "table"
+    _ "form"))
+
 (defn- anonymous-kind [node]
   (if (= node.kind :list)
       (anonymous-list-kind node)
-      (case node.kind
-        :sequence "sequence"
-        :table "table"
-        _ "form")))
+      (anonymous-container-kind node)))
 
 (defn- node-end [node]
   (values node.close.line (+ node.close.col 1)))
@@ -105,12 +111,18 @@
       ordinal
       result))
 
+(defn- meaningful-index-state [state child-index index child]
+  (let [ordinal (advance-meaningful-index state.ordinal child-index index child)]
+    {:ordinal ordinal
+     :result (index-result child-index index ordinal state.result)}))
+
+(defn- meaningful-index-result [children child-index]
+  (accumulate [state {:ordinal 0 :result nil}
+               index child (ipairs children)]
+    (meaningful-index-state state child-index index child)))
+
 (defn- meaningful-index [children child-index]
-  (let [result (accumulate [state {:ordinal 0 :result nil}
-                            index child (ipairs children)]
-                 (let [ordinal (advance-meaningful-index state.ordinal child-index index child)]
-                   {:ordinal ordinal
-                    :result (index-result child-index index ordinal state.result)}))]
+  (let [result (meaningful-index-result children child-index)]
     result.result))
 
 (defn- numbered-then-kind [branch-index]
@@ -139,6 +151,9 @@
   (let [children (meaningful-children node)]
     (symbol-text (. children 1))))
 
+(defn- function-parameter-index [named-fn?]
+  (if named-fn? 3 2))
+
 (defn- parameter-list? [parent child-index child]
   (let [head (list-head parent)
         children (meaningful-children parent)
@@ -165,7 +180,7 @@
     (and (= child.kind :sequence)
          (or (and binding-form? (= index 2))
              (and declaration-form? (= index 3))
-             (and function-form? (= index (if named-fn? 3 2)))))))
+             (and function-form? (= index (function-parameter-index named-fn?)))))))
 
 (defn- append-path [path segment]
   (if segment
@@ -225,27 +240,36 @@
              :top-ordinal 0}
      :path branch-path}))
 
+(defn- child-state-ordinals [state segmented?]
+  (if segmented? {} state.ordinals))
+
 (defn- child-state [state final-path segmented?]
   {:forms state.forms
    :ancestor final-path
-   :ordinals (if segmented? {} state.ordinals)
+   :ordinals (child-state-ordinals state segmented?)
    :top-ordinal 0})
 
 (defn- add-identity [state path node]
   (core.assoc state :forms (core.concat state.forms [(identity-form path node)])))
 
+(defn- walk-local-fn-child [walker node fn-child next-state fn-index]
+  (if (and (container? fn-child)
+           (not (quoted-child? node.children fn-index)))
+      (walker fn-child next-state false nil false
+              (parameter-list? node fn-index fn-child))
+      next-state))
+
 (defn- walk-local-fn-children [walker node state]
   (accumulate [next-state state
                fn-index fn-child (ipairs node.children)]
-    (if (and (container? fn-child)
-             (not (quoted-child? node.children fn-index)))
-        (walker fn-child next-state false nil false
-                (parameter-list? node fn-index fn-child))
-        next-state)))
+    (walk-local-fn-child walker node fn-child next-state fn-index)))
+
+(defn- regular-child-branch [node index]
+  (if (= (list-head node) "if")
+      (branch-kind node index)))
 
 (defn- walk-regular-child [walker node child state index]
-  (let [child-branch (if (= (list-head node) "if")
-                         (branch-kind node index))]
+  (let [child-branch (regular-child-branch node index)]
     (walker child state false child-branch false
             (parameter-list? node index child))))
 
@@ -275,29 +299,41 @@
       (node-path node node-state top-level?)
       (values (non-interesting-path state branch-path skip-identity?) node-state)))
 
+(defn- branch-info [state branch-segment]
+  (if branch-segment
+      (state-for-branch state branch-segment)
+      {:state state :path (append-path state.ancestor branch-segment)}))
+
+(defn- add-branch-identity [branch? final-state branch-path node]
+  (if branch?
+      (add-identity final-state branch-path node)
+      final-state))
+
+(defn- add-node-identity [node-interesting? with-branch final-path node]
+  (if node-interesting?
+      (add-identity with-branch final-path node)
+      with-branch))
+
+(defn- walk-node-ordinals [node-interesting? final-state child-result]
+  (if node-interesting? final-state.ordinals child-result.ordinals))
+
 (defn- walk-node [node state top-level? branch-segment quoted? skip-identity?]
   (let [segment (named-segment node)
         head (list-head node)
         node-interesting? (interesting-node? node segment head top-level? skip-identity?)
         branch? (branch-node? branch-segment node skip-identity?)
-        branch-info (if branch-segment
-                        (state-for-branch state branch-segment)
-                        {:state state :path (append-path state.ancestor branch-segment)})
+        branch-info (branch-info state branch-segment)
         node-state (. branch-info :state)
         branch-path (. branch-info :path)
         (final-path final-state) (final-path-for-node node state node-state branch-path top-level?
                                                       node-interesting? skip-identity?)
-        with-branch (if branch?
-                        (add-identity final-state branch-path node)
-                        final-state)
-        with-node (if node-interesting?
-                      (add-identity with-branch final-path node)
-                      with-branch)
+        with-branch (add-branch-identity branch? final-state branch-path node)
+        with-node (add-node-identity node-interesting? with-branch final-path node)
         child-result (walk-children walk-node node with-node final-path
                                     (or branch-segment node-interesting?) head quoted?)]
     {:forms child-result.forms
      :ancestor state.ancestor
-     :ordinals (if node-interesting? final-state.ordinals child-result.ordinals)
+     :ordinals (walk-node-ordinals node-interesting? final-state child-result)
      :top-ordinal final-state.top-ordinal}))
 
 (defn- walk-root-child [root path state index child]
@@ -308,13 +344,19 @@
         (core.assoc next-state :ancestor (append-path path segment))
         next-state)))
 
+(defn- walk-root-container-child [root path current index child]
+  (if (container? child)
+      (walk-root-child root path current index child)
+      current))
+
+(defn- walk-root-state [root path state]
+  (accumulate [current state
+               index child (ipairs root.children)]
+    (walk-root-container-child root path current index child)))
+
 (defn- walk-root [root path]
   (let [state {:forms [] :ancestor path :ordinals {} :top-ordinal 0}
-        final-state (accumulate [current state
-                                 index child (ipairs root.children)]
-                      (if (container? child)
-                          (walk-root-child root path current index child)
-                          current))]
+        final-state (walk-root-state root path state)]
     final-state.forms))
 
 (defn forms [source path]

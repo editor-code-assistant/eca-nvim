@@ -910,7 +910,7 @@ local function _122_()
   local function _125_()
     local config = load_config()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {rules = {["module-style"] = "error", ["spec-macro-import"] = "error", ["spec-no-module"] = "error", ["spec-direct-require"] = "error", ["one-is-per-testing"] = "error", ["if-branch-call"] = "warning", ["core-require"] = "off"}, exclusions = {{rule = "if-branch-call", form = "x", reason = "why"}}}
+    local expected_6_auto = {rules = {["module-style"] = "error", ["spec-macro-import"] = "error", ["spec-no-module"] = "error", ["spec-direct-require"] = "error", ["one-is-per-testing"] = "error", ["if-branch-call"] = "warning", ["function-shape"] = "warning", ["core-require"] = "off"}, exclusions = {{rule = "if-branch-call", form = "x", reason = "why"}}}
     local actual_7_auto
     if config["module-missing"] then
       actual_7_auto = config

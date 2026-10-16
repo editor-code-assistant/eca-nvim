@@ -14,11 +14,7 @@ local function excluded_3f(exclusions, finding, index)
   if (index > #exclusions) then
     return false
   else
-    if exclusion_match_3f(exclusions[index], finding) then
-      return true
-    else
-      return excluded_3f(exclusions, finding, (index + 1))
-    end
+    return (exclusion_match_3f(exclusions[index], finding) or excluded_3f(exclusions, finding, (index + 1)))
   end
 end
 local function keep_finding(findings, exclusions, index, result)
@@ -37,11 +33,7 @@ local function matching_exclusion_3f(exclusion, findings, index)
   if (index > #findings) then
     return false
   else
-    if exclusion_match_3f(exclusion, findings[index]) then
-      return true
-    else
-      return matching_exclusion_3f(exclusion, findings, (index + 1))
-    end
+    return (exclusion_match_3f(exclusion, findings[index]) or matching_exclusion_3f(exclusion, findings, (index + 1)))
   end
 end
 local function stale_exclusion(exclusion, config_path)
@@ -61,11 +53,7 @@ local function append_stale(exclusions, findings, config_path, index, result)
 end
 local function normalized_form(finding)
   if (finding.rule == "one-is-per-testing") then
-    if string.match(finding.form, " > top#[0-9]+$") then
-      return (finding.form .. " > testing#1")
-    else
-      return finding.form
-    end
+    return ((string.match(finding.form, " > top#[0-9]+$") and (finding.form .. " > testing#1")) or finding.form)
   else
     local form = string.gsub(finding.form, " > (top#[0-9]+) > (then.*)$", " > %1 > if#1 > %2")
     return form
@@ -96,13 +84,13 @@ local function lint_files_at(files, policy, index, result)
     if error then
       return nil, error
     else
-      local function _13_()
+      local function _10_()
         for _, finding in ipairs(findings) do
           table.insert(result, finding)
         end
         return result
       end
-      return lint_files_at(files, policy, (index + 1), _13_())
+      return lint_files_at(files, policy, (index + 1), _10_())
     end
   end
 end
@@ -113,11 +101,7 @@ local function path_in_scope_3f(paths, path, index)
   if (index > #paths) then
     return false
   else
-    if (path == paths[index]) then
-      return true
-    else
-      return path_in_scope_3f(paths, path, (index + 1))
-    end
+    return ((path == paths[index]) or path_in_scope_3f(paths, path, (index + 1)))
   end
 end
 local function scoped_exclusions(exclusions, paths, index, result)
@@ -144,33 +128,31 @@ local function keep_non_warning(findings, index, result)
     return keep_non_warning(findings, (index + 1), result)
   end
 end
+local function diagnostic_source(filtered, policy, stale, scope_paths)
+  if ((#policy.exclusions > 0) and (scope_paths or (#stale > 0))) then
+    return keep_non_warning(filtered, 1, {})
+  else
+    return filtered
+  end
+end
+local function append_stale_findings(source, stale)
+  for _, finding in ipairs(stale) do
+    table.insert(source, finding)
+  end
+  return source
+end
 local function diagnostics(findings, policy, config_path, scope_paths)
   local exclusions = scoped_exclusions(policy.exclusions, scope_paths, 1, {})
   local filtered = keep_finding(findings, exclusions, 1, {})
   local stale = append_stale(exclusions, findings, config_path, 1, {})
-  local source
-  if ((#policy.exclusions > 0) and (scope_paths or (#stale > 0))) then
-    source = keep_non_warning(filtered, 1, {})
-  else
-    source = filtered
-  end
-  local function _23_()
-    for _, finding in ipairs(stale) do
-      table.insert(source, finding)
-    end
-    return source
-  end
-  return output.sort(_23_())
+  local source = diagnostic_source(filtered, policy, stale, scope_paths)
+  return output.sort(append_stale_findings(source, stale))
 end
 local function has_errors_3f(findings, index)
   if (index > #findings) then
     return false
   else
-    if (findings[index].severity == "error") then
-      return true
-    else
-      return has_errors_3f(findings, (index + 1))
-    end
+    return ((findings[index].severity == "error") or has_errors_3f(findings, (index + 1)))
   end
 end
 local function render(findings, format)
@@ -180,14 +162,15 @@ local function render(findings, format)
     return output["text-lines"](findings)
   end
 end
-local function result(findings, format)
-  local _27_
+local function result_status(findings)
   if has_errors_3f(findings, 1) then
-    _27_ = 1
+    return 1
   else
-    _27_ = 0
+    return 0
   end
-  return {lines = render(findings, format), status = _27_}
+end
+local function result(findings, format)
+  return {lines = render(findings, format), status = result_status(findings)}
 end
 local lint_files
 do

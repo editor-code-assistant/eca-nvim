@@ -342,6 +342,138 @@
                (check-source "(unclosed" "fnl/bad.fnl" nil)))))
   ))
 
+(defn- function-findings [source]
+  (findings-for-rule source "fnl/app.fnl" "function-shape" {"module-style" :off}))
+
+(deftest function-shape
+  (testing "a nested if in a set value reports the outer set form"
+    (is (= 1 (length (function-findings "(defn f [x] (set x (if x 1 2)))")))))
+  (testing "a multi-expression do body reports the outer do form"
+    (is (= 1 (length (function-findings "(defn f [] (do a b))")))))
+  (testing "nested function and do forms report one outer offending form"
+    (is (= 1 (length (function-findings "(defn f [] (foo (fn [] a) (do a b)))")))))
+  (testing "a nested if in a sequence reports the sequence form"
+    (is (= [["function-shape" "fnl/app.fnl > defn:f > sequence#1" "warning"]]
+           (function-findings "(defn f [] [1 (if a b c)])"))))
+  (testing "a nested if in a table reports the table form"
+    (is (= [["function-shape" "fnl/app.fnl > defn:f > table#1" "warning"]]
+           (function-findings "(defn f [] {:k (if a b c)})"))))
+  (testing "a nested let in a local value reports the outer local form"
+    (is (= 1 (length (function-findings "(defn f [] (local y (let [z 1] z)))")))))
+  (testing "a set with a leaf call value is clean"
+    (is (= [] (function-findings "(defn f [x] (set x (g x)))"))))
+  (testing "a sequence with a leaf call is clean"
+    (is (= [] (function-findings "(defn f [] [1 (g a)])"))))
+  (testing "a table with a leaf call is clean"
+    (is (= [] (function-findings "(defn f [] {:k (g a)})"))))
+  (testing "quoted control forms are clean"
+    (is (= [] (function-findings "(defn f [] '(if a b c))"))))
+  (testing "the user's nested inner if is the single function-shape finding"
+    (is (= [["function-shape" "fnl/app.fnl > defn-:join > if#1 > else > if#1" "warning"]]
+           (function-findings "(defn- join [xs]
+  (if (= xs [])
+      nil
+      (if (= (length xs) 1)
+          (first xs)
+          (table.concat (icollect [_ x (ipairs xs)] x) \" \"))))"))))
+  (testing "the fixed join form is clean"
+    (is (= []
+           (function-findings "(defn- join [xs]
+  (if (= xs [])
+      nil
+      (let [parts (icollect [_ x (ipairs xs)] x)]
+        (table.concat parts \" \"))))"))))
+  (testing "a first let with leaf bindings and body is clean"
+    (is (= []
+           (function-findings "(defn run [x]
+  (let [a x b 1]
+    (+ a b)))"))))
+  (testing "an if in a let binding value is reported"
+    (is (= 1 (length (function-findings "(defn run [x]
+  (let [a (if x 1 2)] a))")))))
+  (testing "a let after the first body expression is reported"
+    (is (= 1 (length (function-findings "(defn run [x]
+  x
+  (let [a 1] a))")))))
+  (testing "a second nested let is reported"
+    (is (= 1 (length (function-findings "(defn run [x]
+  (let [a x]
+    (let [b a] b)))")))))
+  (testing "a multi-clause flat if is clean"
+    (is (= []
+           (function-findings "(defn run [x]
+  (if x 1 y 2 3))"))))
+  (testing "a case with leaf clauses is clean"
+    (is (= []
+           (function-findings "(defn run [x]
+  (case x 1 :one 2 :two :other))"))))
+  (testing "a nested if in a case clause is reported"
+    (is (= 1 (length (function-findings "(defn run [x]
+  (case x 1 (if x :one :other) :other))")))))
+  (testing "a match with leaf clauses is clean"
+    (is (= []
+           (function-findings "(defn run [x]
+  (match x 1 :one 2 :two :other))"))))
+  (testing "a nested if in a match clause is reported"
+    (is (= 1 (length (function-findings "(defn run [x]
+  (match x 1 (if x :one :other) _ :other))")))))
+  (testing "a when with several leaf steps is clean"
+    (is (= []
+           (function-findings "(defn run [x]
+  (when x (print x) (print :done)))"))))
+  (testing "a loop with a leaf body is clean"
+    (is (= []
+           (function-findings "(defn run [xs]
+  (each [_ x (ipairs xs)] (print x)))"))))
+  (testing "a loop with an if in its body is reported"
+    (is (= 1 (length (function-findings "(defn run [xs]
+  (each [_ x (ipairs xs)] (if x (print x) (print :none))))")))))
+  (testing "a function literal passed to pcall is clean"
+    (is (= []
+           (function-findings "(defn run [] (pcall (fn [] (leaf))))"))))
+  (testing "an icollect passed to table.concat is clean"
+    (is (= []
+           (function-findings "(defn run [xs]
+  (table.concat (icollect [_ x (ipairs xs)] (f x)) \" \"))"))))
+  (testing "an anonymous function body is checked independently"
+    (is (= 1 (length (function-findings "(defn run [] (fn [] (if ok (if nested a b) c)))")))))
+  (testing "a lambda body is checked independently"
+    (is (= 1 (length (function-findings "(defn run [] (lambda [] (if ok (if nested a b) c)))")))))
+  (testing "a unicode lambda body is checked independently"
+    (is (= 1 (length (function-findings "(defn run [] (λ [] (if ok (if nested a b) c)))")))))
+  (testing "a while with a leaf body is clean"
+    (is (= []
+           (function-findings "(defn run [x]
+  (while x (set x false)))"))))
+  (testing "several leaf body expressions are clean"
+    (is (= []
+           (function-findings "(defn run [x]
+  (print x)
+  (+ x 1)
+  x)"))))
+  (testing "quoted data is never flagged"
+    (is (= []
+           (function-findings "(defn run [] '(if x (let [a 1] a) b))"))))
+  (testing "function-shape defaults to warning"
+    (is (= [["function-shape" "fnl/app.fnl > defn:run > if#1 > then > if#1" "warning"]]
+           (function-findings "(defn run [] (if x (if y a b) c))"))))
+  (testing "function-shape uses the approved move-to-private-function message"
+    (is (= "function body is too deep; move this into a named private function"
+           (. (finding-summary (check-source "(defn run [] (if x (if y a b) c))" "fnl/app.fnl" {"module-style" :off})) 1 :message))))
+  (testing "function-shape severity can be overridden to error"
+    (is (= [["function-shape" "fnl/app.fnl > defn:run > if#1 > then > if#1" "error"]]
+           (findings-for-rule "(defn run [] (if x (if y a b) c))" "fnl/app.fnl" "function-shape" {"module-style" :off "function-shape" :error}))))
+  (testing "function-shape can be disabled"
+    (is (= []
+           (findings-for-rule "(defn run [] (if x (if y a b) c))" "fnl/app.fnl" "function-shape" {"module-style" :off "function-shape" :off}))))
+  (testing "function-shape findings are unique and deterministic"
+    (is (= [["function-shape" "fnl/app.fnl > defn:run > if#1 > then > if#1" "warning"]
+            ["function-shape" "fnl/app.fnl > defn:run > if#1 > else > if#1" "warning"]]
+           (function-findings "(defn run []
+  (if x (if y a b) (if z c d)))"))))
+
+)
+
 (deftest repo-properties
   (testing "project Fennel files have the approved rule counts"
     (is (= {"module-style" 24

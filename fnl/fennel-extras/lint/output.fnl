@@ -41,18 +41,30 @@
     (table.sort copied finding-less?)
     copied))
 
+(defn- escape-control-carriage [character]
+  (if (= character carriage-return)
+      (.. slash "r")
+      (string.format (.. slash "u00%02X") (string.byte character))))
+
+(defn- escape-control-whitespace [character]
+  (if (= character tab)
+      (.. slash "t")
+      (escape-control-carriage character)))
+
+(defn- escape-control-newline [character]
+  (if (= character newline)
+      (.. slash "n")
+      (escape-control-whitespace character)))
+
+(defn- escape-control-tail [character]
+  (if (= character slash)
+      (.. slash slash)
+      (escape-control-newline character)))
+
 (defn- escape-control [character]
   (if (= character double-quote)
       (.. slash double-quote)
-      (if (= character slash)
-          (.. slash slash)
-          (if (= character newline)
-              (.. slash "n")
-              (if (= character tab)
-                  (.. slash "t")
-                  (if (= character carriage-return)
-                      (.. slash "r")
-                      (string.format (.. slash "u00%02X") (string.byte character))))))))
+      (escape-control-tail character)))
 
 (defn- valid-continuation? [byte]
   (and byte (>= byte 128) (<= byte 191)))

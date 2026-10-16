@@ -10,6 +10,13 @@ local reader = require("fennel-extras.reader")
 local function trivia_3f(node)
   return ((node.kind ~= "list") and (node.kind ~= "sequence") and (node.kind ~= "table") and ((node.kind == "whitespace") or (node.kind == "newline") or (node.kind == "comment") or (node.kind == "tab") or (node.kind == "cr")))
 end
+local function meaningful_child(child)
+  if not trivia_3f(child) then
+    return child
+  else
+    return nil
+  end
+end
 local function container_3f(node)
   return ((node.kind == "list") or (node.kind == "sequence") or (node.kind == "table"))
 end
@@ -17,12 +24,7 @@ local function meaningful_children(node)
   local tbl_26_ = {}
   local i_27_ = 0
   for _, child in ipairs(node.children) do
-    local val_28_
-    if not trivia_3f(child) then
-      val_28_ = child
-    else
-      val_28_ = nil
-    end
+    local val_28_ = meaningful_child(child)
     if (nil ~= val_28_) then
       i_27_ = (i_27_ + 1)
       tbl_26_[i_27_] = val_28_
@@ -90,19 +92,22 @@ local function anonymous_list_kind(node)
   local children = meaningful_children(node)
   return (symbol_text(children[1]) or "list")
 end
+local function anonymous_container_kind(node)
+  local case_9_ = node.kind
+  if (case_9_ == "sequence") then
+    return "sequence"
+  elseif (case_9_ == "table") then
+    return "table"
+  else
+    local _ = case_9_
+    return "form"
+  end
+end
 local function anonymous_kind(node)
   if (node.kind == "list") then
     return anonymous_list_kind(node)
   else
-    local case_9_ = node.kind
-    if (case_9_ == "sequence") then
-      return "sequence"
-    elseif (case_9_ == "table") then
-      return "table"
-    else
-      local _ = case_9_
-      return "form"
-    end
+    return anonymous_container_kind(node)
   end
 end
 local function node_end(node)
@@ -133,16 +138,19 @@ local function index_result(child_index, index, ordinal, result)
     return result
   end
 end
-local function meaningful_index(children, child_index)
-  local result
-  do
-    local state = {ordinal = 0, result = nil}
-    for index, child in ipairs(children) do
-      local ordinal = advance_meaningful_index(state.ordinal, child_index, index, child)
-      state = {ordinal = ordinal, result = index_result(child_index, index, ordinal, state.result)}
-    end
-    result = state
+local function meaningful_index_state(state, child_index, index, child)
+  local ordinal = advance_meaningful_index(state.ordinal, child_index, index, child)
+  return {ordinal = ordinal, result = index_result(child_index, index, ordinal, state.result)}
+end
+local function meaningful_index_result(children, child_index)
+  local state = {ordinal = 0, result = nil}
+  for index, child in ipairs(children) do
+    state = meaningful_index_state(state, child_index, index, child)
   end
+  return state
+end
+local function meaningful_index(children, child_index)
+  local result = meaningful_index_result(children, child_index)
   return result.result
 end
 local function numbered_then_kind(branch_index)
@@ -173,6 +181,13 @@ local function list_head(node)
   local children = meaningful_children(node)
   return symbol_text(children[1])
 end
+local function function_parameter_index(named_fn_3f)
+  if named_fn_3f then
+    return 3
+  else
+    return 2
+  end
+end
 local function parameter_list_3f(parent, child_index, child)
   local head = list_head(parent)
   local children = meaningful_children(parent)
@@ -181,25 +196,7 @@ local function parameter_list_3f(parent, child_index, child)
   local binding_form_3f = ((head == "let") or (head == "when-let") or (head == "if-let") or (head == "each") or (head == "for") or (head == "icollect") or (head == "collect") or (head == "accumulate") or (head == "with-open"))
   local function_form_3f = ((head == "fn") or (head == "lambda") or (head == "\206\187"))
   local declaration_form_3f = ((head == "defn") or (head == "defn-") or (head == "macro"))
-  local and_18_ = (child.kind == "sequence")
-  if and_18_ then
-    local or_19_ = (binding_form_3f and (index == 2)) or (declaration_form_3f and (index == 3))
-    if not or_19_ then
-      local and_20_ = function_form_3f
-      if and_20_ then
-        local _21_
-        if named_fn_3f then
-          _21_ = 3
-        else
-          _21_ = 2
-        end
-        and_20_ = (index == _21_)
-      end
-      or_19_ = and_20_
-    end
-    and_18_ = or_19_
-  end
-  return and_18_
+  return ((child.kind == "sequence") and ((binding_form_3f and (index == 2)) or (declaration_form_3f and (index == 3)) or (function_form_3f and (index == function_parameter_index(named_fn_3f)))))
 end
 local function append_path(path, segment)
   if segment then
@@ -246,36 +243,42 @@ local function state_for_branch(state, branch_segment)
   local branch_path = append_path(state.ancestor, branch_segment)
   return {state = {forms = state.forms, ancestor = branch_path, ordinals = {}, ["top-ordinal"] = 0}, path = branch_path}
 end
-local function child_state(state, final_path, segmented_3f)
-  local _26_
+local function child_state_ordinals(state, segmented_3f)
   if segmented_3f then
-    _26_ = {}
+    return {}
   else
-    _26_ = state.ordinals
+    return state.ordinals
   end
-  return {forms = state.forms, ancestor = final_path, ordinals = _26_, ["top-ordinal"] = 0}
+end
+local function child_state(state, final_path, segmented_3f)
+  return {forms = state.forms, ancestor = final_path, ordinals = child_state_ordinals(state, segmented_3f), ["top-ordinal"] = 0}
 end
 local function add_identity(state, path, node)
   return core.assoc(state, "forms", core.concat(state.forms, {identity_form(path, node)}))
 end
+local function walk_local_fn_child(walker, node, fn_child, next_state, fn_index)
+  if (container_3f(fn_child) and not quoted_child_3f(node.children, fn_index)) then
+    return walker(fn_child, next_state, false, nil, false, parameter_list_3f(node, fn_index, fn_child))
+  else
+    return next_state
+  end
+end
 local function walk_local_fn_children(walker, node, state)
   local next_state = state
   for fn_index, fn_child in ipairs(node.children) do
-    if (container_3f(fn_child) and not quoted_child_3f(node.children, fn_index)) then
-      next_state = walker(fn_child, next_state, false, nil, false, parameter_list_3f(node, fn_index, fn_child))
-    else
-      next_state = next_state
-    end
+    next_state = walk_local_fn_child(walker, node, fn_child, next_state, fn_index)
   end
   return next_state
 end
-local function walk_regular_child(walker, node, child, state, index)
-  local child_branch
+local function regular_child_branch(node, index)
   if (list_head(node) == "if") then
-    child_branch = branch_kind(node, index)
+    return branch_kind(node, index)
   else
-    child_branch = nil
+    return nil
   end
+end
+local function walk_regular_child(walker, node, child, state, index)
+  local child_branch = regular_child_branch(node, index)
   return walker(child, state, false, child_branch, false, parameter_list_3f(node, index, child))
 end
 local function walk_child(walker, node, child, state, index, local_fn)
@@ -316,40 +319,47 @@ local function final_path_for_node(node, state, node_state, branch_path, top_lev
     return non_interesting_path(state, branch_path, skip_identity_3f), node_state
   end
 end
+local function branch_info(state, branch_segment)
+  if branch_segment then
+    return state_for_branch(state, branch_segment)
+  else
+    return {state = state, path = append_path(state.ancestor, branch_segment)}
+  end
+end
+local function add_branch_identity(branch_3f, final_state, branch_path, node)
+  if branch_3f then
+    return add_identity(final_state, branch_path, node)
+  else
+    return final_state
+  end
+end
+local function add_node_identity(node_interesting_3f, with_branch, final_path, node)
+  if node_interesting_3f then
+    return add_identity(with_branch, final_path, node)
+  else
+    return with_branch
+  end
+end
+local function walk_node_ordinals(node_interesting_3f, final_state, child_result)
+  if node_interesting_3f then
+    return final_state.ordinals
+  else
+    return child_result.ordinals
+  end
+end
 local function walk_node(node, state, top_level_3f, branch_segment, quoted_3f, skip_identity_3f)
   local segment = named_segment(node)
   local head = list_head(node)
   local node_interesting_3f = interesting_node_3f(node, segment, head, top_level_3f, skip_identity_3f)
   local branch_3f = branch_node_3f(branch_segment, node, skip_identity_3f)
-  local branch_info
-  if branch_segment then
-    branch_info = state_for_branch(state, branch_segment)
-  else
-    branch_info = {state = state, path = append_path(state.ancestor, branch_segment)}
-  end
-  local node_state = branch_info.state
-  local branch_path = branch_info.path
+  local branch_info0 = branch_info(state, branch_segment)
+  local node_state = branch_info0.state
+  local branch_path = branch_info0.path
   local final_path, final_state = final_path_for_node(node, state, node_state, branch_path, top_level_3f, node_interesting_3f, skip_identity_3f)
-  local with_branch
-  if branch_3f then
-    with_branch = add_identity(final_state, branch_path, node)
-  else
-    with_branch = final_state
-  end
-  local with_node
-  if node_interesting_3f then
-    with_node = add_identity(with_branch, final_path, node)
-  else
-    with_node = with_branch
-  end
+  local with_branch = add_branch_identity(branch_3f, final_state, branch_path, node)
+  local with_node = add_node_identity(node_interesting_3f, with_branch, final_path, node)
   local child_result = walk_children(walk_node, node, with_node, final_path, (branch_segment or node_interesting_3f), head, quoted_3f)
-  local _38_
-  if node_interesting_3f then
-    _38_ = final_state.ordinals
-  else
-    _38_ = child_result.ordinals
-  end
-  return {forms = child_result.forms, ancestor = state.ancestor, ordinals = _38_, ["top-ordinal"] = final_state["top-ordinal"]}
+  return {forms = child_result.forms, ancestor = state.ancestor, ordinals = walk_node_ordinals(node_interesting_3f, final_state, child_result), ["top-ordinal"] = final_state["top-ordinal"]}
 end
 local function walk_root_child(root, path, state, index, child)
   local quoted_3f = quoted_child_3f(root.children, index)
@@ -361,20 +371,23 @@ local function walk_root_child(root, path, state, index, child)
     return next_state
   end
 end
+local function walk_root_container_child(root, path, current, index, child)
+  if container_3f(child) then
+    return walk_root_child(root, path, current, index, child)
+  else
+    return current
+  end
+end
+local function walk_root_state(root, path, state)
+  local current = state
+  for index, child in ipairs(root.children) do
+    current = walk_root_container_child(root, path, current, index, child)
+  end
+  return current
+end
 local function walk_root(root, path)
   local state = {forms = {}, ancestor = path, ordinals = {}, ["top-ordinal"] = 0}
-  local final_state
-  do
-    local current = state
-    for index, child in ipairs(root.children) do
-      if container_3f(child) then
-        current = walk_root_child(root, path, current, index, child)
-      else
-        current = current
-      end
-    end
-    final_state = current
-  end
+  local final_state = walk_root_state(root, path, state)
   return final_state.forms
 end
 local forms

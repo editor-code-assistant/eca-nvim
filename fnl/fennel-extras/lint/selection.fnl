@@ -44,12 +44,14 @@
 (defn- split-lines [text]
   (icollect [line (string.gmatch text "[^\n]+")] line))
 
+(defn- hunk-count [new-count]
+  (if (= new-count "") 1 (tonumber new-count)))
+
 (defn- hunk-line [line]
   (let [(new-start new-count) (string.match line "^@@ %-[0-9]+,?[0-9]* %+(%d+),?(%d*)")
-        count (if (= new-count "") 1 (tonumber new-count))]
-    (if new-start
-        {:start (tonumber new-start) :end (+ (tonumber new-start) (math.max count 1) -1)}
-        nil)))
+        count (hunk-count new-count)]
+    (and new-start
+         {:start (tonumber new-start) :end (+ (tonumber new-start) (math.max count 1) -1)})))
 
 (defn parse-hunks [text]
   (icollect [_ line (ipairs (split-lines text))]
@@ -78,23 +80,30 @@
       {:seen (core.assoc seen value true)
        :items (append-item items value)}))
 
+(defn- add-record-path [state seen-key items-key path]
+  (if (. (. state seen-key) path)
+      state
+      (let [result (append-if-new (. state seen-key) (. state items-key) path)]
+        (core.assoc (core.assoc state seen-key result.seen)
+                    items-key result.items))))
+
+(defn- add-whole-record [state record]
+  (and (or (= record.status "A") (= record.status "R") (= record.status "C"))
+       (add-record-path state :whole-set :whole record.path)))
+
+(defn- add-deleted-record [state record]
+  (and (= record.status "D")
+       (add-record-path state :deleted-set :deleted record.path)))
+
+(defn- add-hunk-record [state record]
+  (and (= record.status "M")
+       (add-record-path state :hunks-set :hunks record.path)))
+
 (defn- add-record [state record]
-  (if (or (= record.status "A") (= record.status "R") (= record.status "C"))
-      (if (not (. state.whole-set record.path))
-          (let [result (append-if-new state.whole-set state.whole record.path)]
-            (core.assoc state :whole-set result.seen :whole result.items))
-          state)
-      (if (= record.status "D")
-          (if (not (. state.deleted-set record.path))
-              (let [result (append-if-new state.deleted-set state.deleted record.path)]
-                (core.assoc state :deleted-set result.seen :deleted result.items))
-              state)
-          (if (= record.status "M")
-              (if (not (. state.hunks-set record.path))
-                  (let [result (append-if-new state.hunks-set state.hunks record.path)]
-                    (core.assoc state :hunks-set result.seen :hunks result.items))
-                  state)
-              state))))
+  (or (add-whole-record state record)
+      (add-deleted-record state record)
+      (add-hunk-record state record)
+      state))
 
 (defn- add-old-path [state record]
   (if (and (or (= record.status "R") (= record.status "C")) record.old-path
@@ -103,19 +112,38 @@
         (core.assoc state :deleted-set result.seen :deleted result.items))
       state))
 
+(defn- add-untracked-path [state path]
+  (if (or (= path nil) (. state.whole-set path))
+      state
+      (let [result (append-if-new state.whole-set state.whole path)]
+        (core.assoc state :whole-set result.seen :whole result.items))))
+
+(defn- add-records [initial records]
+  (accumulate [state initial _ record (ipairs records)]
+    (add-record state record)))
+
+(defn- add-old-paths [initial records]
+  (accumulate [state initial _ record (ipairs records)]
+    (add-old-path state record)))
+
+(defn- add-untracked-paths [initial untracked]
+  (accumulate [state initial _ path (ipairs untracked)]
+    (add-untracked-path state path)))
+
+(defn- plan-state [records untracked]
+  (add-old-paths
+   (add-records
+    (add-untracked-paths {:whole-set {} :hunks-set {} :deleted-set {}
+                          :whole [] :hunks [] :deleted []}
+                         untracked)
+    records)
+   records))
+
+(defn- plan-result [final-state]
+  (table.sort final-state.whole)
+  (table.sort final-state.hunks)
+  (table.sort final-state.deleted)
+  {:whole final-state.whole :hunks final-state.hunks :deleted final-state.deleted})
+
 (defn plan [records untracked]
-  (let [initial {:whole-set {} :hunks-set {} :deleted-set {}
-                 :whole [] :hunks [] :deleted []}
-        with-untracked (accumulate [state initial _ path (ipairs untracked)]
-                         (if (or (= path nil) (. state.whole-set path))
-                             state
-                             (let [result (append-if-new state.whole-set state.whole path)]
-                               (core.assoc state :whole-set result.seen :whole result.items))))
-        with-records (accumulate [state with-untracked _ record (ipairs records)]
-                       (add-record state record))
-        final-state (accumulate [state with-records _ record (ipairs records)]
-                      (add-old-path state record))]
-    (table.sort final-state.whole)
-    (table.sort final-state.hunks)
-    (table.sort final-state.deleted)
-    {:whole final-state.whole :hunks final-state.hunks :deleted final-state.deleted}))
+  (plan-result (plan-state records untracked)))
