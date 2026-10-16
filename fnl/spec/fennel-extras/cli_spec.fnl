@@ -56,6 +56,33 @@
            :expected-code expected-code
            :expected-lines expected-lines})))))
 
+(defn- write-good-scenario
+  [root good]
+  (let [_ (write-file good "(when x\ny)\n")
+        result (run-cli root ["format" "--write" "--parser" "eca.nfnl.fennel" "good.fnl"])]
+    {:code (. result :code)
+     :lines (. result :lines)
+     :good (read-file good)}))
+
+(defn- write-formatted-scenario
+  [root good]
+  (let [_ (write-file good "(when x\n  y)\n")
+        result (run-cli root ["format" "--write" "good.fnl"])]
+    {:code (. result :code)
+     :lines (. result :lines)
+     :good (read-file good)
+     :entry-count (length (vim.fn.globpath root "*" false true))}))
+
+(defn- write-error-scenario
+  [root good bad]
+  (let [_ (write-file good "(when x\ny)\n")
+        _ (write-file bad "(x")
+        result (run-cli root ["format" "--write" "good.fnl" "bad.fnl"])]
+    {:code (. result :code)
+     :lines (. result :lines)
+     :good (read-file good)
+     :bad (read-file bad)}))
+
 (defn- write-scenario
   [mode]
   (let [root (vim.fn.tempname)
@@ -67,28 +94,47 @@
      (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :good)
-            (do
-              (write-file good "(when x\ny)\n")
-              (let [result (run-cli root ["format" "--write" "--parser" "eca.nfnl.fennel" "good.fnl"])]
-                {:code (. result :code)
-                 :lines (. result :lines)
-                 :good (read-file good)}))
+            (write-good-scenario root good)
             (if (= mode :formatted)
-                (do
-                  (write-file good "(when x\n  y)\n")
-                  (let [result (run-cli root ["format" "--write" "good.fnl"])]
-                    {:code (. result :code)
-                     :lines (. result :lines)
-                     :good (read-file good)
-                     :entry-count (length (vim.fn.globpath root "*" false true))}))
-                (do
-                  (write-file good "(when x\ny)\n")
-                  (write-file bad "(x")
-                  (let [result (run-cli root ["format" "--write" "good.fnl" "bad.fnl"])]
-                    {:code (. result :code)
-                     :lines (. result :lines)
-                     :good (read-file good)
-                     :bad (read-file bad)}))))))))
+                (write-formatted-scenario root good)
+                (write-error-scenario root good bad)))))))
+
+(defn- config-indent-scenario
+  [root src-file config-path]
+  (let [_ (write-file config-path "{:indents {\"deftest\" [[:block 1]]}}")
+        _ (write-file src-file "(deftest t\n(foo))\n")
+        result (run-cli root ["format" "--write" "src/a.fnl"])]
+    {:code (. result :code)
+     :lines (. result :lines)
+     :content (read-file src-file)}))
+
+(defn- config-exclude-scenario
+  [root src-file skip-file config-path]
+  (let [_ (write-file config-path "{:exclude [\"skip\"]}\n")
+        _ (write-file src-file "(when x\n  y)\n")
+        _ (write-file skip-file "(when x\ny)\n")
+        result (run-cli root ["format" "--write"])]
+    {:code (. result :code)
+     :lines (. result :lines)
+     :content (read-file skip-file)}))
+
+(defn- config-paths-scenario
+  [root src-file skip-file config-path]
+  (let [_ (write-file config-path "{:paths [\"src\"]}")
+        _ (write-file src-file "(when x\ny)\n")
+        _ (write-file skip-file "(when x\ny)\n")
+        result (run-cli root ["format" "--write"])]
+    {:code (. result :code)
+     :lines (. result :lines)
+     :src (read-file src-file)
+     :skip (read-file skip-file)}))
+
+(defn- config-invalid-scenario
+  [root src-file config-path]
+  (let [_ (write-file config-path "{:colour 1}")
+        result (run-cli root ["format" "--check" "src/a.fnl"])]
+    {:code (. result :code)
+     :lines (. result :lines)}))
 
 (defn- config-scenario
   [mode]
@@ -105,37 +151,12 @@
      (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :indent)
-            (do
-              (write-file config-path "{:indents {\"deftest\" [[:block 1]]}}")
-              (write-file src-file "(deftest t\n(foo))\n")
-              (let [result (run-cli root ["format" "--write" "src/a.fnl"])]
-                {:code (. result :code)
-                 :lines (. result :lines)
-                 :content (read-file src-file)}))
+            (config-indent-scenario root src-file config-path)
             (if (= mode :exclude)
-                (do
-                  (write-file config-path "{:exclude [\"skip\"]}\n")
-                  (write-file src-file "(when x\n  y)\n")
-                  (write-file skip-file "(when x\ny)\n")
-                  (let [result (run-cli root ["format" "--write"])]
-                    {:code (. result :code)
-                     :lines (. result :lines)
-                     :content (read-file skip-file)}))
+                (config-exclude-scenario root src-file skip-file config-path)
                 (if (= mode :paths)
-                    (do
-                      (write-file config-path "{:paths [\"src\"]}")
-                      (write-file src-file "(when x\ny)\n")
-                      (write-file skip-file "(when x\ny)\n")
-                      (let [result (run-cli root ["format" "--write"])]
-                        {:code (. result :code)
-                         :lines (. result :lines)
-                         :src (read-file src-file)
-                         :skip (read-file skip-file)}))
-                    (do
-                      (write-file config-path "{:colour 1}")
-                      (let [result (run-cli root ["format" "--check" "src/a.fnl"])]
-                        {:code (. result :code)
-                         :lines (. result :lines)})))))))))
+                    (config-paths-scenario root src-file skip-file config-path)
+                    (config-invalid-scenario root src-file config-path))))))))
 
 (deftest check
   (testing "returns zero and no lines for an already-formatted project"
@@ -184,6 +205,21 @@
               :line-count (length lines)
               :mentions-config (not (not (string.match line "fnl%-extras")))})))))
 
+(defn- extension-fnl-scenario
+  [root path config-path]
+  (let [_ (write-file path "(when x\ny)\n")
+        _ (write-file (.. root "/source.fnlm") "(when y\nz)\n")
+        result (run-cli root ["format" "--check"])]
+    {:code (. result :code)
+     :lines (. result :lines)}))
+
+(defn- extension-other-scenario
+  [root path config-path]
+  (let [_ (write-file path "(when x\ny)\n")
+        result (run-cli root ["format" "--check"])]
+    {:code (. result :code)
+     :lines (. result :lines)}))
+
 (defn- extension-scenario
   [extension]
   (let [root (vim.fn.tempname)
@@ -196,13 +232,8 @@
       (fn []
         (write-file config-path (.. "{:extensions [\"" extension "\"]}"))
         (if (= extension ".fnl")
-            (do
-              (write-file path "(when x\ny)\n")
-              (write-file (.. root "/source.fnlm") "(when y\nz)\n"))
-            (write-file path "(when x\ny)\n"))
-        (let [result (run-cli root ["format" "--check"])]
-          {:code (. result :code)
-           :lines (. result :lines)})))))
+            (extension-fnl-scenario root path config-path)
+            (extension-other-scenario root path config-path))))))
 
 (defn- default-path-scenario []
   (let [root (vim.fn.tempname)
@@ -410,6 +441,18 @@
           {:code vim.v.shell_error
            :lines lines})))))
 
+(defn- two-phase-skipped-scenario
+  [probe-file probe]
+  (let [_ (probe-file:close)
+        _ (vim.fn.delete probe)]
+    {:skipped-root true}))
+
+(defn- two-phase-write-attempt
+  [root good]
+  (let [result (run-cli root ["format" "--write"])]
+    {:code (. result :code)
+     :a-unchanged (= (read-file good) "(when x\ny)\n")}))
+
 (defn- two-phase-write-scenario []
   (let [root (vim.fn.tempname)
         fnl-dir (.. root "/fnl")
@@ -429,13 +472,21 @@
         (vim.fn.setfperm read-only "r-xr-xr-x")
         (let [probe-file (io.open probe :w)]
           (if probe-file
-              (do
-                (probe-file:close)
-                (vim.fn.delete probe)
-                {:skipped-root true})
-              (let [result (run-cli root ["format" "--write"])]
-                {:code (. result :code)
-                 :a-unchanged (= (read-file good) "(when x\ny)\n")})))))))
+              (two-phase-skipped-scenario probe-file probe)
+              (two-phase-write-attempt root good)))))))
+
+(defn- dotfile-config-scenario
+  [root fnl-dir]
+  (let [_ (write-file (.. root "/.fnl-extras.fnl") "{}\n")
+        _ (write-file (.. fnl-dir "/a.fnl") "(when x\n  y)\n")
+        result (run-cli root ["format" "--check" "."])]
+    {:code (. result :code) :lines (. result :lines)}))
+
+(defn- dotfile-source-scenario
+  [root]
+  (let [_ (write-file (.. root "/.x.fnl") "(when x\n  y)\n")
+        result (run-cli root ["format" "--check" "."])]
+    {:code (. result :code) :lines (. result :lines)}))
 
 (defn- dotfile-scenario
   [mode]
@@ -447,15 +498,8 @@
      (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :config)
-            (do
-              (write-file (.. root "/.fnl-extras.fnl") "{}\n")
-              (write-file (.. fnl-dir "/a.fnl") "(when x\n  y)\n")
-              (let [result (run-cli root ["format" "--check" "."])]
-                {:code (. result :code) :lines (. result :lines)}))
-            (do
-              (write-file (.. root "/.x.fnl") "(when x\n  y)\n")
-              (let [result (run-cli root ["format" "--check" "."])]
-                {:code (. result :code) :lines (. result :lines)})))))))
+            (dotfile-config-scenario root fnl-dir)
+            (dotfile-source-scenario root))))))
 
 (defn- symlink-file-scenario
   [mode]
@@ -934,6 +978,22 @@
 (defn- both-source []
   "(defn first []\n  (if z\n      (do\n        (foo)\n        (bar))\n      nil))\n\n(defn second []\n  (if q\n      (do\n        (baz)\n        (qux))\n      nil))\n")
 
+(defn- changed-mode-both
+  [root source-path]
+  (let [_ (write-file source-path (changed-source :changed))
+        _ (git-run root ["add" "a.fnl"])]
+    (write-file source-path (both-source))))
+
+(defn- changed-mode-staged
+  [root source-path]
+  (let [_ (write-file source-path (changed-source :changed))]
+    (git-run root ["add" "a.fnl"])))
+
+(defn- changed-mode-rename
+  [root]
+  (let [_ (git-run root ["mv" "a.fnl" "renamed file.fnl"])]
+    (write-file (.. root "/renamed file.fnl") (changed-source :changed))))
+
 (defn- changed-mode-scenario [mode]
   (let [root (vim.fn.tempname)
         source-path (.. root "/a.fnl")
@@ -952,20 +1012,13 @@
         (if (or (= mode :modified) (= mode :subdir))
             (write-file source-path (changed-source :changed))
             (if (= mode :both)
-                (do
-                  (write-file source-path (changed-source :changed))
-                  (git-run root ["add" "a.fnl"])
-                  (write-file source-path (both-source)))
+                (changed-mode-both root source-path)
                 (if (= mode :staged)
-                    (do
-                      (write-file source-path (changed-source :changed))
-                      (git-run root ["add" "a.fnl"])))))
+                    (changed-mode-staged root source-path))))
         (if (= mode :untracked)
             (write-file (.. root "/new file.fnl") "(defn new [] (if z (do (foo) (bar)) nil))\n"))
         (if (= mode :rename)
-            (do
-              (git-run root ["mv" "a.fnl" "renamed file.fnl"])
-              (write-file (.. root "/renamed file.fnl") (changed-source :changed))))
+            (changed-mode-rename root))
         (let [cwd (if (= mode :subdir) subdir root)
               result (bounded-cli cwd ["lint"])]
           {:code (. result :code)
@@ -992,6 +1045,18 @@
            :lines (. result :lines)
            :timed-out? (. result :timed-out?)})))))
 
+(defn- lint-error-repository-scenario
+  [root]
+  (write-file (.. root "/a.fnl") "(if x 1 2)\n"))
+
+(defn- lint-error-configured-scenario
+  [root]
+  (let [_ (git-init root)
+        _ (write-file (.. root "/.fnl-extras.fnl") "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+        _ (write-file (.. root "/a.fnl") "(if x 1 2)\n")
+        _ (git-run root ["add" "."])]
+    (git-run root ["commit" "-qm" "base"])))
+
 (defn- lint-error-mode-scenario [mode]
   (let [root (vim.fn.tempname)]
     (vim.fn.mkdir root "p")
@@ -999,13 +1064,8 @@
      (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :git)
-            (write-file (.. root "/a.fnl") "(if x 1 2)\n")
-            (do
-              (git-init root)
-              (write-file (.. root "/.fnl-extras.fnl") "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
-              (write-file (.. root "/a.fnl") "(if x 1 2)\n")
-              (git-run root ["add" "."])
-              (git-run root ["commit" "-qm" "base"])))
+            (lint-error-repository-scenario root)
+            (lint-error-configured-scenario root))
         (let [args (if (= mode :base) ["lint" "--base" "missing-ref"] ["lint"])
               result (bounded-cli root args)
               line (or (. result :lines 1) "")]

@@ -83,6 +83,20 @@
         result
         {:error "read failed" :path path})))
 
+(defn- format-file-scenario
+  [format parser config path source format-failures idempotence-failures indent-failures ast-failures]
+  (let [(ok formatted err) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
+    (if (or (not ok) (= nil formatted) err)
+        (table.insert format-failures path)
+        (let [_ (if (or (not (pcall (fn [] (format.format-string formatted {:config config :parser parser}))))
+                        (not= formatted (format.format-string formatted {:config config :parser parser})))
+                    (table.insert idempotence-failures path))
+              _ (if (not (format.indent-only? source formatted))
+                    (table.insert indent-failures path))
+              _ (if (not (format.ast-equal? parser source formatted))
+                    (table.insert ast-failures path))]
+          nil))))
+
 (defn- repo-scenario []
   (let [format (load-format)
         parser (load-parser)
@@ -97,17 +111,7 @@
         (if (. source :error)
             (each [_ failures (ipairs [format-failures idempotence-failures indent-failures ast-failures])]
               (table.insert failures (.. "read failed: " path)))
-            (let [(ok formatted err) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
-              (if (or (not ok) (= nil formatted) err)
-                  (table.insert format-failures path)
-                  (do
-                    (if (or (not (pcall (fn [] (format.format-string formatted {:config config :parser parser}))))
-                            (not= formatted (format.format-string formatted {:config config :parser parser})))
-                        (table.insert idempotence-failures path))
-                    (if (not (format.indent-only? source formatted))
-                        (table.insert indent-failures path))
-                    (if (not (format.ast-equal? parser source formatted))
-                        (table.insert ast-failures path))))))))
+            (format-file-scenario format parser config path source format-failures idempotence-failures indent-failures ast-failures))))
     (each [_ path (ipairs ["fnl/eca/ui/widgets/footer-bar.fnl" "fnl/eca/ui/components/lualine.fnl"])]
       (let [source (read-source path)]
         (if (or (. source :error) (. format :error))

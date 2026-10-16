@@ -128,6 +128,39 @@ local function read_source(path)
     return {error = "read failed", path = path}
   end
 end
+local function format_file_scenario(format, parser, config, path, source, format_failures, idempotence_failures, indent_failures, ast_failures)
+  local ok, formatted, err
+  local function _27_()
+    return format["format-string"](source, {config = config, parser = parser})
+  end
+  ok, formatted, err = pcall(_27_)
+  if (not ok or (nil == formatted) or err) then
+    return table.insert(format_failures, path)
+  else
+    local _
+    local function _28_()
+      return format["format-string"](formatted, {config = config, parser = parser})
+    end
+    if (not pcall(_28_) or (formatted ~= format["format-string"](formatted, {config = config, parser = parser}))) then
+      _ = table.insert(idempotence_failures, path)
+    else
+      _ = nil
+    end
+    local _0
+    if not format["indent-only?"](source, formatted) then
+      _0 = table.insert(indent_failures, path)
+    else
+      _0 = nil
+    end
+    local _1
+    if not format["ast-equal?"](parser, source, formatted) then
+      _1 = table.insert(ast_failures, path)
+    else
+      _1 = nil
+    end
+    return nil
+  end
+end
 local function repo_scenario()
   local format = load_format()
   local parser = load_parser()
@@ -164,30 +197,7 @@ local function repo_scenario()
         table.insert(failures, ("read failed: " .. path))
       end
     else
-      local ok, formatted, err
-      local function _31_()
-        return format["format-string"](source, {config = config, parser = parser})
-      end
-      ok, formatted, err = pcall(_31_)
-      if (not ok or (nil == formatted) or err) then
-        table.insert(format_failures, path)
-      else
-        local function _32_()
-          return format["format-string"](formatted, {config = config, parser = parser})
-        end
-        if (not pcall(_32_) or (formatted ~= format["format-string"](formatted, {config = config, parser = parser}))) then
-          table.insert(idempotence_failures, path)
-        else
-        end
-        if not format["indent-only?"](source, formatted) then
-          table.insert(indent_failures, path)
-        else
-        end
-        if not format["ast-equal?"](parser, source, formatted) then
-          table.insert(ast_failures, path)
-        else
-        end
-      end
+      format_file_scenario(format, parser, config, path, source, format_failures, idempotence_failures, indent_failures, ast_failures)
     end
   end
   for _, path in ipairs({"fnl/eca/ui/widgets/footer-bar.fnl", "fnl/eca/ui/components/lualine.fnl"}) do

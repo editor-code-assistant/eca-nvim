@@ -55,6 +55,22 @@ local function check_scenario(source, expected_code, expected_lines)
   end
   return with_cleanup(_5_, _6_)
 end
+local function write_good_scenario(root, good)
+  local _ = write_file(good, "(when x\ny)\n")
+  local result = run_cli(root, {"format", "--write", "--parser", "eca.nfnl.fennel", "good.fnl"})
+  return {code = result.code, lines = result.lines, good = read_file(good)}
+end
+local function write_formatted_scenario(root, good)
+  local _ = write_file(good, "(when x\n  y)\n")
+  local result = run_cli(root, {"format", "--write", "good.fnl"})
+  return {code = result.code, lines = result.lines, good = read_file(good), ["entry-count"] = #vim.fn.globpath(root, "*", false, true)}
+end
+local function write_error_scenario(root, good, bad)
+  local _ = write_file(good, "(when x\ny)\n")
+  local _0 = write_file(bad, "(x")
+  local result = run_cli(root, {"format", "--write", "good.fnl", "bad.fnl"})
+  return {code = result.code, lines = result.lines, good = read_file(good), bad = read_file(bad)}
+end
 local function write_scenario(mode)
   local root = vim.fn.tempname()
   local good = (root .. "/good.fnl")
@@ -66,23 +82,41 @@ local function write_scenario(mode)
   end
   local function _8_()
     if (mode == "good") then
-      write_file(good, "(when x\ny)\n")
-      local result = run_cli(root, {"format", "--write", "--parser", "eca.nfnl.fennel", "good.fnl"})
-      return {code = result.code, lines = result.lines, good = read_file(good)}
+      return write_good_scenario(root, good)
     else
       if (mode == "formatted") then
-        write_file(good, "(when x\n  y)\n")
-        local result = run_cli(root, {"format", "--write", "good.fnl"})
-        return {code = result.code, lines = result.lines, good = read_file(good), ["entry-count"] = #vim.fn.globpath(root, "*", false, true)}
+        return write_formatted_scenario(root, good)
       else
-        write_file(good, "(when x\ny)\n")
-        write_file(bad, "(x")
-        local result = run_cli(root, {"format", "--write", "good.fnl", "bad.fnl"})
-        return {code = result.code, lines = result.lines, good = read_file(good), bad = read_file(bad)}
+        return write_error_scenario(root, good, bad)
       end
     end
   end
   return with_cleanup(_7_, _8_)
+end
+local function config_indent_scenario(root, src_file, config_path)
+  local _ = write_file(config_path, "{:indents {\"deftest\" [[:block 1]]}}")
+  local _0 = write_file(src_file, "(deftest t\n(foo))\n")
+  local result = run_cli(root, {"format", "--write", "src/a.fnl"})
+  return {code = result.code, lines = result.lines, content = read_file(src_file)}
+end
+local function config_exclude_scenario(root, src_file, skip_file, config_path)
+  local _ = write_file(config_path, "{:exclude [\"skip\"]}\n")
+  local _0 = write_file(src_file, "(when x\n  y)\n")
+  local _1 = write_file(skip_file, "(when x\ny)\n")
+  local result = run_cli(root, {"format", "--write"})
+  return {code = result.code, lines = result.lines, content = read_file(skip_file)}
+end
+local function config_paths_scenario(root, src_file, skip_file, config_path)
+  local _ = write_file(config_path, "{:paths [\"src\"]}")
+  local _0 = write_file(src_file, "(when x\ny)\n")
+  local _1 = write_file(skip_file, "(when x\ny)\n")
+  local result = run_cli(root, {"format", "--write"})
+  return {code = result.code, lines = result.lines, src = read_file(src_file), skip = read_file(skip_file)}
+end
+local function config_invalid_scenario(root, src_file, config_path)
+  local _ = write_file(config_path, "{:colour 1}")
+  local result = run_cli(root, {"format", "--check", "src/a.fnl"})
+  return {code = result.code, lines = result.lines}
 end
 local function config_scenario(mode)
   local root = vim.fn.tempname()
@@ -99,28 +133,15 @@ local function config_scenario(mode)
   end
   local function _12_()
     if (mode == "indent") then
-      write_file(config_path, "{:indents {\"deftest\" [[:block 1]]}}")
-      write_file(src_file, "(deftest t\n(foo))\n")
-      local result = run_cli(root, {"format", "--write", "src/a.fnl"})
-      return {code = result.code, lines = result.lines, content = read_file(src_file)}
+      return config_indent_scenario(root, src_file, config_path)
     else
       if (mode == "exclude") then
-        write_file(config_path, "{:exclude [\"skip\"]}\n")
-        write_file(src_file, "(when x\n  y)\n")
-        write_file(skip_file, "(when x\ny)\n")
-        local result = run_cli(root, {"format", "--write"})
-        return {code = result.code, lines = result.lines, content = read_file(skip_file)}
+        return config_exclude_scenario(root, src_file, skip_file, config_path)
       else
         if (mode == "paths") then
-          write_file(config_path, "{:paths [\"src\"]}")
-          write_file(src_file, "(when x\ny)\n")
-          write_file(skip_file, "(when x\ny)\n")
-          local result = run_cli(root, {"format", "--write"})
-          return {code = result.code, lines = result.lines, src = read_file(src_file), skip = read_file(skip_file)}
+          return config_paths_scenario(root, src_file, skip_file, config_path)
         else
-          write_file(config_path, "{:colour 1}")
-          local result = run_cli(root, {"format", "--check", "src/a.fnl"})
-          return {code = result.code, lines = result.lines}
+          return config_invalid_scenario(root, src_file, config_path)
         end
       end
     end
@@ -214,6 +235,17 @@ local function _23_()
   return require("plenary.busted").it("returns one config error line for an invalid configuration", _27_)
 end
 require("plenary.busted").describe("config", _23_)
+local function extension_fnl_scenario(root, path, config_path)
+  local _ = write_file(path, "(when x\ny)\n")
+  local _0 = write_file((root .. "/source.fnlm"), "(when y\nz)\n")
+  local result = run_cli(root, {"format", "--check"})
+  return {code = result.code, lines = result.lines}
+end
+local function extension_other_scenario(root, path, config_path)
+  local _ = write_file(path, "(when x\ny)\n")
+  local result = run_cli(root, {"format", "--check"})
+  return {code = result.code, lines = result.lines}
+end
 local function extension_scenario(extension)
   local root = vim.fn.tempname()
   local path = (root .. "/source" .. extension)
@@ -226,13 +258,10 @@ local function extension_scenario(extension)
   local function _29_()
     write_file(config_path, ("{:extensions [\"" .. extension .. "\"]}"))
     if (extension == ".fnl") then
-      write_file(path, "(when x\ny)\n")
-      write_file((root .. "/source.fnlm"), "(when y\nz)\n")
+      return extension_fnl_scenario(root, path, config_path)
     else
-      write_file(path, "(when x\ny)\n")
+      return extension_other_scenario(root, path, config_path)
     end
-    local result = run_cli(root, {"format", "--check"})
-    return {code = result.code, lines = result.lines}
   end
   return with_cleanup(_28_, _29_)
 end
@@ -492,6 +521,15 @@ local function symlink_loop_scenario()
   end
   return with_cleanup(_59_, _60_)
 end
+local function two_phase_skipped_scenario(probe_file, probe)
+  local _ = probe_file:close()
+  local _0 = vim.fn.delete(probe)
+  return {["skipped-root"] = true}
+end
+local function two_phase_write_attempt(root, good)
+  local result = run_cli(root, {"format", "--write"})
+  return {code = result.code, ["a-unchanged"] = (read_file(good) == "(when x\ny)\n")}
+end
 local function two_phase_write_scenario()
   local root = vim.fn.tempname()
   local fnl_dir = (root .. "/fnl")
@@ -511,15 +549,23 @@ local function two_phase_write_scenario()
     vim.fn.setfperm(read_only, "r-xr-xr-x")
     local probe_file = io.open(probe, "w")
     if probe_file then
-      probe_file:close()
-      vim.fn.delete(probe)
-      return {["skipped-root"] = true}
+      return two_phase_skipped_scenario(probe_file, probe)
     else
-      local result = run_cli(root, {"format", "--write"})
-      return {code = result.code, ["a-unchanged"] = (read_file(good) == "(when x\ny)\n")}
+      return two_phase_write_attempt(root, good)
     end
   end
   return with_cleanup(_61_, _62_)
+end
+local function dotfile_config_scenario(root, fnl_dir)
+  local _ = write_file((root .. "/.fnl-extras.fnl"), "{}\n")
+  local _0 = write_file((fnl_dir .. "/a.fnl"), "(when x\n  y)\n")
+  local result = run_cli(root, {"format", "--check", "."})
+  return {code = result.code, lines = result.lines}
+end
+local function dotfile_source_scenario(root)
+  local _ = write_file((root .. "/.x.fnl"), "(when x\n  y)\n")
+  local result = run_cli(root, {"format", "--check", "."})
+  return {code = result.code, lines = result.lines}
 end
 local function dotfile_scenario(mode)
   local root = vim.fn.tempname()
@@ -531,14 +577,9 @@ local function dotfile_scenario(mode)
   end
   local function _65_()
     if (mode == "config") then
-      write_file((root .. "/.fnl-extras.fnl"), "{}\n")
-      write_file((fnl_dir .. "/a.fnl"), "(when x\n  y)\n")
-      local result = run_cli(root, {"format", "--check", "."})
-      return {code = result.code, lines = result.lines}
+      return dotfile_config_scenario(root, fnl_dir)
     else
-      write_file((root .. "/.x.fnl"), "(when x\n  y)\n")
-      local result = run_cli(root, {"format", "--check", "."})
-      return {code = result.code, lines = result.lines}
+      return dotfile_source_scenario(root)
     end
   end
   return with_cleanup(_64_, _65_)
@@ -1297,6 +1338,19 @@ end
 local function both_source()
   return "(defn first []\n  (if z\n      (do\n        (foo)\n        (bar))\n      nil))\n\n(defn second []\n  (if q\n      (do\n        (baz)\n        (qux))\n      nil))\n"
 end
+local function changed_mode_both(root, source_path)
+  local _ = write_file(source_path, changed_source("changed"))
+  local _0 = git_run(root, {"add", "a.fnl"})
+  return write_file(source_path, both_source())
+end
+local function changed_mode_staged(root, source_path)
+  local _ = write_file(source_path, changed_source("changed"))
+  return git_run(root, {"add", "a.fnl"})
+end
+local function changed_mode_rename(root)
+  local _ = git_run(root, {"mv", "a.fnl", "renamed file.fnl"})
+  return write_file((root .. "/renamed file.fnl"), changed_source("changed"))
+end
 local function changed_mode_scenario(mode)
   local root = vim.fn.tempname()
   local source_path = (root .. "/a.fnl")
@@ -1317,13 +1371,10 @@ local function changed_mode_scenario(mode)
       write_file(source_path, changed_source("changed"))
     else
       if (mode == "both") then
-        write_file(source_path, changed_source("changed"))
-        git_run(root, {"add", "a.fnl"})
-        write_file(source_path, both_source())
+        changed_mode_both(root, source_path)
       else
         if (mode == "staged") then
-          write_file(source_path, changed_source("changed"))
-          git_run(root, {"add", "a.fnl"})
+          changed_mode_staged(root, source_path)
         else
         end
       end
@@ -1333,8 +1384,7 @@ local function changed_mode_scenario(mode)
     else
     end
     if (mode == "rename") then
-      git_run(root, {"mv", "a.fnl", "renamed file.fnl"})
-      write_file((root .. "/renamed file.fnl"), changed_source("changed"))
+      changed_mode_rename(root)
     else
     end
     local cwd
@@ -1369,6 +1419,16 @@ local function base_mode_scenario()
   end
   return with_cleanup(_164_, _165_)
 end
+local function lint_error_repository_scenario(root)
+  return write_file((root .. "/a.fnl"), "(if x 1 2)\n")
+end
+local function lint_error_configured_scenario(root)
+  local _ = git_init(root)
+  local _0 = write_file((root .. "/.fnl-extras.fnl"), "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+  local _1 = write_file((root .. "/a.fnl"), "(if x 1 2)\n")
+  local _2 = git_run(root, {"add", "."})
+  return git_run(root, {"commit", "-qm", "base"})
+end
 local function lint_error_mode_scenario(mode)
   local root = vim.fn.tempname()
   vim.fn.mkdir(root, "p")
@@ -1377,13 +1437,9 @@ local function lint_error_mode_scenario(mode)
   end
   local function _167_()
     if (mode == "git") then
-      write_file((root .. "/a.fnl"), "(if x 1 2)\n")
+      lint_error_repository_scenario(root)
     else
-      git_init(root)
-      write_file((root .. "/.fnl-extras.fnl"), "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
-      write_file((root .. "/a.fnl"), "(if x 1 2)\n")
-      git_run(root, {"add", "."})
-      git_run(root, {"commit", "-qm", "base"})
+      lint_error_configured_scenario(root)
     end
     local args
     if (mode == "base") then
