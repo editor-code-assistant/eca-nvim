@@ -19,15 +19,18 @@ end
 local function cwd()
   return ((vim and vim.loop and vim.loop.cwd()) or (vim and vim.uv and vim.uv.cwd()) or ".")
 end
+local function join_with_slash(left, right)
+  if (string.sub(left, -1) == "/") then
+    return (left .. right)
+  else
+    return (left .. "/" .. right)
+  end
+end
 local function join(left, right)
   if (left == "/") then
     return (left .. right)
   else
-    if (string.sub(left, -1) == "/") then
-      return (left .. right)
-    else
-      return (left .. "/" .. right)
-    end
+    return join_with_slash(left, right)
   end
 end
 local function absolute(root, path)
@@ -37,33 +40,47 @@ local function absolute(root, path)
     return join(root, path)
   end
 end
-local function relative(root, path)
-  local root0
-  if (string.sub(root, 1, 9) == "/private/") then
-    root0 = string.sub(root, 9)
-  else
-    root0 = root
-  end
-  local path0
+local function strip_private_prefix(path)
   if (string.sub(path, 1, 9) == "/private/") then
-    path0 = string.sub(path, 9)
+    return string.sub(path, 9)
   else
-    path0 = path
+    return path
   end
-  local prefix
-  if (string.sub(root0, -1) == "/") then
-    prefix = root0
+end
+local function ensure_trailing_slash(root)
+  if (string.sub(root, -1) == "/") then
+    return root
   else
-    prefix = (root0 .. "/")
+    return (root .. "/")
   end
-  local result
-  if (string.sub(path0, 1, string.len(prefix)) == prefix) then
-    result = string.sub(path0, (string.len(prefix) + 1))
-  else
-    result = path0
-  end
+end
+local function strip_relative_prefix(result)
   if (string.sub(result, 1, 2) == "./") then
     return string.sub(result, 3)
+  else
+    return result
+  end
+end
+local function relative_result(path, prefix)
+  if (string.sub(path, 1, string.len(prefix)) == prefix) then
+    return string.sub(path, (string.len(prefix) + 1))
+  else
+    return path
+  end
+end
+local function relative(root, path)
+  local root0 = strip_private_prefix(root)
+  local path0 = strip_private_prefix(path)
+  local prefix = ensure_trailing_slash(root0)
+  local result = relative_result(path0, prefix)
+  return strip_relative_prefix(result)
+end
+local function extension_matches_3f(path, extension)
+  return (string.sub(path, ( - string.len(extension))) == extension)
+end
+local function matched_result(path, extension, result)
+  if extension_matches_3f(path, extension) then
+    return true
   else
     return result
   end
@@ -71,29 +88,32 @@ end
 local function fnl_file_3f(path, extensions)
   local result = false
   for _, extension in ipairs(extensions) do
-    if (string.sub(path, ( - string.len(extension))) == extension) then
-      result = true
-    else
-    end
+    result = matched_result(path, extension, result)
   end
   return result
 end
-local function under_prefix_3f(path, prefix)
-  local clean
+local function clean_prefix(prefix)
   if (string.sub(prefix, -1) == "/") then
-    clean = string.sub(prefix, 1, -2)
+    return string.sub(prefix, 1, -2)
   else
-    clean = prefix
+    return prefix
   end
+end
+local function under_prefix_3f(path, prefix)
+  local clean = clean_prefix(prefix)
   return ((path == clean) or (string.sub(path, 1, (string.len(clean) + 1)) == (clean .. "/")))
+end
+local function excluded_result(path, prefix, result)
+  if under_prefix_3f(path, prefix) then
+    return true
+  else
+    return result
+  end
 end
 local function excluded_3f(path, excludes)
   local result = under_prefix_3f(path, ".git")
   for _, prefix in ipairs(excludes) do
-    if under_prefix_3f(path, prefix) then
-      result = true
-    else
-    end
+    result = excluded_result(path, prefix, result)
   end
   return result
 end
@@ -127,14 +147,16 @@ local function add_file(root, path, rel, result, seen, excludes, extensions, ded
     return nil
   end
 end
-local function walk_target(walk_fn, root, target, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, visited)
-  visited[target] = true
-  local walk_result, error = walk_fn(root, target, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, rel, visited)
+local function walk_target_result(walk_result, error)
   if error then
     return nil, error
   else
-    return result, nil
+    return walk_result, nil
   end
+end
+local function walk_target(walk_fn, root, target, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, visited)
+  visited[target] = true
+  return walk_target_result(walk_fn(root, target, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, rel, visited))
 end
 local function walk_scan(walk_fn, root, directory, prefix, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, error_prefix, visited, uv, handle)
   local scanning = true
@@ -169,14 +191,14 @@ local function walk_scan(walk_fn, root, directory, prefix, result, seen, exclude
             end
           else
             if (target_stat and (target_stat.type == "file")) then
-              local function _19_()
+              local function _18_()
                 if follow_symlinks then
                   return target
                 else
                   return relative(root, path)
                 end
               end
-              add_file(root, target, rel, result, seen, excludes, extensions, _19_())
+              add_file(root, target, rel, result, seen, excludes, extensions, _18_())
             else
             end
           end
@@ -189,14 +211,14 @@ local function walk_scan(walk_fn, root, directory, prefix, result, seen, exclude
             end
             local target_stat0 = (target0 and uv.fs_stat(target0))
             if (target_stat0 and (target_stat0.type == "file")) then
-              local function _23_()
+              local function _22_()
                 if follow_symlinks then
                   return target0
                 else
                   return relative(root, path)
                 end
               end
-              add_file(root, target0, rel, result, seen, excludes, extensions, _23_())
+              add_file(root, target0, rel, result, seen, excludes, extensions, _22_())
             else
             end
           else
@@ -212,21 +234,88 @@ local function walk_scan(walk_fn, root, directory, prefix, result, seen, exclude
     return result, nil
   end
 end
+local function walk_prefix_or_dot(prefix)
+  if (prefix == "") then
+    return "."
+  else
+    return prefix
+  end
+end
+local function walk_error_prefix(error_prefix, prefix)
+  if error_prefix then
+    return error_prefix
+  else
+    return walk_prefix_or_dot(prefix)
+  end
+end
+local function walk_scan_error(error_prefix, prefix)
+  return nil, ("cannot read directory " .. walk_error_prefix(error_prefix, prefix))
+end
 local function walk(root, directory, prefix, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, error_prefix, visited)
   local uv = (vim.uv or vim.loop)
   local handle, scan_error = uv.fs_scandir(directory)
   if not handle then
-    local or_30_ = error_prefix
-    if not or_30_ then
-      if (prefix == "") then
-        or_30_ = "."
-      else
-        or_30_ = prefix
-      end
-    end
-    return nil, ("cannot read directory " .. or_30_)
+    return walk_scan_error(error_prefix, prefix)
   else
     return walk_scan(walk, root, directory, prefix, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, error_prefix, visited, uv, handle)
+  end
+end
+local function followed_link_directory(root, target, target_stat, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  if (target_stat and (target_stat.type == "directory")) then
+    return walk(root, target, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input, {})
+  else
+    return nil
+  end
+end
+local function followed_link_result(root, target, target_stat, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  if (target_stat and (target_stat.type == "file")) then
+    return add_file(root, target, rel, result, seen, excludes, extensions, target)
+  else
+    return followed_link_directory(root, target, target_stat, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  end
+end
+local function add_followed_link(root, uv, abs, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  local target = realpath(uv, abs)
+  local target_stat = (target and uv.fs_stat(target))
+  return followed_link_result(root, target, target_stat, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+end
+local function directory_target(uv, abs, follow_symlinks)
+  if follow_symlinks then
+    return realpath(uv, abs)
+  else
+    return abs
+  end
+end
+local function directory_visited(target, follow_symlinks)
+  if follow_symlinks then
+    return {[target] = true}
+  else
+    return {}
+  end
+end
+local function add_directory_path(root, uv, abs, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  local target = directory_target(uv, abs, follow_symlinks)
+  local visited = directory_visited(target, follow_symlinks)
+  return walk(root, target, walk_prefix(root, abs), result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input, visited)
+end
+local function add_path_link(root, uv, abs, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  if follow_symlinks then
+    return add_followed_link(root, uv, abs, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  else
+    return nil, (rel .. ": symlinks are not supported")
+  end
+end
+local function add_path_stat(root, uv, abs, rel, stat, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  local case_37_ = stat.type
+  if (case_37_ == "file") then
+    return add_file(root, abs, rel, result, seen, excludes, extensions, rel)
+  elseif (case_37_ == "link") then
+    return add_path_link(root, uv, abs, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  elseif (case_37_ == "directory") then
+    return add_directory_path(root, uv, abs, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
+  else
+    local _ = case_37_
+    return nil
   end
 end
 local function add_path(root, input, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks)
@@ -235,75 +324,50 @@ local function add_path(root, input, result, seen, excludes, extensions, skip_do
   local stat = uv.fs_lstat(abs)
   local rel = relative(root, abs)
   if stat then
-    if (stat.type == "file") then
-      return add_file(root, abs, rel, result, seen, excludes, extensions, rel)
-    else
-      if (stat.type == "link") then
-        if follow_symlinks then
-          local target = realpath(uv, abs)
-          local target_stat = (target and uv.fs_stat(target))
-          if (target_stat and (target_stat.type == "file")) then
-            return add_file(root, target, rel, result, seen, excludes, extensions, target)
-          else
-            if (target_stat and (target_stat.type == "directory")) then
-              return walk(root, target, rel, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input, {})
-            else
-              return nil
-            end
-          end
-        else
-          return nil, (rel .. ": symlinks are not supported")
-        end
-      else
-        if (stat.type == "directory") then
-          local target
-          if follow_symlinks then
-            target = realpath(uv, abs)
-          else
-            target = abs
-          end
-          local visited
-          if follow_symlinks then
-            visited = {[target] = true}
-          else
-            visited = {}
-          end
-          return walk(root, target, walk_prefix(root, abs), result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input, visited)
-        else
-          return nil
-        end
-      end
-    end
+    return add_path_stat(root, uv, abs, rel, stat, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks, input)
   else
     return nil
   end
 end
+local function sorted_files_failure(failure, error)
+  return (error or failure)
+end
 local function sorted_files_success(result)
-  local function _42_(a, b)
+  local function _40_(a, b)
     return (a.relative < b.relative)
   end
-  table.sort(result, _42_)
+  table.sort(result, _40_)
   return result, nil
+end
+local function sorted_files_result(failure, result)
+  local case_41_ = not failure
+  if (case_41_ == false) then
+    return nil, failure
+  elseif (case_41_ == true) then
+    return sorted_files_success(result)
+  else
+    return nil
+  end
+end
+local function sorted_files_step(failure, input, root, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks)
+  local case_43_ = not failure
+  if (case_43_ == false) then
+    return failure
+  elseif (case_43_ == true) then
+    local path_result, error = add_path(root, input, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks)
+    return sorted_files_failure(failure, error)
+  else
+    return nil
+  end
 end
 local function sorted_files(root, inputs, excludes, extensions, skip_dotfiles, follow_symlinks)
   local result = {}
   local seen = {}
   local failure = nil
   for _, input in ipairs(inputs) do
-    if not failure then
-      local path_result, error = add_path(root, input, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks)
-      if error then
-        failure = error
-      else
-      end
-    else
-    end
+    failure = sorted_files_step(failure, input, root, result, seen, excludes, extensions, skip_dotfiles, follow_symlinks)
   end
-  if failure then
-    return nil, failure
-  else
-    return sorted_files_success(result)
-  end
+  return sorted_files_result(failure, result)
 end
 local function read_file(path)
   local file = io.open(path, "r")
@@ -399,77 +463,111 @@ local function parse_lint_args_step(args, index, state)
     end
   end
 end
-local function parse_lint_args(args)
-  local state, failure = parse_lint_args_step(args, 2, {base = nil, format = "text", paths = {}, all = false, ["format-seen"] = false})
+local function parse_lint_success(state)
+  if (state.all and state.base) then
+    return nil, "--base cannot be used with --all"
+  else
+    return state
+  end
+end
+local function parse_lint_result(state, failure)
   if failure then
     return nil, failure
   else
-    if (state.all and state.base) then
-      return nil, "--base cannot be used with --all"
-    else
-      return state
-    end
+    return parse_lint_success(state)
   end
+end
+local function parse_lint_args(args)
+  local state, failure = parse_lint_args_step(args, 2, {base = nil, format = "text", paths = {}, all = false, ["format-seen"] = false})
+  return parse_lint_result(state, failure)
 end
 local function parse_parser_option(args, index)
   return (index + 1), args[(index + 1)]
 end
-local function parse_args(args)
-  local command = args[1]
-  if (command == "lint") then
-    return parse_lint_args(args)
+local function parse_format_mode_value(arg)
+  if (arg == "--check") then
+    return "check"
   else
-    if (command ~= "format") then
-      return nil, ("unknown command: " .. (command or ""))
-    else
-      local mode = nil
-      local parser_name = nil
-      local paths = {}
-      local i = 2
-      local failure = nil
-      while ((i <= #args) and not failure) do
-        do
-          local arg = args[i]
-          if ((arg == "--check") or (arg == "--write")) then
-            if mode then
-              failure = "unknown or duplicate mode flag"
-            else
-              if (arg == "--check") then
-                mode = "check"
-              else
-                mode = "write"
-              end
-            end
-          else
-            if (arg == "--parser") then
-              if (i >= #args) then
-                failure = "missing argument for --parser"
-              else
-                local next_index, next_parser = parse_parser_option(args, i)
-                i = next_index
-                parser_name = next_parser
-              end
-            else
-              if (string.sub(arg, 1, 2) == "--") then
-                failure = ("unknown flag: " .. arg)
-              else
-                table.insert(paths, arg)
-              end
-            end
-          end
-        end
-        i = (i + 1)
-      end
-      if failure then
-        return nil, failure
-      else
-        if not mode then
-          return nil, "missing --check or --write"
-        else
-          return {mode = mode, parser = parser_name, paths = paths}
-        end
-      end
-    end
+    return "write"
+  end
+end
+local function parse_format_mode(arg, index, mode, parser_name)
+  if mode then
+    return mode, parser_name, index, "unknown or duplicate mode flag"
+  else
+    return parse_format_mode_value(arg), parser_name, index, nil
+  end
+end
+local function parse_format_parser(args, index, mode, parser_name)
+  if (index >= #args) then
+    return mode, parser_name, index, "missing argument for --parser"
+  else
+    local next_index, next_parser = parse_parser_option(args, index)
+    return mode, next_parser, next_index, nil
+  end
+end
+local function parse_format_path_value(arg, index, mode, parser_name, paths)
+  table.insert(paths, arg)
+  return mode, parser_name, index, nil
+end
+local function parse_format_path(arg, index, mode, parser_name, paths)
+  if (string.sub(arg, 1, 2) == "--") then
+    return mode, parser_name, index, ("unknown flag: " .. arg)
+  else
+    return parse_format_path_value(arg, index, mode, parser_name, paths)
+  end
+end
+local function parse_format_arg(args, arg, index, mode, parser_name, paths)
+  if (arg == "--check") then
+    return parse_format_mode(arg, index, mode, parser_name)
+  elseif (arg == "--write") then
+    return parse_format_mode(arg, index, mode, parser_name)
+  elseif (arg == "--parser") then
+    return parse_format_parser(args, index, mode, parser_name)
+  else
+    local _ = arg
+    return parse_format_path(arg, index, mode, parser_name, paths)
+  end
+end
+local function parse_format_success(mode, parser_name, paths)
+  if not mode then
+    return nil, "missing --check or --write"
+  else
+    return {mode = mode, parser = parser_name, paths = paths}
+  end
+end
+local function parse_format_result(failure, mode, parser_name, paths)
+  if failure then
+    return nil, failure
+  else
+    return parse_format_success(mode, parser_name, paths)
+  end
+end
+local function parse_format_args(args)
+  local mode = nil
+  local parser_name = nil
+  local paths = {}
+  local i = 2
+  local failure = nil
+  while ((i <= #args) and not failure) do
+    local arg = args[i]
+    local next_mode, next_parser, next_index, next_failure = parse_format_arg(args, arg, i, mode, parser_name, paths)
+    mode = next_mode
+    parser_name = next_parser
+    i = (next_index + 1)
+    failure = next_failure
+  end
+  return parse_format_result(failure, mode, parser_name, paths)
+end
+local function parse_args(args)
+  local case_67_ = args[1]
+  if (case_67_ == "lint") then
+    return parse_lint_args(args)
+  elseif (case_67_ == "format") then
+    return parse_format_args(args)
+  else
+    local _ = case_67_
+    return nil, ("unknown command: " .. (args[1] or ""))
   end
 end
 local function load_parser(name)
@@ -605,17 +703,28 @@ local function write_failure_result(temps, write_failure, printer)
   emit(printer, (write_failure.path .. ": " .. write_failure.error))
   return 2
 end
+local function rename_step(rename_failure, item)
+  local case_83_ = not rename_failure
+  if (case_83_ == false) then
+    return rename_failure
+  elseif (case_83_ == true) then
+    local ok, renamed, error = pcall(os.rename, item.temp, item.path)
+    local case_84_ = (not ok or not renamed)
+    if (case_84_ == true) then
+      return {path = item.relative, error = (error or "could not rename temporary file")}
+    elseif (case_84_ == false) then
+      return nil
+    else
+      return nil
+    end
+  else
+    return nil
+  end
+end
 local function rename_files(temps)
   local rename_failure = nil
   for _, item in ipairs(temps) do
-    if not rename_failure then
-      local ok, renamed, error = pcall(os.rename, item.temp, item.path)
-      if (not ok or not renamed) then
-        rename_failure = {path = item.relative, error = (error or "could not rename temporary file")}
-      else
-      end
-    else
-    end
+    rename_failure = (rename_step(rename_failure, item) or rename_failure)
   end
   return rename_failure
 end
@@ -661,19 +770,29 @@ local function write_success_result(changed, printer)
   end
   return 0
 end
+local function write_step(write_failure, item, temps)
+  local case_92_ = (not write_failure and (item.source ~= item.text))
+  if (case_92_ == false) then
+    return write_failure
+  elseif (case_92_ == true) then
+    local temp, error = temp_write(item.path, item.text)
+    local case_93_ = not temp
+    if (case_93_ == true) then
+      return {path = item.relative, error = error}
+    elseif (case_93_ == false) then
+      return table.insert(temps, {path = item.path, relative = item.relative, temp = temp})
+    else
+      return nil
+    end
+  else
+    return nil
+  end
+end
 local function write_files_result(formatted, changed, printer)
   local write_failure = nil
   local temps = {}
   for _, item in ipairs(formatted) do
-    if (not write_failure and (item.source ~= item.text)) then
-      local temp, error = temp_write(item.path, item.text)
-      if temp then
-        table.insert(temps, {path = item.path, relative = item.relative, temp = temp})
-      else
-        write_failure = {path = item.relative, error = error}
-      end
-    else
-    end
+    write_failure = write_step(write_failure, item, temps)
   end
   if write_failure then
     return write_failure_result(temps, write_failure, printer)
@@ -694,26 +813,42 @@ local function process_files_result(mode, formatted, changed, printer)
     return write_files_result(formatted, changed, printer)
   end
 end
+local function run_files_step(failure, file, parser, cfg, formatted, changed)
+  local case_99_ = not failure
+  if (case_99_ == false) then
+    return failure
+  elseif (case_99_ == true) then
+    local item, error = format_file(parser, cfg, file)
+    local case_100_ = not error
+    if (case_100_ == false) then
+      return error
+    elseif (case_100_ == true) then
+      return append_formatted(formatted, changed, item)
+    else
+      return nil
+    end
+  else
+    return nil
+  end
+end
+local function run_files_result(failure, mode, formatted, changed, printer)
+  local case_103_ = not failure
+  if (case_103_ == false) then
+    return run_files_error(printer, failure)
+  elseif (case_103_ == true) then
+    return process_files_result(mode, formatted, changed, printer)
+  else
+    return nil
+  end
+end
 local function run_files(root, mode, parser, cfg, files, printer)
   local formatted = {}
   local changed = {}
   local failure = nil
   for _, file in ipairs(files) do
-    if not failure then
-      local item, error = format_file(parser, cfg, file)
-      if error then
-        failure = error
-      else
-        append_formatted(formatted, changed, item)
-      end
-    else
-    end
+    failure = run_files_step(failure, file, parser, cfg, formatted, changed)
   end
-  if failure then
-    return run_files_error(printer, failure)
-  else
-    return process_files_result(mode, formatted, changed, printer)
-  end
+  return run_files_result(failure, mode, formatted, changed, printer)
 end
 local function read_lint_files(files, index, result)
   if (index > #files) then
@@ -724,11 +859,11 @@ local function read_lint_files(files, index, result)
     if error then
       return nil, {path = file.relative, error = error}
     else
-      local function _100_()
+      local function _105_()
         table.insert(result, {path = file.relative, source = source})
         return result
       end
-      return read_lint_files(files, (index + 1), _100_())
+      return read_lint_files(files, (index + 1), _105_())
     end
   end
 end
@@ -778,7 +913,7 @@ local function trim_newlines(text)
   return string.gsub(text, "\n+$", "")
 end
 local function git_command(root, args)
-  local _103_
+  local _108_
   do
     local tbl_26_ = {}
     local i_27_ = 0
@@ -790,28 +925,32 @@ local function git_command(root, args)
       else
       end
     end
-    _103_ = tbl_26_
+    _108_ = tbl_26_
   end
-  return ("git -C " .. vim.fn.shellescape(root) .. " " .. table.concat(_103_, " "))
+  return ("git -C " .. vim.fn.shellescape(root) .. " " .. table.concat(_108_, " "))
+end
+local function git_output(output, marker)
+  local case_110_ = not marker
+  if (case_110_ == true) then
+    return output, 2
+  elseif (case_110_ == false) then
+    return string.sub(output, 1, (marker - 1)), tonumber(string.sub(output, (marker + 15)))
+  else
+    return nil
+  end
+end
+local function git_read_output(file)
+  if file then
+    return file:read("*a")
+  else
+    return ""
+  end
 end
 local function git_call(root, args)
   local file = io.popen((git_command(root, args) .. " </dev/null 2>&1; printf '\\n__ECA_STATUS__%s' $?"))
-  local output
-  if file then
-    output = file:read("*a")
-  else
-    output = ""
-  end
-  if file then
-    file:close()
-  else
-  end
-  local marker = string.find(output, "\n__ECA_STATUS__")
-  if marker then
-    return string.sub(output, 1, (marker - 1)), tonumber(string.sub(output, (marker + 15)))
-  else
-    return output, 2
-  end
+  local output = git_read_output(file)
+  do local _ = (file and file:close()) end
+  return git_output(output, string.find(output, "\n__ECA_STATUS__"))
 end
 local function git_root(start)
   local output, status = git_call(start, {"rev-parse", "--show-toplevel"})
@@ -861,12 +1000,10 @@ end
 local function path_present_3f(paths, path, index)
   if (index > #paths) then
     return false
+  elseif (path == paths[index]) then
+    return true
   else
-    if (path == paths[index]) then
-      return true
-    else
-      return path_present_3f(paths, path, (index + 1))
-    end
+    return path_present_3f(paths, path, (index + 1))
   end
 end
 local function changed_file(root, base, file, whole_3f)
@@ -921,13 +1058,15 @@ local function scope_paths(plan)
   end
   return result
 end
-local function run_lint(root, parsed, cfg, config_path, printer, require_git_3f)
-  local git_info, git_error_value
+local function lint_git_info(root, parsed, require_git_3f)
   if require_git_3f then
-    git_info, git_error_value = git_plan(root, parsed)
+    return git_plan(root, parsed)
   else
-    git_info, git_error_value = {root = root}, nil
+    return {root = root}, nil
   end
+end
+local function run_lint(root, parsed, cfg, config_path, printer, require_git_3f)
+  local git_info, git_error_value = lint_git_info(root, parsed, require_git_3f)
   if git_error_value then
     return emit_git_error(printer, git_error_value)
   else

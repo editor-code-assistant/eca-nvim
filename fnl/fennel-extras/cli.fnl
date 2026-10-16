@@ -19,48 +19,79 @@
       (and vim vim.uv (vim.uv.cwd))
       "."))
 
+(defn- join-with-slash [left right]
+  (if (= (string.sub left -1) "/")
+      (.. left right)
+      (.. left "/" right)))
+
 (defn- join [left right]
   (if (= left "/")
       (.. left right)
-      (if (= (string.sub left -1) "/")
-          (.. left right)
-          (.. left "/" right))))
+      (join-with-slash left right)))
 
 (defn- absolute [root path]
   (if (= (string.sub path 1 1) "/")
       path
       (join root path)))
 
+(defn- strip-private-prefix [path]
+  (if (= (string.sub path 1 9) "/private/")
+      (string.sub path 9)
+      path))
+
+(defn- ensure-trailing-slash [root]
+  (if (= (string.sub root -1) "/") root (.. root "/")))
+
+(defn- strip-relative-prefix [result]
+  (if (= (string.sub result 1 2) "./")
+      (string.sub result 3)
+      result))
+
+(defn- relative-result [path prefix]
+  (if (= (string.sub path 1 (string.len prefix)) prefix)
+      (string.sub path (+ (string.len prefix) 1))
+      path))
+
 (defn- relative [root path]
-  (let [root (if (= (string.sub root 1 9) "/private/") (string.sub root 9) root)
-        path (if (= (string.sub path 1 9) "/private/") (string.sub path 9) path)
-        prefix (if (= (string.sub root -1) "/") root (.. root "/"))
-        result (if (= (string.sub path 1 (string.len prefix)) prefix)
-                   (string.sub path (+ (string.len prefix) 1))
-                   path)]
-    (if (= (string.sub result 1 2) "./")
-        (string.sub result 3)
-        result)))
+  (let [root (strip-private-prefix root)
+        path (strip-private-prefix path)
+        prefix (ensure-trailing-slash root)
+        result (relative-result path prefix)]
+    (strip-relative-prefix result)))
+
+(defn- extension-matches? [path extension]
+  (= (string.sub path (- (string.len extension))) extension))
+
+(defn- matched-result [path extension result]
+  (if (extension-matches? path extension)
+      true
+      result))
 
 (defn- fnl-file? [path extensions]
   (var result false)
   (each [_ extension (ipairs extensions)]
-    (if (= (string.sub path (- (string.len extension))) extension)
-        (set result true)))
+    (set result (matched-result path extension result)))
   result)
 
+(defn- clean-prefix [prefix]
+  (if (= (string.sub prefix -1) "/")
+      (string.sub prefix 1 -2)
+      prefix))
+
 (defn- under-prefix? [path prefix]
-  (let [clean (if (= (string.sub prefix -1) "/")
-                  (string.sub prefix 1 -2)
-                  prefix)]
+  (let [clean (clean-prefix prefix)]
     (or (= path clean)
         (= (string.sub path 1 (+ (string.len clean) 1)) (.. clean "/")))))
+
+(defn- excluded-result [path prefix result]
+  (if (under-prefix? path prefix)
+      true
+      result))
 
 (defn- excluded? [path excludes]
   (var result (under-prefix? path ".git"))
   (each [_ prefix (ipairs excludes)]
-    (if (under-prefix? path prefix)
-        (set result true)))
+    (set result (excluded-result path prefix result)))
   result)
 
 (defn- hidden? [name]
@@ -88,11 +119,13 @@
            (not (. seen dedupe)))
       (record-file path rel result seen dedupe)))
 
+(defn- walk-target-result [walk-result error]
+  (if error (values nil error) (values walk-result nil)))
+
 (defn- walk-target [walk-fn root target rel result seen excludes extensions skip-dotfiles follow-symlinks visited]
   (tset visited target true)
-  (let [(walk-result error) (walk-fn root target rel result seen excludes extensions
-                                     skip-dotfiles follow-symlinks rel visited)]
-    (if error (values nil error) (values result nil))))
+  (walk-target-result (walk-fn root target rel result seen excludes extensions
+                               skip-dotfiles follow-symlinks rel visited)))
 
 (defn- walk-scan [walk-fn root directory prefix result seen excludes extensions skip-dotfiles follow-symlinks error-prefix visited uv handle]
   (var scanning true)
@@ -127,12 +160,61 @@
                                           (if follow-symlinks target (relative root path)))))))))))))
   (if failure (values nil failure) (values result nil)))
 
+(defn- walk-prefix-or-dot [prefix]
+  (if (= prefix "") "." prefix))
+
+(defn- walk-error-prefix [error-prefix prefix]
+  (if error-prefix
+      error-prefix
+      (walk-prefix-or-dot prefix)))
+
+(defn- walk-scan-error [error-prefix prefix]
+  (values nil (.. "cannot read directory " (walk-error-prefix error-prefix prefix))))
+
 (defn- walk [root directory prefix result seen excludes extensions skip-dotfiles follow-symlinks error-prefix visited]
   (let [uv (or vim.uv vim.loop)
         (handle scan-error) (uv.fs_scandir directory)]
     (if (not handle)
-        (values nil (.. "cannot read directory " (or error-prefix (if (= prefix "") "." prefix))))
+        (walk-scan-error error-prefix prefix)
         (walk-scan walk root directory prefix result seen excludes extensions skip-dotfiles follow-symlinks error-prefix visited uv handle))))
+
+(defn- followed-link-directory [root target target-stat rel result seen excludes extensions skip-dotfiles follow-symlinks input]
+  (if (and target-stat (= target-stat.type "directory"))
+      (walk root target rel result seen excludes extensions skip-dotfiles follow-symlinks input {})
+      nil))
+
+(defn- followed-link-result [root target target-stat rel result seen excludes extensions skip-dotfiles follow-symlinks input]
+  (if (and target-stat (= target-stat.type "file"))
+      (add-file root target rel result seen excludes extensions target)
+      (followed-link-directory root target target-stat rel result seen excludes extensions skip-dotfiles follow-symlinks input)))
+
+(defn- add-followed-link [root uv abs rel result seen excludes extensions skip-dotfiles follow-symlinks input]
+  (let [target (realpath uv abs)
+        target-stat (and target (uv.fs_stat target))]
+    (followed-link-result root target target-stat rel result seen excludes extensions skip-dotfiles follow-symlinks input)))
+
+(defn- directory-target [uv abs follow-symlinks]
+  (if follow-symlinks (realpath uv abs) abs))
+
+(defn- directory-visited [target follow-symlinks]
+  (if follow-symlinks {target true} {}))
+
+(defn- add-directory-path [root uv abs result seen excludes extensions skip-dotfiles follow-symlinks input]
+  (let [target (directory-target uv abs follow-symlinks)
+        visited (directory-visited target follow-symlinks)]
+    (walk root target (walk-prefix root abs) result seen excludes extensions skip-dotfiles follow-symlinks input visited)))
+
+(defn- add-path-link [root uv abs rel result seen excludes extensions skip-dotfiles follow-symlinks input]
+  (if follow-symlinks
+      (add-followed-link root uv abs rel result seen excludes extensions skip-dotfiles follow-symlinks input)
+      (values nil (.. rel ": symlinks are not supported"))))
+
+(defn- add-path-stat [root uv abs rel stat result seen excludes extensions skip-dotfiles follow-symlinks input]
+  (case stat.type
+    "file" (add-file root abs rel result seen excludes extensions rel)
+    "link" (add-path-link root uv abs rel result seen excludes extensions skip-dotfiles follow-symlinks input)
+    "directory" (add-directory-path root uv abs result seen excludes extensions skip-dotfiles follow-symlinks input)
+    _ nil))
 
 (defn- add-path [root input result seen excludes extensions skip-dotfiles follow-symlinks]
   (let [uv (or vim.uv vim.loop)
@@ -140,39 +222,33 @@
         stat (uv.fs_lstat abs)
         rel (relative root abs)]
     (if stat
-        (if (= stat.type "file")
-            (add-file root abs rel result seen excludes extensions rel)
-            (if (= stat.type "link")
-                (if follow-symlinks
-                    (let [target (realpath uv abs)
-                          target-stat (and target (uv.fs_stat target))]
-                      (if (and target-stat (= target-stat.type "file"))
-                          (add-file root target rel result seen excludes extensions target)
-                          (if (and target-stat (= target-stat.type "directory"))
-                              (walk root target rel result seen excludes extensions skip-dotfiles follow-symlinks input {})
-                              nil)))
-                    (values nil (.. rel ": symlinks are not supported")))
-                (if (= stat.type "directory")
-                    (let [target (if follow-symlinks (realpath uv abs) abs)
-                          visited (if follow-symlinks {target true} {})]
-                      (walk root target (walk-prefix root abs) result seen excludes extensions skip-dotfiles follow-symlinks input visited))
-                    nil)))
+        (add-path-stat root uv abs rel stat result seen excludes extensions skip-dotfiles follow-symlinks input)
         nil)))
+
+(defn- sorted-files-failure [failure error]
+  (or error failure))
 
 (defn- sorted-files-success [result]
   (table.sort result (fn [a b] (< a.relative b.relative)))
   (values result nil))
 
+(defn- sorted-files-result [failure result]
+  (case (not failure)
+    false (values nil failure)
+    true (sorted-files-success result)))
+
+(defn- sorted-files-step [failure input root result seen excludes extensions skip-dotfiles follow-symlinks]
+  (case (not failure)
+    false failure
+    true (let [(path-result error) (add-path root input result seen excludes extensions skip-dotfiles follow-symlinks)]
+           (sorted-files-failure failure error))))
+
 (defn- sorted-files [root inputs excludes extensions skip-dotfiles follow-symlinks]
   (let [result [] seen {}]
     (var failure nil)
     (each [_ input (ipairs inputs)]
-      (if (not failure)
-          (let [(path-result error) (add-path root input result seen excludes extensions skip-dotfiles follow-symlinks)]
-            (if error (set failure error)))))
-    (if failure
-        (values nil failure)
-        (sorted-files-success result))))
+      (set failure (sorted-files-step failure input root result seen excludes extensions skip-dotfiles follow-symlinks)))
+    (sorted-files-result failure result)))
 
 (defn- read-file [path]
   (let [file (io.open path :r)]
@@ -240,50 +316,83 @@
               (values nil (.. "unknown flag: " arg))
               (parse-lint-args-step args (+ index 1) {:all state.all :base state.base :format state.format :format-seen state.format-seen :paths (append-path state.paths arg)}))))))
 
+(defn- parse-lint-success [state]
+  (if (and state.all state.base)
+      (values nil "--base cannot be used with --all")
+      state))
+
+(defn- parse-lint-result [state failure]
+  (if failure
+      (values nil failure)
+      (parse-lint-success state)))
+
 (defn- parse-lint-args [args]
   (let [(state failure) (parse-lint-args-step args 2 {:all false :base nil :format "text" :format-seen false :paths []})]
-    (if failure
-        (values nil failure)
-        (if (and state.all state.base)
-            (values nil "--base cannot be used with --all")
-            state))))
+    (parse-lint-result state failure)))
 
 (defn- parse-parser-option [args index]
   (values (+ index 1) (. args (+ index 1))))
 
+(defn- parse-format-mode-value [arg]
+  (if (= arg "--check") :check :write))
+
+(defn- parse-format-mode [arg index mode parser-name]
+  (if mode
+      (values mode parser-name index "unknown or duplicate mode flag")
+      (values (parse-format-mode-value arg) parser-name index nil)))
+
+(defn- parse-format-parser [args index mode parser-name]
+  (if (>= index (length args))
+      (values mode parser-name index "missing argument for --parser")
+      (let [(next-index next-parser) (parse-parser-option args index)]
+        (values mode next-parser next-index nil))))
+
+(defn- parse-format-path-value [arg index mode parser-name paths]
+  (table.insert paths arg)
+  (values mode parser-name index nil))
+
+(defn- parse-format-path [arg index mode parser-name paths]
+  (if (= (string.sub arg 1 2) "--")
+      (values mode parser-name index (.. "unknown flag: " arg))
+      (parse-format-path-value arg index mode parser-name paths)))
+
+(defn- parse-format-arg [args arg index mode parser-name paths]
+  (case arg
+    "--check" (parse-format-mode arg index mode parser-name)
+    "--write" (parse-format-mode arg index mode parser-name)
+    "--parser" (parse-format-parser args index mode parser-name)
+    _ (parse-format-path arg index mode parser-name paths)))
+
+(defn- parse-format-success [mode parser-name paths]
+  (if (not mode)
+      (values nil "missing --check or --write")
+      {:mode mode :parser parser-name :paths paths}))
+
+(defn- parse-format-result [failure mode parser-name paths]
+  (if failure
+      (values nil failure)
+      (parse-format-success mode parser-name paths)))
+
+(defn- parse-format-args [args]
+  (var mode nil)
+  (var parser-name nil)
+  (local paths [])
+  (var i 2)
+  (var failure nil)
+  (while (and (<= i (length args)) (not failure))
+    (let [arg (. args i)
+          (next-mode next-parser next-index next-failure) (parse-format-arg args arg i mode parser-name paths)]
+      (set mode next-mode)
+      (set parser-name next-parser)
+      (set i (+ next-index 1))
+      (set failure next-failure)))
+  (parse-format-result failure mode parser-name paths))
+
 (defn- parse-args [args]
-  (let [command (. args 1)]
-    (if (= command "lint")
-        (parse-lint-args args)
-        (if (not= command "format")
-            (values nil (.. "unknown command: " (or command "")))
-            (let []
-              (var mode nil)
-              (var parser-name nil)
-              (local paths [])
-              (var i 2)
-              (var failure nil)
-              (while (and (<= i (length args)) (not failure))
-                (let [arg (. args i)]
-                  (if (or (= arg "--check") (= arg "--write"))
-                      (if mode
-                          (set failure "unknown or duplicate mode flag")
-                          (set mode (if (= arg "--check") :check :write)))
-                      (if (= arg "--parser")
-                          (if (>= i (length args))
-                              (set failure "missing argument for --parser")
-                              (let [(next-index next-parser) (parse-parser-option args i)]
-                                (set i next-index)
-                                (set parser-name next-parser)))
-                          (if (= (string.sub arg 1 2) "--")
-                              (set failure (.. "unknown flag: " arg))
-                              (table.insert paths arg)))))
-                (set i (+ i 1)))
-              (if failure
-                  (values nil failure)
-                  (if (not mode)
-                      (values nil "missing --check or --write")
-                      {:mode mode :parser parser-name :paths paths})))))))
+  (case (. args 1)
+    "lint" (parse-lint-args args)
+    "format" (parse-format-args args)
+    _ (values nil (.. "unknown command: " (or (. args 1) "")))))
 
 (defn- load-parser [name]
   (if name
@@ -383,15 +492,20 @@
   (emit printer (.. write-failure.path ": " write-failure.error))
   2)
 
+(defn- rename-step [rename-failure item]
+  (case (not rename-failure)
+    false rename-failure
+    true (let [(ok renamed error) (pcall os.rename item.temp item.path)]
+           (case (or (not ok) (not renamed))
+             true {:path item.relative
+                   :error (or error "could not rename temporary file")}
+             false nil))))
+
 (defn- rename-files [temps]
   (var rename-failure nil)
        ;; Cross-file atomicity is limited to the staging phase.
   (each [_ item (ipairs temps)]
-    (if (not rename-failure)
-        (let [(ok renamed error) (pcall os.rename item.temp item.path)]
-          (if (or (not ok) (not renamed))
-              (set rename-failure {:path item.relative
-                                   :error (or error "could not rename temporary file")})))))
+    (set rename-failure (or (rename-step rename-failure item) rename-failure)))
   rename-failure)
 
 (defn- rename-failure-result [temps rename-failure printer]
@@ -423,15 +537,19 @@
   (each [_ path (ipairs changed)] (emit printer path))
   0)
 
+(defn- write-step [write-failure item temps]
+  (case (and (not write-failure) (not= item.source item.text))
+    false write-failure
+    true (let [(temp error) (temp-write item.path item.text)]
+           (case (not temp)
+             true {:path item.relative :error error}
+             false (table.insert temps {:path item.path :relative item.relative :temp temp})))))
+
 (defn- write-files-result [formatted changed printer]
   (var write-failure nil)
   (local temps [])
   (each [_ item (ipairs formatted)]
-    (if (and (not write-failure) (not= item.source item.text))
-        (let [(temp error) (temp-write item.path item.text)]
-          (if temp
-              (table.insert temps {:path item.path :relative item.relative :temp temp})
-              (set write-failure {:path item.relative :error error})))))
+    (set write-failure (write-step write-failure item temps)))
   (if write-failure
       (write-failure-result temps write-failure printer)
       (let [rename-failure (rename-files temps)]
@@ -445,18 +563,25 @@
       (check-files changed printer)
       (write-files-result formatted changed printer)))
 
+(defn- run-files-step [failure file parser cfg formatted changed]
+  (case (not failure)
+    false failure
+    true (let [(item error) (format-file parser cfg file)]
+           (case (not error)
+             false error
+             true (append-formatted formatted changed item)))))
+
+(defn- run-files-result [failure mode formatted changed printer]
+  (case (not failure)
+    false (run-files-error printer failure)
+    true (process-files-result mode formatted changed printer)))
+
 (defn- run-files [root mode parser cfg files printer]
   (let [formatted [] changed []]
     (var failure nil)
     (each [_ file (ipairs files)]
-      (if (not failure)
-          (let [(item error) (format-file parser cfg file)]
-            (if error
-                (set failure error)
-                (append-formatted formatted changed item)))))
-    (if failure
-        (run-files-error printer failure)
-        (process-files-result mode formatted changed printer))))
+      (set failure (run-files-step failure file parser cfg formatted changed)))
+    (run-files-result failure mode formatted changed printer)))
 
 (defn- read-lint-files [files index result]
   (if (> index (length files))
@@ -516,15 +641,20 @@
   (.. "git -C " (vim.fn.shellescape root) " "
       (table.concat (icollect [_ arg (ipairs args)] (vim.fn.shellescape arg)) " ")))
 
+(defn- git-output [output marker]
+  (case (not marker)
+    true (values output 2)
+    false (values (string.sub output 1 (- marker 1))
+                  (tonumber (string.sub output (+ marker 15))))))
+
+(defn- git-read-output [file]
+  (if file (file:read "*a") ""))
+
 (defn- git-call [root args]
   (let [file (io.popen (.. (git-command root args) " </dev/null 2>&1; printf '\\n__ECA_STATUS__%s' $?"))
-        output (if file (file:read "*a") "")]
-    (if file (file:close))
-    (let [marker (string.find output "\n__ECA_STATUS__")]
-      (if marker
-          (values (string.sub output 1 (- marker 1))
-                  (tonumber (string.sub output (+ marker 15))))
-          (values output 2)))))
+        output (git-read-output file)]
+    (and file (file:close))
+    (git-output output (string.find output "\n__ECA_STATUS__"))))
 
 (defn- git-root [start]
   (let [(output status) (git-call start ["rev-parse" "--show-toplevel"])]
@@ -564,11 +694,9 @@
                   (git-plan-changed root parsed)))))))
 
 (defn- path-present? [paths path index]
-  (if (> index (length paths))
-      false
-      (if (= path (. paths index))
-          true
-          (path-present? paths path (+ index 1)))))
+  (if (> index (length paths)) false
+      (= path (. paths index)) true
+      (path-present? paths path (+ index 1))))
 
 (defn- changed-file [root base file whole?]
   (if whole?
@@ -608,10 +736,13 @@
     (each [_ path (ipairs plan.deleted)] (table.insert result path))
     result))
 
+(defn- lint-git-info [root parsed require-git?]
+  (if require-git?
+      (git-plan root parsed)
+      (values {:root root} nil)))
+
 (defn- run-lint [root parsed cfg config-path printer require-git?]
-  (let [(git-info git-error-value) (if require-git?
-                                       (git-plan root parsed)
-                                       (values {:root root} nil))]
+  (let [(git-info git-error-value) (lint-git-info root parsed require-git?)]
     (if git-error-value
         (emit-git-error printer git-error-value)
         (let [git-info (or git-info {:root root :plan {:whole [] :hunks [] :deleted []}})
