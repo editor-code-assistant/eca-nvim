@@ -9,20 +9,20 @@
     ;; Called when streaming inserts a new line (so prompt can adjust)
   (local on-line-inserted (or (?. ?opts :on-line-inserted) (fn [] nil)))
 
-  (local state {:messages []
-                :ns-id nil
-                :end-line 0
-                :start-line 0
-                :welcome-lines nil
+  (local state {:messages                 []
+                :ns-id                    nil
+                :end-line                 0
+                :start-line               0
+                :welcome-lines            nil
                 ;; Streaming state
-                :streaming-id nil
-                :streaming-queue ""
-                :streaming-displayed ""
-                :streaming-timer nil
-                :streaming-line nil       ;; current line index being streamed to
-                :streaming-col nil        ;; current col in that line
+                :streaming-id             nil
+                :streaming-queue          ""
+                :streaming-displayed      ""
+                :streaming-timer          nil
+                :streaming-line           nil       ;; current line index being streamed to
+                :streaming-col            nil        ;; current col in that line
                 :streaming-chars-per-tick 2
-                :streaming-tick-ms 20})
+                :streaming-tick-ms        20})
 
   (fn ensure-ns []
     (when (= nil state.ns-id)
@@ -128,9 +128,9 @@
             (set state.end-line (+ state.start-line (length state.welcome-lines.lines))))
           (each [_ msg (ipairs state.messages)]
             (let [;; For streaming msg, render with displayed content
-                  render-msg (if (= msg.id state.streaming-id)
-                                 (vim.tbl_extend :force msg {:content state.streaming-displayed})
-                                 msg)
+                  render-msg    (if (= msg.id state.streaming-id)
+                                       (vim.tbl_extend :force msg {:content state.streaming-displayed})
+                                       msg)
                   lines-written (render-single-message render-msg state.end-line)]
               (set state.end-line (+ state.end-line lines-written)))))))
 
@@ -165,8 +165,8 @@
         (set msg.content new-content)
         (if (= id state.streaming-id)
             ;; Queue only NEW characters
-            (let [already (+ (length state.streaming-displayed)
-                             (length state.streaming-queue))
+            (let [already   (+ (length state.streaming-displayed)
+                                  (length state.streaming-queue))
                   new-chars (when (> (length new-content) already)
                               (string.sub new-content (+ already 1)))]
               (when (and new-chars (> (length new-chars) 0))

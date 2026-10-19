@@ -27,8 +27,8 @@
     (if (. indent :error)
         indent
         (let [(ok value err) (pcall (fn [] (indent.reindent source config)))]
-          {:value? (and ok (not= nil value))
-           :has-message (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
+          {:value?         (and ok (not= nil value))
+           :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
            :returned-error (and ok value (= nil value) err)}))))
 
 (deftest rule-semantics
@@ -83,7 +83,7 @@
   (testing "exact indents take precedence over patterns"
     (is (= "(when x\n  y\n  z)"
            (output-for "(when x\ny\nz)"
-                       {:indents {"when" [[:inner 0]]}
+                       {:indents         {"when" [[:inner 0]]}
                         :indent-patterns [["^when" [[:block 2]]]]}))))
   (testing "patterns take precedence over built-ins"
     (is (= "(when x\n      y\n  z)"
@@ -92,25 +92,25 @@
   (testing "rejects a name present in indents and format-as"
     (is (= {:value? false :has-message true}
            (let [result (error-summary "(when x\ny)"
-                                       {:indents {"when" [[:block 1]]}
+                                       {:indents   {"when" [[:block 1]]}
                                         :format-as {"when" "let"}})]
-             {:value? (. result :value?)
+             {:value?      (. result :value?)
               :has-message (. result :has-message)}))))
   (testing "rejects alias cycles"
     (is (= {:value? false :has-message true}
            (let [result (error-summary "(a x\ny)"
                                        {:format-as {"a" "b" "b" "a"}})]
-             {:value? (. result :value?)
+             {:value?      (. result :value?)
               :has-message (. result :has-message)}))))
   (testing "rejects aliases to unknown targets"
     (is (= {:value? false :has-message true}
            (let [result (error-summary "(a x\ny)"
                                        {:format-as {"a" "unknown"}})]
-             {:value? (. result :value?)
+             {:value?      (. result :value?)
               :has-message (. result :has-message)}))))
   (testing "rejects unsupported positive inner depth"
     (is (= {:value? false :has-message true}
            (let [result (error-summary "(foo x\ny)"
                                        {:indents {"foo" [[:inner 1]]}})]
-             {:value? (. result :value?)
+             {:value?      (. result :value?)
               :has-message (. result :has-message)})))))

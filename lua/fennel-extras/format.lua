@@ -6,6 +6,7 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.format"]
 end
 local indent = require("fennel-extras.indent")
+local reader = require("fennel-extras.reader")
 local function split_lines(source)
   local lines = {}
   local start = 1
@@ -37,16 +38,57 @@ local function indentation_lines_equal_3f(left, right)
   end
   return same
 end
+local function token_kind_equal_3f(left, right)
+  return (left.kind == right.kind)
+end
+local function non_whitespace_token_equal_3f(left, right)
+  return (left.text == right.text)
+end
+local function whitespace_token_equal_3f(left, right)
+  return ((string.len(left.text) > 0) and (string.len(right.text) > 0))
+end
+local function token_text_equal_3f(left, right)
+  if (left.kind == "whitespace") then
+    return whitespace_token_equal_3f(left, right)
+  else
+    return non_whitespace_token_equal_3f(left, right)
+  end
+end
+local function token_sequence_step(left, right, index, next)
+  local token = left[index]
+  local other = right[index]
+  return (token_kind_equal_3f(token, other) and token_text_equal_3f(token, other) and next(left, right, (index + 1)))
+end
+local function token_sequences_equal_3f(left, right, index)
+  if (index > #left) then
+    return true
+  else
+    return token_sequence_step(left, right, index, token_sequences_equal_3f)
+  end
+end
+local function binding_whitespace_equal_3f(left, right)
+  local left_body = string.gsub(left, "^ *", "")
+  local right_body = string.gsub(right, "^ *", "")
+  local left_tokens, left_error = reader.tokenize(left_body)
+  local right_tokens, right_error = reader.tokenize(right_body)
+  return (not left_error and not right_error and (left_body ~= right_body) and (string.sub(left_body, -1) ~= " ") and (string.sub(right_body, -1) ~= " ") and token_sequences_equal_3f(left_tokens, right_tokens, 1))
+end
+local function line_equal_3f(line, other, allow_binding_whitespace_3f)
+  return ((line == other) or (other == (string.sub(other, 1, leading_spaces(other)) .. string.sub(line, (leading_spaces(line) + 1)))) or (allow_binding_whitespace_3f and binding_whitespace_equal_3f(line, other)) or ((other == "") and spaces_only_3f(line)))
+end
+local function lines_equal_3f(left, right, index, allow_binding_whitespace_3f)
+  if (index > #left) then
+    return true
+  else
+    return (line_equal_3f(left[index], right[index], allow_binding_whitespace_3f) and lines_equal_3f(left, right, (index + 1), allow_binding_whitespace_3f))
+  end
+end
 local indent_only_3f
 do
-  local function indent_only_3f0(before, after)
+  local function indent_only_3f0(before, after, allow_binding_whitespace_3f)
     local left = split_lines(before)
     local right = split_lines(after)
-    if (#left ~= #right) then
-      return false
-    else
-      return indentation_lines_equal_3f(left, right)
-    end
+    return ((#left == #right) and lines_equal_3f(left, right, 1, allow_binding_whitespace_3f))
   end
   _2amodule_2a["indent-only?"] = indent_only_3f0
   indent_only_3f = _2amodule_2a["indent-only?"]
@@ -153,7 +195,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _13_()
+    local function _15_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -162,7 +204,7 @@ do
         return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_13_)
+    ok, result = pcall(_15_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
@@ -177,7 +219,7 @@ do
     if error then
       return nil, error
     else
-      if not indent_only_3f(source, out) then
+      if not indent_only_3f(source, out, (config["align-bindings"] and true)) then
         return nil, {message = "formatter changed more than indentation"}
       else
         if (parser and not ast_equal_3f(parser, source, out)) then

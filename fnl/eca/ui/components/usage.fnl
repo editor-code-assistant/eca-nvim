@@ -6,7 +6,7 @@
    text: pre-formatted display string (e.g. '31K/200K ($0.03)')
    hl-group: highlight group
    Returns {: text : hl-group}."
-  {:text (or text "")
+  {:text     (or text "")
    :hl-group (or hl-group :Normal)})
 
 {: render}

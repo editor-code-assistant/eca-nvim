@@ -17,8 +17,8 @@
 
 (defn- with-footer-bar
   [mocks f]
-  (let [original-lualine (. package.loaded :eca.ui.components.lualine)
-        original-bar-items (. package.loaded :eca.ui.components.bar-items)
+  (let [original-lualine    (. package.loaded :eca.ui.components.lualine)
+        original-bar-items  (. package.loaded :eca.ui.components.bar-items)
         original-footer-bar (. package.loaded :eca.ui.widgets.footer-bar)]
     (tset package.loaded :eca.ui.components.lualine (or (. mocks :lualine) {}))
     (tset package.loaded :eca.ui.components.bar-items
@@ -40,24 +40,24 @@
 (defn- lualine-scenario
   [items]
   (let [setup-calls []]
-    {:widget (with-footer-bar {:lualine {:plugin (fn [] true)
-                                         :setup (fn [new-items]
-                                                  (table.insert setup-calls new-items))}
-                               :bar-items {:render (fn [_]
-                                                     (error "bar-items.render should not be called"))}}
-               (fn [footer-bar]
-                 (footer-bar.create 1 2 items)))
+    {:widget      (with-footer-bar {:lualine   {:plugin (fn [] true)
+                                                      :setup  (fn [new-items]
+                                                                   (table.insert setup-calls new-items))}
+                                       :bar-items {:render (fn [_]
+                                                             (error "bar-items.render should not be called"))}}
+                       (fn [footer-bar]
+                         (footer-bar.create 1 2 items)))
      :setup-calls setup-calls}))
 
 (defn- native-scenario
   [items]
   (let [render-calls []]
-    {:widget (with-footer-bar {:lualine {:plugin (fn [] false)}
-                               :bar-items {:render (fn [opts]
-                                                     (table.insert render-calls opts)
-                                                     :rendered)}}
-               (fn [footer-bar]
-                 (footer-bar.create 1 2 items)))
+    {:widget       (with-footer-bar {:lualine   {:plugin (fn [] false)}
+                                        :bar-items {:render (fn [opts]
+                                                              (table.insert render-calls opts)
+                                                              :rendered)}}
+                        (fn [footer-bar]
+                          (footer-bar.create 1 2 items)))
      :render-calls render-calls}))
 
 (defn- capture-set-option

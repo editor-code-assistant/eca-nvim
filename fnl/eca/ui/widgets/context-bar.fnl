@@ -21,17 +21,17 @@
                                          acc.col)]
                          (table.insert acc.parts item.text)
                          (table.insert acc.highlights
-                                       {:hl-group (or item.hl-group :Normal)
+                                       {:hl-group  (or item.hl-group :Normal)
                                         :col-start sep-col
-                                        :col-end (+ sep-col (length item.text))})
-                         {:parts acc.parts
+                                        :col-end   (+ sep-col (length item.text))})
+                         {:parts      acc.parts
                           :highlights acc.highlights
-                          :col (+ sep-col (length item.text))}))]
-          {:line (table.concat result.parts "")
+                          :col        (+ sep-col (length item.text))}))]
+          {:line       (table.concat result.parts "")
            :highlights result.highlights})))
 
   (fn render [line-num]
-    (let [ns (ensure-ns)
+    (let [ns                    (ensure-ns)
           {: line : highlights} (build-line)]
       (when (and line (not= "" line))
         (nvim.nvim_buf_set_lines buf-id line-num (+ line-num 1) false [line])

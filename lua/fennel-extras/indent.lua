@@ -288,6 +288,320 @@ local function process_unchanged_line(line_number, line, tokens)
   assign_output_columns(tokens, line_number, line, 0, false)
   return line
 end
+local function alignment_form_name_3f(head)
+  return (head and (head.kind == "symbol") and ((head.text == "let") or (head.text == "when-let") or (head.text == "if-let") or (head.text == "with-open")))
+end
+local function alignment_form_3f(node, parent)
+  return (parent and (node.kind == "sequence") and (parent.kind == "list") and alignment_form_name_3f(nontrivia_children(parent)[1]))
+end
+local function alignment_node_3f(node, parent)
+  return ((node.kind == "table") or alignment_form_3f(node, parent))
+end
+local function append_alignment_node(result, node)
+  table.insert(result, node)
+  return result
+end
+local function alignment_node_result(result, node, parent)
+  if alignment_node_3f(node, parent) then
+    return append_alignment_node(result, node)
+  else
+    return result
+  end
+end
+local function collect_alignment_nodes(node, parent, result)
+  local next_result = alignment_node_result(result, node, parent)
+  local state = next_result
+  for _, child in ipairs(node.children) do
+    state = ((child.text and state) or collect_alignment_nodes(child, node, state))
+  end
+  return state
+end
+local function child_end(child)
+  if child.text then
+    return child
+  else
+    return child.close
+  end
+end
+local function single_line_name_3f(name_start, name_end)
+  return (name_end and (name_start.line == name_end.line))
+end
+local function append_pair_candidate(result, name_start, name_end, value_start, value, parent_kind)
+  table.insert(result, {name = name_start, ["name-end"] = name_end, value = value_start, ["value-node"] = value, ["parent-kind"] = parent_kind, line = name_start.line})
+  return result
+end
+local function adjacent_token_3f(left, right)
+  return ((left["out-col"] + codepoint_width(left.text)) == right["out-col"])
+end
+local function name_end_index(children, index)
+  local name = children[index]
+  local candidate = children[(index + 1)]
+  if (candidate and (candidate.kind == "prefix") and adjacent_token_3f(child_end(name), candidate)) then
+    return name_end_index(children, (index + 1))
+  else
+    return index
+  end
+end
+local function value_index(children, index)
+  local candidate = children[index]
+  if (candidate and (candidate.kind == "prefix")) then
+    return value_index(children, (index + 1))
+  else
+    return index
+  end
+end
+local function pair_candidate(children, index, result, parent_kind)
+  local name_end_position = name_end_index(children, index)
+  local name = children[index]
+  local name_end = child_end(children[name_end_position])
+  local value_start_child = children[(name_end_position + 1)]
+  local value_position = value_index(children, (name_end_position + 1))
+  local value = children[value_position]
+  local name_start = child_start(name)
+  local value_start = (value_start_child and child_start(value_start_child))
+  if (value and value_start and (name_start.line == value_start.line) and single_line_name_3f(name_start, name_end)) then
+    return append_pair_candidate(result, name_start, name_end, value_start, value, parent_kind)
+  else
+    return result
+  end
+end
+local function pair_candidates_step(children, index, result, parent_kind, next)
+  local name_end_position = name_end_index(children, index)
+  local next_index = (value_index(children, (name_end_position + 1)) + 1)
+  return next(children, next_index, pair_candidate(children, index, result, parent_kind), parent_kind)
+end
+local function pair_candidates(children, index, result, parent_kind)
+  if (index > #children) then
+    return result
+  else
+    return pair_candidates_step(children, index, result, parent_kind, pair_candidates)
+  end
+end
+local function pair_count_step(count, pair, line)
+  if (pair.line == line) then
+    return (count + 1)
+  else
+    return count
+  end
+end
+local function pair_count(pairs, line)
+  local count = 0
+  for _, pair in ipairs(pairs) do
+    count = pair_count_step(count, pair, line)
+  end
+  return count
+end
+local function candidate_3f(pairs, pair)
+  return (pair_count(pairs, pair.line) == 1)
+end
+local function single_pair(pairs, pair)
+  if candidate_3f(pairs, pair) then
+    return pair
+  else
+    return nil
+  end
+end
+local function single_pairs(pairs)
+  local tbl_26_ = {}
+  local i_27_ = 0
+  for _, pair in ipairs(pairs) do
+    local val_28_ = single_pair(pairs, pair)
+    if (nil ~= val_28_) then
+      i_27_ = (i_27_ + 1)
+      tbl_26_[i_27_] = val_28_
+    else
+    end
+  end
+  return tbl_26_
+end
+local function pair_name_width(pair)
+  return ((pair["name-end"]["out-col"] + codepoint_width(pair["name-end"].text)) - pair.name["out-col"])
+end
+local function pair_target(pair, width)
+  if ((pair["parent-kind"] == "table") and (pair.name.text == "(")) then
+    return (pair.name["out-col"] + width)
+  else
+    return (pair.name["out-col"] + width + 1)
+  end
+end
+local function alignment_width(pairs)
+  local width = 0
+  for _, pair in ipairs(pairs) do
+    width = math.max(width, pair_name_width(pair))
+  end
+  return width
+end
+local function alignment_plan_for_pairs(pairs)
+  if (#pairs > 1) then
+    return {pairs = pairs, width = alignment_width(pairs)}
+  else
+    return nil
+  end
+end
+local function alignment_plan(node)
+  local children = nontrivia_children(node)
+  local pairs = single_pairs(pair_candidates(children, 1, {}, node.kind))
+  return alignment_plan_for_pairs(pairs)
+end
+local function alignment_plans(nodes)
+  local tbl_26_ = {}
+  local i_27_ = 0
+  for _, node in ipairs(nodes) do
+    local val_28_ = alignment_plan(node)
+    if (nil ~= val_28_) then
+      i_27_ = (i_27_ + 1)
+      tbl_26_[i_27_] = val_28_
+    else
+    end
+  end
+  return tbl_26_
+end
+local function value_end_line(pair)
+  return ((pair["value-node"] and pair["value-node"].close and pair["value-node"].close.line) or pair.line)
+end
+local function alignment_shift_extra(pair, end_line)
+  if (end_line > pair.line) then
+    return 3
+  else
+    return 0
+  end
+end
+local function alignment_shift_delta(pair, delta, end_line)
+  return (delta + alignment_shift_extra(pair, end_line))
+end
+local function alignment_shift(pair, delta)
+  local end_line = value_end_line(pair)
+  return {start = (pair.line + 1), ["end"] = end_line, delta = alignment_shift_delta(pair, delta, end_line)}
+end
+local function append_alignment_shift(shifts, pair, delta)
+  if (delta > 0) then
+    return table.insert(shifts, alignment_shift(pair, delta))
+  else
+    return nil
+  end
+end
+local function append_alignment_edit(edits, shifts, plan, pair)
+  local name_width = pair_name_width(pair)
+  local name_end_column = (pair.name["out-col"] + name_width)
+  local target = pair_target(pair, plan.width)
+  local delta = (target - pair.value["out-col"])
+  table.insert(edits, {line = pair.line, start = (name_end_column + 1), finish = (pair.value["out-col"] + 1), spaces = (target - name_end_column)})
+  return append_alignment_shift(shifts, pair, delta)
+end
+local function append_alignment_edits(edits, shifts, plan)
+  for _, pair in ipairs(plan.pairs) do
+    append_alignment_edit(edits, shifts, plan, pair)
+  end
+  return edits, shifts
+end
+local function append_plan_edits(edits, shifts, plan)
+  if plan then
+    return append_alignment_edits(edits, shifts, plan)
+  else
+    return edits, shifts
+  end
+end
+local function alignment_state_step(state, plan)
+  local edits, shifts = append_plan_edits(state.edits, state.shifts, plan)
+  return {edits = edits, shifts = shifts}
+end
+local function alignment_edits_state(plans)
+  local state = {edits = {}, shifts = {}}
+  for _, plan in ipairs(plans) do
+    state = alignment_state_step(state, plan)
+  end
+  return state
+end
+local function alignment_edits(plans)
+  local state = alignment_edits_state(plans)
+  return state.edits, state.shifts
+end
+local function apply_edit(line, edit)
+  return (string.sub(line, 1, (edit.start - 1)) .. string.rep(" ", edit.spaces) .. string.sub(line, edit.finish))
+end
+local function line_edit(line_number, edit)
+  if (edit.line == line_number) then
+    return edit
+  else
+    return nil
+  end
+end
+local function line_edits(edits, line_number)
+  local tbl_26_ = {}
+  local i_27_ = 0
+  for _, edit in ipairs(edits) do
+    local val_28_ = line_edit(line_number, edit)
+    if (nil ~= val_28_) then
+      i_27_ = (i_27_ + 1)
+      tbl_26_[i_27_] = val_28_
+    else
+    end
+  end
+  return tbl_26_
+end
+local function apply_edits(line, edits)
+  local function _51_(left, right)
+    return (left.start > right.start)
+  end
+  table.sort(edits, _51_)
+  local result = line
+  for _, edit in ipairs(edits) do
+    result = apply_edit(result, edit)
+  end
+  return result
+end
+local function line_shift_step(result, shift, line_number)
+  if ((line_number >= shift.start) and (line_number <= shift["end"])) then
+    return (result + shift.delta)
+  else
+    return result
+  end
+end
+local function line_shift(shifts, line_number)
+  local result = 0
+  for _, shift in ipairs(shifts) do
+    result = line_shift_step(result, shift, line_number)
+  end
+  return result
+end
+local function positive_shift_line(line, delta)
+  return (string.rep(" ", delta) .. line)
+end
+local function negative_shift_line(line, delta)
+  local spaces = leading_spaces(line)
+  return string.sub(line, (math.min(spaces, ( - delta)) + 1))
+end
+local function shift_nonzero_line(line, delta)
+  if (delta > 0) then
+    return positive_shift_line(line, delta)
+  else
+    return negative_shift_line(line, delta)
+  end
+end
+local function shift_line(line, delta)
+  if (delta == 0) then
+    return line
+  else
+    return shift_nonzero_line(line, delta)
+  end
+end
+local function normalize_leading(line, source_line)
+  return (string.rep(" ", leading_spaces(source_line)) .. string.sub(line, (leading_spaces(line) + 1)))
+end
+local function apply_alignment(lines, source_lines, plans)
+  local edits, shifts = alignment_edits(plans)
+  local tbl_26_ = {}
+  local i_27_ = 0
+  for line_number, line in ipairs(lines) do
+    local val_28_ = shift_line(normalize_leading(apply_edits(line, line_edits(edits, line_number)), source_lines[line_number]), line_shift(shifts, line_number))
+    if (nil ~= val_28_) then
+      i_27_ = (i_27_ + 1)
+      tbl_26_[i_27_] = val_28_
+    else
+    end
+  end
+  return tbl_26_
+end
 local function process_line(line_number, line, nodes, tokens, config)
   local string_line_3f = string_on_line_3f(tokens, line_number)
   local first_token = first_token_on_line(tokens, line_number)
@@ -308,6 +622,13 @@ local function process_line(line_number, line, nodes, tokens, config)
         return (string.rep(" ", indent) .. body)
       end
     end
+  end
+end
+local function aligned_output(output, lines, tree, config)
+  if (config and config["align-bindings"]) then
+    return apply_alignment(output, lines, alignment_plans(collect_alignment_nodes(tree, nil, {})))
+  else
+    return output
   end
 end
 local reindent
@@ -331,13 +652,14 @@ do
           table.insert(output, process_line(line_number, line, nodes, tokens, config))
           line_number = (line_number + 1)
         end
-        local _37_
+        local aligned = aligned_output(output, lines, tree, config)
+        local _60_
         if final_newline then
-          _37_ = "\n"
+          _60_ = "\n"
         else
-          _37_ = ""
+          _60_ = ""
         end
-        return (table.concat(output, "\n") .. _37_)
+        return (table.concat(aligned, "\n") .. _60_)
       end
     end
   end

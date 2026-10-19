@@ -101,31 +101,21 @@ local function append_sequence(chunks, value, index, span)
   table.insert(chunks, string.sub(value, index, (index + span + -1)))
   return chunks
 end
+local function normalize_utf8_step(value, index, chunks, first, second, third, fourth, recurse)
+  return (((first < 128) and recurse(value, (index + 1), append_byte(chunks, value, index))) or (valid_two_byte_3f(first, second) and recurse(value, (index + 2), append_sequence(chunks, value, index, 2))) or (valid_three_byte_3f(first, second, third) and recurse(value, (index + 3), append_sequence(chunks, value, index, 3))) or (valid_four_byte_3f(first, second, third, fourth) and recurse(value, (index + 4), append_sequence(chunks, value, index, 4))) or recurse(value, (index + 1), append_replacement(chunks)))
+end
+local function normalize_utf8_bytes(value, index, chunks, recurse)
+  local first = string.byte(value, index)
+  local second = string.byte(value, (index + 1))
+  local third = string.byte(value, (index + 2))
+  local fourth = string.byte(value, (index + 3))
+  return normalize_utf8_step(value, index, chunks, first, second, third, fourth, recurse)
+end
 local function normalize_utf8_at(value, index, chunks)
   if (index > #value) then
     return table.concat(chunks)
   else
-    local first = string.byte(value, index)
-    local second = string.byte(value, (index + 1))
-    local third = string.byte(value, (index + 2))
-    local fourth = string.byte(value, (index + 3))
-    if (first < 128) then
-      return normalize_utf8_at(value, (index + 1), append_byte(chunks, value, index))
-    else
-      if valid_two_byte_3f(first, second) then
-        return normalize_utf8_at(value, (index + 2), append_sequence(chunks, value, index, 2))
-      else
-        if valid_three_byte_3f(first, second, third) then
-          return normalize_utf8_at(value, (index + 3), append_sequence(chunks, value, index, 3))
-        else
-          if valid_four_byte_3f(first, second, third, fourth) then
-            return normalize_utf8_at(value, (index + 4), append_sequence(chunks, value, index, 4))
-          else
-            return normalize_utf8_at(value, (index + 1), append_replacement(chunks))
-          end
-        end
-      end
-    end
+    return normalize_utf8_bytes(value, index, chunks, normalize_utf8_at)
   end
 end
 local function normalize_utf8(value)

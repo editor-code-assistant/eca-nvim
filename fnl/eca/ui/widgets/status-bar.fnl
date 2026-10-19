@@ -6,9 +6,9 @@
    initial-sections: {: left : center : right}
    Each section is a list of {: text : hl-group}.
    Returns {: render : update : get-state}."
-  (local state {:left (or (?. initial-sections :left) [])
+  (local state {:left   (or (?. initial-sections :left) [])
                 :center (or (?. initial-sections :center) [])
-                :right (or (?. initial-sections :right) [])})
+                :right  (or (?. initial-sections :right) [])})
 
   (fn build-section [items]
     (let [parts (icollect [_ item (ipairs items)]
@@ -16,9 +16,9 @@
       (table.concat parts "")))
 
   (fn build-statusline []
-    (let [left (build-section state.left)
+    (let [left   (build-section state.left)
           center (build-section state.center)
-          right (build-section state.right)]
+          right  (build-section state.right)]
       (.. left "%=" center "%=" right)))
 
   (fn render []

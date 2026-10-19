@@ -5,9 +5,9 @@
   "Render the prompt prefix.
    Returns {: text : hl-group}."
   (if loading?
-      {:text "⏳ "
+      {:text     "⏳ "
        :hl-group :EcaPromptPrefixLoading}
-      {:text "> "
+      {:text     "> "
        :hl-group :EcaPromptPrefix}))
 
 {: render}

@@ -18,16 +18,18 @@
     (if (. rules :module-missing)
         rules
         (let [defaults (rules.defaults)
-              entries (icollect [rule severity (pairs defaults)]
-                        [rule severity])]
+              entries  (icollect [rule severity (pairs defaults)]
+                            [rule severity])]
           (sort-severities entries)))))
 
 (deftest defaults
-  (testing "all eight lint rules have the approved default severities"
+  (testing "all ten lint rules have the approved default severities"
     (is (= [["core-require" "error"]
+            ["file-size" "warning"]
             ["function-shape" "warning"]
             ["if-branch-call" "warning"]
             ["module-style" "error"]
+            ["no-mutation" "warning"]
             ["one-is-per-testing" "error"]
             ["spec-direct-require" "error"]
             ["spec-macro-import" "error"]
@@ -38,16 +40,16 @@
                  (sort-severities entries)))))))
 
 (defn- core-require-scenario []
-  (let [source "(local c (require :eca.nfnl.core))"
-        path "fnl/app.fnl"
-        policy {}
+  (let [source        "(local c (require :eca.nfnl.core))"
+        path          "fnl/app.fnl"
+        policy        {}
         (forms error) (identity.forms source path)]
     (if error
         {:error error}
-        (let [before (icollect [_ form (ipairs forms)] form.form)
-              rules (load-rules)
+        (let [before   (icollect [_ form (ipairs forms)] form.form)
+              rules    (load-rules)
               findings (rules.check path forms policy source)
-              after (icollect [_ form (ipairs forms)] form.form)]
+              after    (icollect [_ form (ipairs forms)] form.form)]
           {:before before :after after :findings findings}))))
 
 (defn- core-require-identities [scenario]

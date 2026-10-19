@@ -1,6 +1,7 @@
 (import-macros {: module : def : defn : defn-} :eca.nfnl.macros.aniseed)
 (module fennel-extras.format)
 (local indent (require :fennel-extras.indent))
+(local reader (require :fennel-extras.reader))
 
 (defn- split-lines [source]
   (let [lines []]
@@ -22,17 +23,70 @@
 (defn- indentation-lines-equal? [left right]
   (var same true)
   (each [i line (ipairs left)]
-    (let [other (. right i)
-          body (string.sub line (+ (leading-spaces line) 1))
+    (let [other  (. right i)
+          body   (string.sub line (+ (leading-spaces line) 1))
           spaces (string.sub other 1 (leading-spaces other))]
       (if (not (or (= line other) (= other (.. spaces body))
                    (and (= other "") (spaces-only? line))))
           (set same false))))
   same)
-(defn indent-only? [before after]
+(defn- token-kind-equal? [left right]
+  (= left.kind right.kind))
+
+(defn- non-whitespace-token-equal? [left right]
+  (= left.text right.text))
+
+(defn- whitespace-token-equal? [left right]
+  (and (> (string.len left.text) 0)
+       (> (string.len right.text) 0)))
+
+(defn- token-text-equal? [left right]
+  (if (= left.kind :whitespace)
+      (whitespace-token-equal? left right)
+      (non-whitespace-token-equal? left right)))
+
+(defn- token-sequence-step [left right index next]
+  (let [token (. left index)
+        other (. right index)]
+    (and (token-kind-equal? token other)
+         (token-text-equal? token other)
+         (next left right (+ index 1)))))
+
+(defn- token-sequences-equal? [left right index]
+  (if (> index (length left))
+      true
+      (token-sequence-step left right index token-sequences-equal?)))
+
+(defn- binding-whitespace-equal? [left right]
+  (let [left-body                  (string.gsub left "^ *" "")
+        right-body                 (string.gsub right "^ *" "")
+        (left-tokens left-error)   (reader.tokenize left-body)
+        (right-tokens right-error) (reader.tokenize right-body)]
+    (and (not left-error)
+         (not right-error)
+         (not= left-body right-body)
+         (not= (string.sub left-body -1) " ")
+         (not= (string.sub right-body -1) " ")
+         (token-sequences-equal? left-tokens right-tokens 1))))
+
+(defn- line-equal? [line other allow-binding-whitespace?]
+  (or (= line other)
+      (= other (.. (string.sub other 1 (leading-spaces other))
+                   (string.sub line (+ (leading-spaces line) 1))))
+      (and allow-binding-whitespace?
+           (binding-whitespace-equal? line other))
+      (and (= other "") (spaces-only? line))))
+
+(defn- lines-equal? [left right index allow-binding-whitespace?]
+  (if (> index (length left))
+      true
+      (and (line-equal? (. left index) (. right index) allow-binding-whitespace?)
+           (lines-equal? left right (+ index 1) allow-binding-whitespace?))))
+
+(defn indent-only? [before after allow-binding-whitespace?]
   (let [left (split-lines before) right (split-lines after)]
-    (if (not= (length left) (length right)) false
-        (indentation-lines-equal? left right))))
+    (and (= (length left) (length right))
+         (lines-equal? left right 1 allow-binding-whitespace?))))
 
 (defn- ignored? [key]
   (or (= key :filename) (= key :line) (= key :col) (= key :bytestart)
@@ -77,7 +131,7 @@
 (defn- equal-entries? [equal parser left right]
   (if (= (length left) 0)
       true
-      (let [entry (table.remove left 1)
+      (let [entry       (table.remove left 1)
             found-index (matching-entry equal parser entry right)]
         (continue-equal-entries equal-entries? equal parser left right found-index))))
 
@@ -120,7 +174,7 @@
   (let [config (or (. opts :config) {}) parser (. opts :parser)
         (out error) (indent.reindent source config)]
     (if error (values nil error)
-        (if (not (indent-only? source out))
+        (if (not (indent-only? source out (and (. config :align-bindings) true)))
             (values nil {:message "formatter changed more than indentation"})
             (if (and parser (not (ast-equal? parser source out)))
                 (values nil {:message "formatter changed the parsed form"})

@@ -30,11 +30,11 @@
       (let [builder (require :eca.ui.builder)
             chat-ui (builder.create-chat-ui
                      {:on-submit (or plugin-opts.on-submit self.default-on-submit)
-                      :on-stop (or plugin-opts.on-stop self.default-on-stop)
-                      :opts {:ui (or plugin-opts.ui {})
-                             :keymaps (or plugin-opts.keymaps
-                                          [{:mode :i :lhs "<C-s>" :rhs "<cmd>EcaChatSubmit<CR>"}
-                                           {:mode :n :lhs "<CR>" :rhs "<cmd>EcaChatSubmit<CR>"}])}})]
+                      :on-stop   (or plugin-opts.on-stop self.default-on-stop)
+                      :opts      {:ui      (or plugin-opts.ui {})
+                                     :keymaps (or plugin-opts.keymaps
+                                                  [{:mode :i :lhs "<C-s>" :rhs "<cmd>EcaChatSubmit<CR>"}
+                                                   {:mode :n :lhs "<CR>" :rhs "<cmd>EcaChatSubmit<CR>"}])}})]
         (chat-ui.open)
         (self.register-chat chat-ui)
            ;; Mock server data
@@ -91,17 +91,17 @@
     (when chat
           ;; Show user message
       (chat.append-message
-       {:id (tostring (os.time))
-        :content text
-        :collapsed? true
+       {:id              (tostring (os.time))
+        :content         text
+        :collapsed?      true
         :collapse-prefix "▸ "})
           ;; Set loading + status
       (chat.set-loading true)
       (chat.set-status "Generating")
           ;; Simulate streaming
-      (let [reply-id (.. "reply-" (tostring (os.time)))
-            full-text (.. "You said: " text "\n\n(This is a mock streaming response)")
-            chunks []
+      (let [reply-id   (.. "reply-" (tostring (os.time)))
+            full-text  (.. "You said: " text "\n\n(This is a mock streaming response)")
+            chunks     []
             chunk-size 3]
         (var i 1)
         (while (<= i (length full-text))

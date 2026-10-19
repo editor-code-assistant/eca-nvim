@@ -77,8 +77,8 @@
 
 (deftest planning
   (testing "classifies additions untracked files and rename destinations as whole-file scope"
-    (is (= {:whole ["a.fnl" "new.fnl" "renamed.fnl"]
-            :hunks []
+    (is (= {:whole   ["a.fnl" "new.fnl" "renamed.fnl"]
+            :hunks   []
             :deleted ["old.fnl"]}
            (plan [{:status "A" :path "a.fnl" :old-path nil}
                   {:status "R" :path "renamed.fnl" :old-path "old.fnl"}]

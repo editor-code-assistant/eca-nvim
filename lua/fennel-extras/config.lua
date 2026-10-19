@@ -54,7 +54,7 @@ local function first_unknown_lint_key(lint, key, candidate)
   if (next_key == nil) then
     return candidate
   else
-    if ((next_key == "rules") or (next_key == "exclusions")) then
+    if ((next_key == "rules") or (next_key == "exclusions") or (next_key == "max-code-lines")) then
       return first_unknown_lint_key(lint, next_key, candidate)
     else
       if ((candidate == nil) or (lint_key_sort_value(next_key) < lint_key_sort_value(candidate))) then
@@ -182,37 +182,45 @@ local function first_exclusion_error(exclusions, index)
     end
   end
 end
-local function lint_table_error(rules, exclusions, unknown_key)
-  local or_26_ = unknown_lint_key_error(unknown_key)
-  if not or_26_ then
+local function lint_max_code_lines_error(max_code_lines)
+  if ((max_code_lines ~= nil) and not ((type(max_code_lines) == "number") and (max_code_lines == math.floor(max_code_lines)) and (max_code_lines > 0))) then
+    return {message = "max-code-lines must be a positive integer"}
+  else
+    return nil
+  end
+end
+local function lint_table_error(rules, exclusions, max_code_lines, unknown_key)
+  local or_27_ = unknown_lint_key_error(unknown_key)
+  if not or_27_ then
     if (rules and ((type(rules) ~= "table") or (sequence_3f(rules) and ((getmetatable(rules) ~= nil) or (#rules > 0))))) then
-      or_26_ = {message = "lint rules must be a table"}
+      or_27_ = {message = "lint rules must be a table"}
     else
-      or_26_ = nil
+      or_27_ = nil
     end
   end
-  if not or_26_ then
+  if not or_27_ then
     if rules then
-      or_26_ = first_lint_rule_error(rules, nil)
+      or_27_ = first_lint_rule_error(rules, nil)
     else
-      or_26_ = nil
+      or_27_ = nil
     end
   end
-  if not or_26_ then
+  or_27_ = or_27_ or lint_max_code_lines_error(max_code_lines)
+  if not or_27_ then
     if (exclusions and not sequence_3f(exclusions)) then
-      or_26_ = {message = "lint exclusions must be a list"}
+      or_27_ = {message = "lint exclusions must be a list"}
     else
-      or_26_ = nil
+      or_27_ = nil
     end
   end
-  if not or_26_ then
+  if not or_27_ then
     if exclusions then
-      or_26_ = first_exclusion_error(exclusions, 1)
+      or_27_ = first_exclusion_error(exclusions, 1)
     else
-      or_26_ = nil
+      or_27_ = nil
     end
   end
-  return or_26_
+  return or_27_
 end
 local function lint_error(lint)
   if (type(lint) ~= "table") then
@@ -220,8 +228,9 @@ local function lint_error(lint)
   else
     local rules = lint.rules
     local exclusions = lint.exclusions
+    local max_code_lines = lint["max-code-lines"]
     local unknown_key = first_unknown_lint_key(lint, nil, nil)
-    return lint_table_error(rules, exclusions, unknown_key)
+    return lint_table_error(rules, exclusions, max_code_lines, unknown_key)
   end
 end
 local function error_at(message, token)
@@ -390,7 +399,7 @@ local parse_string
 do
   local function parse_string0(text)
     local ok, result
-    local function _58_()
+    local function _59_()
       local root, reader_error = reader.parse(text)
       if reader_error then
         return {error = reader_error}
@@ -412,7 +421,7 @@ do
         end
       end
     end
-    ok, result = pcall(_58_)
+    ok, result = pcall(_59_)
     if not ok then
       return nil, result
     else
@@ -521,6 +530,7 @@ local function configuration_error(tbl)
   local extensions = tbl.extensions
   local skip_dotfiles = tbl["skip-dotfiles"]
   local follow_symlinks = tbl["follow-symlinks"]
+  local align_bindings = tbl["align-bindings"]
   local parser = tbl.parser
   local lint = tbl.lint
   local failure = nil
@@ -556,6 +566,10 @@ local function configuration_error(tbl)
     failure = {message = "follow-symlinks must be a boolean"}
   else
   end
+  if ((failure == nil) and (align_bindings ~= nil) and not boolean_3f(align_bindings)) then
+    failure = {message = "align-bindings must be a boolean"}
+  else
+  end
   if ((failure == nil) and (parser ~= nil) and (type(parser) ~= "string")) then
     failure = {message = "parser must be a string"}
   else
@@ -568,7 +582,7 @@ do
     if (type(tbl) ~= "table") then
       return nil, {message = "configuration must be a table"}
     else
-      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, parser = true, lint = true}
+      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, ["align-bindings"] = true, parser = true, lint = true}
       local failure = nil
       for key, _ in pairs(tbl) do
         if not allowed[key] then
@@ -603,7 +617,8 @@ local function valid_lint_policy(cfg)
   local lint = cfg.lint
   local overrides = ((lint and lint.rules) or {})
   local exclusions = ((lint and lint.exclusions) or {})
-  return {rules = core.merge(lint_rules.defaults(), overrides), exclusions = exclusions}
+  local max_code_lines = ((lint and lint["max-code-lines"]) or 300)
+  return {rules = core.merge(lint_rules.defaults(), overrides), exclusions = exclusions, ["max-code-lines"] = max_code_lines}
 end
 local lint_policy
 do
@@ -706,10 +721,10 @@ do
       local text = file:read("*a")
       file:close()
       local ok, parsed_or_error
-      local function _102_()
+      local function _104_()
         return parse_string(text)
       end
-      ok, parsed_or_error = pcall(_102_)
+      ok, parsed_or_error = pcall(_104_)
       if not ok then
         return nil, parsed_or_error
       else

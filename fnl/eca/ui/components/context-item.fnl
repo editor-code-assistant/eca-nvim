@@ -6,7 +6,7 @@
    text: display text (e.g. '@file.lua', '@repoMap')
    hl-group: highlight group
    Returns {: text : hl-group}."
-  {:text (or text "")
+  {:text     (or text "")
    :hl-group (or hl-group :Normal)})
 
 {: render}

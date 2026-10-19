@@ -7,7 +7,7 @@ do
 end
 local built_in_rules = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}}
 local prefix_rules = {def = {{"inner", 0}}, ["with-"] = {{"block", 1}}}
-local allowed_keys = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true}
+local allowed_keys = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, ["align-bindings"] = true}
 local resolve_name = nil
 local alias_rule = nil
 local function error(message)
@@ -275,6 +275,14 @@ local function validate_custom_config(config)
     end
   end
 end
+local function validate_align_bindings(config)
+  local align_bindings = config["align-bindings"]
+  if ((align_bindings ~= nil) and (type(align_bindings) ~= "boolean")) then
+    return error("align-bindings must be a boolean")
+  else
+    return nil
+  end
+end
 local function validate_config_table(config)
   local failure = nil
   for key, _ in pairs(config) do
@@ -301,6 +309,10 @@ local function validate_config_table(config)
       failure = error("indent-width must be a positive integer")
     else
     end
+  else
+  end
+  if (failure == nil) then
+    failure = validate_align_bindings(config)
   else
   end
   if (failure == nil) then

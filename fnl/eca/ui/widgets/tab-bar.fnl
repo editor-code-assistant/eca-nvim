@@ -6,7 +6,7 @@
    initial-state: {: tabs [{: id : label : hl-group}] : active-id}
    Returns {: render : add-tab : remove-tab : select-tab : update-tab : get-state}."
   (local state (vim.tbl_extend :force
-                               {:tabs []
+                               {:tabs      []
                                 :active-id nil}
                                (or initial-state {})))
 
@@ -14,7 +14,7 @@
     (let [parts []]
       (each [_ tab (ipairs state.tabs)]
         (let [is-active (= tab.id state.active-id)
-              hl (or tab.hl-group (if is-active :EcaTabActive :EcaTabInactive))]
+              hl        (or tab.hl-group (if is-active :EcaTabActive :EcaTabInactive))]
           (table.insert parts
                         (.. "%#" hl "# " (or tab.label (tostring tab.id)) " "))))
       (table.concat parts "%#Normal#│")))

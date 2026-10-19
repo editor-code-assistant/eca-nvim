@@ -100,22 +100,28 @@
   (table.insert chunks (string.sub value index (+ index span -1)))
   chunks)
 
+(defn- normalize-utf8-step [value index chunks first second third fourth recurse]
+  (or (and (< first 128)
+           (recurse value (+ index 1) (append-byte chunks value index)))
+      (and (valid-two-byte? first second)
+           (recurse value (+ index 2) (append-sequence chunks value index 2)))
+      (and (valid-three-byte? first second third)
+           (recurse value (+ index 3) (append-sequence chunks value index 3)))
+      (and (valid-four-byte? first second third fourth)
+           (recurse value (+ index 4) (append-sequence chunks value index 4)))
+      (recurse value (+ index 1) (append-replacement chunks))))
+
+(defn- normalize-utf8-bytes [value index chunks recurse]
+  (let [first  (string.byte value index)
+        second (string.byte value (+ index 1))
+        third  (string.byte value (+ index 2))
+        fourth (string.byte value (+ index 3))]
+    (normalize-utf8-step value index chunks first second third fourth recurse)))
+
 (defn- normalize-utf8-at [value index chunks]
   (if (> index (length value))
       (table.concat chunks)
-      (let [first (string.byte value index)
-            second (string.byte value (+ index 1))
-            third (string.byte value (+ index 2))
-            fourth (string.byte value (+ index 3))]
-        (if (< first 128)
-            (normalize-utf8-at value (+ index 1) (append-byte chunks value index))
-            (if (valid-two-byte? first second)
-                (normalize-utf8-at value (+ index 2) (append-sequence chunks value index 2))
-                (if (valid-three-byte? first second third)
-                    (normalize-utf8-at value (+ index 3) (append-sequence chunks value index 3))
-                    (if (valid-four-byte? first second third fourth)
-                        (normalize-utf8-at value (+ index 4) (append-sequence chunks value index 4))
-                        (normalize-utf8-at value (+ index 1) (append-replacement chunks)))))))))
+      (normalize-utf8-bytes value index chunks normalize-utf8-at)))
 
 (defn- normalize-utf8 [value]
   (normalize-utf8-at value 1 []))

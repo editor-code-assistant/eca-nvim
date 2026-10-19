@@ -40,26 +40,26 @@
   (let [form (form-by-id source path form-id)]
     (if (or (. form :module-missing) (. form :reader-error))
         form
-        {:line (. form :line)
-         :col (. form :col)
+        {:line     (. form :line)
+         :col      (. form :col)
          :end-line (. form :end-line)
-         :end-col (. form :end-col)})))
+         :end-col  (. form :end-col)})))
 
 (defn- location-summary [source path form-id]
   (let [form (form-by-id source path form-id)]
     (if form
         {:line (. form :line)
-         :col (. form :col)}
+         :col  (. form :col)}
         nil)))
 
 (defn- reader-end-summary [source]
-  (let [reader (require :fennel-extras.reader)
-        tokens (reader.tokenize source)
+  (let [reader  (require :fennel-extras.reader)
+        tokens  (reader.tokenize source)
         closing (. tokens (length tokens))]
-    {:line 1
-     :col 1
+    {:line     1
+     :col      1
      :end-line (. closing :line)
-     :end-col (+ (. closing :col) 1)}))
+     :end-col  (+ (. closing :col) 1)}))
 
 (defn- failure-summary [source path]
   (let [identity (load-identity)]
@@ -67,9 +67,9 @@
         identity
         (let [(value err) (identity.forms source path)]
           {:value-nil? (= nil value)
-           :message (and err (. err :message))
-           :line (and err (. err :line))
-           :col (and err (. err :col))}))))
+           :message    (and err (. err :message))
+           :line       (and err (. err :line))
+           :col        (and err (. err :col))}))))
 
 (deftest named-identities
   (testing "module and named declarations form stable ancestor identities"
@@ -142,7 +142,7 @@
 (deftest stability
   (testing "unrelated named top-level insertion does not change named identities"
     (let [before (form-by-id "(module app)\n(defn run [] (if a b c))" "fnl/app.fnl" "fnl/app.fnl > module:app > defn:run > if#1")
-          after (form-by-id "(defn other [] 1)\n(module app)\n(defn run [] (if a b c))" "fnl/app.fnl" "fnl/app.fnl > module:app > defn:run > if#1")]
+          after  (form-by-id "(defn other [] 1)\n(module app)\n(defn run [] (if a b c))" "fnl/app.fnl" "fnl/app.fnl > module:app > defn:run > if#1")]
       (is (and (not (. before :module-missing))
                (= (. before :form) (. after :form)))))))
 
@@ -155,9 +155,9 @@
            (form-ids "'(if a b)" "fnl/quote.fnl"))))
   (testing "reader failures return nil plus a structured message and location"
     (is (= {:value-nil? true
-            :message "missing closing delimiter"
-            :line 1
-            :col 1}
+            :message    "missing closing delimiter"
+            :line       1
+            :col        1}
            (failure-summary "(unclosed" "fnl/bad.fnl")))))
 
 (deftest spans
@@ -181,8 +181,8 @@
            (span-summary "(foo\n  €😀)" "fnl/utf8.fnl" "fnl/utf8.fnl > top#1")))))
 
 (defn- file-paths []
-  (let [paths []
-        fnl-files (vim.fn.globpath "fnl" "**/*.fnl" false true)
+  (let [paths      []
+        fnl-files  (vim.fn.globpath "fnl" "**/*.fnl" false true)
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
       (if (not (string.find path "^fnl/eca/nfnl/"))
@@ -194,7 +194,7 @@
 
 (defn- read-source [path]
   (let [(ok result) (pcall (fn []
-                             (let [file (assert (io.open path :r))
+                             (let [file   (assert (io.open path :r))
                                    source (file:read "*a")]
                                (file:close)
                                source)))]
@@ -207,8 +207,8 @@
   (tset reported form-id true))
 
 (defn- duplicate-form-ids [forms]
-  (let [seen {}
-        reported {}
+  (let [seen       {}
+        reported   {}
         duplicates []]
     (each [_ form (ipairs forms)]
       (let [form-id (. form :form)]
@@ -222,7 +222,7 @@
   (let [duplicates []]
     (each [_ path (ipairs (file-paths))]
       (let [source (read-source path)
-            forms (if source (identity-forms source path) nil)]
+            forms  (if source (identity-forms source path) nil)]
         (if (and forms (not (. forms :module-missing)) (not (. forms :reader-error)))
             (let [form-duplicates (duplicate-form-ids forms)]
               (if (> (length form-duplicates) 0)
@@ -263,11 +263,11 @@
             "fnl/testing.fnl > deftest:run > testing#2"]
            (form-ids "(deftest run (testing \"one\" (is true)) (testing \"two\" (is true)))" "fnl/testing.fnl"))))
   (testing "sibling testing forms keep their source locations"
-    (is (= {:first {:line 1 :col 14}
+    (is (= {:first  {:line 1 :col 14}
             :second {:line 1 :col 40}}
-           {:first (location-summary "(deftest run (testing \"one\" (is true)) (testing \"two\" (is true)))"
-                                     "fnl/testing.fnl"
-                                     "fnl/testing.fnl > deftest:run > testing#1")
+           {:first  (location-summary "(deftest run (testing \"one\" (is true)) (testing \"two\" (is true)))"
+                                         "fnl/testing.fnl"
+                                         "fnl/testing.fnl > deftest:run > testing#1")
             :second (location-summary "(deftest run (testing \"one\" (is true)) (testing \"two\" (is true)))"
                                       "fnl/testing.fnl"
                                       "fnl/testing.fnl > deftest:run > testing#2")})))
@@ -291,54 +291,54 @@
                      "fnl/testing.fnl")))))
 
 (defn- binding-vector-identities []
-  {:let (form-ids "(defn run [] (let [x xs] [1 2]))" "fnl/bindings.fnl")
-   :when-let (form-ids "(defn run [] (when-let [x xs] [1 2]))" "fnl/bindings.fnl")
-   :if-let (form-ids "(defn run [] (if-let [x xs] [1 2]))" "fnl/bindings.fnl")
-   :each (form-ids "(defn run [] (each [x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
-   :for (form-ids "(defn run [] (for [x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
-   :icollect (form-ids "(defn run [] (icollect [i x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
-   :collect (form-ids "(defn run [] (collect [x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
-   :accumulate (form-ids "(defn run [] (accumulate [acc 0 _ x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
-   :with-open (form-ids "(defn run [] (with-open [f (io.open p)] [1 2]))" "fnl/bindings.fnl")
-   :fn (form-ids "(defn run [] (fn [x xs] [1 2]))" "fnl/bindings.fnl")
-   :lambda (form-ids "(defn run [] (lambda [x xs] [1 2]))" "fnl/bindings.fnl")
+  {:let           (form-ids "(defn run [] (let [x xs] [1 2]))" "fnl/bindings.fnl")
+   :when-let      (form-ids "(defn run [] (when-let [x xs] [1 2]))" "fnl/bindings.fnl")
+   :if-let        (form-ids "(defn run [] (if-let [x xs] [1 2]))" "fnl/bindings.fnl")
+   :each          (form-ids "(defn run [] (each [x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
+   :for           (form-ids "(defn run [] (for [x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
+   :icollect      (form-ids "(defn run [] (icollect [i x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
+   :collect       (form-ids "(defn run [] (collect [x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
+   :accumulate    (form-ids "(defn run [] (accumulate [acc 0 _ x (ipairs xs)] [1 2]))" "fnl/bindings.fnl")
+   :with-open     (form-ids "(defn run [] (with-open [f (io.open p)] [1 2]))" "fnl/bindings.fnl")
+   :fn            (form-ids "(defn run [] (fn [x xs] [1 2]))" "fnl/bindings.fnl")
+   :lambda        (form-ids "(defn run [] (lambda [x xs] [1 2]))" "fnl/bindings.fnl")
    :lambda-symbol (form-ids "(defn run [] (λ [x xs] [1 2]))" "fnl/bindings.fnl")
-   :defn (form-ids "(defn inner [x xs] [1 2])" "fnl/bindings.fnl")
-   :defn- (form-ids "(defn- inner [x xs] [1 2])" "fnl/bindings.fnl")
-   :macro (form-ids "(macro inner [x xs] [1 2])" "fnl/bindings.fnl")})
+   :defn          (form-ids "(defn inner [x xs] [1 2])" "fnl/bindings.fnl")
+   :defn-         (form-ids "(defn- inner [x xs] [1 2])" "fnl/bindings.fnl")
+   :macro         (form-ids "(macro inner [x xs] [1 2])" "fnl/bindings.fnl")})
 
 (deftest binding-vector-identities
   (testing "binding and parameter vectors do not get identities"
-    (is (= {:let ["fnl/bindings.fnl > defn:run"
-                  "fnl/bindings.fnl > defn:run > sequence#1"]
-            :when-let ["fnl/bindings.fnl > defn:run"
-                       "fnl/bindings.fnl > defn:run > sequence#1"]
-            :if-let ["fnl/bindings.fnl > defn:run"
-                     "fnl/bindings.fnl > defn:run > sequence#1"]
-            :each ["fnl/bindings.fnl > defn:run"
-                   "fnl/bindings.fnl > defn:run > sequence#1"]
-            :for ["fnl/bindings.fnl > defn:run"
-                  "fnl/bindings.fnl > defn:run > sequence#1"]
-            :icollect ["fnl/bindings.fnl > defn:run"
-                       "fnl/bindings.fnl > defn:run > sequence#1"]
-            :collect ["fnl/bindings.fnl > defn:run"
-                      "fnl/bindings.fnl > defn:run > sequence#1"]
-            :accumulate ["fnl/bindings.fnl > defn:run"
-                         "fnl/bindings.fnl > defn:run > sequence#1"]
-            :with-open ["fnl/bindings.fnl > defn:run"
-                        "fnl/bindings.fnl > defn:run > sequence#1"]
-            :fn ["fnl/bindings.fnl > defn:run"
-                 "fnl/bindings.fnl > defn:run > sequence#1"]
-            :lambda ["fnl/bindings.fnl > defn:run"
-                     "fnl/bindings.fnl > defn:run > sequence#1"]
+    (is (= {:let           ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :when-let      ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :if-let        ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :each          ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :for           ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :icollect      ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :collect       ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :accumulate    ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :with-open     ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :fn            ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
+            :lambda        ["fnl/bindings.fnl > defn:run"
+                               "fnl/bindings.fnl > defn:run > sequence#1"]
             :lambda-symbol ["fnl/bindings.fnl > defn:run"
                             "fnl/bindings.fnl > defn:run > sequence#1"]
-            :defn ["fnl/bindings.fnl > defn:inner"
-                   "fnl/bindings.fnl > defn:inner > sequence#1"]
-            :defn- ["fnl/bindings.fnl > defn-:inner"
-                    "fnl/bindings.fnl > defn-:inner > sequence#1"]
-            :macro ["fnl/bindings.fnl > top#1"
-                    "fnl/bindings.fnl > top#1 > sequence#1"]}
+            :defn          ["fnl/bindings.fnl > defn:inner"
+                               "fnl/bindings.fnl > defn:inner > sequence#1"]
+            :defn-         ["fnl/bindings.fnl > defn-:inner"
+                               "fnl/bindings.fnl > defn-:inner > sequence#1"]
+            :macro         ["fnl/bindings.fnl > top#1"
+                               "fnl/bindings.fnl > top#1 > sequence#1"]}
            (binding-vector-identities))))
   (testing "forms nested in binding vectors keep identities in the enclosing namespace"
     (is (= ["fnl/nested-binding.fnl > defn:run"

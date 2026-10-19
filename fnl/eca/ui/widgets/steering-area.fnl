@@ -5,10 +5,10 @@
 (local nvim vim.api)
 
 (fn create [buf-id]
-  (local state {:items []
-                :ns-id nil
+  (local state {:items      []
+                :ns-id      nil
                 :start-line 0
-                :end-line 0})
+                :end-line   0})
 
   (fn ensure-ns []
     (when (= nil state.ns-id)
@@ -20,19 +20,19 @@
 
   (fn apply-virt-text [line-num]
     "Apply inline virtual text decoration around the '-' on the given line."
-    (let [ns (ensure-ns)
-          combined (table.concat state.items "\n")
+    (let [ns        (ensure-ns)
+          combined  (table.concat state.items "\n")
           truncated (if (> (length combined) 60)
                         (.. (string.sub combined 1 60) "...")
                         combined)
-          prefix (.. "Steering: " truncated " [")]
+          prefix    (.. "Steering: " truncated " [")]
          ;; Inline virt text before "-"
       (nvim.nvim_buf_set_extmark buf-id ns line-num 0
-                                 {:virt_text [[prefix :EcaSteeringLabel]]
+                                 {:virt_text     [[prefix :EcaSteeringLabel]]
                                   :virt_text_pos :inline})
          ;; Inline virt text after "-"
       (nvim.nvim_buf_set_extmark buf-id ns line-num 1
-                                 {:virt_text [["]" :EcaStopLabel]]
+                                 {:virt_text     [["]" :EcaStopLabel]]
                                   :virt_text_pos :inline})
          ;; Highlight the "-" itself
       (nvim.nvim_buf_set_extmark buf-id ns line-num 0
@@ -67,7 +67,7 @@
     "Check if the cursor is currently on the steering line."
     (and (has-items?)
          (let [cursor (nvim.nvim_win_get_cursor 0)
-               row (. cursor 1)]
+               row    (. cursor 1)]
            (= row (+ state.start-line 1)))))
 
   (fn clear []

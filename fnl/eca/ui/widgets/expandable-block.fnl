@@ -6,14 +6,14 @@
    initial-state: {: id : label : icon-expanded : icon-collapsed : content : expanded?}
    Returns {: render : toggle : expand : collapse : update-label : get-state}."
   (local state (vim.tbl_extend :force
-                               {:id nil
-                                :label ""
-                                :icon-expanded "⏷"
+                               {:id             nil
+                                :label          ""
+                                :icon-expanded  "⏷"
                                 :icon-collapsed "⏵"
-                                :content []
-                                :expanded? false
-                                :start-line 0
-                                :ns-id nil}
+                                :content        []
+                                :expanded?      false
+                                :start-line     0
+                                :ns-id          nil}
                                (or initial-state {})))
 
   (fn ensure-ns []
@@ -29,15 +29,15 @@
   (fn render [start-line]
     "Render the block at start-line. Returns number of lines used."
     (set state.start-line start-line)
-    (let [ns (ensure-ns)
+    (let [ns         (ensure-ns)
           label-line (build-label)
-          lines [label-line]]
+          lines      [label-line]]
       (when state.expanded?
         (each [_ line (ipairs state.content)]
           (table.insert lines (.. "  " line))))
       (canvas:set-lines start-line start-line lines)
       (canvas:add-extmark ns start-line 0
-                          {:end_col (length label-line)
+                          {:end_col  (length label-line)
                            :hl_group :EcaExpandableLabel})
       (length lines)))
 

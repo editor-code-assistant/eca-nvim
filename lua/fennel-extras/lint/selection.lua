@@ -28,58 +28,72 @@ end
 local function status_letter(status)
   return string.sub(status, 1, 1)
 end
+local function status_first_path(parts, index, record, tab, separated_3f)
+  if separated_3f then
+    return string.sub(record, (tab + 1))
+  else
+    return parts[(index + 1)]
+  end
+end
+local function status_old_path(rename, first_path)
+  if rename then
+    return first_path
+  else
+    return nil
+  end
+end
+local function status_offset(separated_3f)
+  if separated_3f then
+    return 1
+  else
+    return 2
+  end
+end
+local function status_destination(parts, index, rename, separated_3f, first_path)
+  if rename then
+    return parts[(index + status_offset(separated_3f))]
+  else
+    return first_path
+  end
+end
+local function status_rename_offset(separated_3f)
+  if separated_3f then
+    return 2
+  else
+    return 3
+  end
+end
+local function status_normal_offset(separated_3f)
+  if separated_3f then
+    return 1
+  else
+    return 2
+  end
+end
+local function status_next_index(index, rename, separated_3f)
+  if rename then
+    return (index + status_rename_offset(separated_3f))
+  else
+    return (index + status_normal_offset(separated_3f))
+  end
+end
+local function parse_status_parts_step(parts, index, result, recurse)
+  local record = parts[index]
+  local tab = string.find(record, "\t")
+  local status = status_letter(string.sub(record, 1, (tab or 1)))
+  local rename = ((status == "R") or (status == "C"))
+  local separated_3f = (tab ~= nil)
+  local first_path = status_first_path(parts, index, record, tab, separated_3f)
+  local old_path = status_old_path(rename, first_path)
+  local destination = status_destination(parts, index, rename, separated_3f, first_path)
+  local next_index = status_next_index(index, rename, separated_3f)
+  return recurse(parts, next_index, add_status(result, status, destination, old_path))
+end
 local function parse_status_parts(parts, index, result)
   if (index > #parts) then
     return result
   else
-    local record = parts[index]
-    local tab = string.find(record, "\t")
-    local status = status_letter(string.sub(record, 1, (tab or 1)))
-    local rename = ((status == "R") or (status == "C"))
-    local separated_3f = (tab ~= nil)
-    local first_path
-    if separated_3f then
-      first_path = string.sub(record, (tab + 1))
-    else
-      first_path = parts[(index + 1)]
-    end
-    local old_path
-    if rename then
-      old_path = first_path
-    else
-      old_path = nil
-    end
-    local destination
-    if rename then
-      local _4_
-      if separated_3f then
-        _4_ = 1
-      else
-        _4_ = 2
-      end
-      destination = parts[(index + _4_)]
-    else
-      destination = first_path
-    end
-    local next_index
-    if rename then
-      local _7_
-      if separated_3f then
-        _7_ = 2
-      else
-        _7_ = 3
-      end
-      next_index = (index + _7_)
-    else
-      local _9_
-      if separated_3f then
-        _9_ = 1
-      else
-        _9_ = 2
-      end
-      next_index = (index + _9_)
-    end
-    return parse_status_parts(parts, next_index, add_status(result, status, destination, old_path))
+    return parse_status_parts_step(parts, index, result, parse_status_parts)
   end
 end
 local parse_name_status
@@ -146,16 +160,19 @@ do
   _2amodule_2a["parse-hunks"] = parse_hunks0
   parse_hunks = _2amodule_2a["parse-hunks"]
 end
+local function overlaps_step(form, intervals, index, recurse)
+  local interval = intervals[index]
+  if ((interval.start <= form["end-line"]) and (form.line <= interval["end"])) then
+    return true
+  else
+    return recurse(form, intervals, (index + 1))
+  end
+end
 local function overlaps_3f(form, intervals, index)
   if (index > #intervals) then
     return false
   else
-    local interval = intervals[index]
-    if ((interval.start <= form["end-line"]) and (form.line <= interval["end"])) then
-      return true
-    else
-      return overlaps_3f(form, intervals, (index + 1))
-    end
+    return overlaps_step(form, intervals, index, overlaps_3f)
   end
 end
 local form_selected_3f
@@ -180,12 +197,15 @@ local function append_if_new(seen, items, value)
     return {seen = core.assoc(seen, value, true), items = append_item(items, value)}
   end
 end
+local function add_record_path_new(state, seen_key, items_key, path)
+  local result = append_if_new(state[seen_key], state[items_key], path)
+  return core.assoc(core.assoc(state, seen_key, result.seen), items_key, result.items)
+end
 local function add_record_path(state, seen_key, items_key, path)
   if state[seen_key][path] then
     return state
   else
-    local result = append_if_new(state[seen_key], state[items_key], path)
-    return core.assoc(core.assoc(state, seen_key, result.seen), items_key, result.items)
+    return add_record_path_new(state, seen_key, items_key, path)
   end
 end
 local function add_whole_record(state, record)
@@ -200,20 +220,26 @@ end
 local function add_record(state, record)
   return (add_whole_record(state, record) or add_deleted_record(state, record) or add_hunk_record(state, record) or state)
 end
+local function add_old_path_new(state, record)
+  local result = append_if_new(state["deleted-set"], state.deleted, record["old-path"])
+  return core.assoc(state, "deleted-set", result.seen, "deleted", result.items)
+end
 local function add_old_path(state, record)
   if (((record.status == "R") or (record.status == "C")) and record["old-path"] and not state["deleted-set"][record["old-path"]]) then
-    local result = append_if_new(state["deleted-set"], state.deleted, record["old-path"])
-    return core.assoc(state, "deleted-set", result.seen, "deleted", result.items)
+    return add_old_path_new(state, record)
   else
     return state
   end
+end
+local function add_untracked_path_new(state, path)
+  local result = append_if_new(state["whole-set"], state.whole, path)
+  return core.assoc(state, "whole-set", result.seen, "whole", result.items)
 end
 local function add_untracked_path(state, path)
   if ((path == nil) or state["whole-set"][path]) then
     return state
   else
-    local result = append_if_new(state["whole-set"], state.whole, path)
-    return core.assoc(state, "whole-set", result.seen, "whole", result.items)
+    return add_untracked_path_new(state, path)
   end
 end
 local function add_records(initial, records)

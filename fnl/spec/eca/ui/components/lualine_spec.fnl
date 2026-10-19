@@ -22,7 +22,7 @@
   (let [lualine-mock {:setup (fn [])}]
     (with-lualine-plugin lualine-mock
       (fn [] {:expected lualine-mock
-              :actual (lualine.plugin)}))))
+              :actual   (lualine.plugin)}))))
 
 (defn- missing-plugin-scenario
   []
@@ -33,10 +33,10 @@
   []
   (var captured nil)
   (let [plugin {:get_config (fn []
-                              {:options {:theme :gruvbox}
+                              {:options    {:theme :gruvbox}
                                :extensions [{:filetypes [:other]}]})
-                :setup (fn [cfg]
-                         (set captured cfg))}]
+                :setup      (fn [cfg]
+                                 (set captured cfg))}]
     (with-lualine-plugin plugin
       (fn []
         (lualine.setup [{:value "~/dev/eca-nvim"}
@@ -56,8 +56,8 @@
     (let [captured (setup-scenario)]
       (is (= {:extensions [{:filetypes [:other]}
                            {:filetypes [:eca-chat]
-                            :sections {:lualine_a ["%#EcaHeaderValue#~/dev/eca-nvim"]
-                                       :lualine_x ["%#EcaHeaderValue#⏱ 0s"]
-                                       :lualine_y ["%#EcaHeaderValue#0/200K ($0.00)"]}}]
-              :options {:theme :gruvbox}}
+                            :sections  {:lualine_a ["%#EcaHeaderValue#~/dev/eca-nvim"]
+                                           :lualine_x ["%#EcaHeaderValue#⏱ 0s"]
+                                           :lualine_y ["%#EcaHeaderValue#0/200K ($0.00)"]}}]
+              :options    {:theme :gruvbox}}
              captured)))))

@@ -16,21 +16,49 @@
 (defn- status-letter [status]
   (string.sub status 1 1))
 
+(defn- status-first-path [parts index record tab separated?]
+  (if separated?
+      (string.sub record (+ tab 1))
+      (. parts (+ index 1))))
+
+(defn- status-old-path [rename first-path]
+  (if rename first-path nil))
+
+(defn- status-offset [separated?]
+  (if separated? 1 2))
+
+(defn- status-destination [parts index rename separated? first-path]
+  (if rename
+      (. parts (+ index (status-offset separated?)))
+      first-path))
+
+(defn- status-rename-offset [separated?]
+  (if separated? 2 3))
+
+(defn- status-normal-offset [separated?]
+  (if separated? 1 2))
+
+(defn- status-next-index [index rename separated?]
+  (if rename
+      (+ index (status-rename-offset separated?))
+      (+ index (status-normal-offset separated?))))
+
+(defn- parse-status-parts-step [parts index result recurse]
+  (let [record      (. parts index)
+        tab         (string.find record "\t")
+        status      (status-letter (string.sub record 1 (or tab 1)))
+        rename      (or (= status "R") (= status "C"))
+        separated?  (not= tab nil)
+        first-path  (status-first-path parts index record tab separated?)
+        old-path    (status-old-path rename first-path)
+        destination (status-destination parts index rename separated? first-path)
+        next-index  (status-next-index index rename separated?)]
+    (recurse parts next-index (add-status result status destination old-path))))
+
 (defn- parse-status-parts [parts index result]
   (if (> index (length parts))
       result
-      (let [record (. parts index)
-            tab (string.find record "\t")
-            status (status-letter (string.sub record 1 (or tab 1)))
-            rename (or (= status "R") (= status "C"))
-            separated? (not= tab nil)
-            first-path (if separated? (string.sub record (+ tab 1)) (. parts (+ index 1)))
-            old-path (if rename first-path nil)
-            destination (if rename (. parts (+ index (if separated? 1 2))) first-path)
-            next-index (if rename (+ index (if separated? 2 3)) (+ index (if separated? 1 2)))]
-        (parse-status-parts parts
-                            next-index
-                            (add-status result status destination old-path)))))
+      (parse-status-parts-step parts index result parse-status-parts)))
 
 (defn parse-name-status [text]
   (let [parts (split-nul text)]
@@ -49,7 +77,7 @@
 
 (defn- hunk-line [line]
   (let [(new-start new-count) (string.match line "^@@ %-[0-9]+,?[0-9]* %+(%d+),?(%d*)")
-        count (hunk-count new-count)]
+        count                 (hunk-count new-count)]
     (and new-start
          {:start (tonumber new-start) :end (+ (tonumber new-start) (math.max count 1) -1)})))
 
@@ -57,14 +85,17 @@
   (icollect [_ line (ipairs (split-lines text))]
     (hunk-line line)))
 
+(defn- overlaps-step [form intervals index recurse]
+  (let [interval (. intervals index)]
+    (if (and (<= interval.start form.end-line)
+             (<= form.line interval.end))
+        true
+        (recurse form intervals (+ index 1)))))
+
 (defn- overlaps? [form intervals index]
   (if (> index (length intervals))
       false
-      (let [interval (. intervals index)]
-        (if (and (<= interval.start form.end-line)
-                 (<= form.line interval.end))
-            true
-            (overlaps? form intervals (+ index 1))))))
+      (overlaps-step form intervals index overlaps?)))
 
 (defn form-selected? [form intervals]
   (overlaps? form intervals 1))
@@ -77,15 +108,18 @@
 (defn- append-if-new [seen items value]
   (if (. seen value)
       {:seen seen :items items}
-      {:seen (core.assoc seen value true)
+      {:seen  (core.assoc seen value true)
        :items (append-item items value)}))
+
+(defn- add-record-path-new [state seen-key items-key path]
+  (let [result (append-if-new (. state seen-key) (. state items-key) path)]
+    (core.assoc (core.assoc state seen-key result.seen)
+                items-key result.items)))
 
 (defn- add-record-path [state seen-key items-key path]
   (if (. (. state seen-key) path)
       state
-      (let [result (append-if-new (. state seen-key) (. state items-key) path)]
-        (core.assoc (core.assoc state seen-key result.seen)
-                    items-key result.items))))
+      (add-record-path-new state seen-key items-key path)))
 
 (defn- add-whole-record [state record]
   (and (or (= record.status "A") (= record.status "R") (= record.status "C"))
@@ -105,18 +139,24 @@
       (add-hunk-record state record)
       state))
 
+(defn- add-old-path-new [state record]
+  (let [result (append-if-new state.deleted-set state.deleted record.old-path)]
+    (core.assoc state :deleted-set result.seen :deleted result.items)))
+
 (defn- add-old-path [state record]
   (if (and (or (= record.status "R") (= record.status "C")) record.old-path
            (not (. state.deleted-set record.old-path)))
-      (let [result (append-if-new state.deleted-set state.deleted record.old-path)]
-        (core.assoc state :deleted-set result.seen :deleted result.items))
+      (add-old-path-new state record)
       state))
+
+(defn- add-untracked-path-new [state path]
+  (let [result (append-if-new state.whole-set state.whole path)]
+    (core.assoc state :whole-set result.seen :whole result.items)))
 
 (defn- add-untracked-path [state path]
   (if (or (= path nil) (. state.whole-set path))
       state
-      (let [result (append-if-new state.whole-set state.whole path)]
-        (core.assoc state :whole-set result.seen :whole result.items))))
+      (add-untracked-path-new state path)))
 
 (defn- add-records [initial records]
   (accumulate [state initial _ record (ipairs records)]

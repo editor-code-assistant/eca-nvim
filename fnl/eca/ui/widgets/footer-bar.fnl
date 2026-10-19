@@ -39,6 +39,6 @@
                                                                 (apply (core.get state
                                                                                  :items)))
                                                   10)))})
-    {:render (fn [] (render state))
-     :update (fn [new-items] (update state new-items))
+    {:render    (fn [] (render state))
+     :update    (fn [new-items] (update state new-items))
      :get-state (fn [] (get-state state))}))

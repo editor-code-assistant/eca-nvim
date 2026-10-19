@@ -18,16 +18,16 @@
    collapsed?: if true, render single line with collapse-prefix
    collapse-prefix: prefix for collapsed view (e.g. '▸ ')
    Returns {: lines : highlights}."
-  (let [pfx (or prefix "")
-        hl (or hl-group (when (and prefix (> (length prefix) 0)) :EcaMessagePrefix))
+  (let [pfx           (or prefix "")
+        hl            (or hl-group (when (and prefix (> (length prefix) 0)) :EcaMessagePrefix))
         content-lines (split-lines (or content ""))
-        lines []
-        highlights []]
+        lines         []
+        highlights    []]
     (if collapsed?
         ;; Collapsed: single line with collapse-prefix + first line of content
-        (let [cpfx (or collapse-prefix "▸ ")
+        (let [cpfx          (or collapse-prefix "▸ ")
               first-content (or (. content-lines 1) "")
-              line (.. cpfx first-content)]
+              line          (.. cpfx first-content)]
           (table.insert lines line)
           (table.insert highlights
                         {:line-idx 0 :hl-group (or hl :EcaExpandableLabel)
@@ -40,10 +40,10 @@
               (table.insert lines full)
               (when hl
                 (table.insert highlights
-                              {:line-idx (- (length lines) 1)
-                               :hl-group hl
+                              {:line-idx  (- (length lines) 1)
+                               :hl-group  hl
                                :col-start 0
-                               :col-end (length full)}))))
+                               :col-end   (length full)}))))
           (table.insert lines "")))
     {: lines : highlights}))
 

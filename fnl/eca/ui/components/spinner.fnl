@@ -7,9 +7,9 @@
   "Render a spinner frame.
    frame is a 0-based index, wraps around automatically.
    Returns {: text : hl-group}."
-  (let [idx (+ (% (or frame 0) (length frames)) 1)
+  (let [idx  (+ (% (or frame 0) (length frames)) 1)
         char (. frames idx)]
-    {:text char
+    {:text     char
      :hl-group :EcaSpinner}))
 
 (fn frame-count []

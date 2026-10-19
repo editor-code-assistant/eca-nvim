@@ -9,7 +9,7 @@
 
 (defn- read-source [path]
   (let [(ok result) (pcall (fn []
-                             (let [file (assert (io.open path :r))
+                             (let [file   (assert (io.open path :r))
                                    source (file:read "*a")]
                                (file:close)
                                source)))]
@@ -18,8 +18,8 @@
         {:error "read failed" :path path})))
 
 (defn- file-paths []
-  (let [paths []
-        fnl-files (vim.fn.globpath "fnl" "**/*.fnl" false true)
+  (let [paths      []
+        fnl-files  (vim.fn.globpath "fnl" "**/*.fnl" false true)
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
       (table.insert paths path))
@@ -37,7 +37,7 @@
     (. token :kind)))
 
 (defn- round-trip-scenario []
-  (let [reader (load-reader)
+  (let [reader   (load-reader)
         failures []]
     (if (. reader :error)
         (each [_ path (ipairs (file-paths))]
@@ -46,7 +46,7 @@
           (let [source (read-source path)]
             (if (. source :error)
                 (table.insert failures (.. "read failed: " path))
-                (let [(ok parsed) (pcall (fn [] (reader.parse source)))
+                (let [(ok parsed)       (pcall (fn [] (reader.parse source)))
                       (token-ok tokens) (pcall (fn [] (reader.tokenize source)))]
                   (if (or (not ok)
                           (not token-ok)
@@ -81,9 +81,9 @@
   (let [root (parse-scenario "(a [b {:c d}])")]
     (if (. root :error)
         root
-        (let [outer (. root.children 1)
+        (let [outer    (. root.children 1)
               sequence (. outer.children 3)
-              table (. sequence.children 3)]
+              table    (. sequence.children 3)]
           [(. outer :kind) (. sequence :kind) (. table :kind)]))))
 
 (defn- comment-child-kind []
@@ -91,7 +91,7 @@
     (if (. parsed :error)
         parsed
         (let [list-node (. parsed.children 1)
-              child (. list-node.children 3)]
+              child     (. list-node.children 3)]
           (. child :kind)))))
 
 (defn- fail-closed-scenario [source]
@@ -101,21 +101,21 @@
         (let [(ok result err) (pcall (fn [] (reader.parse source)))]
           (if (not ok)
               {:value? true :has-message false}
-              {:value? (not= nil result)
+              {:value?      (not= nil result)
                :has-message (and err (= :string (type (. err :message))))
-               :line (and err (. err :line))
-               :col (and err (. err :col))})))))
+               :line        (and err (. err :line))
+               :col         (and err (. err :col))})))))
 
 (defn- fail-closed-summary [source include-location?]
   (let [result (fail-closed-scenario source)]
     (if (. result :error)
         result
         (if include-location?
-            {:value? (. result :value?)
+            {:value?      (. result :value?)
              :has-message (. result :has-message)
-             :line (. result :line)
-             :col (. result :col)}
-            {:value? (. result :value?)
+             :line        (. result :line)
+             :col         (. result :col)}
+            {:value?      (. result :value?)
              :has-message (. result :has-message)}))))
 
 (deftest round-trip

@@ -16,15 +16,15 @@
 
 (defn- text
   [item]
-  (let [title (core.get item :title nil)
-        value (core.get item :value nil)
+  (let [title     (core.get item :title nil)
+        value     (core.get item :value nil)
         title-str (if title (core.str "%#EcaHeaderKey#" title ":") "")
         value-str (if value (core.str "%#EcaHeaderValue#" value) "")]
     (core.str title-str value-str)))
 
 (defn- add-item
   [sections [i item]]
-  (let [slot (core.get tail-slots (math.min i (core.count tail-slots)))
+  (let [slot    (core.get tail-slots (math.min i (core.count tail-slots)))
         current (core.get sections slot [])]
     (core.assoc sections slot (core.concat current [(text item)]))))
 
@@ -47,8 +47,8 @@
 
 (defn- register-eca-extension
   [p items]
-  (let [config (p.get_config)
-        extensions (core.get config :extensions [])
+  (let [config         (p.get_config)
+        extensions     (core.get config :extensions [])
         extensions+eca (register extensions (eca-extension items))]
     (p.setup (core.assoc config :extensions extensions+eca))))
 

@@ -17,16 +17,22 @@ local function excluded_3f(exclusions, finding, index)
     return (exclusion_match_3f(exclusions[index], finding) or excluded_3f(exclusions, finding, (index + 1)))
   end
 end
+local function append_kept_finding(result, finding, exclusions)
+  if not excluded_3f(exclusions, finding, 1) then
+    table.insert(result, finding)
+  else
+  end
+  return result
+end
+local function keep_finding_step(findings, exclusions, index, result, recurse)
+  local finding = findings[index]
+  return recurse(findings, exclusions, (index + 1), append_kept_finding(result, finding, exclusions))
+end
 local function keep_finding(findings, exclusions, index, result)
   if (index > #findings) then
     return result
   else
-    local finding = findings[index]
-    if not excluded_3f(exclusions, finding, 1) then
-      table.insert(result, finding)
-    else
-    end
-    return keep_finding(findings, exclusions, (index + 1), result)
+    return keep_finding_step(findings, exclusions, index, result, keep_finding)
   end
 end
 local function matching_exclusion_3f(exclusion, findings, index)
@@ -39,59 +45,80 @@ end
 local function stale_exclusion(exclusion, config_path)
   return {kind = "stale-exclusion", path = config_path, line = 1, col = 1, severity = "error", rule = exclusion.rule, form = exclusion.form, message = ("stale exclusion: " .. exclusion.form)}
 end
+local function append_stale_item(result, exclusion, findings, config_path)
+  if not matching_exclusion_3f(exclusion, findings, 1) then
+    table.insert(result, stale_exclusion(exclusion, config_path))
+  else
+  end
+  return result
+end
+local function append_stale_step(exclusions, findings, config_path, index, result, recurse)
+  local exclusion = exclusions[index]
+  return recurse(exclusions, findings, config_path, (index + 1), append_stale_item(result, exclusion, findings, config_path))
+end
 local function append_stale(exclusions, findings, config_path, index, result)
   if (index > #exclusions) then
     return result
   else
-    local exclusion = exclusions[index]
-    if not matching_exclusion_3f(exclusion, findings, 1) then
-      table.insert(result, stale_exclusion(exclusion, config_path))
-    else
-    end
-    return append_stale(exclusions, findings, config_path, (index + 1), result)
+    return append_stale_step(exclusions, findings, config_path, index, result, append_stale)
   end
+end
+local function normalized_testing_form(finding)
+  return ((string.match(finding.form, " > top#[0-9]+$") and (finding.form .. " > testing#1")) or finding.form)
+end
+local function normalized_branch_form(finding)
+  local form = string.gsub(finding.form, " > (top#[0-9]+) > (then.*)$", " > %1 > if#1 > %2")
+  return form
 end
 local function normalized_form(finding)
   if (finding.rule == "one-is-per-testing") then
-    return ((string.match(finding.form, " > top#[0-9]+$") and (finding.form .. " > testing#1")) or finding.form)
+    return normalized_testing_form(finding)
   else
-    local form = string.gsub(finding.form, " > (top#[0-9]+) > (then.*)$", " > %1 > if#1 > %2")
-    return form
+    return normalized_branch_form(finding)
   end
+end
+local function normalized_finding(finding)
+  return {kind = finding.kind, path = finding.path, line = finding.line, col = finding.col, ["end-line"] = finding["end-line"], ["end-col"] = finding["end-col"], severity = finding.severity, rule = finding.rule, form = normalized_form(finding), message = finding.message}
+end
+local function normalize_findings_step(findings, index, result, recurse)
+  local finding = findings[index]
+  table.insert(result, normalized_finding(finding))
+  return recurse(findings, (index + 1), result)
 end
 local function normalize_findings(findings, index, result)
   if (index > #findings) then
     return result
   else
-    local finding = findings[index]
-    table.insert(result, {kind = finding.kind, path = finding.path, line = finding.line, col = finding.col, ["end-line"] = finding["end-line"], ["end-col"] = finding["end-col"], severity = finding.severity, rule = finding.rule, form = normalized_form(finding), message = finding.message})
-    return normalize_findings(findings, (index + 1), result)
+    return normalize_findings_step(findings, index, result, normalize_findings)
   end
 end
 local function lint_file(file, policy)
-  local findings, error = lint.check(file.source, {path = file.path, rules = policy.rules, selection = file.selection})
+  local findings, error = lint.check(file.source, {path = file.path, rules = policy.rules, ["max-code-lines"] = policy["max-code-lines"], selection = file.selection})
   if error then
     return nil, {message = error.message, line = error.line, col = error.col, path = file.path}
   else
     return normalize_findings(findings, 1, {}), nil
   end
 end
+local function append_findings(result, findings)
+  for _, finding in ipairs(findings) do
+    table.insert(result, finding)
+  end
+  return result
+end
+local function lint_files_at_step(files, policy, index, result, recurse)
+  local findings, error = lint_file(files[index], policy)
+  if error then
+    return nil, error
+  else
+    return recurse(files, policy, (index + 1), append_findings(result, findings))
+  end
+end
 local function lint_files_at(files, policy, index, result)
   if (index > #files) then
     return result, nil
   else
-    local findings, error = lint_file(files[index], policy)
-    if error then
-      return nil, error
-    else
-      local function _10_()
-        for _, finding in ipairs(findings) do
-          table.insert(result, finding)
-        end
-        return result
-      end
-      return lint_files_at(files, policy, (index + 1), _10_())
-    end
+    return lint_files_at_step(files, policy, index, result, lint_files_at)
   end
 end
 local function exclusion_path(exclusion)
@@ -104,28 +131,40 @@ local function path_in_scope_3f(paths, path, index)
     return ((path == paths[index]) or path_in_scope_3f(paths, path, (index + 1)))
   end
 end
+local function append_scoped_exclusion(result, exclusion, paths)
+  if ((paths == nil) or path_in_scope_3f(paths, exclusion_path(exclusion), 1)) then
+    table.insert(result, exclusion)
+  else
+  end
+  return result
+end
+local function scoped_exclusions_step(exclusions, paths, index, result, recurse)
+  local exclusion = exclusions[index]
+  return recurse(exclusions, paths, (index + 1), append_scoped_exclusion(result, exclusion, paths))
+end
 local function scoped_exclusions(exclusions, paths, index, result)
   if (index > #exclusions) then
     return result
   else
-    local exclusion = exclusions[index]
-    if ((paths == nil) or path_in_scope_3f(paths, exclusion_path(exclusion), 1)) then
-      table.insert(result, exclusion)
-    else
-    end
-    return scoped_exclusions(exclusions, paths, (index + 1), result)
+    return scoped_exclusions_step(exclusions, paths, index, result, scoped_exclusions)
   end
+end
+local function append_non_warning(result, finding)
+  if not (finding.severity == "warning") then
+    table.insert(result, finding)
+  else
+  end
+  return result
+end
+local function keep_non_warning_step(findings, index, result, recurse)
+  local finding = findings[index]
+  return recurse(findings, (index + 1), append_non_warning(result, finding))
 end
 local function keep_non_warning(findings, index, result)
   if (index > #findings) then
     return result
   else
-    local finding = findings[index]
-    if not (finding.severity == "warning") then
-      table.insert(result, finding)
-    else
-    end
-    return keep_non_warning(findings, (index + 1), result)
+    return keep_non_warning_step(findings, index, result, keep_non_warning)
   end
 end
 local function diagnostic_source(filtered, policy, stale, scope_paths)

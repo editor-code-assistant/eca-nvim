@@ -35,15 +35,15 @@
     (if (. result :module-missing)
         result
         (let [value (. result :value)
-              err (. result :error)]
+              err   (. result :error)]
           (if include-location?
-              {:value? (not= nil value)
+              {:value?      (not= nil value)
                :has-message (and (= nil value) err
                                  (= :table (type err))
                                  (= :string (type (. err :message))))
-               :line (and err (. err :line))
-               :col (and err (. err :col))}
-              {:value? (not= nil value)
+               :line        (and err (. err :line))
+               :col         (and err (. err :col))}
+              {:value?      (not= nil value)
                :has-message (and (= nil value) err
                                  (= :table (type err))
                                  (= :string (type (. err :message))))})))))
@@ -54,7 +54,7 @@
     (if (. config :module-missing)
         config
         (let [(ok result err) (pcall (fn [] (config.validate value)))]
-          {:value? (and ok (not= nil result))
+          {:value?      (and ok (not= nil result))
            :has-message (and ok (= nil result) err
                              (= :table (type err))
                              (= :string (type (. err :message))))}))))
@@ -62,7 +62,7 @@
 (defn- validation-error-message
   [text]
   (let [config (load-config)
-        value (parse-value text)]
+        value  (parse-value text)]
     (if (or (. config :module-missing) (= value nil))
         nil
         (let [(ok result err) (pcall (fn [] (config.validate value)))]
@@ -73,14 +73,14 @@
 (defn- validation-call-summary
   [text-or-value]
   (let [config (load-config)
-        value (if (= :string (type text-or-value))
-                  (parse-value text-or-value)
-                  text-or-value)]
+        value  (if (= :string (type text-or-value))
+                      (parse-value text-or-value)
+                      text-or-value)]
     (if (or (. config :module-missing) (= value nil))
         {:crashed? false :message nil}
         (let [(ok result err) (pcall (fn [] (config.validate value)))]
           {:crashed? (not ok)
-           :message (and ok (= nil result) err (. err :message))}))))
+           :message  (and ok (= nil result) err (. err :message))}))))
 
 (defn- lint-policy-summary
   [value]
@@ -89,7 +89,7 @@
         config
         (let [(ok policy err) (pcall (fn [] (config.lint-policy value)))]
           {:value-nil? (and ok (= nil policy))
-           :message (and ok (= nil policy) err (. err :message))}))))
+           :message    (and ok (= nil policy) err (. err :message))}))))
 
 (defn- unknown-lint-key-summary
   [value]
@@ -97,7 +97,7 @@
     (if (. config :module-missing)
         config
         (let [(ok result err) (pcall (fn [] (config.validate value)))
-              message (and ok (= nil result) err (. err :message))]
+              message         (and ok (= nil result) err (. err :message))]
           {:unknown-key? (and message
                               (= "unknown lint key: " (string.sub message 1 18)))}))))
 
@@ -109,13 +109,13 @@
     path))
 
 (defn- find-load-scenario []
-  (let [root (vim.fn.tempname)
-        nested (.. root "/one/two")
+  (let [root        (vim.fn.tempname)
+        nested      (.. root "/one/two")
         root-config (.. root "/.fnl-extras.fnl")
         config-path (.. root "/one/.fnl-extras.fnl")
-        stop-root (.. root "/stop")
+        stop-root   (.. root "/stop")
         stop-nested (.. stop-root "/child")
-        stop-git (.. stop-root "/.git")]
+        stop-git    (.. stop-root "/.git")]
     (vim.fn.mkdir nested "p")
     (vim.fn.mkdir stop-nested "p")
     (vim.fn.mkdir stop-git "p")
@@ -125,50 +125,50 @@
         (write-file root-config "{:exclude [\"root\"]}")
         (write-file config-path "{:paths [\"fnl\"]}")
         (write-file (.. root "/valid.fnl-extras.fnl") "{:exclude [\"generated\"]}")
-        {:start (let [config (load-config)]
-                  (if (. config :module-missing)
-                      config
-                      (config.find root)))
-         :parent (let [config (load-config)]
-                   (if (. config :module-missing)
-                       config
-                       (config.find nested)))
-         :stopped (let [config (load-config)]
-                    (if (. config :module-missing)
-                        config
-                        (config.find stop-nested)))
+        {:start       (let [config (load-config)]
+                           (if (. config :module-missing)
+                               config
+                               (config.find root)))
+         :parent      (let [config (load-config)]
+                           (if (. config :module-missing)
+                               config
+                               (config.find nested)))
+         :stopped     (let [config (load-config)]
+                           (if (. config :module-missing)
+                               config
+                               (config.find stop-nested)))
          :root-config root-config
          :config-path config-path
-         :loaded (let [config (load-config)]
-                   (if (. config :module-missing)
-                       config
-                       (config.load config-path)))
-         :missing (let [config (load-config)]
-                    (if (. config :module-missing)
-                        config
-                        (let [(ok value err)
-                              (pcall (fn [] (config.load (.. root "/missing.fnl-extras.fnl"))))]
-                          {:value? (and ok (not= nil value))
-                           :has-message (and ok (= nil value) err
-                                             (= :table (type err))
-                                             (= :string (type (. err :message))))})))}))))
+         :loaded      (let [config (load-config)]
+                           (if (. config :module-missing)
+                               config
+                               (config.load config-path)))
+         :missing     (let [config (load-config)]
+                           (if (. config :module-missing)
+                               config
+                               (let [(ok value err)
+                                     (pcall (fn [] (config.load (.. root "/missing.fnl-extras.fnl"))))]
+                                 {:value?      (and ok (not= nil value))
+                                  :has-message (and ok (= nil value) err
+                                                    (= :table (type err))
+                                                    (= :string (type (. err :message))))})))}))))
 
 (deftest parse-string
   (testing "parses a realistic data-only configuration and converts keywords to strings"
-    (is (= {:indents {:deftest [["block" 1]]
-                      :testing [["block" 1]]}
+    (is (= {:indents   {:deftest [["block" 1]]
+                           :testing [["block" 1]]}
             :format-as {:my-let "let"}
-            :paths ["fnl"]
-            :exclude ["fnl/eca/nfnl"]}
+            :paths     ["fnl"]
+            :exclude   ["fnl/eca/nfnl"]}
            (parse-value "{:indents {\"deftest\" [[:block 1]] \"testing\" [[:block 1]]} :format-as {\"my-let\" \"let\"} :paths [\"fnl\"] :exclude [\"fnl/eca/nfnl\"]}"))))
   (testing "parses escapes, numbers, booleans, nil, and ignores comments"
-    (is (= {:text "quote \" slash \\ line\n tab\t"
-            :one 1
-            :decimal 2.5
+    (is (= {:text     "quote \" slash \\ line\n tab\t"
+            :one      1
+            :decimal  2.5
             :negative -3
-            :yes true
-            :no false
-            :nothing nil}
+            :yes      true
+            :no       false
+            :nothing  nil}
            (parse-value "{:text \"quote \\\" slash \\\\ line\\n tab\\t\" ; comment\n :one 1 :decimal 2.5 :negative -3 :yes true :no false :nothing nil}")))))
 
 (deftest rejection
@@ -288,15 +288,21 @@
            (validation-error-message "{:follow-symlinks 1}"))))
   (testing "rejects a non-string parser value with the exact validation message"
     (is (= "parser must be a string"
-           (validation-error-message "{:parser 1}")))))
+           (validation-error-message "{:parser 1}"))))
+  (testing "accepts a boolean align-bindings value"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:align-bindings true}))))
+  (testing "rejects a non-boolean align-bindings value with the exact validation message"
+    (is (= "align-bindings must be a boolean"
+           (validation-error-message "{:align-bindings \"yes\"}")))))
 
 (defn- formatter-projection
   [config]
-  {:indents (. config :indents)
-   :format-as (. config :format-as)
-   :indent-patterns (. config :indent-patterns)
-   :indent-width (. config :indent-width)
-   :builtins (. config :builtins)
+  {:indents          (. config :indents)
+   :format-as        (. config :format-as)
+   :indent-patterns  (. config :indent-patterns)
+   :indent-width     (. config :indent-width)
+   :builtins         (. config :builtins)
    :prefix-fallbacks (. config :prefix-fallbacks)})
 
 (defn- format-with-config
@@ -323,9 +329,30 @@
   (testing "accepts a known lint rule from parsed Fennel"
     (is (= {:lint {:rules {"if-branch-call" "error"}}}
            (parse-value "{:lint {:rules {\"if-branch-call\" :error}}}"))))
+  (testing "accepts the no-mutation lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"no-mutation" "warning"}}}
+           (parse-value "{:lint {:rules {\"no-mutation\" :warning}}}"))))
+  (testing "accepts a positive max-code-lines value"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:lint {:max-code-lines 10}}))))
+  (testing "rejects zero max-code-lines with a specific validation message"
+    (is (= "max-code-lines must be a positive integer"
+           (validation-error-message "{:lint {:max-code-lines 0}}"))))
+  (testing "rejects negative max-code-lines with a specific validation message"
+    (is (= "max-code-lines must be a positive integer"
+           (validation-error-message "{:lint {:max-code-lines -1}}"))))
+  (testing "rejects non-integer max-code-lines with a specific validation message"
+    (is (= "max-code-lines must be a positive integer"
+           (validation-error-message "{:lint {:max-code-lines 1.5}}"))))
+  (testing "rejects string max-code-lines with a specific validation message"
+    (is (= "max-code-lines must be a positive integer"
+           (validation-error-message "{:lint {:max-code-lines \"10\"}}"))))
+  (testing "accepts the file-size lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"file-size" "warning"}}}
+           (parse-value "{:lint {:rules {\"file-size\" :warning}}}"))))
   (testing "accepts an exclusion from parsed Fennel"
-    (is (= {:lint {:exclusions [{:rule "if-branch-call"
-                                 :form "fnl/a.fnl > top#1"
+    (is (= {:lint {:exclusions [{:rule   "if-branch-call"
+                                 :form   "fnl/a.fnl > top#1"
                                  :reason "why"}]}}
            (parse-value "{:lint {:exclusions [{:rule \"if-branch-call\" :form \"fnl/a.fnl > top#1\" :reason \"why\"}]}}"))))
   (testing "accepts an empty lint table through validate"
@@ -341,14 +368,14 @@
                  config
                  (config.validate {:lint {:rules {"if-branch-call" "error"}}}))))))
   (testing "accepts an exclusion through validate"
-    (is (= {:lint {:exclusions [{:rule "if-branch-call"
-                                 :form "fnl/a.fnl > top#1"
+    (is (= {:lint {:exclusions [{:rule   "if-branch-call"
+                                 :form   "fnl/a.fnl > top#1"
                                  :reason "why"}]}}
            (let [config (load-config)]
              (if (. config :module-missing)
                  config
-                 (config.validate {:lint {:exclusions [{:rule "if-branch-call"
-                                                        :form "fnl/a.fnl > top#1"
+                 (config.validate {:lint {:exclusions [{:rule   "if-branch-call"
+                                                        :form   "fnl/a.fnl > top#1"
                                                         :reason "why"}]} }))))))
   (testing "rejects a non-table lint value"
     (is (= "lint must be a table"
@@ -369,31 +396,31 @@
     (is (= {:crashed? false :message "lint exclusion 1: unknown key true"}
            (validation-call-summary "{:lint {:exclusions [{true \"x\" :rule \"if-branch-call\" :form \"f\" :reason \"r\"}]}}"))))
   (testing "rejects a table lint exclusion key without crashing"
-    (let [key {}
-          exclusion {:rule "if-branch-call"
-                     :form "f"
+    (let [key       {}
+          exclusion {:rule   "if-branch-call"
+                     :form   "f"
                      :reason "r"}
-          value {:lint {:exclusions [exclusion]}}]
+          value     {:lint {:exclusions [exclusion]}}]
       (tset exclusion key "x")
       (let [summary (validation-call-summary value)
             message (. summary :message)
-            prefix "lint exclusion 1: unknown key table"]
-        (is (= {:crashed? false
+            prefix  "lint exclusion 1: unknown key table"]
+        (is (= {:crashed?   false
                 :prefix-ok? (and message
                                  (= prefix (string.sub message 1 35)))}
-               {:crashed? (. summary :crashed?)
+               {:crashed?   (. summary :crashed?)
                 :prefix-ok? (and message
                                  (= prefix (string.sub message 1 35)))})))))
   (testing "rejects a lint rule with a table severity without crashing"
     (is (= {:crashed? false
-            :message "lint rule if-branch-call must be error, warning, or off"}
+            :message  "lint rule if-branch-call must be error, warning, or off"}
            (validation-call-summary "{:lint {:rules {\"if-branch-call\" {}}}}"))))
   (testing "rejects a list-valued lint exclusion without crashing"
     (is (= {:crashed? false :message "lint exclusion 1: unknown key 1"}
            (validation-call-summary "{:lint {:exclusions [[1 2]]}}"))))
   (testing "rejects a lint exclusion with a table rule without crashing"
     (is (= {:crashed? false
-            :message "lint exclusion 1: rule must be a string"}
+            :message  "lint exclusion 1: rule must be a string"}
            (validation-call-summary "{:lint {:exclusions [{:rule {} :form \"f\" :reason \"r\"}]}}"))))
   (testing "rejects an unknown lint key"
     (is (= "unknown lint key: extra"
@@ -456,32 +483,43 @@
            (lint-policy-summary {:lint {:rules {true "error"}}}))))
   (testing "returns a validation error for a blank lint exclusion reason"
     (is (= {:value-nil? true :message "lint exclusion 1: reason must not be blank"}
-           (lint-policy-summary {:lint {:exclusions [{:rule "if-branch-call"
-                                                      :form "x"
+           (lint-policy-summary {:lint {:exclusions [{:rule   "if-branch-call"
+                                                      :form   "x"
                                                       :reason ""}]}}))))
   (testing "normalizes lint defaults and overrides without formatter keys"
     (let [config (load-config)]
-      (is (= {:rules {"module-style" "error"
-                      "spec-macro-import" "error"
-                      "spec-no-module" "error"
-                      "spec-direct-require" "error"
-                      "one-is-per-testing" "error"
-                      "if-branch-call" "warning"
-                      "function-shape" "warning"
-                      "core-require" "off"}
-              :exclusions [{:rule "if-branch-call" :form "x" :reason "why"}]}
+      (is (= {:rules          {"module-style"        "error"
+                                   "spec-macro-import"   "error"
+                                   "spec-no-module"      "error"
+                                   "spec-direct-require" "error"
+                                   "one-is-per-testing"  "error"
+                                   "if-branch-call"      "warning"
+                                   "function-shape"      "warning"
+                                   "no-mutation"         "warning"
+                                   "file-size"           "warning"
+                                   "core-require"        "off"}
+              :max-code-lines 300
+              :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}
              (if (. config :module-missing)
                  config
-                 (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:rules {"core-require" "off"}
-                                                                            :exclusions [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
+                 (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 300
+                                                                            :rules          {"core-require" "off"}
+                                                                            :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
                    (if ok value {:missing-lint-policy true}))))))))
+  (testing "normalizes a configured max-code-lines value"
+    (let [config (load-config)]
+      (is (= 10
+             (if (. config :module-missing)
+                 nil
+                 (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 10}})))]
+                   (and ok (. value :max-code-lines))))))))
 
 (deftest formatter-isolation
   (testing "lint configuration does not change formatter output"
-    (let [source "(when condition\n(foo)\n(bar))"
+    (let [source       "(when condition\n(foo)\n(bar))"
           without-lint {:indents {"when" [[:block 1]]}}
-          with-lint {:indents {"when" [[:block 1]]}
-                     :lint {:rules {"if-branch-call" "off"}}}
+          with-lint    {:indents {"when" [[:block 1]]}
+                           :lint    {:rules {"if-branch-call" "off"}}}
           plain-result (format-with-config source (formatter-projection without-lint))
-          lint-result (format-with-config source (formatter-projection with-lint))]
+          lint-result  (format-with-config source (formatter-projection with-lint))]
       (is (= (. plain-result :value) (. lint-result :value))))))

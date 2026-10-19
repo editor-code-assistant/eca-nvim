@@ -5,19 +5,19 @@
   "Render a key:value pair.
    Returns {: line : highlights} where highlights is a list of
    {: hl-group : col-start : col-end}."
-  (let [title-str (or title "")
-        value-str (or value "")
-        separator ":"
-        line (.. title-str separator value-str)
-        title-end (length title-str)
+  (let [title-str   (or title "")
+        value-str   (or value "")
+        separator   ":"
+        line        (.. title-str separator value-str)
+        title-end   (length title-str)
         value-start (+ title-end (length separator))
-        value-end (+ value-start (length value-str))]
-    {:line line
-     :highlights [{:hl-group (or hl-title :EcaHeaderKey)
+        value-end   (+ value-start (length value-str))]
+    {:line       line
+     :highlights [{:hl-group  (or hl-title :EcaHeaderKey)
                    :col-start 0
-                   :col-end title-end}
-                  {:hl-group (or hl-value :EcaHeaderValue)
+                   :col-end   title-end}
+                  {:hl-group  (or hl-value :EcaHeaderValue)
                    :col-start value-start
-                   :col-end value-end}]}))
+                   :col-end   value-end}]}))
 
 {: render}

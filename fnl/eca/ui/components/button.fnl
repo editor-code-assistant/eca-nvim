@@ -8,7 +8,7 @@
   (let [display (if keybind
                     (.. label " (" keybind ")")
                     label)]
-    {:text display
+    {:text     display
      :hl-group (or hl-group :EcaButtonAccept)}))
 
 {: render}

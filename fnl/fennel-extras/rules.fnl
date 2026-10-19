@@ -11,7 +11,8 @@
 
 (local prefix-rules {:def [[:inner 0]] :with- [[:block 1]]})
 (local allowed-keys {:indents true :format-as true :indent-patterns true
-                     :indent-width true :builtins true :prefix-fallbacks true})
+                     :indent-width true :builtins true :prefix-fallbacks true
+                     :align-bindings true})
 (var resolve-name nil)
 (var alias-rule nil)
 
@@ -181,6 +182,11 @@
                     (validate-custom-map fallbacks "prefix-fallbacks rule ")
                     nil))))))
 
+(defn- validate-align-bindings [config]
+  (let [align-bindings (. config :align-bindings)]
+    (if (and (not= align-bindings nil) (not= (type align-bindings) :boolean))
+        (error "align-bindings must be a boolean"))))
+
 (defn- validate-config-table [config]
   (var failure nil)
   (each [key _ (pairs config)]
@@ -193,6 +199,7 @@
       (let [width (. config :indent-width)]
         (if (and (not= width nil) (not (and (integer? width) (> width 0))))
             (set failure (error "indent-width must be a positive integer")))))
+  (if (= failure nil) (set failure (validate-align-bindings config)))
   (if (= failure nil) (set failure (validate-custom-config config)))
   (if (= failure nil)
       (each [name _ (pairs (or (. config :format-as) {}))]

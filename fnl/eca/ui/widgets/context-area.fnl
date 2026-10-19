@@ -23,13 +23,13 @@
                                          acc.col)]
                          (table.insert acc.parts item.text)
                          (table.insert acc.highlights
-                                       {:hl-group (or item.hl-group :Normal)
+                                       {:hl-group  (or item.hl-group :Normal)
                                         :col-start sep-col
-                                        :col-end (+ sep-col (length item.text))})
-                         {:parts acc.parts
+                                        :col-end   (+ sep-col (length item.text))})
+                         {:parts      acc.parts
                           :highlights acc.highlights
-                          :col (+ sep-col (length item.text))}))]
-          {:line (table.concat result.parts "")
+                          :col        (+ sep-col (length item.text))}))]
+          {:line       (table.concat result.parts "")
            :highlights result.highlights})))
 
   (fn has-items? []
@@ -64,7 +64,7 @@
   (fn render-highlights [line-num]
     "Apply highlights to a context line already written in the buffer."
     (when (has-items?)
-      (let [ns (ensure-ns)
+      (let [ns             (ensure-ns)
             {: highlights} (build-line)]
         (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
         (each [_ hl (ipairs highlights)]

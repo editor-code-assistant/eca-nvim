@@ -8,8 +8,8 @@
    hl-value: highlight group for values (default EcaHeaderValue)
    Layout: 1 item left, 2 items left+right, 3+ left+center+right.
    Returns string with %#HlGroup# formatting."
-  (let [hk (or hl-key :EcaHeaderKey)
-        hv (or hl-value :EcaHeaderValue)
+  (let [hk    (or hl-key :EcaHeaderKey)
+        hv    (or hl-value :EcaHeaderValue)
         parts (icollect [_ item (ipairs (or items []))]
                 (if item.title
                     (.. "%#" hk "#" item.title "%#" hv "#:" item.value)
@@ -19,12 +19,12 @@
       0 ""
       1 (.. " " (. parts 1))
       2 (.. " " (. parts 1) "%=" (. parts 2) " ")
-      _ (let [left (. parts 1)
-              right (. parts count)
+      _ (let [left         (. parts 1)
+              right        (. parts count)
               center-parts []
-              _ (for [i 2 (- count 1)]
-                  (table.insert center-parts (. parts i)))
-              center (table.concat center-parts "  ")]
+              _            (for [i 2 (- count 1)]
+                                (table.insert center-parts (. parts i)))
+              center       (table.concat center-parts "  ")]
           (.. " " left "%=" center "%=" right " ")))))
 
 {: render}

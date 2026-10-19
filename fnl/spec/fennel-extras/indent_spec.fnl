@@ -36,8 +36,8 @@
     (if (. indent :error)
         indent
         (let [(ok value err) (pcall (fn [] (indent.reindent source)))]
-          {:value? (and ok (not= nil value))
-           :has-message (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
+          {:value?         (and ok (not= nil value))
+           :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
            :returned-error (and ok value (= nil value) err)}))))
 
 (deftest alignment-goldens
@@ -100,8 +100,8 @@
            (output-for "(λ a\nb)")))))
 
 (defn- file-paths []
-  (let [paths []
-        fnl-files (vim.fn.globpath "fnl" "**/*.fnl" false true)
+  (let [paths      []
+        fnl-files  (vim.fn.globpath "fnl" "**/*.fnl" false true)
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
       (if (not (string.find path "^fnl/eca/nfnl/"))
@@ -112,7 +112,7 @@
     paths))
 
 (defn- read-source [path]
-  (let [file (assert (io.open path :r))
+  (let [file   (assert (io.open path :r))
         source (file:read "*a")]
     (file:close)
     source))
@@ -122,11 +122,11 @@
     (indent.reindent source config)))
 
 (defn- repo-idempotence-failures []
-  (let [config {:indents {"deftest" [[:block 1]] "testing" [[:block 1]]}}
+  (let [config   {:indents {"deftest" [[:block 1]] "testing" [[:block 1]]}}
         failures []]
     (each [_ path (ipairs (file-paths))]
       (let [source (read-source path)
-            once (reindent-direct source config)]
+            once   (reindent-direct source config)]
         (if (= nil once)
             (table.insert failures (.. "error: " path))
             (let [twice (reindent-direct once config)]
@@ -146,7 +146,7 @@
   (testing "unbalanced input returns a structured reader error"
     (is (= {:value? false :has-message true}
            (let [result (error-summary "(missing")]
-             {:value? (. result :value?)
+             {:value?      (. result :value?)
               :has-message (. result :has-message)})))))
 
 (deftest hand-style-fixed-points

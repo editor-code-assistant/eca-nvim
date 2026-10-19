@@ -6,6 +6,7 @@
 - Generated Lua lives in `lua/` and is committed. Files under `lua/**/*.lua` are marked `linguist-generated`.
 - `lua/eca/nfnl/` is embedded nfnl. Update it with `scripts/nfnl`; do not edit it by hand.
 - Specs live in `fnl/spec/` and compile to `lua/spec/`.
+- The lint implementation entry point is `fnl/fennel-extras/lint.fnl`; its rule modules live under `fnl/fennel-extras/lint/rules/` and compile to the matching `lua/` paths.
 - Never edit generated Lua by hand.
 
 ## Commands
@@ -34,6 +35,7 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
   - `:paths` (default `["."]`): list of file or directory paths to scan.
   - `:exclude` (default `[]`): list of path prefixes to skip. `.git` is skipped even when it is not listed.
   - `:indent-width` (default `2`): positive integer used for continuation indentation.
+  - `:align-bindings` (default `false`): boolean. When true, align one binding/key pair per line in supported binding vectors and multi-line maps.
   - `:builtins` (default `true`): `true`, `false`, or a map of form names to rule lists. Built-ins include rules for forms such as `fn`, `let`, `when`, and `do`.
   - `:prefix-fallbacks` (default `{"def" [[:inner 0]] "with-" [[:block 1]]}`): `false` or a map of prefixes to rule lists. The built-in prefixes are `def` and `with-`.
   - `:extensions` (default `[".fnl" ".fnlm"]`): non-empty list of strings, each starting with `.`.
@@ -41,7 +43,7 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
   - `:follow-symlinks` (default `false`): boolean. When true, follow links, write to the real target, and process each real path once.
   - `:parser` (default none): string module name for the parser. The `--parser` flag overrides this setting.
 
-Indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > built-ins > prefix fallbacks > default. The default is no special rule. The formatter only changes leading indentation. It never breaks or joins lines, so one-line forms stay one line.
+Indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > built-ins > prefix fallbacks > default. The default is no special rule. By default, the formatter only changes leading indentation; with `:align-bindings true`, it also normalizes whitespace between names or keys and values. It never breaks or joins lines, so one-line forms stay one line.
 
 For example, the repository configuration contains:
 
@@ -59,9 +61,9 @@ For editor use, run `make fmt` or `scripts/fennel-extras format --write <file>`.
 
 ### Project style lint
 
-`make style` runs `scripts/fennel-extras lint` in changed mode against `HEAD`. Use `make style STYLE_FLAGS="--base <ref>"` to compare with another base, or `make style STYLE_FLAGS=--all` to audit all files. Add `--format json` for JSON Lines output.
+`make style` runs `scripts/fennel-extras lint` with no selection flag by default, checking all configured files without requiring Git. Set `STYLE_FLAGS=--changed` to check changed forms and files against `HEAD`, or `STYLE_FLAGS="--base <ref>"` to use another Git base. `--all` is an explicit alias for the no-selection mode; `--changed` and `--all` cannot be combined; `--all` and `--base` cannot be combined. Explicit paths restrict discovery in any mode. Add `--format json` for JSON Lines output.
 
-The seven rules are:
+The ten rules are:
 
 - `module-style` (error): non-spec files use the module style.
 - `spec-macro-import` (error): specs import `deftest`, `testing`, and `is` from `spec.eca.macros`.
@@ -69,13 +71,16 @@ The seven rules are:
 - `spec-direct-require` (error): specs use the shared macros instead of requiring `plenary.busted` or `luassert` directly.
 - `one-is-per-testing` (error): each `testing` form contains exactly one `is`.
 - `if-branch-call` (warning): multi-expression `if` branches are moved to a named helper.
+- `no-mutation` (warning): source files do not use `var`, `set`, or `while`; return new values instead.
+- `function-shape` (warning): bodies of `defn`/`defn-`/`fn`/`lambda`/`λ` use an optional first `let` with leaf values, then expressions that are leaves or one layer; move deeper code into named private functions.
+- `file-size` (warning): source files contain at most the configured number of nonblank, non-comment code lines.
 - `core-require` (error): `eca.nfnl.core` is required as `core`.
 
 Module-style is a convert-on-touch rule. When a change selects a legacy module, convert that file to module style. `--all` reports all remaining legacy files.
 
-Lint configuration uses `:lint` with optional `:rules` and `:exclusions` keys. Set rule severities under `:rules` to `error`, `warning`, or `off`. Add `:exclusions` entries as `{:rule :form :reason}`; copy the printed exclusion snippet. A stale exclusion (one that no longer matches a finding) fails the command when its file is in the checked scope; `--all` checks every exclusion.
+Lint configuration uses `:lint` with optional `:rules`, `:max-code-lines`, and `:exclusions` keys. `:max-code-lines` defaults to `300` and must be a positive integer. Set rule severities under `:rules` to `error`, `warning`, or `off`. Add `:exclusions` entries as `{:rule :form :reason}`; copy the printed exclusion snippet. A stale exclusion (one that no longer matches a finding) fails the command when its file is in the checked scope; `--all` checks every exclusion.
 
-Exit code 0 means no errors, 1 means an error or stale exclusion, and 2 means a command, configuration, Git, read, parse, or internal failure. Lint requires a full Git clone. Findings are written to stdout. CI runs `make style` on pull requests to `main`.
+Exit code 0 means no errors, 1 means an error or stale exclusion, and 2 means a command, configuration, Git, read, parse, or internal failure. The default and `--all` modes do not require Git; `--changed` and `--base` require a valid full Git clone and report Git errors with exit 2. Findings are written to stdout. CI runs `make style` on pull requests to `main`.
 
 CI runs `make check-compiled`, `make fmt-check`, `make test`, and `make lint`. The test job uses this Neovim matrix:
 

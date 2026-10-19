@@ -18,15 +18,15 @@
       (do
         (assert-compile (= 3 (length form)) "(=) expects exactly 2 arguments" form)
         (if has-message
-            `(let [assert# (require :luassert)
+            `(let [assert#   (require :luassert)
                    expected# ,(. form 2)
-                   actual# ,(. form 3)]
+                   actual#   ,(. form 3)]
                (do
                  ((. assert# :same) expected# actual# ,message)
                  true))
-            `(let [assert# (require :luassert)
+            `(let [assert#   (require :luassert)
                    expected# ,(. form 2)
-                   actual# ,(. form 3)]
+                   actual#   ,(. form 3)]
                (do
                  ((. assert# :same) expected# actual#)
                  true))))
@@ -34,15 +34,15 @@
       (do
         (assert-compile (= 3 (length form)) "(not=) expects exactly 2 arguments" form)
         (if has-message
-            `(let [assert# (require :luassert)
+            `(let [assert#   (require :luassert)
                    expected# ,(. form 2)
-                   actual# ,(. form 3)]
+                   actual#   ,(. form 3)]
                (do
                  ((. (. assert# :are_not) :same) expected# actual# ,message)
                  true))
-            `(let [assert# (require :luassert)
+            `(let [assert#   (require :luassert)
                    expected# ,(. form 2)
-                   actual# ,(. form 3)]
+                   actual#   ,(. form 3)]
                (do
                  ((. (. assert# :are_not) :same) expected# actual#)
                  true))))
@@ -50,15 +50,15 @@
       (do
         (assert-compile (= 3 (length form)) "(identical?) expects exactly 2 arguments" form)
         (if has-message
-            `(let [assert# (require :luassert)
+            `(let [assert#   (require :luassert)
                    expected# ,(. form 2)
-                   actual# ,(. form 3)]
+                   actual#   ,(. form 3)]
                (do
                  ((. assert# :equals) expected# actual# ,message)
                  true))
-            `(let [assert# (require :luassert)
+            `(let [assert#   (require :luassert)
                    expected# ,(. form 2)
-                   actual# ,(. form 3)]
+                   actual#   ,(. form 3)]
                (do
                  ((. assert# :equals) expected# actual#)
                  true))))
@@ -67,17 +67,17 @@
         (assert-compile (= 2 (length form)) "(nil?) expects exactly 1 argument" form)
         (if has-message
             `(let [assert# (require :luassert)
-                   value# ,(. form 2)]
+                   value#  ,(. form 2)]
                (do
                  ((. assert# :is_nil) value# ,message)
                  true))
             `(let [assert# (require :luassert)
-                   value# ,(. form 2)]
+                   value#  ,(. form 2)]
                (do
                  ((. assert# :is_nil) value#)
                  true))))
       `(let [assert# (require :luassert)
-             value# ,form]
+             value#  ,form]
          (do
            ((. assert# :is_truthy) value# ,(or message (view form)))
            true))))

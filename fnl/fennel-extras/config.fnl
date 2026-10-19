@@ -50,7 +50,9 @@
   (let [(next-key) (next lint key)]
     (if (= next-key nil)
         candidate
-        (if (or (= next-key :rules) (= next-key :exclusions))
+        (if (or (= next-key :rules)
+                (= next-key :exclusions)
+                (= next-key :max-code-lines))
             (first-unknown-lint-key lint next-key candidate)
             (if (or (= candidate nil)
                     (< (lint-key-sort-value next-key) (lint-key-sort-value candidate)))
@@ -122,10 +124,10 @@
 
 (defn- first-exclusion-error-entry [exclusions index exclusion next-error]
   (let [(unknown-key) (next exclusion nil)
-        rule (. exclusion :rule)
-        form (. exclusion :form)
-        reason (. exclusion :reason)
-        duplicate (duplicate-exclusion-index exclusions 1 rule form index)]
+        rule          (. exclusion :rule)
+        form          (. exclusion :form)
+        reason        (. exclusion :reason)
+        duplicate     (duplicate-exclusion-index exclusions 1 rule form index)]
     (or (exclusion-keys-error exclusion index unknown-key)
         (if (not= (type rule) :string)
             {:message (.. "lint exclusion " index ": rule must be a string")}
@@ -139,7 +141,14 @@
             {:message (.. "lint exclusion " index " must be a table")}
             (first-exclusion-error-entry exclusions index exclusion first-exclusion-error)))))
 
-(defn- lint-table-error [rules exclusions unknown-key]
+(defn- lint-max-code-lines-error [max-code-lines]
+  (if (and (not= max-code-lines nil)
+           (not (and (= (type max-code-lines) :number)
+                     (= max-code-lines (math.floor max-code-lines))
+                     (> max-code-lines 0))))
+      {:message "max-code-lines must be a positive integer"}))
+
+(defn- lint-table-error [rules exclusions max-code-lines unknown-key]
   (or (unknown-lint-key-error unknown-key)
       (if (and rules
                (or (not= (type rules) :table)
@@ -148,6 +157,7 @@
                             (> (length rules) 0)))))
           {:message "lint rules must be a table"})
       (if rules (first-lint-rule-error rules nil))
+      (lint-max-code-lines-error max-code-lines)
       (if (and exclusions (not (sequence? exclusions)))
           {:message "lint exclusions must be a list"})
       (if exclusions (first-exclusion-error exclusions 1))))
@@ -155,10 +165,11 @@
 (defn- lint-error [lint]
   (if (not= (type lint) :table)
       {:message "lint must be a table"}
-      (let [rules (. lint :rules)
-            exclusions (. lint :exclusions)
-            unknown-key (first-unknown-lint-key lint nil nil)]
-        (lint-table-error rules exclusions unknown-key))))
+      (let [rules          (. lint :rules)
+            exclusions     (. lint :exclusions)
+            max-code-lines (. lint :max-code-lines)
+            unknown-key    (first-unknown-lint-key lint nil nil)]
+        (lint-table-error rules exclusions max-code-lines unknown-key))))
 
 (defn- error-at [message token]
   {:message message :line token.line :col token.col})
@@ -184,8 +195,8 @@
   (table.insert result c))
 
 (defn- decode-string [token]
-  (let [text token.text
-        n (string.len text)
+  (let [text   token.text
+        n      (string.len text)
         result []]
     (var i 2)
     (while (< i n)
@@ -222,7 +233,7 @@
   (var i 1)
   (var failure nil)
   (while (and (<= i (length children)) (not failure))
-    (let [(key key-error) (convert-fn (. children i))
+    (let [(key key-error)     (convert-fn (. children i))
           (value value-error) (convert-fn (rawget children (+ i 1)))]
       (if key-error
           (set failure key-error)
@@ -235,7 +246,7 @@
 (defn- convert [node]
   (if (= node.kind :table)
       (let [children (meaningful-children node.children)
-            result {}]
+            result   {}]
         (if (= (math.fmod (length children) 2) 1)
             (error (error-at "table must contain key/value pairs" node.open) 0)
             (let [failure (convert-table-children convert children result)]
@@ -353,14 +364,15 @@
   (or failure (and lint (lint-error lint))))
 
 (defn- configuration-error [tbl]
-  (let [width (. tbl :indent-width)
-        builtins (. tbl :builtins)
-        fallbacks (. tbl :prefix-fallbacks)
-        extensions (. tbl :extensions)
-        skip-dotfiles (. tbl :skip-dotfiles)
+  (let [width           (. tbl :indent-width)
+        builtins        (. tbl :builtins)
+        fallbacks       (. tbl :prefix-fallbacks)
+        extensions      (. tbl :extensions)
+        skip-dotfiles   (. tbl :skip-dotfiles)
         follow-symlinks (. tbl :follow-symlinks)
-        parser (. tbl :parser)
-        lint (. tbl :lint)]
+        align-bindings  (. tbl :align-bindings)
+        parser          (. tbl :parser)
+        lint            (. tbl :lint)]
     (var failure nil)
     (if (and (= failure nil) (not= width nil)
              (not (and (integer? width) (> width 0))))
@@ -382,6 +394,8 @@
         (set failure {:message "skip-dotfiles must be a boolean"}))
     (if (and (= failure nil) (not= follow-symlinks nil) (not (boolean? follow-symlinks)))
         (set failure {:message "follow-symlinks must be a boolean"}))
+    (if (and (= failure nil) (not= align-bindings nil) (not (boolean? align-bindings)))
+        (set failure {:message "align-bindings must be a boolean"}))
     (if (and (= failure nil) (not= parser nil) (not= (type parser) :string))
         (set failure {:message "parser must be a string"}))
     (configuration-error-with-lint failure lint)))
@@ -391,7 +405,7 @@
       (values nil {:message "configuration must be a table"})
       (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true
                      :indent-width true :builtins true :prefix-fallbacks true :extensions true
-                     :skip-dotfiles true :follow-symlinks true :parser true :lint true}]
+                     :skip-dotfiles true :follow-symlinks true :align-bindings true :parser true :lint true}]
         (var failure nil)
         (each [key _ (pairs tbl)]
           (if (not (. allowed key))
@@ -408,11 +422,13 @@
                           tbl))))))))
 
 (defn- valid-lint-policy [cfg]
-  (let [lint (. cfg :lint)
-        overrides (or (and lint (. lint :rules)) {})
-        exclusions (or (and lint (. lint :exclusions)) [])]
-    {:rules (core.merge (lint-rules.defaults) overrides)
-     :exclusions exclusions}))
+  (let [lint           (. cfg :lint)
+        overrides      (or (and lint (. lint :rules)) {})
+        exclusions     (or (and lint (. lint :exclusions)) [])
+        max-code-lines (or (and lint (. lint :max-code-lines)) 300)]
+    {:rules          (core.merge (lint-rules.defaults) overrides)
+     :exclusions     exclusions
+     :max-code-lines max-code-lines}))
 
 (defn lint-policy [cfg]
   (let [(valid error) (validate cfg)]
@@ -446,7 +462,7 @@
   (let [trimmed (if (and (> (string.len dir) 1) (= (string.sub dir -1) "/"))
                     (string.sub dir 1 -2)
                     dir)
-        parent (string.match trimmed "^(.*)/[^/]+$")]
+        parent  (string.match trimmed "^(.*)/[^/]+$")]
     (if parent
         (if (= parent "") "/" parent)
         nil)))
