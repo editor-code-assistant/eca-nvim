@@ -6,8 +6,8 @@
   (let [(ok result) (pcall f)]
     (cleanup)
     (if ok
-        result
-        (error result 0))))
+      result
+      (error result 0))))
 
 (defn- with-api-stub
   [name stub f]
@@ -41,23 +41,23 @@
   [items]
   (let [setup-calls []]
     {:widget      (with-footer-bar {:lualine   {:plugin (fn [] true)
-                                                      :setup  (fn [new-items]
-                                                                   (table.insert setup-calls new-items))}
-                                       :bar-items {:render (fn [_]
-                                                             (error "bar-items.render should not be called"))}}
-                       (fn [footer-bar]
-                         (footer-bar.create 1 2 items)))
+                                                :setup  (fn [new-items]
+                                                          (table.insert setup-calls new-items))}
+                                    :bar-items {:render (fn [_]
+                                                          (error "bar-items.render should not be called"))}}
+                    (fn [footer-bar]
+                      (footer-bar.create 1 2 items)))
      :setup-calls setup-calls}))
 
 (defn- native-scenario
   [items]
   (let [render-calls []]
     {:widget       (with-footer-bar {:lualine   {:plugin (fn [] false)}
-                                        :bar-items {:render (fn [opts]
-                                                              (table.insert render-calls opts)
-                                                              :rendered)}}
-                        (fn [footer-bar]
-                          (footer-bar.create 1 2 items)))
+                                     :bar-items {:render (fn [opts]
+                                                           (table.insert render-calls opts)
+                                                           :rendered)}}
+                     (fn [footer-bar]
+                       (footer-bar.create 1 2 items)))
      :render-calls render-calls}))
 
 (defn- capture-set-option

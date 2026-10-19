@@ -12,8 +12,8 @@
         hv    (or hl-value :EcaHeaderValue)
         parts (icollect [_ item (ipairs (or items []))]
                 (if item.title
-                    (.. "%#" hk "#" item.title "%#" hv "#:" item.value)
-                    (.. "%#" hv "#" item.value)))
+                  (.. "%#" hk "#" item.title "%#" hv "#:" item.value)
+                  (.. "%#" hv "#" item.value)))
         count (length parts)]
     (case count
       0 ""
@@ -23,7 +23,7 @@
               right        (. parts count)
               center-parts []
               _            (for [i 2 (- count 1)]
-                                (table.insert center-parts (. parts i)))
+                             (table.insert center-parts (. parts i)))
               center       (table.concat center-parts "  ")]
           (.. " " left "%=" center "%=" right " ")))))
 

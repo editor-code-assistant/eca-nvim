@@ -42,8 +42,8 @@
           lines         (nvim.nvim_buf_get_lines buf idx (+ idx 1) false)
           last-line     (or (. lines 1) "")]
       (if (vim.startswith last-line "> ")
-          [(string.sub last-line 3)]
-          [""])))
+        [(string.sub last-line 3)]
+        [""])))
 
   (fn restore-with-user-text [buf user-lines]
     (set internal-edit true)
@@ -51,7 +51,7 @@
     (let [new-count    (nvim.nvim_buf_line_count buf)
           new-last-idx (- new-count 1)
           restored     (icollect [i line (ipairs user-lines)]
-                            (if (= i 1) (.. "> " line) line))]
+                         (if (= i 1) (.. "> " line) line))]
       (when (> (length restored) 0)
         (nvim.nvim_buf_set_lines buf new-last-idx new-count false restored)
             ;; Re-apply prefix highlight
@@ -63,13 +63,13 @@
 
   (fn on-lines-handler [_ buf _changedtick first-line last-line new-last-line]
     (when (not internal-edit)
-      (let [prompt-state   (get-prompt-state)
-            prompt-line    (or prompt-state.prompt-start-line 0)
+      (let [prompt-state (get-prompt-state)
+            prompt-line  (or prompt-state.prompt-start-line 0)
             lines-deleted? (> last-line new-last-line) ;; Damaged if:
             ;; 1. edit is before the prompt (chat history touched), OR
             ;; 2. edit touches the prompt area AND lines were deleted (e.g. dd)
-            damaged?       (or (< first-line prompt-line)
-                                  (and (<= first-line prompt-line) lines-deleted?))]
+            damaged?     (or (< first-line prompt-line)
+                             (and (<= first-line prompt-line) lines-deleted?))]
         (when damaged?
           (vim.schedule (fn []
                           (when (nvim.nvim_buf_is_valid buf)
@@ -89,8 +89,8 @@
 (fn create-chat-ui [{: on-submit : on-stop : opts}]
   (let [ui-config (or opts.ui {})
         config    {:width    (or ui-config.width 0.4)
-                      :position (or ui-config.position :right)
-                      :keymaps  (or opts.keymaps [])}]
+                   :position (or ui-config.position :right)
+                   :keymaps  (or opts.keymaps [])}]
        ;; Mutable state
     (local state {:header-items   []
                   :footer-items   []
@@ -131,7 +131,7 @@
               prompt-line  (or prompt-state.prompt-start-line (- total 1))
               ;; Position cursor at end of the prompt line, not at col 2
               line-text    (or (. (nvim.nvim_buf_get_lines buf-id prompt-line
-                                                              (+ prompt-line 1) false)
+                                                           (+ prompt-line 1) false)
                                      1) "> ")
               col          (length line-text)]
           (nvim.nvim_win_set_cursor win-id [(+ prompt-line 1) col]))))
@@ -139,7 +139,7 @@
     (fn make-separator []
       (let [win   (vim.fn.bufwinid buf-id)
             width (if (and win (not= win -1))
-                      (nvim.nvim_win_get_width win)
+                    (nvim.nvim_win_get_width win)
                       40)]
         (string.rep "─" width)))
 
@@ -179,9 +179,9 @@
         (var offset 1)
            ;; 1 = after separator
         (let [ctx-line      (when has-ctx?
-                                 (let [l (+ msg-end offset)]
-                                   (set offset (+ offset 1))
-                                   l))
+                              (let [l (+ msg-end offset)]
+                                (set offset (+ offset 1))
+                                l))
               steering-line (when has-steering?
                               (let [l (+ msg-end offset)]
                                 (set offset (+ offset 1))
@@ -266,31 +266,31 @@
     (fn submit-prompt []
       (when (is-open?)
         (if ;; Cursor on steering [-] → cancel steering
-         (widgets.steering.is-on-steering-line?)
-         (do
-           (cancel-steering) (focus-prompt))
-         ;; Cursor on stop → stop everything
-         (is-on-stop-line?)
-         (stop)
-         ;; Normal flow
-         (let [prompt-state (widgets.prompt.get-state)
-               text         (widgets.prompt.get-text)]
-           (if prompt-state.loading?
-               ;; During loading: append to steering queue
-               (when (and text (not= "" text))
-                 (table.insert state.steering-queue text)
-                 (widgets.prompt.add-to-history text)
-                 (with-internal-edit (fn []
-                                       (widgets.prompt.clear)
-                                       (widgets.steering.set-items state.steering-queue)
-                                       (render-prompt-area)))
-                 (focus-prompt))
-               ;; Normal: submit immediately
-               (when (and text (not= "" text))
-                 (widgets.prompt.add-to-history text)
-                 (with-internal-edit (fn [] (widgets.prompt.clear)))
-                 (focus-prompt)
-                 (when on-submit (on-submit text))))))))
+          (widgets.steering.is-on-steering-line?)
+          (do
+            (cancel-steering) (focus-prompt))
+          ;; Cursor on stop → stop everything
+          (is-on-stop-line?)
+          (stop)
+          ;; Normal flow
+          (let [prompt-state (widgets.prompt.get-state)
+                text         (widgets.prompt.get-text)]
+            (if prompt-state.loading?
+                ;; During loading: append to steering queue
+              (when (and text (not= "" text))
+                (table.insert state.steering-queue text)
+                (widgets.prompt.add-to-history text)
+                (with-internal-edit (fn []
+                                      (widgets.prompt.clear)
+                                      (widgets.steering.set-items state.steering-queue)
+                                      (render-prompt-area)))
+                (focus-prompt))
+                ;; Normal: submit immediately
+              (when (and text (not= "" text))
+                (widgets.prompt.add-to-history text)
+                (with-internal-edit (fn [] (widgets.prompt.clear)))
+                (focus-prompt)
+                (when on-submit (on-submit text))))))))
 
        ;; Open
 

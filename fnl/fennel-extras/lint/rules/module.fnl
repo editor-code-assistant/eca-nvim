@@ -16,20 +16,20 @@
 
 (defn module-finding [path forms policy module-ok]
   (if (and (not (spec-file? path)) (enabled? policy "module-style") (not module-ok))
-      [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1
-        :severity (rule-severity policy "module-style") :rule "module-style"
-        :form    (.. path " > file")
-        :message "file must use the module style"
-        :node    nil}]
-      []))
+    [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1
+      :severity (rule-severity policy "module-style") :rule "module-style"
+      :form    (.. path " > file")
+      :message "file must use the module style"
+      :node    nil}]
+    []))
 (defn- core-finding-form [path form head children]
   (if (= head "local")
-      {:line     form.line
-       :col      form.col
-       :end-line form.end-line
-       :end-col  form.end-col
-       :form     (.. path " > local:" (symbol-text (. children 2)))}
-      form))
+    {:line     form.line
+     :col      form.col
+     :end-line form.end-line
+     :end-col  form.end-col
+     :form     (.. path " > local:" (symbol-text (. children 2)))}
+    form))
 
 (defn- add-core-finding [findings path form head children node policy]
   (let [finding-form (core-finding-form path form head children)]
@@ -53,7 +53,7 @@
 
 (defn- maybe-add-core-require-finding [findings path form head children node policy target canonical]
   (if (and (= target "eca.nfnl.core") (not canonical))
-      (add-core-finding findings path form head children node policy)))
+    (add-core-finding findings path form head children node policy)))
 
 (defn- core-require-children [require-form]
   (if require-form (meaningful-children require-form) []))

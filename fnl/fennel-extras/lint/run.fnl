@@ -11,13 +11,13 @@
 
 (defn- excluded? [exclusions finding index]
   (if (> index (length exclusions))
-      false
-      (or (exclusion-match? (. exclusions index) finding)
-          (excluded? exclusions finding (+ index 1)))))
+    false
+    (or (exclusion-match? (. exclusions index) finding)
+        (excluded? exclusions finding (+ index 1)))))
 
 (defn- append-kept-finding [result finding exclusions]
   (if (not (excluded? exclusions finding 1))
-      (table.insert result finding))
+    (table.insert result finding))
   result)
 
 (defn- keep-finding-step [findings exclusions index result recurse]
@@ -27,14 +27,14 @@
 
 (defn- keep-finding [findings exclusions index result]
   (if (> index (length findings))
-      result
-      (keep-finding-step findings exclusions index result keep-finding)))
+    result
+    (keep-finding-step findings exclusions index result keep-finding)))
 
 (defn- matching-exclusion? [exclusion findings index]
   (if (> index (length findings))
-      false
-      (or (exclusion-match? exclusion (. findings index))
-          (matching-exclusion? exclusion findings (+ index 1)))))
+    false
+    (or (exclusion-match? exclusion (. findings index))
+        (matching-exclusion? exclusion findings (+ index 1)))))
 
 (defn- stale-exclusion [exclusion config-path]
   {:kind     "stale-exclusion"
@@ -48,7 +48,7 @@
 
 (defn- append-stale-item [result exclusion findings config-path]
   (if (not (matching-exclusion? exclusion findings 1))
-      (table.insert result (stale-exclusion exclusion config-path)))
+    (table.insert result (stale-exclusion exclusion config-path)))
   result)
 
 (defn- append-stale-step [exclusions findings config-path index result recurse]
@@ -58,8 +58,8 @@
 
 (defn- append-stale [exclusions findings config-path index result]
   (if (> index (length exclusions))
-      result
-      (append-stale-step exclusions findings config-path index result append-stale)))
+    result
+    (append-stale-step exclusions findings config-path index result append-stale)))
 
 (defn- normalized-testing-form [finding]
   (or (and (string.match finding.form " > top#[0-9]+$")
@@ -72,8 +72,8 @@
 
 (defn- normalized-form [finding]
   (if (= finding.rule "one-is-per-testing")
-      (normalized-testing-form finding)
-      (normalized-branch-form finding)))
+    (normalized-testing-form finding)
+    (normalized-branch-form finding)))
 
 (defn- normalized-finding [finding]
   {:kind     finding.kind
@@ -94,8 +94,8 @@
 
 (defn- normalize-findings [findings index result]
   (if (> index (length findings))
-      result
-      (normalize-findings-step findings index result normalize-findings)))
+    result
+    (normalize-findings-step findings index result normalize-findings)))
 
 (defn- lint-file [file policy]
   (let [(findings error) (lint.check file.source {:path           file.path
@@ -103,11 +103,11 @@
                                                   :max-code-lines policy.max-code-lines
                                                   :selection      file.selection})]
     (if error
-        (values nil {:message error.message
-                     :line    error.line
-                     :col     error.col
-                     :path    file.path})
-        (values (normalize-findings findings 1 []) nil))))
+      (values nil {:message error.message
+                   :line    error.line
+                   :col     error.col
+                   :path    file.path})
+      (values (normalize-findings findings 1 []) nil))))
 
 (defn- append-findings [result findings]
   (each [_ finding (ipairs findings)]
@@ -117,27 +117,27 @@
 (defn- lint-files-at-step [files policy index result recurse]
   (let [(findings error) (lint-file (. files index) policy)]
     (if error
-        (values nil error)
-        (recurse files policy (+ index 1)
-                 (append-findings result findings)))))
+      (values nil error)
+      (recurse files policy (+ index 1)
+               (append-findings result findings)))))
 
 (defn- lint-files-at [files policy index result]
   (if (> index (length files))
-      (values result nil)
-      (lint-files-at-step files policy index result lint-files-at)))
+    (values result nil)
+    (lint-files-at-step files policy index result lint-files-at)))
 
 (defn- exclusion-path [exclusion]
   (or (string.match exclusion.form "^(.-) > ") exclusion.form))
 
 (defn- path-in-scope? [paths path index]
   (if (> index (length paths))
-      false
-      (or (= path (. paths index))
-          (path-in-scope? paths path (+ index 1)))))
+    false
+    (or (= path (. paths index))
+        (path-in-scope? paths path (+ index 1)))))
 
 (defn- append-scoped-exclusion [result exclusion paths]
   (if (or (= paths nil) (path-in-scope? paths (exclusion-path exclusion) 1))
-      (table.insert result exclusion))
+    (table.insert result exclusion))
   result)
 
 (defn- scoped-exclusions-step [exclusions paths index result recurse]
@@ -147,12 +147,12 @@
 
 (defn- scoped-exclusions [exclusions paths index result]
   (if (> index (length exclusions))
-      result
-      (scoped-exclusions-step exclusions paths index result scoped-exclusions)))
+    result
+    (scoped-exclusions-step exclusions paths index result scoped-exclusions)))
 
 (defn- append-non-warning [result finding]
   (if (not (= finding.severity "warning"))
-      (table.insert result finding))
+    (table.insert result finding))
   result)
 
 (defn- keep-non-warning-step [findings index result recurse]
@@ -162,14 +162,14 @@
 
 (defn- keep-non-warning [findings index result]
   (if (> index (length findings))
-      result
-      (keep-non-warning-step findings index result keep-non-warning)))
+    result
+    (keep-non-warning-step findings index result keep-non-warning)))
 
 (defn- diagnostic-source [filtered policy stale scope-paths]
   (if (and (> (length policy.exclusions) 0)
            (or scope-paths (> (length stale) 0)))
-      (keep-non-warning filtered 1 [])
-      filtered))
+    (keep-non-warning filtered 1 [])
+    filtered))
 
 (defn- append-stale-findings [source stale]
   (each [_ finding (ipairs stale)]
@@ -185,14 +185,14 @@
 
 (defn- has-errors? [findings index]
   (if (> index (length findings))
-      false
-      (or (= (. (. findings index) :severity) "error")
-          (has-errors? findings (+ index 1)))))
+    false
+    (or (= (. (. findings index) :severity) "error")
+        (has-errors? findings (+ index 1)))))
 
 (defn- render [findings format]
   (if (= format "json")
-      (output.json-lines findings)
-      (output.text-lines findings)))
+    (output.json-lines findings)
+    (output.text-lines findings)))
 
 (defn- result-status [findings]
   (if (has-errors? findings 1) 1 0))
@@ -204,5 +204,5 @@
 (defn lint-files [files policy config-path format scope-paths]
   (let [(findings error) (lint-files-at files policy 1 [])]
     (if error
-        (values nil error)
-        (result (diagnostics findings policy config-path scope-paths) format))))
+      (values nil error)
+      (result (diagnostics findings policy config-path scope-paths) format))))

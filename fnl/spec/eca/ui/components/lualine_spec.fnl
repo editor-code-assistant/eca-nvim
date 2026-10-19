@@ -8,8 +8,8 @@
   (let [(ok result) (pcall f)]
     (cleanup)
     (if ok
-        result
-        (error result 0))))
+      result
+      (error result 0))))
 
 (defn- with-lualine-plugin
   [plugin f]
@@ -36,7 +36,7 @@
                               {:options    {:theme :gruvbox}
                                :extensions [{:filetypes [:other]}]})
                 :setup      (fn [cfg]
-                                 (set captured cfg))}]
+                              (set captured cfg))}]
     (with-lualine-plugin plugin
       (fn []
         (lualine.setup [{:value "~/dev/eca-nvim"}
@@ -57,7 +57,7 @@
       (is (= {:extensions [{:filetypes [:other]}
                            {:filetypes [:eca-chat]
                             :sections  {:lualine_a ["%#EcaHeaderValue#~/dev/eca-nvim"]
-                                           :lualine_x ["%#EcaHeaderValue#⏱ 0s"]
-                                           :lualine_y ["%#EcaHeaderValue#0/200K ($0.00)"]}}]
+                                        :lualine_x ["%#EcaHeaderValue#⏱ 0s"]
+                                        :lualine_y ["%#EcaHeaderValue#0/200K ($0.00)"]}}]
               :options    {:theme :gruvbox}}
              captured)))))

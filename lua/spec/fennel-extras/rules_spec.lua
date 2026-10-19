@@ -72,12 +72,12 @@ local function _8_()
   require("plenary.busted").it("applies block rules through nested forms and keeps default inner alignment", _11_)
   local function _12_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(testing\n \"d\"\n  body)"
+    local expected_6_auto = "(testing\n  \"d\"\n  body)"
     local actual_7_auto = output_for("(testing\n\"d\"\nbody)", {indents = {testing = {{"block", 1}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses default alignment when the first block argument starts on a new line", _12_)
+  require("plenary.busted").it("uses body indentation when the first block argument starts on a new line", _12_)
   local function _13_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo a\n  b\n     c)"

@@ -23,8 +23,8 @@
     (let [ns        (ensure-ns)
           combined  (table.concat state.items "\n")
           truncated (if (> (length combined) 60)
-                        (.. (string.sub combined 1 60) "...")
-                        combined)
+                      (.. (string.sub combined 1 60) "...")
+                      combined)
           prefix    (.. "Steering: " truncated " [")]
          ;; Inline virt text before "-"
       (nvim.nvim_buf_set_extmark buf-id ns line-num 0
@@ -44,12 +44,12 @@
     (let [ns (ensure-ns)]
       (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
       (if (not (has-items?))
-          (do (set state.end-line start-line) 0)
-          (do
-            (nvim.nvim_buf_set_lines buf-id start-line start-line false ["-"])
-            (set state.end-line (+ start-line 1))
-            (apply-virt-text start-line)
-            1))))
+        (do (set state.end-line start-line) 0)
+        (do
+          (nvim.nvim_buf_set_lines buf-id start-line start-line false ["-"])
+          (set state.end-line (+ start-line 1))
+          (apply-virt-text start-line)
+          1))))
 
   (fn render-highlights [line-num]
     "Apply highlights to a steering line already written in the buffer."

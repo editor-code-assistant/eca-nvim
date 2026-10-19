@@ -33,8 +33,8 @@
 
 (defn- copy-findings [findings index copied]
   (if (> index (length findings))
-      copied
-      (copy-findings findings (+ index 1) (insert-finding copied (. findings index)))))
+    copied
+    (copy-findings findings (+ index 1) (insert-finding copied (. findings index)))))
 
 (defn sort [findings]
   (let [copied (copy-findings findings 1 [])]
@@ -43,28 +43,28 @@
 
 (defn- escape-control-carriage [character]
   (if (= character carriage-return)
-      (.. slash "r")
-      (string.format (.. slash "u00%02X") (string.byte character))))
+    (.. slash "r")
+    (string.format (.. slash "u00%02X") (string.byte character))))
 
 (defn- escape-control-whitespace [character]
   (if (= character tab)
-      (.. slash "t")
-      (escape-control-carriage character)))
+    (.. slash "t")
+    (escape-control-carriage character)))
 
 (defn- escape-control-newline [character]
   (if (= character newline)
-      (.. slash "n")
-      (escape-control-whitespace character)))
+    (.. slash "n")
+    (escape-control-whitespace character)))
 
 (defn- escape-control-tail [character]
   (if (= character slash)
-      (.. slash slash)
-      (escape-control-newline character)))
+    (.. slash slash)
+    (escape-control-newline character)))
 
 (defn- escape-control [character]
   (if (= character double-quote)
-      (.. slash double-quote)
-      (escape-control-tail character)))
+    (.. slash double-quote)
+    (escape-control-tail character)))
 
 (defn- valid-continuation? [byte]
   (and byte (>= byte 128) (<= byte 191)))
@@ -120,8 +120,8 @@
 
 (defn- normalize-utf8-at [value index chunks]
   (if (> index (length value))
-      (table.concat chunks)
-      (normalize-utf8-bytes value index chunks normalize-utf8-at)))
+    (table.concat chunks)
+    (normalize-utf8-bytes value index chunks normalize-utf8-at)))
 
 (defn- normalize-utf8 [value]
   (normalize-utf8-at value 1 []))
@@ -143,13 +143,13 @@
 (defn- append-text [lines finding]
   (table.insert lines (text-line finding))
   (if (= finding.kind "finding")
-      (table.insert lines (exclusion-line finding)))
+    (table.insert lines (exclusion-line finding)))
   lines)
 
 (defn- append-text-lines [diagnostics index lines]
   (if (> index (length diagnostics))
-      lines
-      (append-text-lines diagnostics (+ index 1) (append-text lines (. diagnostics index)))))
+    lines
+    (append-text-lines diagnostics (+ index 1) (append-text lines (. diagnostics index)))))
 
 (defn text-lines [diagnostics]
   (append-text-lines diagnostics 1 []))
@@ -188,8 +188,8 @@
 
 (defn- diagnostic-json [finding]
   (if (= finding.kind "finding")
-      (finding-json finding)
-      (stale-json finding)))
+    (finding-json finding)
+    (stale-json finding)))
 
 (defn- append-json [lines finding]
   (table.insert lines (.. "{" (diagnostic-json finding) "}"))
@@ -197,8 +197,8 @@
 
 (defn- append-json-lines [diagnostics index lines]
   (if (> index (length diagnostics))
-      lines
-      (append-json-lines diagnostics (+ index 1) (append-json lines (. diagnostics index)))))
+    lines
+    (append-json-lines diagnostics (+ index 1) (append-json lines (. diagnostics index)))))
 
 (defn json-lines [diagnostics]
   (append-json-lines diagnostics 1 []))

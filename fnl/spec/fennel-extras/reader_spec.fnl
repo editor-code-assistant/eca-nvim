@@ -4,8 +4,8 @@
 (defn- load-reader []
   (let [(ok result) (pcall require :fennel-extras.reader)]
     (if ok
-        result
-        {:error "module missing"})))
+      result
+      {:error "module missing"})))
 
 (defn- read-source [path]
   (let [(ok result) (pcall (fn []
@@ -14,8 +14,8 @@
                                (file:close)
                                source)))]
     (if ok
-        result
-        {:error "read failed" :path path})))
+      result
+      {:error "read failed" :path path})))
 
 (defn- file-paths []
   (let [paths      []
@@ -40,83 +40,83 @@
   (let [reader   (load-reader)
         failures []]
     (if (. reader :error)
-        (each [_ path (ipairs (file-paths))]
-          (table.insert failures path))
-        (each [_ path (ipairs (file-paths))]
-          (let [source (read-source path)]
-            (if (. source :error)
-                (table.insert failures (.. "read failed: " path))
-                (let [(ok parsed)       (pcall (fn [] (reader.parse source)))
-                      (token-ok tokens) (pcall (fn [] (reader.tokenize source)))]
-                  (if (or (not ok)
-                          (not token-ok)
-                          (= nil parsed)
-                          (= nil tokens)
-                          (not= source (reader.to-string parsed))
-                          (not= source (token-text tokens)))
-                      (table.insert failures path)))))))
+      (each [_ path (ipairs (file-paths))]
+        (table.insert failures path))
+      (each [_ path (ipairs (file-paths))]
+        (let [source (read-source path)]
+          (if (. source :error)
+            (table.insert failures (.. "read failed: " path))
+            (let [(ok parsed)       (pcall (fn [] (reader.parse source)))
+                  (token-ok tokens) (pcall (fn [] (reader.tokenize source)))]
+              (if (or (not ok)
+                      (not token-ok)
+                      (= nil parsed)
+                      (= nil tokens)
+                      (not= source (reader.to-string parsed))
+                      (not= source (token-text tokens)))
+                (table.insert failures path)))))))
     failures))
 
 (defn- tokenize-scenario [source]
   (let [reader (load-reader)]
     (if (. reader :error)
-        reader
-        (let [(ok result) (pcall (fn [] (reader.tokenize source)))]
-          (if ok result {:error "tokenize failed"})))))
+      reader
+      (let [(ok result) (pcall (fn [] (reader.tokenize source)))]
+        (if ok result {:error "tokenize failed"})))))
 
 (defn- parse-scenario [source]
   (let [reader (load-reader)]
     (if (. reader :error)
-        reader
-        (let [(ok result) (pcall (fn [] (reader.parse source)))]
-          (if ok result {:error "parse failed"})))))
+      reader
+      (let [(ok result) (pcall (fn [] (reader.parse source)))]
+        (if ok result {:error "parse failed"})))))
 
 (defn- kinds-for [source]
   (let [tokens (tokenize-scenario source)]
     (if (. tokens :error)
-        tokens
-        (token-kinds tokens))))
+      tokens
+      (token-kinds tokens))))
 
 (defn- nested-kinds []
   (let [root (parse-scenario "(a [b {:c d}])")]
     (if (. root :error)
-        root
-        (let [outer    (. root.children 1)
-              sequence (. outer.children 3)
-              table    (. sequence.children 3)]
-          [(. outer :kind) (. sequence :kind) (. table :kind)]))))
+      root
+      (let [outer    (. root.children 1)
+            sequence (. outer.children 3)
+            table    (. sequence.children 3)]
+        [(. outer :kind) (. sequence :kind) (. table :kind)]))))
 
 (defn- comment-child-kind []
   (let [parsed (parse-scenario "(a ;; comment\n)")]
     (if (. parsed :error)
-        parsed
-        (let [list-node (. parsed.children 1)
-              child     (. list-node.children 3)]
-          (. child :kind)))))
+      parsed
+      (let [list-node (. parsed.children 1)
+            child     (. list-node.children 3)]
+        (. child :kind)))))
 
 (defn- fail-closed-scenario [source]
   (let [reader (load-reader)]
     (if (. reader :error)
-        reader
-        (let [(ok result err) (pcall (fn [] (reader.parse source)))]
-          (if (not ok)
-              {:value? true :has-message false}
-              {:value?      (not= nil result)
-               :has-message (and err (= :string (type (. err :message))))
-               :line        (and err (. err :line))
-               :col         (and err (. err :col))})))))
+      reader
+      (let [(ok result err) (pcall (fn [] (reader.parse source)))]
+        (if (not ok)
+          {:value? true :has-message false}
+          {:value?      (not= nil result)
+           :has-message (and err (= :string (type (. err :message))))
+           :line        (and err (. err :line))
+           :col         (and err (. err :col))})))))
 
 (defn- fail-closed-summary [source include-location?]
   (let [result (fail-closed-scenario source)]
     (if (. result :error)
-        result
-        (if include-location?
-            {:value?      (. result :value?)
-             :has-message (. result :has-message)
-             :line        (. result :line)
-             :col         (. result :col)}
-            {:value?      (. result :value?)
-             :has-message (. result :has-message)}))))
+      result
+      (if include-location?
+        {:value?      (. result :value?)
+         :has-message (. result :has-message)
+         :line        (. result :line)
+         :col         (. result :col)}
+        {:value?      (. result :value?)
+         :has-message (. result :has-message)}))))
 
 (deftest round-trip
   (testing "all Fennel sources round-trip through parsing and tokenization"

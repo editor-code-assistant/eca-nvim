@@ -4,53 +4,53 @@
 (defn- load-identity []
   (let [(ok result) (pcall require :fennel-extras.lint.identity)]
     (if ok
-        result
-        {:module-missing true})))
+      result
+      {:module-missing true})))
 
 (defn- identity-forms [source path]
   (let [identity (load-identity)]
     (if (. identity :module-missing)
-        identity
-        (let [(forms err) (identity.forms source path)]
-          (if forms
-              forms
-              {:reader-error err})))))
+      identity
+      (let [(forms err) (identity.forms source path)]
+        (if forms
+          forms
+          {:reader-error err})))))
 
 (defn- form-ids [source path]
   (let [forms (identity-forms source path)]
     (if (or (. forms :module-missing) (. forms :reader-error))
-        forms
-        (icollect [_ form (ipairs forms)]
-          (. form :form)))))
+      forms
+      (icollect [_ form (ipairs forms)]
+        (. form :form)))))
 
 (defn- find-form-id [forms form-id]
   (var result nil)
   (each [_ form (ipairs forms)]
     (if (= form-id (. form :form))
-        (set result form)))
+      (set result form)))
   result)
 
 (defn- form-by-id [source path form-id]
   (let [forms (identity-forms source path)]
     (if (or (. forms :module-missing) (. forms :reader-error))
-        forms
-        (find-form-id forms form-id))))
+      forms
+      (find-form-id forms form-id))))
 
 (defn- span-summary [source path form-id]
   (let [form (form-by-id source path form-id)]
     (if (or (. form :module-missing) (. form :reader-error))
-        form
-        {:line     (. form :line)
-         :col      (. form :col)
-         :end-line (. form :end-line)
-         :end-col  (. form :end-col)})))
+      form
+      {:line     (. form :line)
+       :col      (. form :col)
+       :end-line (. form :end-line)
+       :end-col  (. form :end-col)})))
 
 (defn- location-summary [source path form-id]
   (let [form (form-by-id source path form-id)]
     (if form
-        {:line (. form :line)
-         :col  (. form :col)}
-        nil)))
+      {:line (. form :line)
+       :col  (. form :col)}
+      nil)))
 
 (defn- reader-end-summary [source]
   (let [reader  (require :fennel-extras.reader)
@@ -64,12 +64,12 @@
 (defn- failure-summary [source path]
   (let [identity (load-identity)]
     (if (. identity :module-missing)
-        identity
-        (let [(value err) (identity.forms source path)]
-          {:value-nil? (= nil value)
-           :message    (and err (. err :message))
-           :line       (and err (. err :line))
-           :col        (and err (. err :col))}))))
+      identity
+      (let [(value err) (identity.forms source path)]
+        {:value-nil? (= nil value)
+         :message    (and err (. err :message))
+         :line       (and err (. err :line))
+         :col        (and err (. err :col))}))))
 
 (deftest named-identities
   (testing "module and named declarations form stable ancestor identities"
@@ -186,10 +186,10 @@
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
       (if (not (string.find path "^fnl/eca/nfnl/"))
-          (table.insert paths path)))
+        (table.insert paths path)))
     (each [_ path (ipairs fnlm-files)]
       (if (not (string.find path "^fnl/eca/nfnl/"))
-          (table.insert paths path)))
+        (table.insert paths path)))
     paths))
 
 (defn- read-source [path]
@@ -199,8 +199,8 @@
                                (file:close)
                                source)))]
     (if ok
-        result
-        nil)))
+      result
+      nil)))
 
 (defn- report-duplicate [duplicates reported form-id]
   (table.insert duplicates form-id)
@@ -213,9 +213,9 @@
     (each [_ form (ipairs forms)]
       (let [form-id (. form :form)]
         (if (. seen form-id)
-            (if (not (. reported form-id))
-                (report-duplicate duplicates reported form-id))
-            (tset seen form-id true))))
+          (if (not (. reported form-id))
+            (report-duplicate duplicates reported form-id))
+          (tset seen form-id true))))
     duplicates))
 
 (defn- repo-duplicates []
@@ -224,10 +224,10 @@
       (let [source (read-source path)
             forms  (if source (identity-forms source path) nil)]
         (if (and forms (not (. forms :module-missing)) (not (. forms :reader-error)))
-            (let [form-duplicates (duplicate-form-ids forms)]
-              (if (> (length form-duplicates) 0)
-                  (table.insert duplicates path)))
-            (table.insert duplicates path))))
+          (let [form-duplicates (duplicate-form-ids forms)]
+            (if (> (length form-duplicates) 0)
+              (table.insert duplicates path)))
+          (table.insert duplicates path))))
     duplicates))
 
 (deftest paths
@@ -266,8 +266,8 @@
     (is (= {:first  {:line 1 :col 14}
             :second {:line 1 :col 40}}
            {:first  (location-summary "(deftest run (testing \"one\" (is true)) (testing \"two\" (is true)))"
-                                         "fnl/testing.fnl"
-                                         "fnl/testing.fnl > deftest:run > testing#1")
+                                      "fnl/testing.fnl"
+                                      "fnl/testing.fnl > deftest:run > testing#1")
             :second (location-summary "(deftest run (testing \"one\" (is true)) (testing \"two\" (is true)))"
                                       "fnl/testing.fnl"
                                       "fnl/testing.fnl > deftest:run > testing#2")})))
@@ -310,35 +310,35 @@
 (deftest binding-vector-identities
   (testing "binding and parameter vectors do not get identities"
     (is (= {:let           ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :when-let      ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :if-let        ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :each          ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :for           ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :icollect      ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :collect       ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :accumulate    ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :with-open     ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :fn            ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :lambda        ["fnl/bindings.fnl > defn:run"
-                               "fnl/bindings.fnl > defn:run > sequence#1"]
+                            "fnl/bindings.fnl > defn:run > sequence#1"]
             :lambda-symbol ["fnl/bindings.fnl > defn:run"
                             "fnl/bindings.fnl > defn:run > sequence#1"]
             :defn          ["fnl/bindings.fnl > defn:inner"
-                               "fnl/bindings.fnl > defn:inner > sequence#1"]
+                            "fnl/bindings.fnl > defn:inner > sequence#1"]
             :defn-         ["fnl/bindings.fnl > defn-:inner"
-                               "fnl/bindings.fnl > defn-:inner > sequence#1"]
+                            "fnl/bindings.fnl > defn-:inner > sequence#1"]
             :macro         ["fnl/bindings.fnl > top#1"
-                               "fnl/bindings.fnl > top#1 > sequence#1"]}
+                            "fnl/bindings.fnl > top#1 > sequence#1"]}
            (binding-vector-identities))))
   (testing "forms nested in binding vectors keep identities in the enclosing namespace"
     (is (= ["fnl/nested-binding.fnl > defn:run"

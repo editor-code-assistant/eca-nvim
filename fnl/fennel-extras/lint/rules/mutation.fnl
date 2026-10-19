@@ -29,16 +29,16 @@
   (let [previous-index (previous-meaningful-index node.children index)
         previous       (and previous-index (. node.children previous-index))]
     (if (and previous (= previous.kind :prefix))
-        (mutation-mode-for-prefix previous.text
-                                  (mutation-mode-for-child node previous-index mode))
-        mode)))
+      (mutation-mode-for-prefix previous.text
+                                (mutation-mode-for-child node previous-index mode))
+      mode)))
 
 (defn- append-mutation-child [node result index child mode recurse]
   (let [child-mode (mutation-mode-for-child node index mode)]
     (if (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
              (not= child-mode :quoted))
-        (recurse child result child-mode)
-        result)))
+      (recurse child result child-mode)
+      result)))
 
 (defn- collect-mutation-children [node result mode recurse]
   (accumulate [state result index child (ipairs (or node.children []))]
@@ -46,8 +46,8 @@
 
 (defn- mutation-node-result [node result mode]
   (if (and (= mode 0) (= node.kind :list) (mutation-head? (list-head node)))
-      (core.concat result [node])
-      result))
+    (core.concat result [node])
+    result))
 
 (defn- collect-mutation-nodes [node result mode]
   (collect-mutation-children node (mutation-node-result node result mode) mode collect-mutation-nodes))
@@ -74,8 +74,8 @@
 
 (defn- add-mutation-finding [findings path forms policy node ordinals]
   (if (and (not (spec-file? path)) (enabled? policy "no-mutation"))
-      (append-mutation-finding findings path forms policy node ordinals)
-      ordinals))
+    (append-mutation-finding findings path forms policy node ordinals)
+    ordinals))
 
 (defn findings [findings path forms policy source]
   (accumulate [ordinals {}

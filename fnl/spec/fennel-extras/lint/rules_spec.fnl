@@ -6,8 +6,8 @@
 (defn- load-rules []
   (let [(ok result) (pcall require :fennel-extras.lint.rules)]
     (if ok
-        result
-        {:module-missing true})))
+      result
+      {:module-missing true})))
 
 (defn- sort-severities [entries]
   (table.sort entries (fn [a b] (< (. a 1) (. b 1))))
@@ -16,11 +16,11 @@
 (defn- default-severities []
   (let [rules (load-rules)]
     (if (. rules :module-missing)
-        rules
-        (let [defaults (rules.defaults)
-              entries  (icollect [rule severity (pairs defaults)]
-                            [rule severity])]
-          (sort-severities entries)))))
+      rules
+      (let [defaults (rules.defaults)
+            entries  (icollect [rule severity (pairs defaults)]
+                       [rule severity])]
+        (sort-severities entries)))))
 
 (deftest defaults
   (testing "all ten lint rules have the approved default severities"
@@ -36,8 +36,8 @@
             ["spec-no-module" "error"]]
            (let [entries (default-severities)]
              (if (. entries :module-missing)
-                 entries
-                 (sort-severities entries)))))))
+               entries
+               (sort-severities entries)))))))
 
 (defn- core-require-scenario []
   (let [source        "(local c (require :eca.nfnl.core))"
@@ -45,17 +45,17 @@
         policy        {}
         (forms error) (identity.forms source path)]
     (if error
-        {:error error}
-        (let [before   (icollect [_ form (ipairs forms)] form.form)
-              rules    (load-rules)
-              findings (rules.check path forms policy source)
-              after    (icollect [_ form (ipairs forms)] form.form)]
-          {:before before :after after :findings findings}))))
+      {:error error}
+      (let [before   (icollect [_ form (ipairs forms)] form.form)
+            rules    (load-rules)
+            findings (rules.check path forms policy source)
+            after    (icollect [_ form (ipairs forms)] form.form)]
+        {:before before :after after :findings findings}))))
 
 (defn- core-require-identities [scenario]
   (icollect [_ finding (ipairs scenario.findings)]
     (if (= finding.rule "core-require")
-        [finding.rule finding.form finding.severity])))
+      [finding.rule finding.form finding.severity])))
 
 (deftest check
   (testing "does not mutate identity forms"

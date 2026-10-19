@@ -12,23 +12,23 @@
 
   (fn build-line []
     (if (= 0 (length state.items))
-        {:line "" :highlights []}
-        (let [result (accumulate [acc {:parts [] :highlights [] :col 0}
-                                  _ item (ipairs state.items)]
-                       (let [sep-col (if (> acc.col 0)
-                                         (do (table.insert acc.parts " ")
-                                           (+ acc.col 1))
-                                         acc.col)]
-                         (table.insert acc.parts item.text)
-                         (table.insert acc.highlights
-                                       {:hl-group  (or item.hl-group :Normal)
-                                        :col-start sep-col
-                                        :col-end   (+ sep-col (length item.text))})
-                         {:parts      acc.parts
-                          :highlights acc.highlights
-                          :col        (+ sep-col (length item.text))}))]
-          {:line       (table.concat result.parts "")
-           :highlights result.highlights})))
+      {:line "" :highlights []}
+      (let [result (accumulate [acc {:parts [] :highlights [] :col 0}
+                                _ item (ipairs state.items)]
+                     (let [sep-col (if (> acc.col 0)
+                                     (do (table.insert acc.parts " ")
+                                       (+ acc.col 1))
+                                     acc.col)]
+                       (table.insert acc.parts item.text)
+                       (table.insert acc.highlights
+                                     {:hl-group  (or item.hl-group :Normal)
+                                      :col-start sep-col
+                                      :col-end   (+ sep-col (length item.text))})
+                       {:parts      acc.parts
+                        :highlights acc.highlights
+                        :col        (+ sep-col (length item.text))}))]
+        {:line       (table.concat result.parts "")
+         :highlights result.highlights})))
 
   (fn render [line-num]
     (let [ns                    (ensure-ns)

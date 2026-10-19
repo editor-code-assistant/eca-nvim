@@ -30,13 +30,13 @@
 
 (defn- module-import-state [state import-info]
   (if (and import-info (= import-info.target "eca.nfnl.macros.aniseed"))
-      (has-module-import? import-info.names)
-      state.module-import))
+    (has-module-import? import-info.names)
+    state.module-import))
 
 (defn- spec-import-state [state import-info]
   (if (and import-info (= import-info.target "spec.eca.macros"))
-      (has-all? import-info.names)
-      state.spec-import))
+    (has-all? import-info.names)
+    state.spec-import))
 
 (defn- update-check-state [state import-info head]
   {:module-import (module-import-state state import-info)
@@ -50,8 +50,8 @@
 
 (defn- check-state [nodes index state]
   (if (> index (length nodes))
-      state
-      (check-state-step nodes index state check-state)))
+    state
+    (check-state-step nodes index state check-state)))
 
 (defn- append-all [target items]
   (each [_ value (ipairs (or items []))]
@@ -63,18 +63,18 @@
         head     (list-head node)
         findings []]
     (if (and (spec-file? path) (= head "module") (enabled? policy "spec-no-module"))
-        (table.insert findings (finding path form (rule-severity policy "spec-no-module")
-                                        "spec-no-module" "specs must not declare a module" node)))
+      (table.insert findings (finding path form (rule-severity policy "spec-no-module")
+                                      "spec-no-module" "specs must not declare a module" node)))
     (if (and (spec-file? path) (not (spec-rule.direct-require? path)) (require-node? node))
-        (spec-rule.spec-direct-require-finding findings path form policy node))
+      (spec-rule.spec-direct-require-finding findings path form policy node))
     (if (= head "testing")
-        (spec-rule.testing-finding findings path form policy node))
+      (spec-rule.testing-finding findings path form policy node))
     (if (and node (shape-leaf.function-head? head))
-        (shape-rule.add-function-findings findings path form forms policy node))
+      (shape-rule.add-function-findings findings path form forms policy node))
     (append-all findings (branch-rule.finding path form policy node))
     (if (and (or (= head "local") (= head "require")) node
              (enabled? policy "core-require"))
-        (module-rule.core-require-finding findings path form head node policy))
+      (module-rule.core-require-finding findings path form head node policy))
     findings))
 
 (defn- append-form-findings [all path forms policy spec-import]
@@ -93,9 +93,9 @@
   (let [file-policy (core.assoc policy :max-code-lines max-code-lines)
         findings    (size-rule.finding path file-policy source)
         findings    (append-all findings
-                                 (module-rule.module-finding
-                                  path forms policy
-                                  (and state.module-import state.module-form)))
+                                (module-rule.module-finding
+                                 path forms policy
+                                 (and state.module-import state.module-form)))
         findings    (append-form-findings findings path forms policy state.spec-import)
         findings    (append-synthetic-findings findings path forms policy source)
         findings    (mutation-rule.findings findings path forms policy source)]

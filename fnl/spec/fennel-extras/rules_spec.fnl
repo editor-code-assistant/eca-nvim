@@ -4,32 +4,32 @@
 (defn- load-indent []
   (let [(ok result) (pcall require :fennel-extras.indent)]
     (if ok
-        result
-        {:error "module missing"})))
+      result
+      {:error "module missing"})))
 
 (defn- reindent-scenario [source config]
   (let [indent (load-indent)]
     (if (. indent :error)
-        indent
-        (let [(ok result err) (pcall (fn [] (indent.reindent source config)))]
-          (if ok
-              {:value result :error err}
-              {:call-error true :error err})))))
+      indent
+      (let [(ok result err) (pcall (fn [] (indent.reindent source config)))]
+        (if ok
+          {:value result :error err}
+          {:call-error true :error err})))))
 
 (defn- output-for [source config]
   (let [result (reindent-scenario source config)]
     (if (. result :error)
-        result
-        (. result :value))))
+      result
+      (. result :value))))
 
 (defn- error-summary [source config]
   (let [indent (load-indent)]
     (if (. indent :error)
-        indent
-        (let [(ok value err) (pcall (fn [] (indent.reindent source config)))]
-          {:value?         (and ok (not= nil value))
-           :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
-           :returned-error (and ok value (= nil value) err)}))))
+      indent
+      (let [(ok value err) (pcall (fn [] (indent.reindent source config)))]
+        {:value?         (and ok (not= nil value))
+         :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
+         :returned-error (and ok value (= nil value) err)}))))
 
 (deftest rule-semantics
   (testing "applies inner zero to every continuation line"
@@ -43,8 +43,8 @@
            (output-for "(deftest t\n(testing \"d\"\n(is (= 1\n1))))"
                        {:indents {"deftest" [[:block 1]]
                                   "testing" [[:block 1]]}}))))
-  (testing "uses default alignment when the first block argument starts on a new line"
-    (is (= "(testing\n \"d\"\n  body)"
+  (testing "uses body indentation when the first block argument starts on a new line"
+    (is (= "(testing\n  \"d\"\n  body)"
            (output-for "(testing\n\"d\"\nbody)" {:indents {"testing" [[:block 1]]}}))))
   (testing "applies inner rules to only the selected argument"
     (is (= "(foo a\n  b\n     c)"

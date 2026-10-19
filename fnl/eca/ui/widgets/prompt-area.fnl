@@ -143,20 +143,20 @@
 
   (fn set-status [text]
     (if text
-        (do
-          (set state.status-text text)
-          (set state.status-dots 0)
-          (when (not state.status-timer)
-            (fn tick []
-              (when state.status-text
-                (animate-dots)
-                (set state.status-timer
-                     (vim.defer_fn tick 400))))
-            (set state.status-timer (vim.defer_fn tick 400))))
-        (do
-          (set state.status-text nil)
-          (set state.status-timer nil)
-          (update-virt-lines))))
+      (do
+        (set state.status-text text)
+        (set state.status-dots 0)
+        (when (not state.status-timer)
+          (fn tick []
+            (when state.status-text
+              (animate-dots)
+              (set state.status-timer
+                   (vim.defer_fn tick 400))))
+          (set state.status-timer (vim.defer_fn tick 400))))
+      (do
+        (set state.status-text nil)
+        (set state.status-timer nil)
+        (update-virt-lines))))
 
     ;; ── Loading ───────────────────────────────────────────
 
@@ -217,10 +217,10 @@
 
   (fn history-next []
     (if (< state.history-idx (length state.history))
-        (do (set state.history-idx (+ state.history-idx 1))
-          (set-text (. state.history state.history-idx)))
-        (do (set state.history-idx (+ (length state.history) 1))
-          (set-text ""))))
+      (do (set state.history-idx (+ state.history-idx 1))
+        (set-text (. state.history state.history-idx)))
+      (do (set state.history-idx (+ (length state.history) 1))
+        (set-text ""))))
 
     ;; Strip "> " prefix from yanked text on the prompt line.
   (nvim.nvim_create_autocmd :TextYankPost
@@ -232,8 +232,8 @@
                                            (when (vim.startswith first idle-prefix.text)
                                              (let [stripped (string.sub first (+ (length idle-prefix.text) 1))
                                                    reg      (if (and event.regname (not= event.regname ""))
-                                                                   event.regname
-                                                                   "\"")]
+                                                              event.regname
+                                                              "\"")]
                                                (tset lines 1 stripped)
                                                (vim.schedule
                                                 (fn []

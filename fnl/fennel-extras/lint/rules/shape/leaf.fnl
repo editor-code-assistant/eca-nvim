@@ -30,22 +30,22 @@
 
 (defn- parameter-index [children head index]
   (if (> index (length children))
-      nil
-      (or (and (not= head "defn") (not= head "defn-")
-               (= (. (. children index) :kind) :sequence)
-               index)
-          (parameter-index children head (+ index 1)))))
+    nil
+    (or (and (not= head "defn") (not= head "defn-")
+             (= (. (. children index) :kind) :sequence)
+             index)
+        (parameter-index children head (+ index 1)))))
 
 (defn- docstring-adjusted-index [children index]
   (if (and index (. children index)
            (= (. (. children index) :kind) :string))
-      (+ index 1)
-      index))
+    (+ index 1)
+    index))
 
 (defn- function-body-child [children body-start index child]
   (if (and body-start (>= index body-start)
            (not (quoted-child? children index)))
-      child))
+    child))
 
 (defn- function-body [children body-start]
   (icollect [index child (ipairs children)]
@@ -53,8 +53,8 @@
 
 (defn- function-parameter [children head]
   (if (or (= head "defn") (= head "defn-"))
-      3
-      (parameter-index children head 2)))
+    3
+    (parameter-index children head 2)))
 
 (defn- function-body-index [parameter]
   (and parameter (+ parameter 1)))
@@ -150,8 +150,8 @@
 (defn- leaf-valid-call-state-step [children state child index valid?]
   (if (and state.valid (>= index 2)
            (not (quoted-child? children index)))
-      (leaf-valid-call-state-update state child valid?)
-      state))
+    (leaf-valid-call-state-update state child valid?)
+    state))
 
 (defn- leaf-valid-call-state [children valid?]
   (accumulate [state {:valid true :layers 0}
@@ -187,23 +187,23 @@
   (let [children (meaningful-children node)
         head     (symbol-text (. children 1))]
     (case head
-      "do" (and (= (length children) 2)
-                (or (quoted-child? children 2)
-                    (valid? (. children 2))))
-      "if" false
-      "when" false
-      "case" false
+      "do"    (and (= (length children) 2)
+                   (or (quoted-child? children 2)
+                       (valid? (. children 2))))
+      "if"    false
+      "when"  false
+      "case"  false
       "match" false
-      "let" false
-      _ (leaf-valid-list? children head valid?))))
+      "let"   false
+      _       (leaf-valid-list? children head valid?))))
 
 (defn leaf-valid? [node]
   (case (leaf-node-kind node)
-    "atomic" true
+    "atomic"   true
     "sequence" (leaf-valid-sequence? node leaf-valid?)
-    "table" (leaf-valid-sequence? node leaf-valid?)
-    "list" (leaf-valid-list-node? node leaf-valid?)
-    "other" true))
+    "table"    (leaf-valid-sequence? node leaf-valid?)
+    "list"     (leaf-valid-list-node? node leaf-valid?)
+    "other"    true))
 
 (defn- plain-call-layer-count [layer?]
   (if layer? 1 0))
@@ -211,16 +211,16 @@
 (defn- plain-call-layer-state [state child]
   (let [child-head (list-head child)
         layer?     (or (loop-head? child-head)
-                          (function-head? child-head))]
+                       (function-head? child-head))]
     {:valid  (or (and layer? (layer-argument-valid? child leaf-valid?))
-                    (and (not layer?) (leaf-valid? child)))
+                 (and (not layer?) (leaf-valid? child)))
      :layers (+ state.layers (plain-call-layer-count layer?))}))
 
 (defn- plain-call-state-step [children state child index]
   (if (and state.valid (>= index 2)
            (not (quoted-child? children index)))
-      (plain-call-layer-state state child)
-      state))
+    (plain-call-layer-state state child)
+    state))
 
 (defn- plain-call-result [children]
   (accumulate [state {:valid true :layers 0}

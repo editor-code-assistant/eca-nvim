@@ -4,38 +4,38 @@
 (defn- load-selection []
   (let [(ok result) (pcall require :fennel-extras.lint.selection)]
     (if ok
-        result
-        {:module-missing true})))
+      result
+      {:module-missing true})))
 
 (defn- parse-name-status [text]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
-        selection
-        (selection.parse-name-status text))))
+      selection
+      (selection.parse-name-status text))))
 
 (defn- parse-untracked [text]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
-        selection
-        (selection.parse-untracked text))))
+      selection
+      (selection.parse-untracked text))))
 
 (defn- parse-hunks [text]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
-        selection
-        (selection.parse-hunks text))))
+      selection
+      (selection.parse-hunks text))))
 
 (defn- form-selected? [form intervals]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
-        selection
-        (selection.form-selected? form intervals))))
+      selection
+      (selection.form-selected? form intervals))))
 
 (defn- plan [records untracked]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
-        selection
-        (selection.plan records untracked))))
+      selection
+      (selection.plan records untracked))))
 
 (deftest name-status
   (testing "parses modified and added paths from NUL-separated name-status output"

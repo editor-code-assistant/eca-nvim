@@ -11,26 +11,26 @@
 (defn- load-output []
   (let [(ok result) (pcall require :fennel-extras.lint.output)]
     (if ok
-        result
-        {:module-missing true})))
+      result
+      {:module-missing true})))
 
 (defn- text-lines [diagnostics]
   (let [output (load-output)]
     (if (. output :module-missing)
-        output
-        (output.text-lines diagnostics))))
+      output
+      (output.text-lines diagnostics))))
 
 (defn- json-lines [diagnostics]
   (let [output (load-output)]
     (if (. output :module-missing)
-        output
-        (output.json-lines diagnostics))))
+      output
+      (output.json-lines diagnostics))))
 
 (defn- sorted [diagnostics]
   (let [output (load-output)]
     (if (. output :module-missing)
-        output
-        (output.sort diagnostics))))
+      output
+      (output.sort diagnostics))))
 
 (defn- diagnostic-signatures [diagnostics]
   (let [signatures []]
@@ -162,28 +162,28 @@
           prefix      "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\""
           suffix      "\"}"
           cases       {:u007f          (string.char 127)
-                          :u0080          (.. (string.char 194) (string.char 128))
-                          :u07ff          (.. (string.char 223) (string.char 191))
-                          :u0800          (.. (string.char 224) (string.char 160) (string.char 128))
-                          :uD7FF          (.. (string.char 237) (string.char 159) (string.char 191))
-                          :u10000         (.. (string.char 240) (string.char 144) (string.char 128) (string.char 128))
-                          :u10FFFF        (.. (string.char 244) (string.char 143) (string.char 191) (string.char 191))
-                          :surrogate      (.. (string.char 237) (string.char 160) (string.char 128))
-                          :above-u10FFFF  (.. (string.char 244) (string.char 144) (string.char 128) (string.char 128))
-                          :overlong-two   (.. (string.char 192) (string.char 128))
-                          :overlong-three (.. (string.char 224) (string.char 128) (string.char 128))}
+                       :u0080          (.. (string.char 194) (string.char 128))
+                       :u07ff          (.. (string.char 223) (string.char 191))
+                       :u0800          (.. (string.char 224) (string.char 160) (string.char 128))
+                       :uD7FF          (.. (string.char 237) (string.char 159) (string.char 191))
+                       :u10000         (.. (string.char 240) (string.char 144) (string.char 128) (string.char 128))
+                       :u10FFFF        (.. (string.char 244) (string.char 143) (string.char 191) (string.char 191))
+                       :surrogate      (.. (string.char 237) (string.char 160) (string.char 128))
+                       :above-u10FFFF  (.. (string.char 244) (string.char 144) (string.char 128) (string.char 128))
+                       :overlong-two   (.. (string.char 192) (string.char 128))
+                       :overlong-three (.. (string.char 224) (string.char 128) (string.char 128))}
           actual      {}
           expected    {:u007f          {:message (. cases :u007f) :json [(.. prefix (. cases :u007f) suffix)]}
-                          :u0080          {:message (. cases :u0080) :json [(.. prefix (. cases :u0080) suffix)]}
-                          :u07ff          {:message (. cases :u07ff) :json [(.. prefix (. cases :u07ff) suffix)]}
-                          :u0800          {:message (. cases :u0800) :json [(.. prefix (. cases :u0800) suffix)]}
-                          :uD7FF          {:message (. cases :uD7FF) :json [(.. prefix (. cases :uD7FF) suffix)]}
-                          :u10000         {:message (. cases :u10000) :json [(.. prefix (. cases :u10000) suffix)]}
-                          :u10FFFF        {:message (. cases :u10FFFF) :json [(.. prefix (. cases :u10FFFF) suffix)]}
-                          :surrogate      {:message (. cases :surrogate) :json [(.. prefix replacement replacement replacement suffix)]}
-                          :above-u10FFFF  {:message (. cases :above-u10FFFF) :json [(.. prefix replacement replacement replacement replacement suffix)]}
-                          :overlong-two   {:message (. cases :overlong-two) :json [(.. prefix replacement replacement suffix)]}
-                          :overlong-three {:message (. cases :overlong-three) :json [(.. prefix replacement replacement replacement suffix)]}}]
+                       :u0080          {:message (. cases :u0080) :json [(.. prefix (. cases :u0080) suffix)]}
+                       :u07ff          {:message (. cases :u07ff) :json [(.. prefix (. cases :u07ff) suffix)]}
+                       :u0800          {:message (. cases :u0800) :json [(.. prefix (. cases :u0800) suffix)]}
+                       :uD7FF          {:message (. cases :uD7FF) :json [(.. prefix (. cases :uD7FF) suffix)]}
+                       :u10000         {:message (. cases :u10000) :json [(.. prefix (. cases :u10000) suffix)]}
+                       :u10FFFF        {:message (. cases :u10FFFF) :json [(.. prefix (. cases :u10FFFF) suffix)]}
+                       :surrogate      {:message (. cases :surrogate) :json [(.. prefix replacement replacement replacement suffix)]}
+                       :above-u10FFFF  {:message (. cases :above-u10FFFF) :json [(.. prefix replacement replacement replacement replacement suffix)]}
+                       :overlong-two   {:message (. cases :overlong-two) :json [(.. prefix replacement replacement suffix)]}
+                       :overlong-three {:message (. cases :overlong-three) :json [(.. prefix replacement replacement replacement suffix)]}}]
       (each [key message (pairs cases)]
         (tset actual key (json-case message)))
       (is (= expected actual))))

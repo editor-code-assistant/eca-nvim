@@ -12,8 +12,8 @@
 
 (defn- apply [items]
   (if (lualine.plugin)
-      (lualine.setup items)
-      (set-native-statusline items)))
+    (lualine.setup items)
+    (set-native-statusline items)))
 
 (defn- render [state]
   (core.assoc state :active true)

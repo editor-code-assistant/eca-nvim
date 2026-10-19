@@ -32,9 +32,9 @@
                      {:on-submit (or plugin-opts.on-submit self.default-on-submit)
                       :on-stop   (or plugin-opts.on-stop self.default-on-stop)
                       :opts      {:ui      (or plugin-opts.ui {})
-                                     :keymaps (or plugin-opts.keymaps
-                                                  [{:mode :i :lhs "<C-s>" :rhs "<cmd>EcaChatSubmit<CR>"}
-                                                   {:mode :n :lhs "<CR>" :rhs "<cmd>EcaChatSubmit<CR>"}])}})]
+                                  :keymaps (or plugin-opts.keymaps
+                                               [{:mode :i :lhs "<C-s>" :rhs "<cmd>EcaChatSubmit<CR>"}
+                                                {:mode :n :lhs "<CR>" :rhs "<cmd>EcaChatSubmit<CR>"}])}})]
         (chat-ui.open)
         (self.register-chat chat-ui)
            ;; Mock server data
@@ -56,8 +56,8 @@
 (fn self.chat-toggle []
   (let [chat (self.resolve-chat)]
     (if (and chat (chat.is-open?))
-        (chat.close)
-        (self.chat-open))))
+      (chat.close)
+      (self.chat-open))))
 
 (fn self.chat-submit []
   (let [chat (self.resolve-chat)]

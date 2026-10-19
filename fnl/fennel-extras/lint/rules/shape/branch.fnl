@@ -20,29 +20,29 @@
 
 (defn- explicit-if? [children index]
   (if (> index (length children))
-      false
-      (or (marker? (. children index) "then")
-          (marker? (. children index) "elseif")
-          (marker? (. children index) "else")
-          (explicit-if? children (+ index 1)))))
+    false
+    (or (marker? (. children index) "then")
+        (marker? (. children index) "elseif")
+        (marker? (. children index) "else")
+        (explicit-if? children (+ index 1)))))
 
 (defn- explicit-branch-result [children index result recurse]
   (if (. children (+ index 1))
-      (recurse children (+ index 2)
-               (append-nodes result (expression-violations (. children (+ index 1)))))
-      (recurse children (+ index 1) result)))
+    (recurse children (+ index 2)
+             (append-nodes result (expression-violations (. children (+ index 1)))))
+    (recurse children (+ index 1) result)))
 
 (defn- validate-if-explicit-step [children index result recurse]
   (let [child (. children index)]
     (if (or (marker? child "then") (marker? child "elseif") (marker? child "else"))
-        (explicit-branch-result children index result recurse)
-        (recurse children (+ index 1)
-                 (append-nodes result (expression-violations child))))))
+      (explicit-branch-result children index result recurse)
+      (recurse children (+ index 1)
+               (append-nodes result (expression-violations child))))))
 
 (defn- validate-if-explicit [children index result]
   (if (> index (length children))
-      result
-      (validate-if-explicit-step children index result validate-if-explicit)))
+    result
+    (validate-if-explicit-step children index result validate-if-explicit)))
 
 (defn- implicit-branch-values [children index]
   (append-nodes
@@ -56,28 +56,28 @@
 
 (defn- validate-if-implicit [children index result]
   (if (> index (length children))
-      result
-      (or (and (= index (length children)) (= (% index 2) 0)
-               (append-nodes result (expression-violations (. children index))))
-          (validate-if-implicit children (+ index 2)
-                                (append-implicit-branch children index result)))))
+    result
+    (or (and (= index (length children)) (= (% index 2) 0)
+             (append-nodes result (expression-violations (. children index))))
+        (validate-if-implicit children (+ index 2)
+                              (append-implicit-branch children index result)))))
 
 (defn- validate-if-children [children]
   (if (explicit-if? children 2)
-      (validate-if-explicit children 2 [])
-      (validate-if-implicit children 2 [])))
+    (validate-if-explicit children 2 [])
+    (validate-if-implicit children 2 [])))
 
 (defn- validate-if [node]
   (validate-if-children (meaningful-children node)))
 
 (defn- validate-when-head [children result]
   (if (. children 2)
-      (append-nodes result (expression-violations (. children 2)))
-      result))
+    (append-nodes result (expression-violations (. children 2)))
+    result))
 
 (defn- append-if-index [result index threshold value]
   (if (>= index threshold)
-      (append-nodes result (expression-violations value))))
+    (append-nodes result (expression-violations value))))
 
 (defn- validate-when-body [children result]
   (each [index child (ipairs children)]
@@ -90,15 +90,15 @@
 
 (defn- loop-bindings [children]
   (if (and (. children 2) (= (. (. children 2) :kind) :sequence))
-      (meaningful-children (. children 2))
-      []))
+    (meaningful-children (. children 2))
+    []))
 
 (defn- loop-start [bindings]
   (if (> (length bindings) 0) 3 2))
 
 (defn- append-if-unquoted [bindings result index value]
   (if (not (quoted-child? bindings index))
-      (append-nodes result (expression-violations value))))
+    (append-nodes result (expression-violations value))))
 
 (defn- validate-loop-bindings [bindings result]
   (each [index child (ipairs bindings)]
@@ -157,8 +157,8 @@
 
 (defn- validate-let-binding-step [binding-children result index child]
   (if (and (= (% index 2) 0) (not (quoted-child? binding-children index)))
-      (append-nodes result (leaf-violations child))
-      result))
+    (append-nodes result (leaf-violations child))
+    result))
 
 (defn- validate-let-bindings-children [binding-children result]
   (accumulate [state result
@@ -167,8 +167,8 @@
 
 (defn- validate-let-bindings [bindings result]
   (if (and bindings (= bindings.kind :sequence))
-      (validate-let-bindings-children (meaningful-children bindings) result)
-      result))
+    (validate-let-bindings-children (meaningful-children bindings) result)
+    result))
 
 (defn- validate-let-body [children result]
   (each [index child (ipairs children)]
@@ -190,8 +190,8 @@
 
 (defn- function-body-initial [body result first-let?]
   (if first-let?
-      (append-nodes result (validate-let (. body 1)))
-      result))
+    (append-nodes result (validate-let (. body 1)))
+    result))
 
 (defn validate-function-body [body result]
   (let [first-let? (function-first-let? body)

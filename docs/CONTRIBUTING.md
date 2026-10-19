@@ -35,7 +35,7 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
   - `:paths` (default `["."]`): list of file or directory paths to scan.
   - `:exclude` (default `[]`): list of path prefixes to skip. `.git` is skipped even when it is not listed.
   - `:indent-width` (default `2`): positive integer used for continuation indentation.
-  - `:align-bindings` (default `false`): boolean. When true, align one binding/key pair per line in supported binding vectors and multi-line maps.
+  - `:align-bindings` (default `false`): boolean. When true, align one binding/key pair per line in supported binding vectors and multi-line maps, plus one pattern/test → result clause pair per line in `case`, `match`, `case-try`, `match-try`, and multi-clause `if` forms.
   - `:builtins` (default `true`): `true`, `false`, or a map of form names to rule lists. Built-ins include rules for forms such as `fn`, `let`, `when`, and `do`.
   - `:prefix-fallbacks` (default `{"def" [[:inner 0]] "with-" [[:block 1]]}`): `false` or a map of prefixes to rule lists. The built-in prefixes are `def` and `with-`.
   - `:extensions` (default `[".fnl" ".fnlm"]`): non-empty list of strings, each starting with `.`.
@@ -49,13 +49,14 @@ For example, the repository configuration contains:
 
 ```fennel
 {:indents {"deftest" [[:block 1]]
-           "testing" [[:block 1]]}
+           "testing" [[:block 1]]
+           "if" [[:block 1]]}
  :parser "eca.nfnl.fennel"
  :paths ["fnl"]
  :exclude ["fnl/eca/nfnl"]}
 ```
 
-To add a rule for a new macro, add one line such as `"deftest" [[:block 1]]` under `:indents`.
+To add a rule for a new macro, add one line such as `"deftest" [[:block 1]]` under `:indents`. In this repository, the `if` rule gives bodies regular 2-space indentation; multiline `and`/`or` forms remain aligned under their first argument.
 
 For editor use, run `make fmt` or `scripts/fennel-extras format --write <file>`. An LSP integration will come later.
 

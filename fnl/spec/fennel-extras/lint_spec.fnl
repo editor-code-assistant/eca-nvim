@@ -4,52 +4,52 @@
 (defn- load-lint []
   (let [(ok result) (pcall require :fennel-extras.lint)]
     (if ok
-        result
-        {:module-missing true})))
+      result
+      {:module-missing true})))
 
 (defn- check-source [source path rules]
   (let [lint (load-lint)]
     (if (. lint :module-missing)
-        lint
-        (let [ctx            (if rules
-                                    {:path path :rules rules}
-                                    {:path path})
-              (findings err) (lint.check source ctx)]
-          (if findings
-              findings
-              {:value-nil? true
-               :message    (and err (. err :message))
-               :line       (and err (. err :line))
-               :col        (and err (. err :col))})))))
+      lint
+      (let [ctx            (if rules
+                             {:path path :rules rules}
+                             {:path path})
+            (findings err) (lint.check source ctx)]
+        (if findings
+          findings
+          {:value-nil? true
+           :message    (and err (. err :message))
+           :line       (and err (. err :line))
+           :col        (and err (. err :col))})))))
 
 (defn- finding-summary [result]
   (if (or (. result :module-missing) (. result :value-nil?))
-      result
-      (icollect [_ finding (ipairs result)]
-        {:kind     (. finding :kind)
-         :path     (. finding :path)
-         :line     (. finding :line)
-         :col      (. finding :col)
-         :end-line (. finding :end-line)
-         :end-col  (. finding :end-col)
-         :severity (. finding :severity)
-         :rule     (. finding :rule)
-         :form     (. finding :form)
-         :message  (. finding :message)})))
+    result
+    (icollect [_ finding (ipairs result)]
+      {:kind     (. finding :kind)
+       :path     (. finding :path)
+       :line     (. finding :line)
+       :col      (. finding :col)
+       :end-line (. finding :end-line)
+       :end-col  (. finding :end-col)
+       :severity (. finding :severity)
+       :rule     (. finding :rule)
+       :form     (. finding :form)
+       :message  (. finding :message)})))
 
 (defn- finding-identities [result]
   (if (or (. result :module-missing) (. result :value-nil?))
-      result
-      (icollect [_ finding (ipairs result)]
-        [(. finding :rule) (. finding :form) (. finding :severity)])))
+    result
+    (icollect [_ finding (ipairs result)]
+      [(. finding :rule) (. finding :form) (. finding :severity)])))
 
 (defn- findings-for-rule [source path rule rules]
   (let [result (check-source source path rules)]
     (if (or (. result :module-missing) (. result :value-nil?))
-        result
-        (icollect [_ finding (ipairs result)]
-          (if (= (. finding :rule) rule)
-              [(. finding :rule) (. finding :form) (. finding :severity)])))))
+      result
+      (icollect [_ finding (ipairs result)]
+        (if (= (. finding :rule) rule)
+          [(. finding :rule) (. finding :form) (. finding :severity)])))))
 
 (defn- forms-for [source path rules]
   (finding-identities (check-source source path rules)))
@@ -61,50 +61,50 @@
                                (file:close)
                                source)))]
     (if ok
-        result
-        {:error "read failed" :path path})))
+      result
+      {:error "read failed" :path path})))
 
 (defn- project-fennel-files []
   (let [paths []
         files (vim.fn.globpath "fnl" "**/*.fnl" false true)]
     (each [_ path (ipairs files)]
       (if (not (string.find path "^fnl/eca/nfnl/"))
-          (table.insert paths path)))
+        (table.insert paths path)))
     paths))
 
 (defn- collect-repo-findings [lint counts lint-files cli-files rules]
   (each [_ path (ipairs (project-fennel-files))]
     (let [source (read-source path)]
       (if (. source :error)
+        (if (string.find path "^fnl/fennel%-extras/cli")
+          (table.insert cli-files path)
+          (table.insert lint-files path))
+        (let [context  (if rules {:path path :rules rules} {:path path})
+              findings (lint.check source context)]
+          (each [_ finding (ipairs findings)]
+            (if (. counts (. finding :rule))
+              (tset counts (. finding :rule) (+ (. counts (. finding :rule)) 1))))
           (if (string.find path "^fnl/fennel%-extras/cli")
-              (table.insert cli-files path)
-              (table.insert lint-files path))
-          (let [context  (if rules {:path path :rules rules} {:path path})
-                findings (lint.check source context)]
             (each [_ finding (ipairs findings)]
-              (if (. counts (. finding :rule))
-                  (tset counts (. finding :rule) (+ (. counts (. finding :rule)) 1))))
-            (if (string.find path "^fnl/fennel%-extras/cli")
-                (each [_ finding (ipairs findings)]
-                  (table.insert cli-files [path (. finding :rule)]))
-                (if (string.find path "^fnl/fennel%-extras/lint")
-                    (each [_ finding (ipairs findings)]
-                      (table.insert lint-files [path (. finding :rule)]))))))))
+              (table.insert cli-files [path (. finding :rule)]))
+            (if (string.find path "^fnl/fennel%-extras/lint")
+              (each [_ finding (ipairs findings)]
+                (table.insert lint-files [path (. finding :rule)]))))))))
   {:counts counts :lint-files lint-files :cli-files cli-files})
 
 (defn- repo-scenario [rules]
   (let [lint       (load-lint)
         counts     {"module-style"        0
-                       "spec-macro-import"   0
-                       "spec-no-module"      0
-                       "spec-direct-require" 0
-                       "one-is-per-testing"  0
-                       "core-require"        0}
+                    "spec-macro-import"   0
+                    "spec-no-module"      0
+                    "spec-direct-require" 0
+                    "one-is-per-testing"  0
+                    "core-require"        0}
         lint-files []
         cli-files  []]
     (if (. lint :module-missing)
-        {:module-missing true}
-        (collect-repo-findings lint counts lint-files cli-files rules))))
+      {:module-missing true}
+      (collect-repo-findings lint counts lint-files cli-files rules))))
 
 (deftest module-style
   (testing "a compliant non-spec module is clean"
@@ -331,7 +331,7 @@
                (findings-for-rule "(defn run [] (if ok (do a b) (do c d)))" "fnl/app.fnl" "if-branch-call" {"module-style" :off}))))
       (testing "no two findings share path rule and form"
         (is (= {:findings   [["if-branch-call" "fnl/app.fnl > defn:run > if#1 > then" "warning"]
-                                ["if-branch-call" "fnl/app.fnl > defn:run > if#1 > else" "warning"]]
+                             ["if-branch-call" "fnl/app.fnl > defn:run > if#1 > else" "warning"]]
                 :duplicates []}
                (let [findings   (findings-for-rule "(defn run [] (if ok (do a b) (do c d)))" "fnl/app.fnl" "if-branch-call" {"module-style" :off})
                      seen       {}
@@ -339,8 +339,8 @@
                  (each [_ value (ipairs findings)]
                    (let [key (.. (. value 1) "|" (. value 2))]
                      (if (. seen key)
-                         (table.insert duplicates key)
-                         (tset seen key true))))
+                       (table.insert duplicates key)
+                       (tset seen key true))))
                  {:findings findings :duplicates duplicates}))))
       (testing "the pure core returns findings without executing vim api text"
         (is (= [["core-require" "fnl/app.fnl > top#1" "error"]]
@@ -568,18 +568,18 @@
   [source ctx]
   (let [lint (load-lint)]
     (if (. lint :module-missing)
-        lint
-        (let [(findings err) (lint.check source ctx)]
-          (if findings
-              findings
-              {:value-nil? true :error err})))))
+      lint
+      (let [(findings err) (lint.check source ctx)]
+        (if findings
+          findings
+          {:value-nil? true :error err})))))
 
 (defn- first-finding-form
   [findings rule]
   (var result nil)
   (each [_ finding (ipairs findings)]
     (if (and (= result nil) (= (. finding :rule) rule))
-        (set result (. finding :form))))
+      (set result (. finding :form))))
   result)
 
 (deftest exclusions
@@ -616,19 +616,19 @@
   [source path rules]
   (let [result (findings-for-rule source path "no-mutation" rules)]
     (if (or (. result :module-missing) (. result :value-nil?))
-        result
-        {:count      (length result)
-         :rules      (icollect [_ finding (ipairs result)] (. finding 1))
-         :severities (icollect [_ finding (ipairs result)] (. finding 3))})))
+      result
+      {:count      (length result)
+       :rules      (icollect [_ finding (ipairs result)] (. finding 1))
+       :severities (icollect [_ finding (ipairs result)] (. finding 3))})))
 
 (defn- no-mutation-forms
   [source path rules]
   (let [result (check-source source path rules)]
     (if (or (. result :module-missing) (. result :value-nil?))
-        result
-        (icollect [_ finding (ipairs result)]
-          (if (= (. finding :rule) "no-mutation")
-              (. finding :form))))))
+      result
+      (icollect [_ finding (ipairs result)]
+        (if (= (. finding :rule) "no-mutation")
+          (. finding :form))))))
 
 (deftest no-mutation
   (testing "flags var in a source file as one warning"
@@ -709,10 +709,10 @@
                                       :max-code-lines max-code-lines
                                       :exclusions     exclusions})]
     (if (or (. result :module-missing) (. result :value-nil?))
-        result
-        (icollect [_ finding (ipairs result)]
-          (if (= (. finding :rule) "file-size")
-              finding)))))
+      result
+      (icollect [_ finding (ipairs result)]
+        (if (= (. finding :rule) "file-size")
+          finding)))))
 
 (deftest file-size
   (testing "reports one finding for 301 code lines at the default limit"

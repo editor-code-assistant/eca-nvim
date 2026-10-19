@@ -13,18 +13,18 @@
 
 (defn- file-size-finding-result [path policy count limit]
   (if (> count limit)
-      [{:kind     "finding"
-        :path     path
-        :line     1
-        :col      1
-        :end-line 1
-        :end-col  1
-        :severity (rule-severity policy "file-size")
-        :rule     "file-size"
-        :form     (.. path " > file")
-        :message  (.. "file has " count " code lines (max " limit "); split it by responsibility into smaller modules")
-        :node     nil}]
-      []))
+    [{:kind     "finding"
+      :path     path
+      :line     1
+      :col      1
+      :end-line 1
+      :end-col  1
+      :severity (rule-severity policy "file-size")
+      :rule     "file-size"
+      :form     (.. path " > file")
+      :message  (.. "file has " count " code lines (max " limit "); split it by responsibility into smaller modules")
+      :node     nil}]
+    []))
 
 (defn- file-size-finding-source [path policy source]
   (let [tokens (reader.tokenize source)
@@ -34,5 +34,5 @@
 
 (defn finding [path policy source]
   (if (and (not (spec-file? path)) (enabled? policy "file-size"))
-      (file-size-finding-source path policy source)
-      []))
+    (file-size-finding-source path policy source)
+    []))

@@ -4,23 +4,23 @@
 (defn- load-indent []
   (let [(ok result) (pcall require :fennel-extras.indent)]
     (if ok
-        result
-        {:error "module missing"})))
+      result
+      {:error "module missing"})))
 
 (defn- reindent-scenario [source]
   (let [indent (load-indent)]
     (if (. indent :error)
-        indent
-        (let [(ok result err) (pcall (fn [] (indent.reindent source)))]
-          (if ok
-              {:value result :error err}
-              {:call-error true :error err})))))
+      indent
+      (let [(ok result err) (pcall (fn [] (indent.reindent source)))]
+        (if ok
+          {:value result :error err}
+          {:call-error true :error err})))))
 
 (defn- output-for [source]
   (let [result (reindent-scenario source)]
     (if (. result :error)
-        result
-        (. result :value))))
+      result
+      (. result :value))))
 
 (defn- newline-count [source]
   (select 2 (string.gsub source "\\n" "")))
@@ -28,17 +28,17 @@
 (defn- idempotent? [source]
   (let [once (output-for source)]
     (if (not= :string (type once))
-        false
-        (= once (output-for once)))))
+      false
+      (= once (output-for once)))))
 
 (defn- error-summary [source]
   (let [indent (load-indent)]
     (if (. indent :error)
-        indent
-        (let [(ok value err) (pcall (fn [] (indent.reindent source)))]
-          {:value?         (and ok (not= nil value))
-           :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
-           :returned-error (and ok value (= nil value) err)}))))
+      indent
+      (let [(ok value err) (pcall (fn [] (indent.reindent source)))]
+        {:value?         (and ok (not= nil value))
+         :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
+         :returned-error (and ok value (= nil value) err)}))))
 
 (deftest alignment-goldens
   (testing "aligns a call continuation to the first argument on the head line"
@@ -105,10 +105,10 @@
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
       (if (not (string.find path "^fnl/eca/nfnl/"))
-          (table.insert paths path)))
+        (table.insert paths path)))
     (each [_ path (ipairs fnlm-files)]
       (if (not (string.find path "^fnl/eca/nfnl/"))
-          (table.insert paths path)))
+        (table.insert paths path)))
     paths))
 
 (defn- read-source [path]
@@ -128,10 +128,10 @@
       (let [source (read-source path)
             once   (reindent-direct source config)]
         (if (= nil once)
-            (table.insert failures (.. "error: " path))
-            (let [twice (reindent-direct once config)]
-              (if (not= once twice)
-                  (table.insert failures path))))))
+          (table.insert failures (.. "error: " path))
+          (let [twice (reindent-direct once config)]
+            (if (not= once twice)
+              (table.insert failures path))))))
     failures))
 
 (deftest idempotence-and-errors

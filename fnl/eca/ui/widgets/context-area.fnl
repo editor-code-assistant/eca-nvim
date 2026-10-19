@@ -14,23 +14,23 @@
   (fn build-line []
     "Build the display line and per-item highlights."
     (if (= 0 (length state.items))
-        {:line nil :highlights []}
-        (let [result (accumulate [acc {:parts [] :highlights [] :col 0}
-                                  _ item (ipairs state.items)]
-                       (let [sep-col (if (> acc.col 0)
-                                         (do (table.insert acc.parts " ")
-                                           (+ acc.col 1))
-                                         acc.col)]
-                         (table.insert acc.parts item.text)
-                         (table.insert acc.highlights
-                                       {:hl-group  (or item.hl-group :Normal)
-                                        :col-start sep-col
-                                        :col-end   (+ sep-col (length item.text))})
-                         {:parts      acc.parts
-                          :highlights acc.highlights
-                          :col        (+ sep-col (length item.text))}))]
-          {:line       (table.concat result.parts "")
-           :highlights result.highlights})))
+      {:line nil :highlights []}
+      (let [result (accumulate [acc {:parts [] :highlights [] :col 0}
+                                _ item (ipairs state.items)]
+                     (let [sep-col (if (> acc.col 0)
+                                     (do (table.insert acc.parts " ")
+                                       (+ acc.col 1))
+                                     acc.col)]
+                       (table.insert acc.parts item.text)
+                       (table.insert acc.highlights
+                                     {:hl-group  (or item.hl-group :Normal)
+                                      :col-start sep-col
+                                      :col-end   (+ sep-col (length item.text))})
+                       {:parts      acc.parts
+                        :highlights acc.highlights
+                        :col        (+ sep-col (length item.text))}))]
+        {:line       (table.concat result.parts "")
+         :highlights result.highlights})))
 
   (fn has-items? []
     (> (length state.items) 0))
@@ -41,14 +41,14 @@
     (let [ns (ensure-ns)]
       (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
       (if (not (has-items?))
-          (do (set state.end-line start-line) 0)
-          (let [{: line : highlights} (build-line)]
-            (nvim.nvim_buf_set_lines buf-id start-line start-line false [line])
-            (each [_ hl (ipairs highlights)]
-              (nvim.nvim_buf_set_extmark buf-id ns start-line hl.col-start
-                                         {:end_col hl.col-end :hl_group hl.hl-group}))
-            (set state.end-line (+ start-line 1))
-            1))))
+        (do (set state.end-line start-line) 0)
+        (let [{: line : highlights} (build-line)]
+          (nvim.nvim_buf_set_lines buf-id start-line start-line false [line])
+          (each [_ hl (ipairs highlights)]
+            (nvim.nvim_buf_set_extmark buf-id ns start-line hl.col-start
+                                       {:end_col hl.col-end :hl_group hl.hl-group}))
+          (set state.end-line (+ start-line 1))
+          1))))
 
   (fn add [item]
     (let [exists (accumulate [found false _ existing (ipairs state.items)]
