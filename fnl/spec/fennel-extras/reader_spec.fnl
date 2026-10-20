@@ -78,8 +78,7 @@
     (if (. reader :error)
       reader
       (let [(ok result) (pcall (fn [] (reader.tokenize source)))]
-        (
-         if
+        (if
           ok
           result
           {:error "tokenize failed"})))))
@@ -91,8 +90,7 @@
     (if (. reader :error)
       reader
       (let [(ok result) (pcall (fn [] (reader.parse source)))]
-        (
-         if
+        (if
           ok
           result
           {:error "parse failed"})))))

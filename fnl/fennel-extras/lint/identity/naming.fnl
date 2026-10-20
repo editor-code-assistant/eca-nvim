@@ -17,8 +17,7 @@
 
 (defn- meaningful-child
   [child]
-  (
-   when
+  (when
     (not (trivia? child))
     child))
 
@@ -40,10 +39,9 @@
 
 (defn- head-name
   [node]
-  (let [children (meaningful-children node)
-        head     (symbol-text (. children 1))
-        name     (symbol-text (. children 2))]
-    (if (and head name)
+  (let [children (meaningful-children node) head     (symbol-text (. children 1)) name     (symbol-text (. children 2))]
+    (if
+      (and head name)
       (values head name)
       (values head nil))))
 
@@ -58,15 +56,14 @@
 
 (defn- local-fn-value-children
   [value]
-  (if (and value (= value.kind :list))
+  (if
+    (and value (= value.kind :list))
     (meaningful-children value)
     []))
 
 (defn local-fn?
   [node]
-  (let [children       (meaningful-children node)
-        value          (. children 3)
-        value-children (local-fn-value-children value)]
+  (let [children       (meaningful-children node) value          (. children 3) value-children (local-fn-value-children value)]
     (= "fn" (symbol-text (. value-children 1)))))
 
 (defn- local-named-segment
@@ -76,7 +73,8 @@
 
 (defn- declaration-segment
   [head name node]
-  (if (named-declaration? head)
+  (if
+    (named-declaration? head)
     (.. head ":" name)
     (local-named-segment head name node)))
 
@@ -89,8 +87,7 @@
 (defn- anonymous-list-kind
   [node]
   (let [children (meaningful-children node)]
-    (
-     or
+    (or
      (symbol-text (. children 1))
      "list")))
 
@@ -103,7 +100,8 @@
 
 (defn- anonymous-kind
   [node]
-  (if (= node.kind :list)
+  (if
+    (= node.kind :list)
     (anonymous-list-kind node)
     (anonymous-container-kind node)))
 
@@ -121,35 +119,33 @@
 
 (defn- increment-meaningful
   [ordinal child]
-  (if (not (trivia? child))
+  (if
+    (not (trivia? child))
     (+ ordinal 1)
     ordinal))
 
 (defn- advance-meaningful-index
   [ordinal child-index index child]
-  (if (<= index child-index)
+  (if
+    (<= index child-index)
     (increment-meaningful ordinal child)
     ordinal))
 
 (defn- index-result
   [child-index index ordinal result]
-  (if (= index child-index)
+  (if
+    (= index child-index)
     ordinal
     result))
 
 (defn- meaningful-index-state
   [state child-index index child]
   (let [ordinal (advance-meaningful-index state.ordinal child-index index child)]
-    {:ordinal ordinal
-     :result  (index-result child-index index ordinal state.result)}))
+    {:ordinal ordinal :result  (index-result child-index index ordinal state.result)}))
 
 (defn- meaningful-index-result
   [children child-index]
-  (accumulate [state
-               {:ordinal 0 :result nil}
-               index
-               child
-               (ipairs children)]
+  (accumulate [state {:ordinal 0 :result nil} index child (ipairs children)]
     (meaningful-index-state state child-index index child)))
 
 (defn- meaningful-index
@@ -165,23 +161,23 @@
 
 (defn- branch-kind-after-then
   [branch-index child-count]
-  (if (and (> child-count 3)
-           (= branch-index child-count)
-           (= (% branch-index 2) 0))
+  (if
+    (and (> child-count 3)
+         (= branch-index child-count)
+         (= (% branch-index 2) 0))
     "else"
     (numbered-then-kind branch-index)))
 
 (defn- branch-kind-for-index
   [branch-index child-count]
-  (if (= branch-index 3)
+  (if
+    (= branch-index 3)
     "then"
     (branch-kind-after-then branch-index child-count)))
 
 (defn branch-kind
   [parent child-index]
-  (branch-kind-for-index
-   (meaningful-index parent.children child-index)
-   (# (meaningful-children parent))))
+  (branch-kind-for-index (meaningful-index parent.children child-index) (# (meaningful-children parent))))
 
 (defn list-head
   [node]
@@ -190,8 +186,7 @@
 
 (defn- function-parameter-index
   [named-fn?]
-  (
-   if
+  (if
     named-fn?
     3
     2))
@@ -227,42 +222,37 @@
 
 (defn append-path
   [path segment]
-  (if segment
+  (if
+    segment
     (.. path " > " segment)
     path))
 
 (defn identity-form
   [path node]
   (let [(end-line end-col) (node-end node)]
-    {:form     path
-     :line     node.open.line
-     :col      node.open.col
-     :end-line end-line
-     :end-col  end-col
-     :node     node}))
+    {:form     path :line     node.open.line :col      node.open.col :end-line end-line :end-col  end-col :node     node}))
 
 (defn- top-level-path
   [state]
   (let [ordinal (+ state.top-ordinal 1)]
-    (values (append-path state.ancestor (.. "top#" ordinal))
-            (core.assoc state :top-ordinal ordinal))))
+    (values (append-path state.ancestor (.. "top#" ordinal)) (core.assoc state :top-ordinal ordinal))))
 
 (defn- anonymous-path
   [node state]
-  (let [kind    (anonymous-kind node)
-        ordinal (+ (or (. state.ordinals kind) 0) 1)]
-    (values (append-path state.ancestor (.. kind "#" ordinal))
-            (core.assoc state :ordinals (core.assoc state.ordinals kind ordinal)))))
+  (let [kind    (anonymous-kind node) ordinal (+ (or (. state.ordinals kind) 0) 1)]
+    (values (append-path state.ancestor (.. kind "#" ordinal)) (core.assoc state :ordinals (core.assoc state.ordinals kind ordinal)))))
 
 (defn- node-path-without-segment
   [node state top-level?]
-  (if top-level?
+  (if
+    top-level?
     (top-level-path state)
     (anonymous-path node state)))
 
 (defn node-path
   [node state top-level?]
   (let [segment (named-segment node)]
-    (if segment
+    (if
+      segment
       (values (append-path state.ancestor segment) state)
       (node-path-without-segment node state top-level?))))

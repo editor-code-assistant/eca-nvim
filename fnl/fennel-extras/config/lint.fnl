@@ -12,8 +12,7 @@
   [value]
   (and (= (type value) :table)
        (let [metadata (getmetatable value)]
-         (
-          and
+         (and
           metadata
           (. metadata :fennel-extras-table)))))
 
@@ -23,8 +22,7 @@
 
 (defn- lint-severity?
   [severity]
-  (
-   or
+  (or
    (= severity "error")
    (= severity "warning")
    (= severity "off")))
@@ -36,22 +34,24 @@
 (defn- first-unknown-lint-key
   [lint key candidate]
   (let [(next-key) (next lint key)]
-    (if (= next-key nil)
+    (if
+      (= next-key nil)
       candidate
-      (if (or (= next-key :rules)
-              (= next-key :exclusions)
-              (= next-key :max-code-lines))
+      (if
+        (or (= next-key :rules)
+            (= next-key :exclusions)
+            (= next-key :max-code-lines))
         (first-unknown-lint-key lint next-key candidate)
-        (if (or (= candidate nil)
-                (< (lint-key-sort-value next-key) (lint-key-sort-value candidate)))
+        (if
+          (or (= candidate nil)
+              (< (lint-key-sort-value next-key) (lint-key-sort-value candidate)))
           (first-unknown-lint-key lint next-key next-key)
           (first-unknown-lint-key lint next-key candidate))))))
 
 (defn- unknown-lint-key-error
   [key]
-  (if key
-    {:message (.. "unknown lint key: " (tostring key))}
-    nil))
+  (when key
+    {:message (.. "unknown lint key: " (tostring key))}))
 
 (defn- blank?
   [text]
@@ -60,11 +60,14 @@
 (defn- first-lint-rule-error
   [rules key]
   (let [(next-key next-value) (next rules key)]
-    (if (= next-key nil)
+    (if
+      (= next-key nil)
       nil
-      (if (not (lint-rule-known? next-key))
+      (if
+        (not (lint-rule-known? next-key))
         {:message (.. "unknown lint rule: " (tostring next-key))}
-        (if (not (lint-severity? next-value))
+        (if
+          (not (lint-severity? next-value))
           {:message (.. "lint rule " (tostring next-key) " must be error, warning, or off")}
           (first-lint-rule-error rules next-key))))))
 
@@ -74,51 +77,60 @@
 
 (defn- exclusion-keys-error
   [exclusion index key]
-  (if (= key nil)
+  (if
+    (= key nil)
     nil
-    (if (or (= key :rule) (= key :form) (= key :reason))
+    (if
+      (or (= key :rule) (= key :form) (= key :reason))
       (next-exclusion-key-error exclusion index key exclusion-keys-error)
       {:message (.. "lint exclusion " index ": unknown key " (tostring key))})))
 
 (defn- duplicate-exclusion-index-entry
   [exclusions index rule form candidate entry next-index]
-  (if (and (= (. entry :rule) rule) (= (. entry :form) form))
+  (if
+    (and (= (. entry :rule) rule) (= (. entry :form) form))
     index
     (next-index exclusions (+ index 1) rule form candidate)))
 
 (defn- duplicate-exclusion-index
   [exclusions index rule form candidate]
-  (if (>= index candidate)
+  (if
+    (>= index candidate)
     nil
     (duplicate-exclusion-index-entry exclusions index rule form candidate (. exclusions index) duplicate-exclusion-index)))
 
 (defn- exclusion-duplicate-error
   [exclusions index duplicate next-error]
-  (if duplicate
+  (if
+    duplicate
     {:message (.. "lint exclusion " index ": duplicate of exclusion " duplicate)}
     (next-error exclusions (+ index 1))))
 
 (defn- exclusion-rule-known-error
   [exclusions index rule form reason duplicate next-error]
-  (if (not (lint-rule-known? rule))
+  (if
+    (not (lint-rule-known? rule))
     {:message (.. "lint exclusion " index ": unknown rule " rule)}
     (exclusion-duplicate-error exclusions index duplicate next-error)))
 
 (defn- exclusion-reason-error
   [exclusions index rule form reason duplicate next-error]
-  (if (blank? reason)
+  (if
+    (blank? reason)
     {:message (.. "lint exclusion " index ": reason must not be blank")}
     (exclusion-rule-known-error exclusions index rule form reason duplicate next-error)))
 
 (defn- exclusion-form-error
   [exclusions index rule form reason duplicate next-error]
-  (if (not= (type reason) :string)
+  (if
+    (not= (type reason) :string)
     {:message (.. "lint exclusion " index ": reason must be a string")}
     (exclusion-reason-error exclusions index rule form reason duplicate next-error)))
 
 (defn- exclusion-rule-error
   [exclusions index rule form reason duplicate next-error]
-  (if (not= (type form) :string)
+  (if
+    (not= (type form) :string)
     {:message (.. "lint exclusion " index ": form must be a string")}
     (exclusion-form-error exclusions index rule form reason duplicate next-error)))
 
@@ -130,16 +142,19 @@
         reason        (. exclusion :reason)
         duplicate     (duplicate-exclusion-index exclusions 1 rule form index)]
     (or (exclusion-keys-error exclusion index unknown-key)
-        (if (not= (type rule) :string)
+        (if
+          (not= (type rule) :string)
           {:message (.. "lint exclusion " index ": rule must be a string")}
           (exclusion-rule-error exclusions index rule form reason duplicate next-error)))))
 
 (defn- first-exclusion-error
   [exclusions index]
   (let [exclusion (. exclusions index)]
-    (if (= exclusion nil)
+    (if
+      (= exclusion nil)
       nil
-      (if (not= (type exclusion) :table)
+      (if
+        (not= (type exclusion) :table)
         {:message (.. "lint exclusion " index " must be a table")}
         (first-exclusion-error-entry exclusions index exclusion first-exclusion-error)))))
 
@@ -168,10 +183,8 @@
 
 (defn lint-error
   [lint]
-  (if (not= (type lint) :table)
+  (if
+    (not= (type lint) :table)
     {:message "lint must be a table"}
-    (let [rules          (. lint :rules)
-          exclusions     (. lint :exclusions)
-          max-code-lines (. lint :max-code-lines)
-          unknown-key    (first-unknown-lint-key lint nil nil)]
+    (let [rules          (. lint :rules) exclusions     (. lint :exclusions) max-code-lines (. lint :max-code-lines) unknown-key    (first-unknown-lint-key lint nil nil)]
       (lint-table-error rules exclusions max-code-lines unknown-key))))

@@ -54,10 +54,9 @@
 (defn- location-summary
   [source path form-id]
   (let [form (form-by-id source path form-id)]
-    (if form
+    (when form
       {:line (. form :line)
-       :col  (. form :col)}
-      nil)))
+       :col  (. form :col)})))
 
 (defn- reader-end-summary
   [source]
@@ -209,9 +208,8 @@
                                    source (file:read "*a")]
                                (file:close)
                                source)))]
-    (if ok
-      result
-      nil)))
+    (when ok
+      result)))
 
 (defn- report-duplicate
   [duplicates reported form-id]
@@ -236,7 +234,7 @@
   (let [duplicates []]
     (each [_ path (ipairs (file-paths))]
       (let [source (read-source path)
-            forms  (if source (identity-forms source path) nil)]
+            forms  (when source (identity-forms source path))]
         (if (and forms (not (. forms :module-missing)) (not (. forms :reader-error)))
           (let [form-duplicates (duplicate-form-ids forms)]
             (when (> (length form-duplicates) 0)

@@ -22,55 +22,40 @@
 (defn- docstring?
   [children]
   (let [third (. children 3)]
-    (
-     and
+    (and
      third
      (= third.kind :string))))
 
 (defn- parameter-index
   [children]
-  (
-   if (docstring? children) 4
+  (if
+    (docstring? children)
+    4
     3))
 
 (defn- parameter-vector
   [node]
-  (let [children (meaningful-children node)
-        index    (parameter-index children)]
+  (let [children (meaningful-children node) index    (parameter-index children)]
     (. children index)))
 
 (defn- invalid-layout?
   [node]
-  (let [children (meaningful-children node)
-        name     (. children 2)
-        args     (parameter-vector node)]
-    (
-     and
+  (let [children (meaningful-children node) name     (. children 2) args     (parameter-vector node)]
+    (and
      name
      args
      (<= args.open.line name.line))))
 
 (defn- finding-form
   [path forms node]
-  (let [existing (form-for-node forms node nil)
-        base     (or existing (nearest-form forms node) {:form path})]
+  (let [existing (form-for-node forms node nil) base     (or existing (nearest-form forms node) {:form path})]
     (or existing
-        {:line     node.open.line
-         :col      node.open.col
-         :end-line node.close.line
-         :end-col  (+ node.close.col 1)
-         :form     (.. base.form " > defn-args-newline")
-         :node     node})))
+        {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     (.. base.form " > defn-args-newline") :node     node})))
 
 (defn- add-finding
   [findings path policy node form]
   (table.insert findings
-                (finding path
-                         form
-                         (rule-severity policy "defn-args-newline")
-                         "defn-args-newline"
-                         "put the defn argument vector on the line below the name"
-                         node)))
+                (finding path form (rule-severity policy "defn-args-newline") "defn-args-newline" "put the defn argument vector on the line below the name" node)))
 
 (defn- append-finding
   [findings path forms policy node]

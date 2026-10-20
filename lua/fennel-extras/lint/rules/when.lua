@@ -17,7 +17,8 @@ local enabled_3f = registry["enabled?"]
 local rule_severity = registry["rule-severity"]
 local function if_without_else_3f(node)
   local children = meaningful_children(node)
-  return ((node.kind == "list") and (list_head(node) == "if") and (#children == 3))
+  local else_child = children[4]
+  return ((node.kind == "list") and (list_head(node) == "if") and ((#children == 3) or ((#children == 4) and (else_child.kind == "symbol") and (else_child.text == "nil"))))
 end
 local function finding_form(path, forms, node)
   return (form_for_node(forms, node, nil) or nearest_form(forms, node) or {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = path, node = node})

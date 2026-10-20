@@ -42,8 +42,7 @@
 
 (defn- alignment-node?
   [node parent]
-  (
-   or
+  (or
    (= node.kind :table)
    (alignment-form? node parent)
    (clause-form? node)))
@@ -55,7 +54,8 @@
 
 (defn- alignment-node-result
   [result node parent]
-  (if (alignment-node? node parent)
+  (if
+    (alignment-node? node parent)
     (append-alignment-node result node)
     result))
 
@@ -69,8 +69,7 @@
 
 (defn- single-line-name?
   [name-start name-end]
-  (
-   and
+  (and
    name-end
    (= name-start.line name-end.line)))
 
@@ -85,45 +84,35 @@
 
 (defn- name-end-index
   [children index]
-  (let [name      (. children index)
-        candidate (. children (+ index 1))]
-    (if (and
-         candidate
-         (= candidate.kind :prefix)
-         (adjacent-token? (helpers.child-end name) candidate))
+  (let [name      (. children index) candidate (. children (+ index 1))]
+    (if
+      (and
+       candidate
+       (= candidate.kind :prefix)
+       (adjacent-token? (helpers.child-end name) candidate))
       (name-end-index children (+ index 1))
       index)))
 
 (defn- value-index
   [children index]
   (let [candidate (. children index)]
-    (if (and candidate (= candidate.kind :prefix))
+    (if
+      (and candidate (= candidate.kind :prefix))
       (value-index children (+ index 1))
       index)))
 
 (defn- pair-candidate
   [children index result parent-kind]
-  (let [name-end-position (name-end-index children index)
-        name              (. children index)
-        name-end          (helpers.child-end (. children name-end-position))
-        value-start-child (. children (+ name-end-position 1))
-        value-position    (value-index children (+ name-end-position 1))
-        value             (. children value-position)
-        name-start        (helpers.child-start name)
-        value-start       (and value-start-child (helpers.child-start value-start-child))]
-    (if (and
-         value
-         value-start
-         (= name-start.line value-start.line)
-         (single-line-name? name-start name-end))
+  (let [name-end-position (name-end-index children index) name              (. children index) name-end          (helpers.child-end (. children name-end-position)) value-start-child (. children (+ name-end-position 1)) value-position    (value-index children (+ name-end-position 1)) value             (. children value-position) name-start        (helpers.child-start name) value-start       (and value-start-child (helpers.child-start value-start-child))]
+    (if
+      (and
+       value
+       value-start
+       (= name-start.line value-start.line)
+       (single-line-name? name-start name-end))
       (append-pair-candidate
        result
-       {:name        name-start
-        :name-end    name-end
-        :value       value-start
-        :value-node  value
-        :parent-kind parent-kind
-        :line        name-start.line})
+       {:name        name-start :name-end    name-end :value       value-start :value-node  value :parent-kind parent-kind :line        name-start.line})
       result)))
 
 (defn- pair-candidates
@@ -133,14 +122,14 @@
         next-index        (and name-end-position
                                (+ (value-index children (+ name-end-position 1)) 1))
         next-result       (and next-index (pair-candidate children index result parent-kind))]
-    (if done
+    (if
+      done
       result
       (pair-candidates children next-index next-result parent-kind))))
 
 (defn- pair-count-step
   [count pair line]
-  (
-   if
+  (if
     (= pair.line line)
     (+ count 1)
     count))
@@ -152,8 +141,7 @@
 
 (defn- single-pair
   [pairs pair]
-  (
-   when
+  (when
     (= (pair-count pairs pair.line) 1)
     pair))
 
@@ -164,12 +152,12 @@
 
 (defn- pair-name-width
   [pair]
-  (- (+ pair.name-end.out-col (helpers.codepoint-width pair.name-end.text))
-     pair.name.out-col))
+  (- (+ pair.name-end.out-col (helpers.codepoint-width pair.name-end.text)) pair.name.out-col))
 
 (defn- pair-target
   [pair width]
-  (if (and (= pair.parent-kind :table) (= pair.name.text "("))
+  (if
+    (and (= pair.parent-kind :table) (= pair.name.text "("))
     (+ pair.name.out-col width)
     (+ pair.name.out-col width 1)))
 
@@ -181,22 +169,21 @@
 (defn- clause-start-index
   [node]
   (let [head (. (helpers.nontrivia-children node) 1)]
-    (
-     if (= head.text "if") 2
+    (if
+      (= head.text "if")
+      2
       3)))
 
 (defn- clause-pair?
   [node pair]
-  (
-   or
+  (or
    (not (clause-form? node))
    (> pair.line node.open.line)))
 
 (defn- comment-on-line?
   [node line]
   (accumulate [found false _ child (ipairs node.children)]
-    (
-     or
+    (or
      found
      (and child.text (= child.kind :comment) (= child.line line)))))
 
@@ -207,8 +194,7 @@
 
 (defn- usable-pair-result
   [node pair]
-  (
-   when
+  (when
     (usable-pair? node pair)
     pair))
 
@@ -224,18 +210,14 @@
 
 (defn- alignment-start
   [node]
-  (
-   if
+  (if
     (clause-form? node)
     (clause-start-index node)
     1))
 
 (defn- alignment-plan
   [node]
-  (let [children (helpers.nontrivia-children node)
-        start    (alignment-start node)
-        pairs    (single-pairs (pair-candidates children start [] node.kind))
-        usable   (usable-pairs node pairs)]
+  (let [children (helpers.nontrivia-children node) start    (alignment-start node) pairs    (single-pairs (pair-candidates children start [] node.kind)) usable   (usable-pairs node pairs)]
     (alignment-plan-result usable)))
 
 (defn- alignment-plans
@@ -245,15 +227,10 @@
 
 (defn- append-alignment-edit
   [edits plan pair]
-  (let [name-width      (pair-name-width pair)
-        name-end-column (+ pair.name.out-col name-width)
-        target          (pair-target pair plan.width)]
+  (let [name-width      (pair-name-width pair) name-end-column (+ pair.name.out-col name-width) target          (pair-target pair plan.width)]
     (table.insert
      edits
-     {:line   pair.line
-      :start  (+ name-end-column 1)
-      :finish (+ pair.value.out-col 1)
-      :spaces (- target name-end-column)})))
+     {:line   pair.line :start  (+ name-end-column 1) :finish (+ pair.value.out-col 1) :spaces (- target name-end-column)})))
 
 (defn- append-plan-pairs
   [edits plan]
@@ -263,7 +240,8 @@
 
 (defn- append-plan-edits
   [edits plan]
-  (if plan
+  (if
+    plan
     (append-plan-pairs edits plan)
     edits))
 
@@ -274,14 +252,11 @@
 
 (defn- apply-edit
   [line edit]
-  (.. (string.sub line 1 (- edit.start 1))
-      (string.rep " " edit.spaces)
-      (string.sub line edit.finish)))
+  (.. (string.sub line 1 (- edit.start 1)) (string.rep " " edit.spaces) (string.sub line edit.finish)))
 
 (defn- line-edit
   [line-number edit]
-  (
-   when
+  (when
     (= edit.line line-number)
     edit))
 

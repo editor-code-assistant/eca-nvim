@@ -10,52 +10,56 @@
 
 (defn- join-with-slash
   [left right]
-  (if (= (string.sub left -1) "/")
+  (if
+    (= (string.sub left -1) "/")
     (.. left right)
     (.. left "/" right)))
 
 (defn join
   [left right]
-  (if (= left "/")
+  (if
+    (= left "/")
     (.. left right)
     (join-with-slash left right)))
 
 (defn absolute
   [root path]
-  (if (= (string.sub path 1 1) "/")
+  (if
+    (= (string.sub path 1 1) "/")
     path
     (join root path)))
 
 (defn- strip-private-prefix
   [path]
-  (if (= (string.sub path 1 9) "/private/")
+  (if
+    (= (string.sub path 1 9) "/private/")
     (string.sub path 9)
     path))
 
 (defn- ensure-trailing-slash
   [root]
-  (if (= (string.sub root -1) "/")
+  (if
+    (= (string.sub root -1) "/")
     root
     (.. root "/")))
 
 (defn- strip-relative-prefix
   [result]
-  (if (= (string.sub result 1 2) "./")
+  (if
+    (= (string.sub result 1 2) "./")
     (string.sub result 3)
     result))
 
 (defn- relative-result
   [path prefix]
-  (if (= (string.sub path 1 (string.len prefix)) prefix)
+  (if
+    (= (string.sub path 1 (string.len prefix)) prefix)
     (string.sub path (+ (string.len prefix) 1))
     path))
 
 (defn relative
   [root path]
-  (let [root   (strip-private-prefix root)
-        path   (strip-private-prefix path)
-        prefix (ensure-trailing-slash root)
-        result (relative-result path prefix)]
+  (let [root   (strip-private-prefix root) path   (strip-private-prefix path) prefix (ensure-trailing-slash root) result (relative-result path prefix)]
     (strip-relative-prefix result)))
 
 (defn- extension-matches?
@@ -70,7 +74,8 @@
 
 (defn- clean-prefix
   [prefix]
-  (if (= (string.sub prefix -1) "/")
+  (if
+    (= (string.sub prefix -1) "/")
     (string.sub prefix 1 -2)
     prefix))
 
@@ -82,13 +87,15 @@
 
 (defn- excluded-result
   [path prefix result]
-  (if (under-prefix? path prefix)
+  (if
+    (under-prefix? path prefix)
     true
     result))
 
 (defn- excluded-any?
   [path excludes index result]
-  (if (> index (length excludes))
+  (if
+    (> index (length excludes))
     result
     (excluded-any? path excludes (+ index 1) (excluded-result path (. excludes index) result))))
 
@@ -103,13 +110,13 @@
 (defn realpath
   [uv path]
   (let [(ok resolved) (pcall uv.fs_realpath path)]
-    (if ok
-      resolved
-      nil)))
+    (when ok
+      resolved)))
 
 (defn walk-prefix
   [root path]
   (let [rel (relative root path)]
-    (if (= rel ".")
+    (if
+      (= rel ".")
       ""
       rel)))

@@ -872,6 +872,36 @@
          (length (if-without-else-findings "(if a b c) (if a b c d e) (when a b)"
                                            "fnl/app.fnl"
                                            {"module-style" :off})))))
+  (testing "flags a single-clause if whose else branch is literal nil"
+    (let [finding (. (if-without-else-findings
+                      "(defn f\n  [ok resolved]\n  (if ok\n    resolved\n    nil))"
+                      "fnl/app.fnl"
+                      {"module-style" :off})
+                     1)]
+      (is (= {:rule     "if-without-else"
+              :severity "warning"
+              :message  "if without else; use when"}
+             {:rule     (. finding :rule)
+              :severity (. finding :severity)
+              :message  (. finding :message)}))))
+  (testing "does not flag a single-clause if with a non-nil else branch"
+    (is (= 0
+           (length (if-without-else-findings
+                    "(if a b c)"
+                    "fnl/app.fnl"
+                    {"module-style" :off})))))
+  (testing "does not flag a multi-clause if ending in literal nil"
+    (is (= 0
+           (length (if-without-else-findings
+                    "(if a b c nil)"
+                    "fnl/app.fnl"
+                    {"module-style" :off})))))
+  (testing "does not flag an if with a literal nil then branch"
+    (is (= 0
+           (length (if-without-else-findings
+                    "(if a nil b)"
+                    "fnl/app.fnl"
+                    {"module-style" :off})))))
   (testing "flags two nested if forms with distinct stable identities"
     (let [source "(defn f [] (do (if x y) (if x y)))"
           rules  {"module-style" :off}
@@ -1007,6 +1037,38 @@
     (is (= 0 (length (multiline-layout-findings "(foo a\n  b\n  c)" "fnl/app.fnl" {"module-style" :off})))))
   (testing "accepts a one-line list"
     (is (= 0 (length (multiline-layout-findings "(foo a b c)" "fnl/app.fnl" {"module-style" :off})))))
+  (testing "flags a list whose head starts below its opening paren"
+    (is (= 1
+           (length (multiline-layout-findings
+                    "(\n foo a b)"
+                    "fnl/app.fnl"
+                    {"module-style" :off})))))
+  (testing "flags a list with a delayed head inside a defn"
+    (is (= 1
+           (length (multiline-layout-findings
+                    "(defn f\n  []\n  (\n   foo a b))"
+                    "fnl/app.fnl"
+                    {"module-style" :off})))))
+  (testing "does not flag vectors or maps whose first item starts below the opener"
+    (is (= 0
+           (+ (length (multiline-layout-findings "[\n 1\n 2]" "fnl/app.fnl" {"module-style" :off}))
+              (length (multiline-layout-findings "{\n :a 1}" "fnl/app.fnl" {"module-style" :off}))))))
+  (testing "flags a single-clause if whose then branch shares the head line"
+    (is (= 1
+           (length (multiline-layout-findings
+                    "(defn f\n  [n]\n  (if (> n 0) 1\n    0))"
+                    "fnl/app.fnl"
+                    {"module-style" :off})))))
+  (testing "accepts a single-clause if with each branch on its own line"
+    (is (= 0
+           (length (multiline-layout-findings
+                    "(defn f\n  [n]\n  (if (> n 0)\n    1\n    0))"
+                    "fnl/app.fnl"
+                    {"module-style" :off})))))
+  (testing "reports only multiline-layout for a malformed multi-line control form"
+    (let [findings (check-source "(defn f\n  [n]\n  (if (> n 0) 1\n    0))" "fnl/app.fnl" {"module-style" :off})]
+      (is (= ["multiline-layout"]
+             (icollect [_ finding (ipairs findings)] (. finding :rule))))))
   (testing "flags a multi-line map with two pairs on one line"
     (is (= 1 (length (multiline-layout-findings "{:a 1 :b 2\n :c 3}" "fnl/app.fnl" {"module-style" :off})))))
   (testing "accepts a map with one pair starting on each line"

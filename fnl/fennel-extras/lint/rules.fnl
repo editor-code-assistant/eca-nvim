@@ -35,32 +35,31 @@
 
 (defn- module-import-state
   [state import-info]
-  (if (and import-info (= import-info.target "eca.nfnl.macros.aniseed"))
+  (if
+    (and import-info (= import-info.target "eca.nfnl.macros.aniseed"))
     (has-module-import? import-info.names)
     state.module-import))
 
 (defn- spec-import-state
   [state import-info]
-  (if (and import-info (= import-info.target "spec.eca.macros"))
+  (if
+    (and import-info (= import-info.target "spec.eca.macros"))
     (has-all? import-info.names)
     state.spec-import))
 
 (defn- update-check-state
   [state import-info head]
-  {:module-import (module-import-state state import-info)
-   :module-form   (or state.module-form (= head "module"))
-   :spec-import   (spec-import-state state import-info)})
+  {:module-import (module-import-state state import-info) :module-form   (or state.module-form (= head "module")) :spec-import   (spec-import-state state import-info)})
 
 (defn- check-state-step
   [nodes index state recurse]
   (let [node (. nodes index)]
-    (recurse nodes
-             (+ index 1)
-             (update-check-state state (macro-import? node) (list-head node)))))
+    (recurse nodes (+ index 1) (update-check-state state (macro-import? node) (list-head node)))))
 
 (defn- check-state
   [nodes index state]
-  (if (> index (length nodes))
+  (if
+    (> index (length nodes))
     state
     (check-state-step nodes index state check-state)))
 
@@ -72,17 +71,10 @@
 
 (defn- evaluate-form
   [path form forms policy]
-  (let [node     form.node
-        head     (list-head node)
-        findings []]
+  (let [node     form.node head     (list-head node) findings []]
     (when (and (spec-file? path) (= head "module") (enabled? policy "spec-no-module"))
       (table.insert findings
-                    (finding path
-                             form
-                             (rule-severity policy "spec-no-module")
-                             "spec-no-module"
-                             "specs must not declare a module"
-                             node)))
+                    (finding path form (rule-severity policy "spec-no-module") "spec-no-module" "specs must not declare a module" node)))
     (when (and (spec-file? path) (not (spec-rule.direct-require? path)) (require-node? node))
       (spec-rule.spec-direct-require-finding findings path form policy node))
     (when (= head "testing")
@@ -116,11 +108,7 @@
   (let [file-policy (core.assoc policy :max-code-lines max-code-lines)
         findings    (size-rule.finding path file-policy source)
         findings    (append-all findings
-                                (module-rule.module-finding
-                                 path
-                                 forms
-                                 policy
-                                 (and state.module-import state.module-form)))
+                                (module-rule.module-finding path forms policy (and state.module-import state.module-form)))
         findings    (append-form-findings findings path forms policy state.spec-import)
         findings    (append-synthetic-findings findings path forms policy source)
         findings    (when-rule.findings findings path forms policy source)
@@ -132,7 +120,5 @@
 
 (defn check
   [path forms policy source max-code-lines]
-  (let [state (check-state (root-forms source)
-                           1
-                           {:module-import false :module-form false :spec-import false})]
+  (let [state (check-state (root-forms source) 1 {:module-import false :module-form false :spec-import false})]
     (check-result path forms policy source (or max-code-lines 300) state)))

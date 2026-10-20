@@ -31,12 +31,10 @@
 (defn-
   quoted-mode-for-child
   [node index mode]
-  (let [previous-index (previous-meaningful-index node.children index)
-        previous       (and previous-index (. node.children previous-index))]
-    (if (and previous (= previous.kind :prefix))
-      (quoted-mode-for-prefix
-       previous.text
-       (quoted-mode-for-child node previous-index mode))
+  (let [previous-index (previous-meaningful-index node.children index) previous       (and previous-index (. node.children previous-index))]
+    (if
+      (and previous (= previous.kind :prefix))
+      (quoted-mode-for-prefix previous.text (quoted-mode-for-child node previous-index mode))
       mode)))
 
 (defn-
@@ -75,10 +73,7 @@
 (defn-
   statement-child?
   [parent child]
-  (let [head     (list-head parent)
-        children (meaningful-children parent)
-        index    (meaningful-index parent child)
-        start    (body-start head children)]
+  (let [head     (list-head parent) children (meaningful-children parent) index    (meaningful-index parent child) start    (body-start head children)]
     (and
      (> start 0)
      (>= index start))))
@@ -106,26 +101,10 @@
         ordinal  (+ (or (. ordinals key) 0) 1)
         form     (or
                   existing
-                  {:line
-                   node.open.line
-                   :col
-                   node.open.col
-                   :end-line
-                   node.close.line
-                   :end-col (+ node.close.col 1)
-                   :form
-                   (.. base.form " > " head "#" ordinal)
-                   :node
-                   node})]
+                  {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form (.. base.form " > " head "#" ordinal) :node node})]
     (table.insert
      findings
-     (finding
-      path
-      form
-      (rule-severity policy "control-layout")
-      "control-layout"
-      "put this control form on several lines"
-      node))
+     (finding path form (rule-severity policy "control-layout") "control-layout" "put this control form on several lines" node))
     (core.assoc ordinals key ordinal)))
 
 (defn-
@@ -138,7 +117,8 @@
 (defn-
   next-ordinals
   [findings path forms policy node statement? mode ordinals]
-  (if (offending-control? node statement? mode)
+  (if
+    (offending-control? node statement? mode)
     (append-control-finding findings path forms policy node ordinals)
     ordinals))
 
@@ -146,30 +126,16 @@
   visit-child
   [state index child]
   (let [child-mode (quoted-mode-for-child state.node index state.mode)]
-    (if (executable-child? child child-mode)
-      (state.visit
-       state.findings
-       state.path
-       state.forms
-       state.policy
-       child
-       (statement-child? state.node child)
-       child-mode
-       state.ordinals)
+    (if
+      (executable-child? child child-mode)
+      (state.visit state.findings state.path state.forms state.policy child (statement-child? state.node child) child-mode state.ordinals)
       state.ordinals)))
 
 (defn-
   visit-node
   [findings path forms policy node statement? mode ordinals]
   (let [next-ordinals (next-ordinals findings path forms policy node statement? mode ordinals)
-        state         {:findings findings
-                       :path     path
-                       :forms    forms
-                       :policy   policy
-                       :node     node
-                       :mode     mode
-                       :ordinals next-ordinals
-                       :visit    visit-node}]
+        state         {:findings findings :path     path :forms    forms :policy   policy :node     node :mode     mode :ordinals next-ordinals :visit    visit-node}]
     (accumulate [result next-ordinals index child (ipairs (or node.children []))]
       (visit-child (core.assoc state :ordinals result) index child))))
 
@@ -182,15 +148,16 @@
 (defn-
   append-control-findings
   [findings path forms policy source]
-  (let [reader (require :fennel-extras.reader)
-        root   (reader.parse source)]
-    (if root
+  (let [reader (require :fennel-extras.reader) root   (reader.parse source)]
+    (if
+      root
       (visit-root findings path forms policy root)
       findings)))
 
 (defn
   findings
   [findings path forms policy source]
-  (if (enabled? policy "control-layout")
+  (if
+    (enabled? policy "control-layout")
     (append-control-findings findings path forms policy source)
     findings))

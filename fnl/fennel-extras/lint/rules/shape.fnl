@@ -21,22 +21,21 @@
 
 (defn function-violations
   [node]
-  (let [info (function-info node)
-        body (or (and info info.body) [])]
+  (let [info (function-info node) body (or (and info info.body) [])]
     (validate-function-body body [])))
 
 (defn- function-target
   [base offending]
-  (if (and (= (list-head offending) "if")
-           (or (string.match base.form " > then$")
-               (string.match base.form " > else$")))
+  (if
+    (and (= (list-head offending) "if")
+         (or (string.match base.form " > then$")
+             (string.match base.form " > else$")))
     (core.assoc base :form (.. base.form " > if#1"))
     base))
 
 (defn- add-function-finding
   [findings path form forms policy offending]
-  (let [base   (form-for-node forms offending form)
-        target (function-target base offending)]
+  (let [base   (form-for-node forms offending form) target (function-target base offending)]
     (table.insert findings
                   (finding path
                            target
@@ -68,20 +67,14 @@
              (= node.kind :list)
              (or (= (list-head node) "fn") (= (list-head node) "lambda") (= (list-head node) "λ")))
     (table.insert result node))
-  (
-   and
+  (and
    node
    (collect-function-children node result collect-function-nodes))
   result)
 
 (defn- synthetic-form
   [path node]
-  {:line     node.open.line
-   :col      node.open.col
-   :end-line node.close.line
-   :end-col  (+ node.close.col 1)
-   :form     (.. path " > function-shape")
-   :node     node})
+  {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     (.. path " > function-shape") :node     node})
 (defn- function-nodes
   [source]
   (let [functions []]
@@ -136,22 +129,16 @@
 
 (defn- function-finding-contained?
   [finding findings]
-  (accumulate [contained?
-               false
-               _
-               candidate
-               (ipairs findings)]
-    (
-     or
+  (accumulate [contained? false _ candidate (ipairs findings)]
+    (or
      contained?
      (contained-function-finding? finding candidate))))
 
 (defn- keep-function-finding
   [finding findings]
-  (if (not (and (= finding.rule "function-shape")
-                (function-finding-contained? finding findings)))
-    finding
-    nil))
+  (when (not (and (= finding.rule "function-shape")
+                  (function-finding-contained? finding findings)))
+    finding))
 
 (defn remove-contained-function-findings
   [findings]

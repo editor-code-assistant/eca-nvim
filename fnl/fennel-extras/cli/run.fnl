@@ -19,14 +19,14 @@
 (defn- config-default
   [cfg key default]
   (let [value (. cfg key)]
-    (
-     if (= value nil) default
+    (if
+      (= value nil)
+      default
       value)))
 
 (defn- load-parser-result
   [name ok parser]
-  (
-   if
+  (if
     ok
     parser
     (values nil (.. "could not require parser module: " name))))
@@ -38,9 +38,8 @@
 
 (defn- load-parser
   [name]
-  (if name
-    (load-parser-result-call name)
-    nil))
+  (when name
+    (load-parser-result-call name)))
 
 (defn- config-load-error
   [printer path error]
@@ -50,21 +49,24 @@
 (defn- config-loaded
   [printer path]
   (let [(loaded error) (config.load path)]
-    (if error
+    (if
+      error
       (config-load-error printer path error)
       (values loaded nil path))))
 
 (defn- config-for
   [root printer]
   (let [path (config.find root)]
-    (if path
+    (if
+      path
       (config-loaded printer path)
       (values {} nil nil))))
 
 (defn- read-lint-item
   [file]
   (let [(source error) (fs.read-file file.absolute)]
-    (if error
+    (if
+      error
       (values nil error)
       (values source nil))))
 
@@ -75,25 +77,25 @@
 
 (defn- read-lint-item-result
   [state]
-  (let [file           (. state.files state.index)
-        (source error) (read-lint-item file)]
-    (if error
+  (let [file           (. state.files state.index) (source error) (read-lint-item file)]
+    (if
+      error
       (values nil {:path file.relative :error error})
-      (values {:files  state.files
-               :index  (+ state.index 1)
-               :result (append-lint-source state.result file source)}
+      (values {:files  state.files :index  (+ state.index 1) :result (append-lint-source state.result file source)}
               nil))))
 
 (defn- read-lint-step-result
   [state]
   (let [(next-state error) (read-lint-item-result state)]
-    (if error
+    (if
+      error
       {:kind :error :error error}
       {:kind :next :state next-state})))
 
 (defn- read-lint-step
   [state]
-  (if (> state.index (length state.files))
+  (if
+    (> state.index (length state.files))
     {:kind :done :result state.result}
     (read-lint-step-result state)))
 
@@ -129,26 +131,25 @@
   [context policy sources]
   (let [(selected paths) (git.lint-selection context.parsed sources context.git-info)
         root             context.git-info.root
-        (result error)   (lint-run.lint-files selected
-                                              policy
-                                              (and context.config-path (scan.relative root context.config-path))
-                                              context.parsed.format
-                                              paths)]
-    (if error
+        (result error)   (lint-run.lint-files selected policy (and context.config-path (scan.relative root context.config-path)) context.parsed.format paths)]
+    (if
+      error
       (lint-run-error context.printer error)
       (lint-result context.printer result))))
 
 (defn- run-lint-files
   [context policy files]
   (let [(sources read-error) (read-lint-files {:files files :index 1 :result []})]
-    (if read-error
+    (if
+      read-error
       (lint-read-error context.printer read-error)
       (run-lint-sources context policy sources))))
 
 (defn- run-lint-policy
   [context files]
   (let [(policy policy-error) (config.lint-policy context.cfg)]
-    (if policy-error
+    (if
+      policy-error
       (lint-policy-error context.root context.config-path context.printer policy-error)
       (run-lint-files context policy files))))
 
@@ -160,26 +161,26 @@
         follow-symlinks              (config-default context.cfg :follow-symlinks false)
         (discovered discovery-error) (scan.sorted-files context.git-info.root
                                                         inputs
-                                                        {:excludes        (or (. context.cfg :exclude) [])
-                                                         :extensions      extensions
-                                                         :skip-dotfiles   skip-dotfiles
-                                                         :follow-symlinks follow-symlinks})
+                                                        {:excludes        (or (. context.cfg :exclude) []) :extensions      extensions :skip-dotfiles   skip-dotfiles :follow-symlinks follow-symlinks})
         files                        (and discovered (format.without-config-file discovered context.config-path))]
-    (if discovery-error
+    (if
+      discovery-error
       (git.emit-git-error context.printer discovery-error)
       (run-lint-policy context files))))
 
 (defn- run-lint
   [context]
   (let [(git-info git-error-value) (git.lint-git-info context.root context.parsed context.require-git)]
-    (if git-error-value
+    (if
+      git-error-value
       (git.emit-git-error context.printer git-error-value)
       (run-lint-discovery (table-update.update context {:git-info git-info})))))
 
 (defn- run-format-files
   [context files]
   (let [(parser parser-error) (load-parser (or context.parsed.parser (. context.cfg :parser)))]
-    (if parser-error
+    (if
+      parser-error
       (git.emit-git-error context.printer parser-error)
       (format.run-files context parser files))))
 
@@ -191,21 +192,20 @@
         follow-symlinks              (config-default cfg :follow-symlinks false)
         (discovered discovery-error) (scan.sorted-files root
                                                         inputs
-                                                        {:excludes        (or (. cfg :exclude) [])
-                                                         :extensions      extensions
-                                                         :skip-dotfiles   skip-dotfiles
-                                                         :follow-symlinks follow-symlinks})]
+                                                        {:excludes        (or (. cfg :exclude) []) :extensions      extensions :skip-dotfiles   skip-dotfiles :follow-symlinks follow-symlinks})]
     (values (and discovered (format.without-config-file discovered config-path)) discovery-error)))
 
 (defn- run-format-files-result
   [context files]
-  (if (= (length files) 0)
+  (if
+    (= (length files) 0)
     (git.emit-git-error context.printer "no files found")
     (run-format-files context files)))
 
 (defn- run-format-result
   [context files discovery-error]
-  (if discovery-error
+  (if
+    discovery-error
     (git.emit-git-error context.printer discovery-error)
     (run-format-files-result context files)))
 
@@ -223,16 +223,15 @@
 (defn- run-command
   [context]
   (let [(cfg config-error config-path) (config-for context.root context.printer)]
-    (if config-error
+    (if
+      config-error
       2
       (run-command-mode (table-update.update context {:cfg cfg :config-path config-path})))))
 
 (defn run
   [args opts]
-  (let [opts                 (or opts {})
-        printer              (or (. opts :print) default-print)
-        root                 (or (. opts :cwd) (scan.cwd))
-        (parsed parse-error) ((. arg_parser :parse-args) args)]
-    (if parse-error
+  (let [opts                 (or opts {}) printer              (or (. opts :print) default-print) root                 (or (. opts :cwd) (scan.cwd)) (parsed parse-error) ((. arg_parser :parse-args) args)]
+    (if
+      parse-error
       (git.emit-git-error printer parse-error)
       (run-command {:root root :args args :parsed parsed :printer printer}))))

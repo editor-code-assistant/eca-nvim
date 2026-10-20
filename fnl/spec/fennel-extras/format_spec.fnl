@@ -621,8 +621,7 @@
   [line]
   (let [(open-text opens)   (string.gsub line "[(]" "")
         (close-text closes) (string.gsub line "[)]" "")]
-    (
-     and
+    (and
      open-text
      close-text
      (= opens closes))))

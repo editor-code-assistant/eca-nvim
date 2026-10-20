@@ -19,9 +19,8 @@
     (var i 1)
     (local n (string.len source))
     (while (<= i n)
-      (if (= (string.sub source i i) "\n")
-        (set start (append-line lines source start i))
-        nil)
+      (when (= (string.sub source i i) "\n")
+        (set start (append-line lines source start i)))
       (set i (+ i 1)))
     (when (or (<= start n) (= n 0))
       (table.insert lines (string.sub source start n)))
@@ -71,7 +70,8 @@
   (when (not= node.kind :root)
     (collect-node-entry node nodes tokens depth))
   (each [_ child (ipairs node.children)]
-    (if child.text
+    (if
+      child.text
       (table.insert tokens child)
       (collect-node child nodes tokens (+ depth 1))))
   (when (and (not= node.kind :root) node.close)
@@ -91,7 +91,8 @@
   [token line indent strip-leading?]
   (let [spaces        (if strip-leading? (helpers.leading-spaces line) 0)
         content-start (+ spaces 1)
-        before        (if (>= token.col content-start)
+        before        (if
+                        (>= token.col content-start)
                         (string.sub line content-start (- token.col 1))
                         "")]
     (+ indent (helpers.codepoint-width before))))
@@ -114,36 +115,29 @@
   (each [_ entry (ipairs rule)]
     (when (= result nil)
       (let [kind (. entry 1) value (. entry 2) selected (. entry 3)]
-        (if (and
-             (= kind :inner)
-             (= value 0)
-             (or (= selected nil) (= selected arg-index)))
+        (if
+          (and
+           (= kind :inner)
+           (= value 0)
+           (or (= selected nil) (= selected arg-index)))
           (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
           (when (and (= kind :block) (>= arg-index value))
             (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
   result)
 (defn- block-argument-index
   [arg-index first-token node]
-  (if (and (= arg-index 0) (> first-token.line node.open.line))
+  (if
+    (and (= arg-index 0) (> first-token.line node.open.line))
     1
     arg-index))
 (defn- rule-indent
   [node first-token line-number config]
-  (if (and node (= node.kind :list) (> line-number node.open.line))
-    (let [children (helpers.nontrivia-children node)
-          head     (. children 1)]
-      (if (and head (= head.kind :symbol))
-        (let [rule      (rules.resolve config head.text)
-              arg-index (argument-index node first-token)]
-          (if (and rule arg-index)
-            (matching-rule-indent
-             rule
-             node
-             (block-argument-index arg-index first-token node)
-             config)
-            nil))
-        nil))
-    nil))
+  (when (and node (= node.kind :list) (> line-number node.open.line))
+    (let [children (helpers.nontrivia-children node) head     (. children 1)]
+      (when (and head (= head.kind :symbol))
+        (let [rule      (rules.resolve config head.text) arg-index (argument-index node first-token)]
+          (when (and rule arg-index)
+            (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
 
 (defn- started-before?
   [child line-number]
@@ -151,27 +145,33 @@
 
 (defn- default-indent-for
   [node first-token line-number]
-  (if (= node nil)
+  (if
+    (= node nil)
     0
-    (if (= first-token.kind :close)
+    (if
+      (= first-token.kind :close)
       (or (. node.open :line-indent) (. node.open :out-col))
-      (let [children     (helpers.nontrivia-children node)
-            first-child  (. children 1)
-            second-child (. children 2)]
-        (if (= first-child nil)
+      (let [children     (helpers.nontrivia-children node) first-child  (. children 1) second-child (. children 2)]
+        (if
+          (= first-child nil)
           (+ (. node.open :out-col) 1)
-          (if (and (= node.kind :list) (= first-child.kind :symbol))
-            (if (and second-child (started-before? second-child line-number))
+          (if
+            (and (= node.kind :list) (= first-child.kind :symbol))
+            (if
+              (and second-child (started-before? second-child line-number))
               (+ (. (helpers.child-start second-child) :out-col)
-                 (if (and (= (. node.open :line) 2)
-                          (= (. node.open :col) 2)
-                          (= line-number 3))
+                 (if
+                   (and (= (. node.open :line) 2)
+                        (= (. node.open :col) 2)
+                        (= line-number 3))
                                1
                                0))
-              (if (started-before? first-child line-number)
+              (if
+                (started-before? first-child line-number)
                 (. (helpers.child-start first-child) :out-col)
                 (+ (. node.open :out-col) 1)))
-            (if (started-before? first-child line-number)
+            (if
+              (started-before? first-child line-number)
               (. (helpers.child-start first-child) :out-col)
               (+ (. node.open :out-col) 1))))))))
 
@@ -182,26 +182,30 @@
 
 (defn- next-token-indent
   [token node config]
-  (if (= token.kind :close) (+ node.open.out-col 1)
+  (if
+    (= token.kind :close)
+    (+ node.open.out-col 1)
     (indent-for node token token.line config)))
 
 (defn- comment-indent
   [tokens nodes line-number config]
-  (let [token (comments.first-code-token-after tokens line-number)
-        node  (and token (active-node nodes token.line))]
+  (let [token (comments.first-code-token-after tokens line-number) node  (and token (active-node nodes token.line))]
     (or (and token node (next-token-indent token node config))
         0)))
 
 (defn- default-line-indent
   [node first-token line-number tokens config]
-  (let [rule   (rule-indent node first-token line-number config)
-        indent (indent-for node first-token line-number config)]
-    (if (and (= rule nil) (> line-number 1)) (comments.continuation-indent indent tokens line-number)
+  (let [rule   (rule-indent node first-token line-number config) indent (indent-for node first-token line-number config)]
+    (if
+      (and (= rule nil) (> line-number 1))
+      (comments.continuation-indent indent tokens line-number)
       indent)))
 
 (defn- line-indent
   [node first-token line-number tokens nodes config]
-  (if (= first-token.kind :comment) (comment-indent tokens nodes line-number config)
+  (if
+    (= first-token.kind :comment)
+    (comment-indent tokens nodes line-number config)
     (default-line-indent node first-token line-number tokens config)))
 
 (defn- assign-token-output
@@ -232,29 +236,29 @@
   line)
 (defn- process-line
   [line-number line nodes tokens config]
-  (let [string-line? (string-on-line? tokens line-number)
-        first-token  (first-token-on-line tokens line-number)
-        node         (active-node nodes line-number)]
-    (if string-line?
+  (let [string-line? (string-on-line? tokens line-number) first-token  (first-token-on-line tokens line-number) node         (active-node nodes line-number)]
+    (if
+      string-line?
       (process-string-line line-number line tokens)
-      (if (= first-token nil)
+      (if
+        (= first-token nil)
         (process-empty-line line-number line tokens)
-        (if (and node
-                 (> (. node.open :col) 1)
-                 (or (= first-token.kind :close)
-                     (and (= first-token.kind :number)
-                          (> (helpers.leading-spaces line) 20))))
+        (if
+          (and node
+               (> (. node.open :col) 1)
+               (or (= first-token.kind :close)
+                   (and (= first-token.kind :number)
+                        (> (helpers.leading-spaces line) 20))))
           (process-unchanged-line line-number line tokens)
-          (let [indent (line-indent node first-token line-number tokens nodes config)
-                spaces (helpers.leading-spaces line)
-                body   (string.sub line (+ spaces 1))]
+          (let [indent (line-indent node first-token line-number tokens nodes config) spaces (helpers.leading-spaces line) body   (string.sub line (+ spaces 1))]
             (assign-output-columns tokens line-number line indent true)
             (.. (string.rep " " indent) body)))))))
 
 (defn- reindent-once
   [source config]
   (let [(tree error) (reader.parse source)]
-    (if error
+    (if
+      error
       (values nil nil error)
       (let [(lines final-newline) (split-lines source)
             nodes                 []
@@ -276,32 +280,36 @@
 (defn- alignment-pass
   [source config]
   (let [(plain tree error) (reindent-once source config)]
-    (if error
+    (if
+      error
       (values nil error)
-      (let [aligned                 (alignment-source plain tree)
-            (result _ result-error) (reindent-once aligned config)]
+      (let [aligned                 (alignment-source plain tree) (result _ result-error) (reindent-once aligned config)]
         (values result result-error)))))
 
 (defn- fixed-point-result
   [source config rounds result recurse]
   (let [next-rounds (- rounds 1)]
-    (if (or (= rounds 0) (= result source))
+    (if
+      (or (= rounds 0) (= result source))
       result
       (recurse result config next-rounds))))
 
 (defn- alignment-fixed-point
   [source config rounds]
   (let [(result _ error) (alignment-pass source config)]
-    (if error
+    (if
+      error
       (values nil error)
       (fixed-point-result source config rounds result alignment-fixed-point))))
 
 (defn reindent
   [source config]
   (let [config-error (rules.validate config)]
-    (if config-error
+    (if
+      config-error
       (values nil config-error)
-      (if (and config (. config :align-bindings))
+      (if
+        (and config (. config :align-bindings))
         (alignment-fixed-point source config 3)
         (let [(result _ error) (reindent-once source config)]
           (values result error))))))

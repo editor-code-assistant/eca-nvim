@@ -15,21 +15,19 @@
 
 (defn- if-without-else?
   [node]
-  (let [children (meaningful-children node)]
+  (let [children (meaningful-children node) else-child (. children 4)]
     (and (= node.kind :list)
          (= (list-head node) "if")
-         (= (length children) 3))))
+         (or (= (length children) 3)
+             (and (= (length children) 4)
+                  (= else-child.kind :symbol)
+                  (= else-child.text "nil"))))))
 
 (defn- finding-form
   [path forms node]
   (or (form-for-node forms node nil)
       (nearest-form forms node)
-      {:line     node.open.line
-       :col      node.open.col
-       :end-line node.close.line
-       :end-col  (+ node.close.col 1)
-       :form     path
-       :node     node}))
+      {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     path :node     node}))
 
 (defn- append-finding
   [findings path forms policy node]
@@ -51,9 +49,5 @@
 (defn findings
   [findings path forms policy source]
   (when (enabled? policy "if-without-else")
-    (append-node-findings findings
-                          path
-                          forms
-                          policy
-                          (mutation.executable-nodes source if-without-else?)))
+    (append-node-findings findings path forms policy (mutation.executable-nodes source if-without-else?)))
   findings)

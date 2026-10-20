@@ -1079,7 +1079,7 @@
 
 (defn- changed-config
   []
-  "{:lint {:rules {\"core-require\" :off \"defn-args-newline\" :off \"function-shape\" :off \"control-layout\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+  "{:lint {:rules {\"core-require\" :off \"defn-args-newline\" :off \"function-shape\" :off \"control-layout\" :off \"if-branch-call\" :warning \"if-without-else\" :off \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
 
 (defn- changed-source
   [which]

@@ -74,9 +74,8 @@
     (if (or (. config :module-missing) (= value nil))
       nil
       (let [(ok result err) (pcall (fn [] (config.validate value)))]
-        (if (and ok (= result nil) err)
-          (. err :message)
-          nil)))))
+        (when (and ok (= result nil) err)
+          (. err :message))))))
 
 (defn- validation-call-summary
   [text-or-value]
@@ -529,8 +528,7 @@
                                          (config.lint-policy {:lint {:max-code-lines 300
                                                                      :rules          {"core-require" "off"}
                                                                      :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
-                 (
-                  if
+                 (if
                    ok
                    value
                    {:missing-lint-policy true}))))))))
@@ -540,8 +538,7 @@
            (if (. config :module-missing)
              nil
              (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 10}})))]
-               (
-                and
+               (and
                 ok
                 (. value :max-code-lines))))))))
 

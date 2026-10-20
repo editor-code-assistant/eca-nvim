@@ -31,8 +31,7 @@
 
 (defn- unit
   [children first-index last-index]
-  {:start (child-line (. children first-index))
-   :end   (child-end-line (. children last-index))})
+  {:start (child-line (. children first-index)) :end   (child-end-line (. children last-index))})
 
 (defn- pair-index?
   [index start-index]
@@ -41,7 +40,8 @@
 
 (defn- append-pair-unit
   [result children start-index index]
-  (if (pair-index? index start-index)
+  (if
+    (pair-index? index start-index)
     (core.concat result [(unit children index (math.min (+ index 1) (length children)))])
     result))
 
@@ -58,7 +58,9 @@
 (defn- units-for-list
   [node children]
   (let [head (list-head node)]
-    (or (and (= head "if") (pair-units children 2))
+    (or (and (= head "if")
+             (>= (length children) 5)
+             (pair-units children 2))
         (and (. clause-heads head) (pair-units children 3))
         (ordinary-units children))))
 
@@ -71,18 +73,16 @@
 
 (defn- offending-adjacency?
   [node index previous current]
-  (let [opening-line     node.open.line
-        opening-list?    (and (= node.kind :list) (= index 2))
-        allowed-opening? (and opening-list? (= current.start opening-line))]
-    (
-     and
+  (let [opening-line     node.open.line opening-list?    (and (= node.kind :list) (= index 2)) allowed-opening? (and opening-list? (= current.start opening-line))]
+    (and
      (not allowed-opening?)
      (<= current.start previous.end))))
 
 (defn- offending-units-step
   [node units index previous]
   (let [current (. units index)]
-    (if (> index (length units))
+    (if
+      (> index (length units))
       false
       (or (and previous (offending-adjacency? node index previous current))
           (offending-units-step node units (+ index 1) current)))))
@@ -97,19 +97,14 @@
   [node]
   (let [children (meaningful-children node)]
     (and (. binding-heads (list-head node))
-         (accumulate [result
-                      false
-                      _
-                      child
-                      (ipairs children)]
+         (accumulate [result false _ child (ipairs children)]
            (or result
                (and (= child.kind :sequence)
                     (offending-units? (core.assoc child :kind :table))))))))
 
 (defn- layout-container?
   [node]
-  (
-   or
+  (or
    (= node.kind :list)
    (= node.kind :sequence)
    (= node.kind :table)))
@@ -121,11 +116,24 @@
       (and (= node.kind :sequence)
            (= (math.fmod (length (meaningful-children node)) 2) 0))))
 
-(defn- layout-result
+(defn- delayed-list-head?
+  [node]
+  (let [children (meaningful-children node) head     (. children 1) head-line (child-line head)]
+    (and (= node.kind :list)
+         head
+         (not= head-line node.open.line))))
+
+(defn- layout-body-result
   [node head]
-  (if (and (= node.kind :list) (. binding-heads head))
+  (if
+    (and (= node.kind :list) (. binding-heads head))
     (binding-layout? node)
     (offending-units? node)))
+
+(defn- layout-result
+  [node head]
+  (or (delayed-list-head? node)
+      (layout-body-result node head)))
 
 (defn- layout-node?
   [node]
@@ -136,35 +144,23 @@
 
 (defn- finding-form
   [path forms node ordinals]
-  (let [existing (form-for-node forms node nil)
-        base     (or existing (nearest-form forms node) {:form path})
-        ordinal  (+ (or (. ordinals base.form) 0) 1)]
+  (let [existing (form-for-node forms node nil) base     (or existing (nearest-form forms node) {:form path}) ordinal  (+ (or (. ordinals base.form) 0) 1)]
     (values (or existing
-                {:line     node.open.line
-                 :col      node.open.col
-                 :end-line node.close.line
-                 :end-col  (+ node.close.col 1)
-                 :form     (.. base.form " > multiline-layout#" ordinal)
-                 :node     node})
+                {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     (.. base.form " > multiline-layout#" ordinal) :node     node})
             (core.assoc ordinals base.form ordinal))))
 
 (defn- insert-finding
   [findings path forms policy node ordinals key]
   (let [(form next-ordinals) (finding-form path forms node ordinals)]
     (table.insert findings
-                  (finding path
-                           form
-                           (rule-severity policy "multiline-layout")
-                           "multiline-layout"
-                           "multi-line form: put each item on its own line"
-                           node))
+                  (finding path form (rule-severity policy "multiline-layout") "multiline-layout" "multi-line form: put each item on its own line" node))
     (core.assoc next-ordinals key true)))
 
 (defn- append-finding
   [findings path forms policy node ordinals]
-  (let [base (or (form-for-node forms node nil) (nearest-form forms node) {:form path})
-        key  (.. base.form ":" node.open.line)]
-    (if (. ordinals key)
+  (let [base (or (form-for-node forms node nil) (nearest-form forms node) {:form path}) key  (.. base.form ":" node.open.line)]
+    (if
+      (. ordinals key)
       ordinals
       (insert-finding findings path forms policy node ordinals key))))
 

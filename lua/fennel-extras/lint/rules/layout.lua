@@ -59,7 +59,7 @@ local function ordinary_units(children)
 end
 local function units_for_list(node, children)
   local head = list_head(node)
-  return (((head == "if") and pair_units(children, 2)) or (clause_heads[head] and pair_units(children, 3)) or ordinary_units(children))
+  return (((head == "if") and (#children >= 5) and pair_units(children, 2)) or (clause_heads[head] and pair_units(children, 3)) or ordinary_units(children))
 end
 local function units_for_node(node)
   local children = meaningful_children(node)
@@ -101,12 +101,21 @@ end
 local function layout_excluded_3f(node, head)
   return (((node.kind == "list") and ((head == "defn") or (head == "defn-"))) or ((node.kind == "sequence") and (math.fmod(#meaningful_children(node), 2) == 0)))
 end
-local function layout_result(node, head)
+local function delayed_list_head_3f(node)
+  local children = meaningful_children(node)
+  local head = children[1]
+  local head_line = child_line(head)
+  return ((node.kind == "list") and head and (head_line ~= node.open.line))
+end
+local function layout_body_result(node, head)
   if ((node.kind == "list") and binding_heads[head]) then
     return binding_layout_3f(node)
   else
     return offending_units_3f(node)
   end
+end
+local function layout_result(node, head)
+  return (delayed_list_head_3f(node) or layout_body_result(node, head))
 end
 local function layout_node_3f(node)
   local head = list_head(node)

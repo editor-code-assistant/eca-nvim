@@ -11,8 +11,9 @@
 
 (defn- severity-rank
   [severity]
-  (
-   if (= severity "error") 1
+  (if
+    (= severity "error")
+    1
     2))
 
 (defn- finding-less?
@@ -38,7 +39,8 @@
 
 (defn- copy-findings
   [findings index copied]
-  (if (> index (length findings))
+  (if
+    (> index (length findings))
     copied
     (copy-findings findings (+ index 1) (insert-finding copied (. findings index)))))
 
@@ -50,46 +52,49 @@
 
 (defn- escape-control-carriage
   [character]
-  (if (= character carriage-return)
+  (if
+    (= character carriage-return)
     (.. slash "r")
     (string.format (.. slash "u00%02X") (string.byte character))))
 
 (defn- escape-control-whitespace
   [character]
-  (if (= character tab)
+  (if
+    (= character tab)
     (.. slash "t")
     (escape-control-carriage character)))
 
 (defn- escape-control-newline
   [character]
-  (if (= character newline)
+  (if
+    (= character newline)
     (.. slash "n")
     (escape-control-whitespace character)))
 
 (defn- escape-control-tail
   [character]
-  (if (= character slash)
+  (if
+    (= character slash)
     (.. slash slash)
     (escape-control-newline character)))
 
 (defn- escape-control
   [character]
-  (if (= character double-quote)
+  (if
+    (= character double-quote)
     (.. slash double-quote)
     (escape-control-tail character)))
 
 (defn- valid-continuation?
   [byte]
-  (
-   and
+  (and
    byte
    (>= byte 128)
    (<= byte 191)))
 
 (defn- valid-two-byte?
   [first second]
-  (
-   and
+  (and
    (>= first 194)
    (<= first 223)
    (valid-continuation? second)))
@@ -141,15 +146,13 @@
 
 (defn- normalize-utf8-bytes
   [value index chunks recurse]
-  (let [first  (string.byte value index)
-        second (string.byte value (+ index 1))
-        third  (string.byte value (+ index 2))
-        fourth (string.byte value (+ index 3))]
+  (let [first  (string.byte value index) second (string.byte value (+ index 1)) third  (string.byte value (+ index 2)) fourth (string.byte value (+ index 3))]
     (normalize-utf8-step value index chunks first second third fourth recurse)))
 
 (defn- normalize-utf8-at
   [value index chunks]
-  (if (> index (length value))
+  (if
+    (> index (length value))
     (table.concat chunks)
     (normalize-utf8-bytes value index chunks normalize-utf8-at)))
 
@@ -163,11 +166,7 @@
 
 (defn- exclusion-line
   [finding]
-  (.. "  exclusion: {:rule "
-      (json-string finding.rule)
-      " :form "
-      (json-string finding.form)
-      " :reason \"explain why this is intentional\"}"))
+  (.. "  exclusion: {:rule " (json-string finding.rule) " :form " (json-string finding.form) " :reason \"explain why this is intentional\"}"))
 
 (defn- text-rule
   [finding]
@@ -186,7 +185,8 @@
 
 (defn- append-text-lines
   [diagnostics index lines]
-  (if (> index (length diagnostics))
+  (if
+    (> index (length diagnostics))
     lines
     (append-text-lines diagnostics (+ index 1) (append-text lines (. diagnostics index)))))
 
@@ -232,7 +232,8 @@
 
 (defn- diagnostic-json
   [finding]
-  (if (= finding.kind "finding")
+  (if
+    (= finding.kind "finding")
     (finding-json finding)
     (stale-json finding)))
 
@@ -243,7 +244,8 @@
 
 (defn- append-json-lines
   [diagnostics index lines]
-  (if (> index (length diagnostics))
+  (if
+    (> index (length diagnostics))
     lines
     (append-json-lines diagnostics (+ index 1) (append-json lines (. diagnostics index)))))
 

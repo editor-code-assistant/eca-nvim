@@ -20,7 +20,8 @@
 (defn- plain-sequence-step
   [value key count maximum]
   (let [(next-key next-value) (next value key)]
-    (if (= next-key nil)
+    (if
+      (= next-key nil)
       (and (= count maximum) (= count (length value)))
       (and (= (type next-key) :number)
            (= next-key (math.floor next-key))
@@ -40,8 +41,7 @@
   [value]
   (and (= (type value) :table)
        (let [metadata (getmetatable value)]
-         (
-          and
+         (and
           metadata
           (. metadata table-marker)))))
 
@@ -51,8 +51,10 @@
 
 (defn- trivia?
   [child]
-  (if child
-    (if child.kind
+  (if
+    child
+    (if
+      child.kind
       (or (= child.kind :whitespace)
           (= child.kind :newline)
           (= child.kind :comment)
@@ -74,21 +76,24 @@
 
 (defn- decode-string
   [token]
-  (let [text   token.text
-        n      (string.len text)
-        result []]
+  (let [text   token.text n      (string.len text) result []]
     (var i 2)
     (while (< i n)
       (let [c (string.sub text i i)]
-        (if (= c "\\")
+        (if
+          (= c "\\")
           (let [escaped (string.sub text (+ i 1) (+ i 1))]
-            (if (= escaped "\"")
+            (if
+              (= escaped "\"")
               (table.insert result "\"")
-              (if (= escaped "\\")
+              (if
+                (= escaped "\\")
                 (table.insert result "\\")
-                (if (= escaped "n")
+                (if
+                  (= escaped "n")
                   (table.insert result "\n")
-                  (if (= escaped "t")
+                  (if
+                    (= escaped "t")
                     (table.insert result "\t")
                     (error (error-at "unsupported string escape" token) 0)))))
             (set i (+ i 2)))
@@ -99,13 +104,17 @@
 (defn- convert-symbol
   [token]
   (let [text token.text]
-    (if (= (string.sub text 1 1) ":")
+    (if
+      (= (string.sub text 1 1) ":")
       (string.sub text 2)
-      (if (= text "true")
+      (if
+        (= text "true")
         true
-        (if (= text "false")
+        (if
+          (= text "false")
           false
-          (if (= text "nil")
+          (if
+            (= text "nil")
             nil
             (error (error-at "symbols are not allowed" token) 0)))))))
 
@@ -116,9 +125,11 @@
   (while (and (<= i (length children)) (not failure))
     (let [(key key-error)     (convert-fn (. children i))
           (value value-error) (convert-fn (rawget children (+ i 1)))]
-      (if key-error
+      (if
+        key-error
         (set failure key-error)
-        (if value-error
+        (if
+          value-error
           (set failure value-error)
           (tset result key value))))
     (set i (+ i 2)))
@@ -126,37 +137,47 @@
 
 (defn- convert
   [node]
-  (if (= node.kind :table)
-    (let [children (meaningful-children node.children)
-          result   {}]
-      (if (= (math.fmod (length children) 2) 1)
+  (if
+    (= node.kind :table)
+    (let [children (meaningful-children node.children) result   {}]
+      (if
+        (= (math.fmod (length children) 2) 1)
         (error (error-at "table must contain key/value pairs" node.open) 0)
         (let [failure (convert-table-children convert children result)]
-          (if failure
+          (if
+            failure
             (error failure 0)
             (marked-table result)))))
-    (if (= node.kind :sequence)
+    (if
+      (= node.kind :sequence)
       (let [result []]
         (var failure nil)
         (each [_ child (ipairs (meaningful-children node.children))]
           (when (not failure)
             (let [(value error) (convert child)]
-              (if error
+              (if
+                error
                 (set failure error)
                 (table.insert result value)))))
-        (if failure
+        (if
+          failure
           (error failure 0)
           (marked-sequence result)))
-      (if (= node.kind :list)
+      (if
+        (= node.kind :list)
         (error (error-at "lists are not allowed" node.open) 0)
-        (if (= node.kind :string)
+        (if
+          (= node.kind :string)
           (decode-string node)
-          (if (= node.kind :symbol)
+          (if
+            (= node.kind :symbol)
             (convert-symbol node)
-            (if (= node.kind :number)
+            (if
+              (= node.kind :number)
               (let [(clean) (string.gsub node.text "_" "")]
                 (tonumber clean))
-              (if (= node.kind :prefix)
+              (if
+                (= node.kind :prefix)
                 (error (error-at "reader prefixes are not allowed" node) 0)
                 (error (error-at "unsupported form" node) 0)))))))))
 
@@ -165,19 +186,25 @@
   (let [(ok result) (pcall
                      (fn []
                        (let [(root reader-error) (reader.parse text)]
-                         (if reader-error
+                         (if
+                           reader-error
                            {:error reader-error}
                            (let [children (meaningful-children root.children)]
-                             (if (= (length children) 0)
+                             (if
+                               (= (length children) 0)
                                {:error {:message "expected one top-level table" :line 1 :col 1}}
-                               (if (> (length children) 1)
+                               (if
+                                 (> (length children) 1)
                                  {:error (error-at "expected exactly one top-level form" (. children 2))}
                                  (let [top (. children 1)]
-                                   (if (= top.kind :table)
+                                   (if
+                                     (= top.kind :table)
                                      {:value (convert top)}
                                      {:error (error-at "top-level form must be a table" (or top.open top))})))))))))]
-    (if (not ok)
+    (if
+      (not ok)
       (values nil result)
-      (if result.error
+      (if
+        result.error
         (values nil result.error)
         result.value))))

@@ -82,12 +82,12 @@ The fourteen rules are:
 - `spec-direct-require` (error): specs use the shared macros instead of requiring `plenary.busted` or `luassert` directly.
 - `one-is-per-testing` (error): each `testing` form contains exactly one `is`.
 - `if-branch-call` (warning): multi-expression `if` branches are moved to a named helper.
-- `if-without-else` (warning): two-argument `if` forms are written as `when`.
+- `if-without-else` (warning): `(if test then)` and `(if test then nil)` are written as `when`.
 - `control-layout` (warning): control forms in statement position span several lines.
 - `defn-args-newline` (warning): `defn` and `defn-` argument vectors start on the line below the function name.
 - `no-mutation` (warning): source files do not use `var`, `set`, or `while`; return new values instead.
 - `function-shape` (warning): bodies of `defn`/`defn-`/`fn`/`lambda`/`λ` use an optional first `let` with leaf values, then expressions that are leaves or one layer; move deeper code into named private functions.
-- `multiline-layout` (warning): multi-line forms put each item on its own line.
+- `multiline-layout` (warning): list heads stay on the opening line; once a form spans lines, each item starts its own line. Maps, binding vectors, and multi-clause `if`/`case`/`match` count pairs; single-clause `if` forms count elements, with the test optionally sharing the head line and each branch on its own line.
 - `file-size` (warning): source files contain at most the configured number of nonblank, non-comment code lines.
 - `core-require` (error): `eca.nfnl.core` is required as `core`.
 

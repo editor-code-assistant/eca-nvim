@@ -14,8 +14,7 @@
 (local leaf-valid? valid.leaf-valid?)
 (defn- plain-call-layer-count
   [layer?]
-  (
-   if
+  (if
     layer?
     1
     0))
@@ -31,34 +30,28 @@
 
 (defn- plain-call-state-step
   [children state child index]
-  (if (and state.valid
-           (>= index 2)
-           (not (quoted-child? children index)))
+  (if
+    (and state.valid
+         (>= index 2)
+         (not (quoted-child? children index)))
     (plain-call-layer-state state child)
     state))
 
 (defn- plain-call-result
   [children]
-  (accumulate [state
-               {:valid true :layers 0}
-               index
-               child
-               (ipairs children)]
+  (accumulate [state {:valid true :layers 0} index child (ipairs children)]
     (plain-call-state-step children state child index)))
 
 (defn plain-call-one-layer?
   [node]
-  (let [children (meaningful-children node)
-        result   (plain-call-result children)]
-    (
-     and
+  (let [children (meaningful-children node) result   (plain-call-result children)]
+    (and
      result.valid
      (>= result.layers 1))))
 
 (defn leaf-violations
   [node]
-  (
-   if
+  (if
     (leaf-valid? node)
     []
     [node]))

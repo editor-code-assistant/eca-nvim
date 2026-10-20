@@ -8,7 +8,8 @@
 
 (defn- leading-spaces-step
   [line index]
-  (if (and (<= index (string.len line)) (= (string.sub line index index) " "))
+  (if
+    (and (<= index (string.len line)) (= (string.sub line index index) " "))
     (leading-spaces-step line (+ index 1))
     (- index 1)))
 
@@ -30,7 +31,8 @@
 
 (defn- append-nontrivia-child
   [children child]
-  (if (nontrivia-child? child)
+  (if
+    (nontrivia-child? child)
     (insert-nontrivia-child children child)
     children))
 
@@ -41,14 +43,14 @@
 
 (defn child-start
   [child]
-  (
-   if
+  (if
     child.text
     child
     child.open))
 
 (defn child-end
   [child]
-  (if child.text
+  (if
+    child.text
     child
     child.close))
