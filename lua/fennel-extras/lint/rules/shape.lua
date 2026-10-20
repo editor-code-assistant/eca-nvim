@@ -61,9 +61,19 @@ do
   _2amodule_2a["add-function-findings"] = add_function_findings0
   add_function_findings = _2amodule_2a["add-function-findings"]
 end
+local function function_child_3f(node, index, child)
+  return (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and not quoted_child_3f(node.children, index))
+end
+local function collect_function_child(node, result, walker, index, child)
+  if function_child_3f(node, index, child) then
+    return walker(child, result)
+  else
+    return nil
+  end
+end
 local function collect_function_children(node, result, walker)
   for index, child in ipairs((node.children or {})) do
-    do local _ = (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and not quoted_child_3f(node.children, index) and walker(child, result)) end
+    collect_function_child(node, result, walker, index, child)
   end
   return result
 end
@@ -72,7 +82,10 @@ local function collect_function_nodes(node, result)
     table.insert(result, node)
   else
   end
-  do local _ = (node and collect_function_children(node, result, collect_function_nodes)) end
+  if node then
+    collect_function_children(node, result, collect_function_nodes)
+  else
+  end
   return result
 end
 local function synthetic_form(path, node)

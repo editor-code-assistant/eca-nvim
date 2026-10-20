@@ -74,7 +74,7 @@ The argument vector must start below the name, with a docstring allowed between 
 
 `make style` runs `scripts/fennel-extras lint` with no selection flag by default, checking all configured files without requiring Git. Set `STYLE_FLAGS=--changed` to check changed forms and files against `HEAD`, or `STYLE_FLAGS="--base <ref>"` to use another Git base. `--all` is an explicit alias for the no-selection mode; `--changed` and `--all` cannot be combined; `--all` and `--base` cannot be combined. Explicit paths restrict discovery in any mode. Add `--format json` for JSON Lines output.
 
-The fourteen rules are:
+The fifteen rules are:
 
 - `module-style` (error): non-spec files use the module style.
 - `spec-macro-import` (error): specs import `deftest`, `testing`, and `is` from `spec.eca.macros`.
@@ -83,7 +83,8 @@ The fourteen rules are:
 - `one-is-per-testing` (error): each `testing` form contains exactly one `is`.
 - `if-branch-call` (warning): multi-expression `if` branches are moved to a named helper.
 - `if-without-else` (warning): `(if test then)` and `(if test then nil)` are written as `when`.
-- `control-layout` (warning): control forms in statement position span several lines.
+- `control-layout` (warning): control forms span several lines only when they are the sole expression of a body.
+- `unused-and-or` (warning): discarded `and`/`or` results in statement bodies use `when`.
 - `defn-args-newline` (warning): `defn` and `defn-` argument vectors start on the line below the function name.
 - `no-mutation` (warning): source files do not use `var`, `set`, or `while`; return new values instead.
 - `function-shape` (warning): bodies of `defn`/`defn-`/`fn`/`lambda`/`λ` use an optional first `let` with leaf values, then expressions that are leaves or one layer; move deeper code into named private functions.

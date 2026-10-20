@@ -34,8 +34,7 @@
   [root args]
   (let [file   (io.popen (.. (git-command root args) " </dev/null 2>&1; printf '\\n__ECA_STATUS__%s' $?"))
         output (git-read-output file)]
-    (and file
-         (file:close))
+    (when file (file:close))
     (git-output output (string.find output "\n__ECA_STATUS__"))))
 
 (defn- git-root

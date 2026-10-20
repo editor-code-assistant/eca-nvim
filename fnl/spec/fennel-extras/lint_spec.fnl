@@ -1104,18 +1104,18 @@
            (length (control-layout-findings "(defn f\n  [file]\n  (when (kept? file) file))"
                                             "fnl/app.fnl"
                                             {"module-style" :off})))))
-  (testing "flags a one-line or in a loop body"
-    (is (= 1
+  (testing "does not flag a one-line or as the last expression of a value-returning loop body"
+    (is (= 0
            (length (control-layout-findings "(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r (m? e))))"
                                             "fnl/app.fnl"
                                             {"module-style" :off})))))
-  (testing "flags a one-line and in direct function statement position"
-    (is (= 1
+  (testing "does not flag a one-line and as the returned function expression"
+    (is (= 0
            (length (control-layout-findings "(defn f\n  [a b]\n  (and a b))"
                                             "fnl/app.fnl"
                                             {"module-style" :off})))))
-  (testing "accepts a control form in a when branch position"
-    (is (= 0
+  (testing "flags a one-line control form as the sole when body expression"
+    (is (= 1
            (length (control-layout-findings "(defn f\n  [a b c]\n  (when a\n    (if b c a)))"
                                             "fnl/app.fnl"
                                             {"module-style" :off})))))
@@ -1124,9 +1124,19 @@
            (length (control-layout-findings "(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r\n      (m? e))))"
                                             "fnl/app.fnl"
                                             {"module-style" :off})))))
-  (testing "flags one-line case and match forms in statement position"
-    (is (= 2
+  (testing "does not flag controls when a do body has other expressions"
+    (is (= 0
            (length (control-layout-findings "(defn f\n  [x]\n  (do (case x 1 :one _ :other)\n      (match x 1 :one _ :other)))"
+                                            "fnl/app.fnl"
+                                            {"module-style" :off})))))
+  (testing "flags a one-line control form as the sole let body expression"
+    (is (= 1
+           (length (control-layout-findings "(defn f\n  [ok]\n  (let [x 1]\n    (if ok x 0)))"
+                                            "fnl/app.fnl"
+                                            {"module-style" :off})))))
+  (testing "flags a one-line control form as the sole each body expression"
+    (is (= 1
+           (length (control-layout-findings "(defn f\n  [xs]\n  (each [_ x (ipairs xs)]\n    (if x x 0)))"
                                             "fnl/app.fnl"
                                             {"module-style" :off})))))
   (testing "does not require control forms in value, call, vector, map, or branch positions"
@@ -1134,14 +1144,11 @@
            (length (control-layout-findings "(defn f\n  [a b c]\n  (let [x (or a b)]\n    {:p (if a b c)\n     :q [(when a b)]}\n    (foo (if a b c))\n    (if a\n      (or b c)\n      c)))"
                                             "fnl/app.fnl"
                                             {"module-style" :off})))))
-  (testing "reports nested offending statement forms with distinct deterministic identities"
-    (let [source "(defn f\n  []\n  (do (if a b c)\n      (when a b)))"
-          first  (control-layout-findings source "fnl/app.fnl" {"module-style" :off})
-          second (control-layout-findings source "fnl/app.fnl" {"module-style" :off})]
-      (is (and (= 2 (length first))
-               (not= (. first 1 :form) (. first 2 :form))
-               (vim.deep_equal (icollect [_ finding (ipairs first)] (. finding :form))
-                               (icollect [_ finding (ipairs second)] (. finding :form)))))))
+  (testing "does not flag nested controls when a do body has other expressions"
+    (is (= 0
+           (length (control-layout-findings "(defn f\n  []\n  (do (if a b c)\n      (when a b)))"
+                                            "fnl/app.fnl"
+                                            {"module-style" :off})))))
   (testing "applies to spec files"
     (is (= 1
            (length (control-layout-findings "(defn f [] (if a b c))"
@@ -1176,7 +1183,7 @@
                                             "fnl/app.fnl"
                                             {"module-style" :off "control-layout" :off})))))
   (testing "an exclusion removes only the selected control-layout finding"
-    (let [source   "(defn f [] (do (if a b c) (when a b)))"
+    (let [source   "(defn f [] (if a b c))\n(defn g [] (when a b))"
           path     "fnl/app.fnl"
           rules    {"module-style" :off}
           baseline (control-layout-findings source path rules)
@@ -1189,6 +1196,134 @@
       (is (= 1
              (length (icollect [_ finding (ipairs result)]
                        (when (= (. finding :rule) "control-layout")
+                         finding))))))))
+
+(defn- unused-and-or-findings
+  [source path rules]
+  (let [result (check-source source path rules)]
+    (if (or (. result :module-missing) (. result :value-nil?))
+      result
+      (icollect [_ finding (ipairs result)]
+        (when (= (. finding :rule) "unused-and-or")
+          finding)))))
+
+(deftest unused-and-or
+  (testing "flags a discarded and before the returned function expression"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f\n  [file]\n  (and file (close file))\n  (out file))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "does not flag the last and expression of a value-returning body"
+    (is (= 0
+           (length (unused-and-or-findings "(defn f\n  [a b]\n  (and a b))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "flags or in an each body"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f\n  [xs]\n  (each [_ x (ipairs xs)]\n    (or x (warn))))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "does not flag and as the last icollect body expression"
+    (is (= 0
+           (length (unused-and-or-findings "(defn f\n  [xs]\n  (icollect [_ x (ipairs xs)]\n    (and x (f x))))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "flags or before the returned let expression"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f []\n  (let [x 1]\n    (or x (warn))\n    x))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "flags and before the returned when expression"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f []\n  (when ok\n    (and a (b))\n    c))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "flags and before the returned do expression"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f []\n  (do (and a (b)) c))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "does not flag and or in value positions"
+    (is (= 0
+           (length (unused-and-or-findings "(defn f []\n  (let [y (and a b)] y)\n  (foo (or a b)))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "ignores quoted and-or data"
+    (is (= 0
+           (length (unused-and-or-findings "'(and a b) '(or a b)"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "ignores and-or data in a quasiquote"
+    (is (= 0
+           (length (unused-and-or-findings "(defn f\n  []\n  (do `(and a b) out))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "checks only unquoted and-or code through nested quasiquotes"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f\n  []\n  `(do ,(do (and a (b)) c) `(do (and x y) z)))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "checks and-or code inside an unquote"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f\n  []\n  `(foo ,(do (or a (warn)) b)))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "ignores plain quoted and-or data in a do body"
+    (is (= 0
+           (length (unused-and-or-findings "(defn f\n  []\n  (do '(and a b) out))"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off})))))
+  (testing "applies to spec files"
+    (is (= 1
+           (length (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
+                                           "fnl/spec/app_spec.fnl"
+                                           {"control-layout" :off})))))
+  (testing "gives nested discarded and-or forms distinct stable identities"
+    (let [source "(defn f []\n  (do (and a b) (or c d) (out)))"
+          rules  {"module-style" :off "control-layout" :off}
+          first  (unused-and-or-findings source "fnl/app.fnl" rules)
+          second (unused-and-or-findings source "fnl/app.fnl" rules)]
+      (is (and (= 2 (length first))
+               (not= (. first 1 :form) (. first 2 :form))
+               (vim.deep_equal (icollect [_ finding (ipairs first)] (. finding :form))
+                               (icollect [_ finding (ipairs second)] (. finding :form)))))))
+  (testing "uses the stable identity warning severity and prescribed message"
+    (let [finding (. (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
+                                             "fnl/app.fnl"
+                                             {"module-style" :off "control-layout" :off})
+                      1)]
+      (is (= {:form     "fnl/app.fnl > defn:f > and#1"
+              :severity "warning"
+              :message  "and/or result is unused; use when"}
+             {:form     (. finding :form)
+              :severity (. finding :severity)
+              :message  (. finding :message)}))))
+  (testing "uses error severity when configured"
+    (is (= "error"
+           (. (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
+                                      "fnl/app.fnl"
+                                      {"module-style" :off "control-layout" :off "unused-and-or" :error})
+              1
+              :severity))))
+  (testing "does not report when disabled"
+    (is (= 0
+           (length (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
+                                           "fnl/app.fnl"
+                                           {"module-style" :off "control-layout" :off "unused-and-or" :off})))))
+  (testing "an exclusion removes only the selected unused-and-or finding"
+    (let [source   "(defn f []\n  (do (and a b) (or c d) (out)))"
+          path     "fnl/app.fnl"
+          rules    {"module-style" :off "control-layout" :off}
+          baseline (unused-and-or-findings source path rules)
+          result   (check-context source
+                                  {:path       path
+                                   :rules      rules
+                                   :exclusions [{:rule   "unused-and-or"
+                                                 :form   (. baseline 1 :form)
+                                                 :reason "intentional"}]})]
+      (is (= 1
+             (length (icollect [_ finding (ipairs result)]
+                       (when (= (. finding :rule) "unused-and-or")
                          finding))))))))
 
 (defn- repeated-code

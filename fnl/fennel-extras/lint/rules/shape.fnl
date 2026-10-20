@@ -52,12 +52,20 @@
   [findings path form forms policy node]
   (when (enabled? policy "function-shape")
     (add-function-findings-for-node findings path form forms policy node)))
+(defn- function-child?
+  [node index child]
+  (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
+       (not (quoted-child? node.children index))))
+
+(defn- collect-function-child
+  [node result walker index child]
+  (when (function-child? node index child)
+    (walker child result)))
+
 (defn- collect-function-children
   [node result walker]
   (each [index child (ipairs (or node.children []))]
-    (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
-         (not (quoted-child? node.children index))
-         (walker child result)))
+    (collect-function-child node result walker index child))
   result)
 
 (defn- collect-function-nodes
@@ -66,8 +74,8 @@
              (= node.kind :list)
              (or (= (list-head node) "fn") (= (list-head node) "lambda") (= (list-head node) "λ")))
     (table.insert result node))
-  (and node
-       (collect-function-children node result collect-function-nodes))
+  (when node
+    (collect-function-children node result collect-function-nodes))
   result)
 
 (defn- synthetic-form

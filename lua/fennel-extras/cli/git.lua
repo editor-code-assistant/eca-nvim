@@ -47,7 +47,10 @@ end
 local function git_call(root, args)
   local file = io.popen((git_command(root, args) .. " </dev/null 2>&1; printf '\\n__ECA_STATUS__%s' $?"))
   local output = git_read_output(file)
-  do local _ = (file and file:close()) end
+  if file then
+    file:close()
+  else
+  end
   return git_output(output, string.find(output, "\n__ECA_STATUS__"))
 end
 local function git_root(start)

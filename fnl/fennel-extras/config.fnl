@@ -187,7 +187,9 @@
                   dir)
         parent  (string.match trimmed "^(.*)/[^/]+$")]
     (when parent
-      (if (= parent "") "/" parent))))
+      (if (= parent "")
+        "/"
+        parent))))
 
 (defn- found-config
   [candidate]

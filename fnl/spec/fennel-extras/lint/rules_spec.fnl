@@ -26,7 +26,7 @@
         (sort-severities entries)))))
 
 (deftest defaults
-  (testing "all fourteen lint rules have the approved default severities"
+  (testing "all fifteen lint rules have the approved default severities"
     (is (= [["control-layout" "warning"]
             ["core-require" "error"]
             ["defn-args-newline" "warning"]
@@ -40,7 +40,8 @@
             ["one-is-per-testing" "error"]
             ["spec-direct-require" "error"]
             ["spec-macro-import" "error"]
-            ["spec-no-module" "error"]]
+            ["spec-no-module" "error"]
+            ["unused-and-or" "warning"]]
            (let [entries (default-severities)]
              (if (. entries :module-missing)
                entries

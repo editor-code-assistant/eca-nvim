@@ -199,11 +199,15 @@
     (validate-let-bindings-children (meaningful-children bindings) result)
     result))
 
+(defn- validate-let-body-child
+  [result index child]
+  (when (>= index 3)
+    (append-nodes result (body-expression-violations child))))
+
 (defn- validate-let-body
   [children result]
   (each [index child (ipairs children)]
-    (and (>= index 3)
-         (append-nodes result (body-expression-violations child))))
+    (validate-let-body-child result index child))
   result)
 
 (defn- validate-let
@@ -228,10 +232,14 @@
     (append-nodes result (validate-let (. body 1)))
     result))
 
+(defn- validate-function-body-child
+  [result start index child]
+  (when (>= index start)
+    (append-nodes result (body-expression-violations child))))
+
 (defn validate-function-body
   [body result]
-  (let [first-let? (function-first-let? body) start      (function-body-start-index first-let?) initial    (function-body-initial body result first-let?)]
+  (let [first-let? (function-first-let? body) start (function-body-start-index first-let?) initial (function-body-initial body result first-let?)]
     (each [index child (ipairs body)]
-      (and (>= index start)
-           (append-nodes initial (body-expression-violations child))))
+      (validate-function-body-child initial start index child))
     initial))

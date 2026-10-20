@@ -262,9 +262,19 @@ end
 local function prefixed_root_child_3f(root, index)
   return prefixed_child_3f(root.children, index)
 end
+local function root_form_3f(root, index, child)
+  return (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and not prefixed_root_child_3f(root, index))
+end
+local function collect_root_form(root, forms, index, child)
+  if root_form_3f(root, index, child) then
+    return table.insert(forms, child)
+  else
+    return nil
+  end
+end
 local function collect_root_forms(root, forms)
   for index, child in ipairs(root.children) do
-    do local _ = (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and not prefixed_root_child_3f(root, index) and table.insert(forms, child)) end
+    collect_root_form(root, forms, index, child)
   end
   return nil
 end

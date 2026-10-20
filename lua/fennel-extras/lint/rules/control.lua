@@ -19,7 +19,6 @@ local rule_severity = registry["rule-severity"]
 local control_heads = {["if"] = true, when = true, ["and"] = true, ["or"] = true, case = true, match = true}
 local function_heads = {defn = true, ["defn-"] = true, fn = true, lambda = true, ["\206\187"] = true}
 local binding_heads = {let = true, ["when-let"] = true, ["if-let"] = true, ["with-open"] = true}
-local loop_heads = {each = true, ["for"] = true, ["while"] = true, icollect = true, collect = true, accumulate = true}
 local function quoted_mode_for_prefix(prefix, mode)
   return (((prefix == "'") and "quoted") or ((mode == "quoted") and "quoted") or ((prefix == "`") and (mode + 1)) or ((prefix == ",") and math.max(0, (mode - 1))) or mode)
 end
@@ -54,16 +53,32 @@ local function function_body_offset(argument)
     return 0
   end
 end
+local body_heads = {let = true, when = true, ["when-let"] = true, ["if-let"] = true, ["with-open"] = true, each = true, ["for"] = true, ["while"] = true, icollect = true, collect = true, accumulate = true}
+local function function_argument_index(head)
+  return (((head == "defn") and 3) or ((head == "defn-") and 3) or 2)
+end
+local function function_base(head)
+  return (((head == "defn") and 4) or ((head == "defn-") and 4) or 3)
+end
+local function body_form_3f(head)
+  return body_heads[head]
+end
 local function body_start(head, children)
-  local argument = children[2]
-  return ((function_heads[head] and (3 + function_body_offset(argument))) or ((binding_heads[head] or loop_heads[head]) and 3) or ((head == "do") and 2) or 0)
+  local argument = children[function_argument_index(head)]
+  return ((function_heads[head] and (function_base(head) + function_body_offset(argument))) or (body_form_3f(head) and 3) or ((head == "do") and 2) or 0)
+end
+local function body_child_3f(head, children, index)
+  local start = body_start(head, children)
+  return ((start > 0) and (index >= start))
+end
+local function last_body_child_3f(head, children, index)
+  return (body_child_3f(head, children, index) and (index == #children))
 end
 local function statement_child_3f(parent, child)
   local head = list_head(parent)
   local children = meaningful_children(parent)
   local index = meaningful_index(parent, child)
-  local start = body_start(head, children)
-  return ((start > 0) and (index >= start))
+  return (body_child_3f(head, children, index) and (#children == body_start(head, children)) and not (last_body_child_3f(head, children, index) and ((list_head(child) == "and") or (list_head(child) == "or"))))
 end
 local function executable_child_3f(child, mode)
   return (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and (mode ~= "quoted"))

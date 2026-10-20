@@ -202,14 +202,20 @@
   [root index]
   (prefixed-child? root.children index))
 
+(defn- root-form?
+  [root index child]
+  (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
+       (not (prefixed-root-child? root index))))
+
+(defn- collect-root-form
+  [root forms index child]
+  (when (root-form? root index child)
+    (table.insert forms child)))
+
 (defn- collect-root-forms
   [root forms]
   (each [index child (ipairs root.children)]
-    (and (or (= child.kind :list)
-             (= child.kind :sequence)
-             (= child.kind :table))
-         (not (prefixed-root-child? root index))
-         (table.insert forms child))))
+    (collect-root-form root forms index child)))
 
 (defn root-forms
   [source]

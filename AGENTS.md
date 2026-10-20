@@ -5,7 +5,8 @@ Read docs/CONTRIBUTING.md first; its rules apply to you.
 - Only touch files in the task's scope. The working tree may contain uncommitted user work: never stash, reset, checkout, or revert it. Do not commit or push unless asked.
 - After any Fennel change, run `make compile`, `make test`, `make lint`, and `make style`; run `make fmt` (or check with `make fmt-check`) too. Keep generated Lua in sync and report lint findings. Never hand-edit `lua/`. Pre-existing findings in untouched files are not your task unless asked, but do not add new ones.
 - The `if-without-else` rule (warning) flags `(if test then)` and `(if test then nil)`; use `when` instead.
-- The `control-layout` rule (warning) requires `if`/`when`/`and`/`or`/`case`/`match` forms in statement position to span several lines.
+- The `control-layout` rule (warning) requires control forms to span several lines only when they are the sole expression of a body.
+- The `unused-and-or` rule (warning) requires discarded `and`/`or` results in statement bodies to use `when`.
 - The `multiline-layout` rule (warning) requires list heads and first arguments on the head line; `do` forms are exempt, and `defn`/`defn-` names remain on the head line.
 - The `defn-args-newline` rule (warning) requires `defn` and `defn-` argument vectors to start on the line below the function name; a docstring may appear between them.
 - The `no-mutation` rule (warning, source files only) flags `var`, `set`, and `while`; prefer returning new values instead.

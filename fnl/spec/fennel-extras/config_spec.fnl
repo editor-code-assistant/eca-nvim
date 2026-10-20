@@ -344,6 +344,9 @@
   (testing "accepts the control-layout lint rule from parsed Fennel"
     (is (= {:lint {:rules {"control-layout" "warning"}}}
            (parse-value "{:lint {:rules {\"control-layout\" :warning}}}"))))
+  (testing "accepts the unused-and-or lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"unused-and-or" "warning"}}}
+           (parse-value "{:lint {:rules {\"unused-and-or\" :warning}}}"))))
   (testing "accepts a positive max-code-lines value"
     (is (= {:value? true :has-message false}
            (validate-summary {:lint {:max-code-lines 10}}))))
@@ -513,7 +516,8 @@
                                "function-shape"      "warning"
                                "no-mutation"         "warning"
                                "file-size"           "warning"
-                               "core-require"        "off"}
+                               "core-require"        "off"
+                               "unused-and-or"       "warning"}
               :max-code-lines 300
               :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}
              (if (. config :module-missing)

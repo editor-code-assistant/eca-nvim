@@ -199,9 +199,16 @@ local function validate_let_bindings(bindings, result)
     return result
   end
 end
+local function validate_let_body_child(result, index, child)
+  if (index >= 3) then
+    return append_nodes(result, body_expression_violations(child))
+  else
+    return nil
+  end
+end
 local function validate_let_body(children, result)
   for index, child in ipairs(children) do
-    do local _ = ((index >= 3) and append_nodes(result, body_expression_violations(child))) end
+    validate_let_body_child(result, index, child)
   end
   return result
 end
@@ -227,6 +234,13 @@ local function function_body_initial(body, result, first_let_3f)
     return result
   end
 end
+local function validate_function_body_child(result, start, index, child)
+  if (index >= start) then
+    return append_nodes(result, body_expression_violations(child))
+  else
+    return nil
+  end
+end
 local validate_function_body
 do
   local function validate_function_body0(body, result)
@@ -234,7 +248,7 @@ do
     local start = function_body_start_index(first_let_3f)
     local initial = function_body_initial(body, result, first_let_3f)
     for index, child in ipairs(body) do
-      do local _ = ((index >= start) and append_nodes(initial, body_expression_violations(child))) end
+      validate_function_body_child(initial, start, index, child)
     end
     return initial
   end

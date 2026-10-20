@@ -17,7 +17,6 @@
 (local control-heads {:if true :when true :and true :or true :case true :match true})
 (local function-heads {:defn true :defn- true :fn true :lambda true :λ true})
 (local binding-heads {:let true :when-let true :if-let true :with-open true})
-(local loop-heads {:each true :for true :while true :icollect true :collect true :accumulate true})
 
 (defn- quoted-mode-for-prefix
   [prefix mode]
@@ -52,20 +51,64 @@
     1
     0))
 
+(local body-heads
+       {:let        true
+        :when       true
+        :when-let   true
+        :if-let     true
+        :with-open  true
+        :each       true
+        :for        true
+        :while      true
+        :icollect   true
+        :collect    true
+        :accumulate true})
+
+(defn- function-argument-index
+  [head]
+  (or (and (= head "defn") 3)
+      (and (= head "defn-") 3)
+      2))
+
+(defn- function-base
+  [head]
+  (or (and (= head "defn") 4)
+      (and (= head "defn-") 4)
+      3))
+
+(defn- body-form?
+  [head]
+  (. body-heads head))
+
 (defn- body-start
   [head children]
-  (let [argument (. children 2)]
+  (let [argument (. children (function-argument-index head))]
     (or (and (. function-heads head)
-             (+ 3 (function-body-offset argument)))
-        (and (or (. binding-heads head) (. loop-heads head)) 3)
+             (+ (function-base head) (function-body-offset argument)))
+        (and (body-form? head) 3)
         (and (= head "do") 2)
         0)))
 
+(defn- body-child?
+  [head children index]
+  (let [start (body-start head children)]
+    (and (> start 0) (>= index start))))
+
+(defn- last-body-child?
+  [head children index]
+  (and (body-child? head children index)
+       (= index (length children))))
+
 (defn- statement-child?
   [parent child]
-  (let [head     (list-head parent) children (meaningful-children parent) index    (meaningful-index parent child) start    (body-start head children)]
-    (and (> start 0)
-         (>= index start))))
+  (let [head     (list-head parent)
+        children (meaningful-children parent)
+        index    (meaningful-index parent child)]
+    (and (body-child? head children index)
+         (= (length children) (body-start head children))
+         (not (and (last-body-child? head children index)
+                   (or (= (list-head child) "and")
+                       (= (list-head child) "or")))))))
 
 (defn- executable-child?
   [child mode]
