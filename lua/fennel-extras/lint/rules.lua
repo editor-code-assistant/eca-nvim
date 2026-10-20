@@ -13,6 +13,9 @@ local spec_rule = require("fennel-extras.lint.rules.spec")
 local branch_rule = require("fennel-extras.lint.rules.branch")
 local size_rule = require("fennel-extras.lint.rules.size")
 local mutation_rule = require("fennel-extras.lint.rules.mutation")
+local defn_rule = require("fennel-extras.lint.rules.defn")
+local layout_rule = require("fennel-extras.lint.rules.layout")
+local when_rule = require("fennel-extras.lint.rules.when")
 local shape_rule = require("fennel-extras.lint.rules.shape")
 local shape_leaf = require("fennel-extras.lint.rules.shape.leaf")
 local defaults_map = registry["defaults-map"]
@@ -114,8 +117,11 @@ local function check_result(path, forms, policy, source, max_code_lines, state)
   local findings0 = append_all(findings, module_rule["module-finding"](path, forms, policy, (state["module-import"] and state["module-form"])))
   local findings1 = append_form_findings(findings0, path, forms, policy, state["spec-import"])
   local findings2 = append_synthetic_findings(findings1, path, forms, policy, source)
-  local findings3 = mutation_rule.findings(findings2, path, forms, policy, source)
-  return remove_contained_function_findings(findings3)
+  local findings3 = when_rule.findings(findings2, path, forms, policy, source)
+  local findings4 = defn_rule.findings(findings3, path, forms, policy, source)
+  local findings5 = layout_rule.findings(findings4, path, forms, policy, source)
+  local findings6 = mutation_rule.findings(findings5, path, forms, policy, source)
+  return remove_contained_function_findings(findings6)
 end
 local check
 do

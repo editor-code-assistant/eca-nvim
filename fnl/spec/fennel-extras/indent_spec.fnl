@@ -1,13 +1,15 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
-(defn- load-indent []
+(defn- load-indent
+  []
   (let [(ok result) (pcall require :fennel-extras.indent)]
     (if ok
       result
       {:error "module missing"})))
 
-(defn- reindent-scenario [source]
+(defn- reindent-scenario
+  [source]
   (let [indent (load-indent)]
     (if (. indent :error)
       indent
@@ -16,22 +18,26 @@
           {:value result :error err}
           {:call-error true :error err})))))
 
-(defn- output-for [source]
+(defn- output-for
+  [source]
   (let [result (reindent-scenario source)]
     (if (. result :error)
       result
       (. result :value))))
 
-(defn- newline-count [source]
+(defn- newline-count
+  [source]
   (select 2 (string.gsub source "\\n" "")))
 
-(defn- idempotent? [source]
+(defn- idempotent?
+  [source]
   (let [once (output-for source)]
     (if (not= :string (type once))
       false
       (= once (output-for once)))))
 
-(defn- error-summary [source]
+(defn- error-summary
+  [source]
   (let [indent (load-indent)]
     (if (. indent :error)
       indent
@@ -99,29 +105,33 @@
     (is (= "(λ a\n   b)"
            (output-for "(λ a\nb)")))))
 
-(defn- file-paths []
+(defn- file-paths
+  []
   (let [paths      []
         fnl-files  (vim.fn.globpath "fnl" "**/*.fnl" false true)
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
-      (if (not (string.find path "^fnl/eca/nfnl/"))
+      (when (not (string.find path "^fnl/eca/nfnl/"))
         (table.insert paths path)))
     (each [_ path (ipairs fnlm-files)]
-      (if (not (string.find path "^fnl/eca/nfnl/"))
+      (when (not (string.find path "^fnl/eca/nfnl/"))
         (table.insert paths path)))
     paths))
 
-(defn- read-source [path]
+(defn- read-source
+  [path]
   (let [file   (assert (io.open path :r))
         source (file:read "*a")]
     (file:close)
     source))
 
-(defn- reindent-direct [source config]
+(defn- reindent-direct
+  [source config]
   (let [indent (load-indent)]
     (indent.reindent source config)))
 
-(defn- repo-idempotence-failures []
+(defn- repo-idempotence-failures
+  []
   (let [config   {:indents {"deftest" [[:block 1]] "testing" [[:block 1]]}}
         failures []]
     (each [_ path (ipairs (file-paths))]
@@ -130,7 +140,7 @@
         (if (= nil once)
           (table.insert failures (.. "error: " path))
           (let [twice (reindent-direct once config)]
-            (if (not= once twice)
+            (when (not= once twice)
               (table.insert failures path))))))
     failures))
 

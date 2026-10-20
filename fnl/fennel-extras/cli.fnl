@@ -4,5 +4,4 @@
 
 (local runner (require :fennel-extras.cli.run))
 
-(defn run [args opts]
-  (runner.run args opts))
+(def run runner.run)

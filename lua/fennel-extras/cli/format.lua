@@ -9,9 +9,6 @@ local formatter = require("fennel-extras.format")
 local fs = require("fennel-extras.cli.fs")
 local scan = require("fennel-extras.cli.scan")
 local table_copy = require("fennel-extras.cli.table")
-local function format_emit(printer, line)
-  return printer(line)
-end
 local error_line
 do
   local function error_line0(path, error)
@@ -87,12 +84,12 @@ local function record_formatted(state, file, source, output)
   return state
 end
 local function run_files_error(printer, failure)
-  format_emit(printer, error_line(failure.path, failure.error))
+  printer(error_line(failure.path, failure.error))
   return 2
 end
 local function check_files(changed, printer)
   for _, path in ipairs(changed) do
-    format_emit(printer, path)
+    printer(path)
   end
   if (#changed > 0) then
     return 1
@@ -104,7 +101,7 @@ local function write_failure_result(temps, write_failure, printer)
   for _, item in ipairs(temps) do
     os.remove(item.temp)
   end
-  format_emit(printer, (write_failure.path .. ": " .. write_failure.error))
+  printer((write_failure.path .. ": " .. write_failure.error))
   return 2
 end
 local function rename_item(item)
@@ -136,7 +133,7 @@ local function rename_failure_result(temps, rename_failure, printer)
   for _, item in ipairs(temps) do
     os.remove(item.temp)
   end
-  format_emit(printer, (rename_failure.path .. ": " .. rename_failure.error))
+  printer((rename_failure.path .. ": " .. rename_failure.error))
   return 2
 end
 local function format_source_error(file, source, output, error)
@@ -181,7 +178,7 @@ local function append_formatted(state, item)
 end
 local function write_success_result(changed, printer)
   for _, path in ipairs(changed) do
-    format_emit(printer, path)
+    printer(path)
   end
   return 0
 end
@@ -223,15 +220,12 @@ local function write_files_finish(formatted, changed, printer)
     return write_files_rename(temps, changed, printer)
   end
 end
-local function write_files_result(formatted, changed, printer)
-  return write_files_finish(formatted, changed, printer)
-end
 local function process_files_result(mode, formatted, changed, printer)
   table.sort(changed)
   if (mode == "check") then
     return check_files(changed, printer)
   else
-    return write_files_result(formatted, changed, printer)
+    return write_files_finish(formatted, changed, printer)
   end
 end
 local function run_file_item(ctx, state, file)

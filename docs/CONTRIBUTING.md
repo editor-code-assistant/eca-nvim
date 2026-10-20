@@ -60,11 +60,21 @@ To add a rule for a new macro, add one line such as `"deftest" [[:block 1]]` und
 
 For editor use, run `make fmt` or `scripts/fennel-extras format --write <file>`. An LSP integration will come later.
 
+Function declarations use one item per line for the declaration header and body:
+
+```fennel
+(defn- git-root
+  [start]
+  body...)
+```
+
+The argument vector must start below the name, with a docstring allowed between them. Keep the body on its own line as well.
+
 ### Project style lint
 
 `make style` runs `scripts/fennel-extras lint` with no selection flag by default, checking all configured files without requiring Git. Set `STYLE_FLAGS=--changed` to check changed forms and files against `HEAD`, or `STYLE_FLAGS="--base <ref>"` to use another Git base. `--all` is an explicit alias for the no-selection mode; `--changed` and `--all` cannot be combined; `--all` and `--base` cannot be combined. Explicit paths restrict discovery in any mode. Add `--format json` for JSON Lines output.
 
-The ten rules are:
+The thirteen rules are:
 
 - `module-style` (error): non-spec files use the module style.
 - `spec-macro-import` (error): specs import `deftest`, `testing`, and `is` from `spec.eca.macros`.
@@ -72,8 +82,11 @@ The ten rules are:
 - `spec-direct-require` (error): specs use the shared macros instead of requiring `plenary.busted` or `luassert` directly.
 - `one-is-per-testing` (error): each `testing` form contains exactly one `is`.
 - `if-branch-call` (warning): multi-expression `if` branches are moved to a named helper.
+- `if-without-else` (warning): two-argument `if` forms are written as `when`.
+- `defn-args-newline` (warning): `defn` and `defn-` argument vectors start on the line below the function name.
 - `no-mutation` (warning): source files do not use `var`, `set`, or `while`; return new values instead.
 - `function-shape` (warning): bodies of `defn`/`defn-`/`fn`/`lambda`/`λ` use an optional first `let` with leaf values, then expressions that are leaves or one layer; move deeper code into named private functions.
+- `multiline-layout` (warning): multi-line forms put each item on its own line.
 - `file-size` (warning): source files contain at most the configured number of nonblank, non-comment code lines.
 - `core-require` (error): `eca.nfnl.core` is required as `core`.
 

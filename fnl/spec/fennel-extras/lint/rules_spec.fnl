@@ -3,17 +3,20 @@
 
 (local identity (require :fennel-extras.lint.identity))
 
-(defn- load-rules []
+(defn- load-rules
+  []
   (let [(ok result) (pcall require :fennel-extras.lint.rules)]
     (if ok
       result
       {:module-missing true})))
 
-(defn- sort-severities [entries]
+(defn- sort-severities
+  [entries]
   (table.sort entries (fn [a b] (< (. a 1) (. b 1))))
   entries)
 
-(defn- default-severities []
+(defn- default-severities
+  []
   (let [rules (load-rules)]
     (if (. rules :module-missing)
       rules
@@ -23,12 +26,15 @@
         (sort-severities entries)))))
 
 (deftest defaults
-  (testing "all ten lint rules have the approved default severities"
+  (testing "all thirteen lint rules have the approved default severities"
     (is (= [["core-require" "error"]
+            ["defn-args-newline" "warning"]
             ["file-size" "warning"]
             ["function-shape" "warning"]
             ["if-branch-call" "warning"]
+            ["if-without-else" "warning"]
             ["module-style" "error"]
+            ["multiline-layout" "warning"]
             ["no-mutation" "warning"]
             ["one-is-per-testing" "error"]
             ["spec-direct-require" "error"]
@@ -39,7 +45,8 @@
                entries
                (sort-severities entries)))))))
 
-(defn- core-require-scenario []
+(defn- core-require-scenario
+  []
   (let [source        "(local c (require :eca.nfnl.core))"
         path          "fnl/app.fnl"
         policy        {}
@@ -52,9 +59,10 @@
             after    (icollect [_ form (ipairs forms)] form.form)]
         {:before before :after after :findings findings}))))
 
-(defn- core-require-identities [scenario]
+(defn- core-require-identities
+  [scenario]
   (icollect [_ finding (ipairs scenario.findings)]
-    (if (= finding.rule "core-require")
+    (when (= finding.rule "core-require")
       [finding.rule finding.form finding.severity])))
 
 (deftest check

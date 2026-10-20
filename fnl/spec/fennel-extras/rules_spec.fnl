@@ -1,13 +1,15 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
-(defn- load-indent []
+(defn- load-indent
+  []
   (let [(ok result) (pcall require :fennel-extras.indent)]
     (if ok
       result
       {:error "module missing"})))
 
-(defn- reindent-scenario [source config]
+(defn- reindent-scenario
+  [source config]
   (let [indent (load-indent)]
     (if (. indent :error)
       indent
@@ -16,13 +18,15 @@
           {:value result :error err}
           {:call-error true :error err})))))
 
-(defn- output-for [source config]
+(defn- output-for
+  [source config]
   (let [result (reindent-scenario source config)]
     (if (. result :error)
       result
       (. result :value))))
 
-(defn- error-summary [source config]
+(defn- error-summary
+  [source config]
   (let [indent (load-indent)]
     (if (. indent :error)
       indent

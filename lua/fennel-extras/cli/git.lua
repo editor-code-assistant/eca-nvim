@@ -7,9 +7,6 @@ do
 end
 local lint_selection = require("fennel-extras.lint.selection")
 local table_copy = require("fennel-extras.cli.table")
-local function git_emit(printer, line)
-  return printer(line)
-end
 local function trim_newlines(text)
   return string.gsub(text, "\n+$", "")
 end
@@ -169,13 +166,10 @@ local function changed_files_step(ctx, state)
     return changed_files_step(ctx, changed_files_next(ctx, state))
   end
 end
-local function changed_files(ctx, state)
-  return changed_files_step(ctx, state)
-end
 local emit_git_error
 do
   local function emit_git_error0(printer, error)
-    git_emit(printer, (error.message or error))
+    printer((error.message or error))
     return 2
   end
   _2amodule_2a["emit-git-error"] = emit_git_error0
@@ -210,7 +204,7 @@ local lint_selection0
 do
   local function lint_selection1(parsed, sources, git_info)
     if parsed.changed then
-      return changed_files({root = git_info.root, base = (parsed.base or "HEAD"), files = sources, plan = git_info.plan}, {index = 1, result = {}}), scope_paths(git_info.plan)
+      return changed_files_step({root = git_info.root, base = (parsed.base or "HEAD"), files = sources, plan = git_info.plan}, {index = 1, result = {}}), scope_paths(git_info.plan)
     else
       return sources, nil
     end

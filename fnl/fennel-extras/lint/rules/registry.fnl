@@ -9,8 +9,11 @@
         :spec-direct-require "error"
         :one-is-per-testing  "error"
         :if-branch-call      "warning"
+        :if-without-else     "warning"
+        :defn-args-newline   "warning"
         :function-shape      "warning"
         :no-mutation         "warning"
+        :multiline-layout    "warning"
         :file-size           "warning"
         :core-require        "error"})
 
@@ -19,13 +22,16 @@
         :spec-macro-import {:scope :file}
         :file-size         {:scope :file}})
 
-(defn defaults []
+(defn defaults
+  []
   defaults-map)
 
-(defn rule-scope [rule]
+(defn rule-scope
+  [rule]
   (let [properties (. rule-properties rule)]
     (and properties (. properties :scope))))
-(defn finding [path form severity rule message node]
+(defn finding
+  [path form severity rule message node]
   {:kind     "finding"
    :path     path
    :line     form.line
@@ -38,9 +44,11 @@
    :message  message
    :node     node})
 
-(defn rule-severity [policy rule]
+(defn rule-severity
+  [policy rule]
   (let [override (and policy (. policy rule))]
     (or override (. defaults-map rule))))
 
-(defn enabled? [policy rule]
+(defn enabled?
+  [policy rule]
   (not= (rule-severity policy rule) "off"))

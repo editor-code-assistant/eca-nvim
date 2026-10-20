@@ -8,38 +8,54 @@
 ;; - control characters use uppercase hexadecimal in JSON unicode escapes.
 ;; - output.sort returns a new list; callers may choose to sort before render.
 
-(defn- load-output []
+(defn- load-output
+  []
   (let [(ok result) (pcall require :fennel-extras.lint.output)]
     (if ok
       result
       {:module-missing true})))
 
-(defn- text-lines [diagnostics]
+(defn- text-lines
+  [diagnostics]
   (let [output (load-output)]
     (if (. output :module-missing)
       output
       (output.text-lines diagnostics))))
 
-(defn- json-lines [diagnostics]
+(defn- json-lines
+  [diagnostics]
   (let [output (load-output)]
     (if (. output :module-missing)
       output
       (output.json-lines diagnostics))))
 
-(defn- sorted [diagnostics]
+(defn- sorted
+  [diagnostics]
   (let [output (load-output)]
     (if (. output :module-missing)
       output
       (output.sort diagnostics))))
 
-(defn- diagnostic-signatures [diagnostics]
+(defn- diagnostic-signatures
+  [diagnostics]
   (let [signatures []]
     (each [_ diagnostic (ipairs diagnostics)]
-      (table.insert signatures (.. diagnostic.path ":" diagnostic.line ":" diagnostic.rule ":"
-                                   diagnostic.form ":" diagnostic.message)))
+      (table.insert
+       signatures
+       (..
+        diagnostic.path
+        ":"
+        diagnostic.line
+        ":"
+        diagnostic.rule
+        ":"
+        diagnostic.form
+        ":"
+        diagnostic.message)))
     (table.concat signatures "\n")))
 
-(defn- finding [overrides]
+(defn- finding
+  [overrides]
   (let [base {:kind     "finding"
               :path     "fnl/app.fnl"
               :line     12
@@ -54,11 +70,13 @@
       (tset base key value))
     base))
 
-(defn- json-case [message]
+(defn- json-case
+  [message]
   {:message message
    :json    (json-lines [(finding {:message message})])})
 
-(defn- stale-exclusion [overrides]
+(defn- stale-exclusion
+  [overrides]
   (let [base {:kind     "stale-exclusion"
               :path     ".fnl-extras.fnl"
               :line     7

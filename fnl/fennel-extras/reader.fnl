@@ -2,13 +2,16 @@
 
 (module fennel-extras.reader)
 
-(defn- token [kind text line col]
+(defn- token
+  [kind text line col]
   {:kind kind :text text :line line :col col})
 
-(defn- fail [message line col]
+(defn- fail
+  [message line col]
   (values nil {:message message :line line :col col}))
 
-(defn- classify [c]
+(defn- classify
+  [c]
   (case c
     "\"" :string
     ";"  :comment
@@ -29,9 +32,11 @@
     "@"  :at
     _    :atom))
 
-(defn- close-string [j]
+(defn- close-string
+  [j]
   (values true (+ j 1)))
-(defn- scan-string [source i]
+(defn- scan-string
+  [source i]
   (let [n (string.len source)]
     (var j (+ i 1))
     (var closed false)
@@ -57,28 +62,32 @@
         (- j 1)
         (values nil {:message "unterminated string" :offset i})))))
 
-(defn- scan-comment [source i]
+(defn- scan-comment
+  [source i]
   (let [n (string.len source)]
     (var j i)
     (while (and (<= j n) (not (= (string.sub source j j) "\n")))
       (set j (+ j 1)))
     (- j 1)))
 
-(defn- scan-whitespace [source i]
+(defn- scan-whitespace
+  [source i]
   (let [n (string.len source)]
     (var j i)
     (while (and (<= j n) (= (string.sub source j j) " "))
       (set j (+ j 1)))
     (- j 1)))
 
-(defn- scan-atom [source i]
+(defn- scan-atom
+  [source i]
   (let [n (string.len source)]
     (var j i)
     (while (and (<= j n) (= (classify (string.sub source j j)) :atom))
       (set j (+ j 1)))
     (- j 1)))
 
-(defn- number? [text]
+(defn- number?
+  [text]
   (or (string.match text "^[0-9][0-9_]*$")
       (string.match text "^%-[0-9][0-9_]*$")
       (string.match text "^[0-9][0-9_]*%.[0-9][0-9_]*$")
@@ -94,9 +103,11 @@
       (string.match text "^[0-9][0-9_]*[eE][+-][0-9][0-9_]*$")
       (string.match text "^%-[0-9][0-9_]*[eE][+-][0-9][0-9_]*$")))
 
-(defn- advance-line [line col]
+(defn- advance-line
+  [line col]
   (values (+ line 1) 1))
-(defn- advance-position [text line col]
+(defn- advance-position
+  [text line col]
   (var j 1)
   (var current-line line)
   (var current-col col)
@@ -110,7 +121,8 @@
       (set j (+ j 1))))
   (values current-line current-col))
 
-(defn- next-token [source i line col]
+(defn- next-token
+  [source i line col]
   (let [shebang? (and (= i 1) (= (string.sub source 1 1) "#") (= (string.sub source 2 2) "!"))
         kind     (if shebang? :comment (classify (string.sub source i i)))]
     (case kind
@@ -147,20 +159,24 @@
         (fail "invalid comma-at reader syntax" line col)
         (values (token :prefix (string.sub source i i) line col) (+ i 1))))))
 
-(defn- push-open-node [node stack tok]
+(defn- push-open-node
+  [node stack tok]
   (let [child {:kind (case tok.text "(" :list "[" :sequence "{" :table) :open tok :children []}]
     (table.insert node.children child)
     (table.insert stack {:node child :open tok})))
 
-(defn- advance-token [tokens tok line col]
+(defn- advance-token
+  [tokens tok line col]
   (table.insert tokens tok)
   (advance-position tok.text line col))
 
-(defn- close-matching-node [stack tok]
+(defn- close-matching-node
+  [stack tok]
   (let [top (. stack (length stack))]
     (set top.node.close tok)
     (table.remove stack)))
-(defn tokenize [source]
+(defn tokenize
+  [source]
   (let [tokens []
         n      (string.len source)]
     (var i 1)
@@ -182,19 +198,22 @@
       (values nil error)
       tokens)))
 
-(defn- matching-close [open]
+(defn- matching-close
+  [open]
   (case open
     "(" ")"
     "[" "]"
     "{" "}"))
 
-(defn- node-kind [open]
+(defn- node-kind
+  [open]
   (case open
     "(" :list
     "[" :sequence
     "{" :table))
 
-(defn parse [source]
+(defn parse
+  [source]
   (let [(tokens error) (tokenize source)]
     (if error
       (values nil error)
@@ -202,7 +221,7 @@
             stack [{:node root :open nil}]]
         (var failure nil)
         (each [_ tok (ipairs tokens)]
-          (if (not failure)
+          (when (not failure)
             (let [frame (. stack (length stack))
                   node  frame.node]
               (if (= tok.kind :open)
@@ -222,13 +241,15 @@
               (fail "missing closing delimiter" top.open.line top.open.col))
             root))))))
 
-(defn- stringify-container [stringify node buffer]
+(defn- stringify-container
+  [stringify node buffer]
   (table.insert buffer node.open.text)
   (each [_ child (ipairs node.children)]
     (stringify child buffer))
   (table.insert buffer node.close.text))
 
-(defn- stringify [node buffer]
+(defn- stringify
+  [node buffer]
   (if (= node.kind :root)
     (each [_ child (ipairs node.children)]
       (stringify child buffer))
@@ -236,7 +257,8 @@
       (table.insert buffer node.text)
       (stringify-container stringify node buffer))))
 
-(defn to-string [node]
+(defn to-string
+  [node]
   (let [buffer []]
     (stringify node buffer)
     (table.concat buffer)))

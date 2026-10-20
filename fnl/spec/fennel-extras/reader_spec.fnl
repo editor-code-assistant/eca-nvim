@@ -1,13 +1,15 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
-(defn- load-reader []
+(defn- load-reader
+  []
   (let [(ok result) (pcall require :fennel-extras.reader)]
     (if ok
       result
       {:error "module missing"})))
 
-(defn- read-source [path]
+(defn- read-source
+  [path]
   (let [(ok result) (pcall (fn []
                              (let [file   (assert (io.open path :r))
                                    source (file:read "*a")]
@@ -17,7 +19,8 @@
       result
       {:error "read failed" :path path})))
 
-(defn- file-paths []
+(defn- file-paths
+  []
   (let [paths      []
         fnl-files  (vim.fn.globpath "fnl" "**/*.fnl" false true)
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
@@ -27,16 +30,19 @@
       (table.insert paths path))
     paths))
 
-(defn- token-text [tokens]
+(defn- token-text
+  [tokens]
   (table.concat
    (icollect [_ token (ipairs tokens)]
      (. token :text))))
 
-(defn- token-kinds [tokens]
+(defn- token-kinds
+  [tokens]
   (icollect [_ token (ipairs tokens)]
     (. token :kind)))
 
-(defn- round-trip-scenario []
+(defn- round-trip-scenario
+  []
   (let [reader   (load-reader)
         failures []]
     (if (. reader :error)
@@ -48,36 +54,40 @@
             (table.insert failures (.. "read failed: " path))
             (let [(ok parsed)       (pcall (fn [] (reader.parse source)))
                   (token-ok tokens) (pcall (fn [] (reader.tokenize source)))]
-              (if (or (not ok)
-                      (not token-ok)
-                      (= nil parsed)
-                      (= nil tokens)
-                      (not= source (reader.to-string parsed))
-                      (not= source (token-text tokens)))
+              (when (or (not ok)
+                        (not token-ok)
+                        (= nil parsed)
+                        (= nil tokens)
+                        (not= source (reader.to-string parsed))
+                        (not= source (token-text tokens)))
                 (table.insert failures path)))))))
     failures))
 
-(defn- tokenize-scenario [source]
+(defn- tokenize-scenario
+  [source]
   (let [reader (load-reader)]
     (if (. reader :error)
       reader
       (let [(ok result) (pcall (fn [] (reader.tokenize source)))]
         (if ok result {:error "tokenize failed"})))))
 
-(defn- parse-scenario [source]
+(defn- parse-scenario
+  [source]
   (let [reader (load-reader)]
     (if (. reader :error)
       reader
       (let [(ok result) (pcall (fn [] (reader.parse source)))]
         (if ok result {:error "parse failed"})))))
 
-(defn- kinds-for [source]
+(defn- kinds-for
+  [source]
   (let [tokens (tokenize-scenario source)]
     (if (. tokens :error)
       tokens
       (token-kinds tokens))))
 
-(defn- nested-kinds []
+(defn- nested-kinds
+  []
   (let [root (parse-scenario "(a [b {:c d}])")]
     (if (. root :error)
       root
@@ -86,7 +96,8 @@
             table    (. sequence.children 3)]
         [(. outer :kind) (. sequence :kind) (. table :kind)]))))
 
-(defn- comment-child-kind []
+(defn- comment-child-kind
+  []
   (let [parsed (parse-scenario "(a ;; comment\n)")]
     (if (. parsed :error)
       parsed
@@ -94,7 +105,8 @@
             child     (. list-node.children 3)]
         (. child :kind)))))
 
-(defn- fail-closed-scenario [source]
+(defn- fail-closed-scenario
+  [source]
   (let [reader (load-reader)]
     (if (. reader :error)
       reader
@@ -106,7 +118,8 @@
            :line        (and err (. err :line))
            :col         (and err (. err :col))})))))
 
-(defn- fail-closed-summary [source include-location?]
+(defn- fail-closed-summary
+  [source include-location?]
   (let [result (fail-closed-scenario source)]
     (if (. result :error)
       result
@@ -126,7 +139,8 @@
   (testing "a string containing delimiters, semicolon, and an escaped quote is one string token"
     (is (= [:string] (kinds-for "\"a) ; \\\" b\""))))
   (testing "a multi-line string is one string token"
-    (is (= [:string] (kinds-for "\"line one
+    (is (= [:string]
+           (kinds-for "\"line one
 line two\""))))
   (testing "a parenthesis in a comment does not open a list"
     (is (= [:comment :newline :open :symbol :close]
@@ -138,9 +152,23 @@ line two\""))))
     (is (= [:prefix :open :symbol :whitespace :prefix :symbol :close]
            (kinds-for "`(foo ,bar)"))))
   (testing "keywords, punctuation symbols, and numbers have their respective kinds"
-    (is (= [:symbol :whitespace :symbol :whitespace :symbol :whitespace :symbol
-            :whitespace :symbol :whitespace :number :whitespace :number :whitespace
-            :number :whitespace :number]
+    (is (= [:symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :number
+            :whitespace
+            :number
+            :whitespace
+            :number
+            :whitespace
+            :number]
            (kinds-for ":kw a.b:c ?. & ... 0x1F 1e3 1_000 -2.5"))))
   (testing "a comment before a close delimiter is a child of that list"
     (is (= :comment (comment-child-kind))))

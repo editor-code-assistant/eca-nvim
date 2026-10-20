@@ -13,9 +13,6 @@ local arg_parser = require("fennel-extras.cli.args")
 local fs = require("fennel-extras.cli.fs")
 local git = require("fennel-extras.cli.git")
 local format = require("fennel-extras.cli.format")
-local function emit(printer, line)
-  return printer(line)
-end
 local function default_print(line)
   io.write((string.gsub(line, "\n+$", "") .. "\n"))
   return io.flush()
@@ -47,7 +44,7 @@ local function load_parser(name)
   end
 end
 local function config_load_error(printer, path, error)
-  emit(printer, (path .. ": " .. (error.message or tostring(error))))
+  printer((path .. ": " .. (error.message or tostring(error))))
   return nil, true, nil
 end
 local function config_loaded(printer, path)
@@ -115,20 +112,20 @@ local function read_lint_files(state)
   end
 end
 local function lint_policy_error(root, config_path, printer, error)
-  emit(printer, format["error-line"](scan.relative(root, (config_path or ".fnl-extras.fnl")), error))
+  printer(format["error-line"](scan.relative(root, (config_path or ".fnl-extras.fnl")), error))
   return 2
 end
 local function lint_read_error(printer, error)
-  emit(printer, format["error-line"](error.path, error.error))
+  printer(format["error-line"](error.path, error.error))
   return 2
 end
 local function lint_run_error(printer, error)
-  emit(printer, format["error-line"](error.path, error))
+  printer(format["error-line"](error.path, error))
   return 2
 end
 local function lint_result(printer, result)
   for _, line in ipairs(result.lines) do
-    emit(printer, line)
+    printer(line)
   end
   return result.status
 end

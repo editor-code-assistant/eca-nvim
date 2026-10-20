@@ -7,6 +7,7 @@ do
 end
 local core = require("eca.nfnl.core")
 local ast = require("fennel-extras.lint.rules.ast")
+local reader = require("fennel-extras.reader")
 local registry = require("fennel-extras.lint.rules.registry")
 local root_forms = ast["root-forms"]
 local previous_meaningful_index = ast["previous-meaningful-index"]
@@ -32,37 +33,49 @@ local function mutation_mode_for_child(node, index, mode)
     return mode
   end
 end
-local function append_mutation_child(node, result, index, child, mode, recurse)
+local function append_executable_child(node, result, index, child, mode, recurse, predicate)
   local child_mode = mutation_mode_for_child(node, index, mode)
   if (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and (child_mode ~= "quoted")) then
-    return recurse(child, result, child_mode)
+    return recurse(child, result, child_mode, predicate)
   else
     return result
   end
 end
-local function collect_mutation_children(node, result, mode, recurse)
+local function collect_executable_children(node, result, mode, recurse, predicate)
   local state = result
   for index, child in ipairs((node.children or {})) do
-    state = append_mutation_child(node, state, index, child, mode, recurse)
+    state = append_executable_child(node, state, index, child, mode, recurse, predicate)
   end
   return state
 end
-local function mutation_node_result(node, result, mode)
-  if ((mode == 0) and (node.kind == "list") and mutation_head_3f(list_head(node))) then
+local function executable_node_result(node, result, mode, predicate)
+  if ((mode == 0) and predicate(node)) then
     return core.concat(result, {node})
   else
     return result
   end
 end
-local function collect_mutation_nodes(node, result, mode)
-  return collect_mutation_children(node, mutation_node_result(node, result, mode), mode, collect_mutation_nodes)
+local function collect_executable_nodes(node, result, mode, predicate)
+  return collect_executable_children(node, executable_node_result(node, result, mode, predicate), mode, collect_executable_nodes, predicate)
+end
+local executable_nodes
+do
+  local function executable_nodes0(source, predicate)
+    local root = reader.parse(source)
+    if root then
+      return collect_executable_nodes(root, {}, 0, predicate)
+    else
+      return {}
+    end
+  end
+  _2amodule_2a["executable-nodes"] = executable_nodes0
+  executable_nodes = _2amodule_2a["executable-nodes"]
 end
 local function mutation_nodes(source)
-  local result = {}
-  for _, root in ipairs(root_forms(source)) do
-    result = collect_mutation_nodes(root, result, 0)
+  local function _5_(node)
+    return ((node.kind == "list") and mutation_head_3f(list_head(node)))
   end
-  return result
+  return executable_nodes(source, _5_)
 end
 local function mutation_form(path, node, base, ordinal)
   return {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (base.form .. " > no-mutation#" .. ordinal), node = node}

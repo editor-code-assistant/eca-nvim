@@ -1,37 +1,43 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
-(defn- load-selection []
+(defn- load-selection
+  []
   (let [(ok result) (pcall require :fennel-extras.lint.selection)]
     (if ok
       result
       {:module-missing true})))
 
-(defn- parse-name-status [text]
+(defn- parse-name-status
+  [text]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
       selection
       (selection.parse-name-status text))))
 
-(defn- parse-untracked [text]
+(defn- parse-untracked
+  [text]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
       selection
       (selection.parse-untracked text))))
 
-(defn- parse-hunks [text]
+(defn- parse-hunks
+  [text]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
       selection
       (selection.parse-hunks text))))
 
-(defn- form-selected? [form intervals]
+(defn- form-selected?
+  [form intervals]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
       selection
       (selection.form-selected? form intervals))))
 
-(defn- plan [records untracked]
+(defn- plan
+  [records untracked]
   (let [selection (load-selection)]
     (if (. selection :module-missing)
       selection

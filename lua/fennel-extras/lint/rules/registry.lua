@@ -5,7 +5,7 @@ do
   pkg_1_auto.loaded["fennel-extras.lint.rules.registry"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
-local defaults_map = {["module-style"] = "error", ["spec-macro-import"] = "error", ["spec-no-module"] = "error", ["spec-direct-require"] = "error", ["one-is-per-testing"] = "error", ["if-branch-call"] = "warning", ["function-shape"] = "warning", ["no-mutation"] = "warning", ["file-size"] = "warning", ["core-require"] = "error"}
+local defaults_map = {["module-style"] = "error", ["spec-macro-import"] = "error", ["spec-no-module"] = "error", ["spec-direct-require"] = "error", ["one-is-per-testing"] = "error", ["if-branch-call"] = "warning", ["if-without-else"] = "warning", ["defn-args-newline"] = "warning", ["function-shape"] = "warning", ["no-mutation"] = "warning", ["multiline-layout"] = "warning", ["file-size"] = "warning", ["core-require"] = "error"}
 local rule_properties = {["module-style"] = {scope = "file"}, ["spec-macro-import"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
 local defaults
 do

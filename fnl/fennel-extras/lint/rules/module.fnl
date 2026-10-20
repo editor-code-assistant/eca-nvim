@@ -14,15 +14,23 @@
 (local rule-severity registry.rule-severity)
 (local finding registry.finding)
 
-(defn module-finding [path forms policy module-ok]
+(defn module-finding
+  [path forms policy module-ok]
   (if (and (not (spec-file? path)) (enabled? policy "module-style") (not module-ok))
-    [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1
-      :severity (rule-severity policy "module-style") :rule "module-style"
-      :form    (.. path " > file")
-      :message "file must use the module style"
-      :node    nil}]
+    [{:kind     "finding"
+      :path     path
+      :line     1
+      :col      1
+      :end-line 1
+      :end-col  1
+      :severity (rule-severity policy "module-style")
+      :rule     "module-style"
+      :form     (.. path " > file")
+      :message  "file must use the module style"
+      :node     nil}]
     []))
-(defn- core-finding-form [path form head children]
+(defn- core-finding-form
+  [path form head children]
   (if (= head "local")
     {:line     form.line
      :col      form.col
@@ -31,34 +39,45 @@
      :form     (.. path " > local:" (symbol-text (. children 2)))}
     form))
 
-(defn- add-core-finding [findings path form head children node policy]
+(defn- add-core-finding
+  [findings path form head children node policy]
   (let [finding-form (core-finding-form path form head children)]
-    (table.insert findings (finding path finding-form (rule-severity policy "core-require")
-                                    "core-require"
-                                    "bind eca.nfnl.core as core" node)))
+    (table.insert findings
+                  (finding path
+                           finding-form
+                           (rule-severity policy "core-require")
+                           "core-require"
+                           "bind eca.nfnl.core as core"
+                           node)))
   nil)
-(defn- core-require-form [head children node]
+(defn- core-require-form
+  [head children node]
   (or (and (= head "local") (. children 3)) node))
 
-(defn- core-require-target [require-form require-children]
+(defn- core-require-target
+  [require-form require-children]
   (and (= (list-head require-form) "require")
        (literal-text (. require-children 2))))
 
-(defn- canonical-core-require? [head children require-children]
+(defn- canonical-core-require?
+  [head children require-children]
   (or (and (= head "local")
            (= (length children) 3)
            (= (symbol-text (. children 2)) "core")
            (= (length require-children) 2))
       (and (= head "require") (= (length children) 2))))
 
-(defn- maybe-add-core-require-finding [findings path form head children node policy target canonical]
-  (if (and (= target "eca.nfnl.core") (not canonical))
+(defn- maybe-add-core-require-finding
+  [findings path form head children node policy target canonical]
+  (when (and (= target "eca.nfnl.core") (not canonical))
     (add-core-finding findings path form head children node policy)))
 
-(defn- core-require-children [require-form]
+(defn- core-require-children
+  [require-form]
   (if require-form (meaningful-children require-form) []))
 
-(defn core-require-finding [findings path form head node policy]
+(defn core-require-finding
+  [findings path form head node policy]
   (let [children         (meaningful-children node)
         require-form     (core-require-form head children node)
         require-children (core-require-children require-form)

@@ -1,19 +1,22 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
-(defn- load-format []
+(defn- load-format
+  []
   (let [(ok result) (pcall require :fennel-extras.format)]
     (if ok
       result
       {:error "module missing"})))
 
-(defn- load-parser []
+(defn- load-parser
+  []
   (let [(ok result) (pcall require :eca.nfnl.fennel)]
     (if ok
       result
       {:error "parser module missing"})))
 
-(defn- verifier-scenario []
+(defn- verifier-scenario
+  []
   (let [format    (load-format)
         parser    (load-parser)
         same-a    "(when x\ny)"
@@ -67,7 +70,8 @@
                         true
                         (format.ast-equal? parser second-a second-b))}))
 
-(defn- format-summary [source config]
+(defn- format-summary
+  [source config]
   (let [format (load-format)]
     (if (. format :error)
       format
@@ -76,19 +80,32 @@
          :has-message (and ok (= nil value) err (= :string (type (. err :message))))
          :value       value}))))
 
-(defn- file-paths []
+(defn- alignment-safety-scenario
+  []
+  (let [source "(let [result {:code 0 \n:lines []}]\n  result)\n"
+        format (load-format)]
+    (if (. format :error)
+      format
+      (let [(ok value err) (pcall (fn [] (format.format-string source {:config {:align-bindings true}})))]
+        {:value? (and ok (not= nil value))
+         :value  value
+         :error  err}))))
+
+(defn- file-paths
+  []
   (let [paths      []
         fnl-files  (vim.fn.globpath "fnl" "**/*.fnl" false true)
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
-      (if (not (string.find path "^fnl/eca/nfnl/"))
+      (when (not (string.find path "^fnl/eca/nfnl/"))
         (table.insert paths path)))
     (each [_ path (ipairs fnlm-files)]
-      (if (not (string.find path "^fnl/eca/nfnl/"))
+      (when (not (string.find path "^fnl/eca/nfnl/"))
         (table.insert paths path)))
     paths))
 
-(defn- read-source [path]
+(defn- read-source
+  [path]
   (let [(ok result) (pcall (fn []
                              (let [file   (assert (io.open path :r))
                                    source (file:read "*a")]
@@ -103,16 +120,17 @@
   (let [(ok formatted err) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
     (if (or (not ok) (= nil formatted) err)
       (table.insert format-failures path)
-      (let [_ (if (or (not (pcall (fn [] (format.format-string formatted {:config config :parser parser}))))
-                      (not= formatted (format.format-string formatted {:config config :parser parser})))
+      (let [_ (when (or (not (pcall (fn [] (format.format-string formatted {:config config :parser parser}))))
+                        (not= formatted (format.format-string formatted {:config config :parser parser})))
                 (table.insert idempotence-failures path))
-            _ (if (not (format.indent-only? source formatted))
+            _ (when (not (format.indent-only? source formatted))
                 (table.insert indent-failures path))
-            _ (if (not (format.ast-equal? parser source formatted))
+            _ (when (not (format.ast-equal? parser source formatted))
                 (table.insert ast-failures path))]
         nil))))
 
-(defn- repo-scenario []
+(defn- repo-scenario
+  []
   (let [format               (load-format)
         parser               (load-parser)
         config               {:indents {"deftest" [[:block 1]]
@@ -134,7 +152,7 @@
         (if (or (. source :error) (. format :error))
           (table.insert fixed-point-failures path)
           (let [(ok formatted) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
-            (if (or (not ok) (not= source formatted))
+            (when (or (not ok) (not= source formatted))
               (table.insert fixed-point-failures path))))))
     {:format      format-failures
      :idempotence idempotence-failures
@@ -196,7 +214,13 @@
     (let [result (format-summary "(x\ny)" {:align-bindings {}})]
       (is (= {:value? false :has-message true}
              {:value?      (. result :value?)
-              :has-message (. result :has-message)})))))
+              :has-message (. result :has-message)}))))
+  (testing "align-bindings formats a multiline map with trailing value whitespace"
+    (is (= {:value? true
+            :value  "(let [result {:code  0 \n              :lines []}]\n  result)\n"}
+           (let [result (alignment-safety-scenario)]
+             {:value? (. result :value?)
+              :value  (. result :value)})))))
 
 (deftest repo-properties
   (testing "format-string succeeds for every project Fennel source"
@@ -225,23 +249,37 @@
            (. (format-summary "(let [x 1]\nx)" {:builtins false}) :value))))
   (testing "a custom builtins table replaces the built-in table"
     (is (= "(let [x 1]\n     x)"
-           (. (format-summary "(let [x 1]\nx)"
-                              {:builtins {"when" [[:block 1]]}}) :value))))
+           (.
+            (format-summary "(let [x 1]\nx)"
+                            {:builtins {"when" [[:block 1]]}})
+            :value))))
   (testing "a custom builtins table supplies its replacement rule"
     (is (= "(when x\n  y)"
-           (. (format-summary "(when x\ny)"
-                              {:builtins {"when" [[:block 1]]}}) :value))))
+           (.
+            (format-summary "(when x\ny)"
+                            {:builtins {"when" [[:block 1]]}})
+            :value))))
   (testing "prefix fallbacks false disables the def fallback"
     (is (= "(defn x\n      y)"
            (. (format-summary "(defn x\ny)" {:prefix-fallbacks false}) :value))))
+  (testing "repo-style formatting indents defn args and body at two spaces"
+    (is (= "(defn- git-root\n  [start]\n  (foo start))"
+           (. (format-summary "(defn- git-root\n[start]\n(foo start))"
+                              {:indents        {"if" [[:block 1]]}
+                               :align-bindings true})
+              :value))))
   (testing "a custom prefix fallback table replaces the defaults"
     (is (= "(defn x\n      y)"
-           (. (format-summary "(defn x\ny)"
-                              {:prefix-fallbacks {"with-" [[:block 1]]}}) :value))))
+           (.
+            (format-summary "(defn x\ny)"
+                            {:prefix-fallbacks {"with-" [[:block 1]]}})
+            :value))))
   (testing "a custom prefix fallback table supplies its replacement rule"
     (is (= "(foo x\n  y)"
-           (. (format-summary "(foo x\ny)"
-                              {:prefix-fallbacks {"foo-" [[:block 1]]}}) :value))))
+           (.
+            (format-summary "(foo x\ny)"
+                            {:prefix-fallbacks {"foo-" [[:block 1]]}})
+            :value))))
   (testing "a long one-line form stays exactly one line"
     (is (= "(when x (print :a) (print :b) (let [y 1] y))"
            (. (format-summary "(when x (print :a) (print :b) (let [y 1] y))" {}) :value))))
@@ -254,7 +292,8 @@
                  (_ count) (string.gsub value "\n" "")]
              (+ count 1))))))
 
-(defn- format-summary-with-parser [source config]
+(defn- format-summary-with-parser
+  [source config]
   (let [format (load-format)
         parser (load-parser)]
     (if (or (. format :error) (. parser :error))
@@ -264,7 +303,8 @@
          :has-message (and ok (= nil value) err (= :string (type (. err :message))))
          :value       value}))))
 
-(defn- symbol-key-safety-scenario []
+(defn- symbol-key-safety-scenario
+  []
   (let [parser (load-parser)
         format (load-format)]
     {:same            (if (or (. parser :error) (. format :error))
@@ -291,7 +331,8 @@
   (testing "ast-equal rejects a changed key with symbol keys"
     (is (not (. (symbol-key-safety-scenario) :different-key)))))
 
-(defn- alignment-regression-scenario []
+(defn- alignment-regression-scenario
+  []
   (let [simple-source "(defn f []\n(foo\nbar))"
         if-source     "(if a\n    b\n    c)"
         mixed-source  "(let [long-name 1\n x 2]\n(foo\nbar))"
@@ -300,16 +341,24 @@
         simple-off    (. (format-summary simple-source {}) :value)
         simple-on     (. (format-summary simple-source {:align-bindings true}) :value)
         if-off        (. (format-summary if-source if-config) :value)
-        if-on         (. (format-summary if-source {:indents        {"if" [[:block 1]]}
-                                                    :align-bindings true}) :value)
+        if-on         (.
+                       (format-summary
+                        if-source
+                        {:indents        {"if" [[:block 1]]}
+                         :align-bindings true})
+                       :value)
         mixed-off     (. (format-summary mixed-source {}) :value)
         mixed-on      (. (format-summary mixed-source {:align-bindings true}) :value)
         value-off     (. (format-summary value-source {}) :value)
         value-on      (. (format-summary value-source {:align-bindings true}) :value)]
-    {:simple-off simple-off :simple-on simple-on
-     :if-off if-off :if-on if-on
-     :mixed-off mixed-off :mixed-on mixed-on
-     :value-off value-off :value-on value-on
+    {:simple-off       simple-off
+     :simple-on        simple-on
+     :if-off           if-off
+     :if-on            if-on
+     :mixed-off        mixed-off
+     :mixed-on         mixed-on
+     :value-off        value-off
+     :value-on         value-on
      :mixed-idempotent (. (format-summary mixed-on {:align-bindings true}) :value)
      :value-idempotent (. (format-summary value-on {:align-bindings true}) :value)}))
 
@@ -335,17 +384,26 @@
     (let [result (alignment-regression-scenario)]
       (is (= (. result :value-on) (. result :value-idempotent))))))
 
-(defn- stale-leading-whitespace-scenario []
+(defn- stale-leading-whitespace-scenario
+  []
   (let [if-source       "(defn f []\n  (if condition\n        (foo)\n        (bar)))"
         top-if-source   "(if condition\n      (foo)\n      (bar))"
         when-source     "(when condition\n          (foo))"
         mixed-source    "(let [a 1\n      long-name 2]\n  (if condition\n        (foo)\n        (bar)))"
         no-pairs-source "(when condition\n          (foo)\n          (bar))"
         if-config       {:indents {"if" [[:block 1]]}}
-        if-on           (. (format-summary if-source {:indents        {"if" [[:block 1]]}
-                                                      :align-bindings true}) :value)
-        top-if-on       (. (format-summary top-if-source {:indents        {"if" [[:block 1]]}
-                                                          :align-bindings true}) :value)
+        if-on           (.
+                         (format-summary
+                          if-source
+                          {:indents        {"if" [[:block 1]]}
+                           :align-bindings true})
+                         :value)
+        top-if-on       (.
+                         (format-summary
+                          top-if-source
+                          {:indents        {"if" [[:block 1]]}
+                           :align-bindings true})
+                         :value)
         when-on         (. (format-summary when-source {:align-bindings true}) :value)
         mixed-config    {:indents        {"if" [[:block 1]]}
                          :align-bindings true}
@@ -360,15 +418,21 @@
      :no-pairs-off     no-pairs-off
      :no-pairs-on      no-pairs-on}))
 
-(defn- nested-if-source [branch-spaces]
-  (.. "(defn outer []\n  (let [x 1]\n    (if condition\n"
-      (string.rep " " branch-spaces) "(foo)\n"
-      (string.rep " " branch-spaces) "(bar))))"))
+(defn- nested-if-source
+  [branch-spaces]
+  (..
+   "(defn outer []\n  (let [x 1]\n    (if condition\n"
+   (string.rep " " branch-spaces)
+   "(foo)\n"
+   (string.rep " " branch-spaces)
+   "(bar))))"))
 
-(defn- nested-if-expected []
+(defn- nested-if-expected
+  []
   "(defn outer []\n  (let [x 1]\n    (if condition\n      (foo)\n      (bar))))")
 
-(defn- multiline-binding-source [name]
+(defn- multiline-binding-source
+  [name]
   (.. "(let [a (foo\n         bar)\n      " name " 2]\n  a)"))
 
 (deftest stale-leading-whitespace
@@ -392,89 +456,121 @@
     (let [result (stale-leading-whitespace-scenario)]
       (is (= (. result :no-pairs-off) (. result :no-pairs-on))))))
 
-(defn- leading-space-count [line]
+(defn- leading-space-count
+  [line]
   (length (or (string.match line "^( *)") "")))
 
-(defn- balanced-line? [line]
+(defn- balanced-line?
+  [line]
   (let [(open-text opens)   (string.gsub line "[(]" "")
         (close-text closes) (string.gsub line "[)]" "")]
     (and open-text close-text (= opens closes))))
 
-(defn- multiline-if-branch-violations [source]
+(defn- multiline-if-branch-violations
+  [source]
   (let [lines      (vim.split source "\n" true)
         violations []]
     (each [index line (ipairs lines)]
       (let [(leading rest) (string.match line "^( *)%(if%s+(.+)$")]
-        (if (and leading rest (balanced-line? line)
-                 (< (+ index 2) (+ (length lines) 1)))
+        (when (and
+               leading
+               rest
+               (balanced-line? line)
+               (< (+ index 2) (+ (length lines) 1)))
           (let [expected (+ (length leading) 2)
                 first    (. lines (+ index 1))
                 second   (. lines (+ index 2))]
-            (if (or (not= expected (leading-space-count first))
-                    (not= expected (leading-space-count second)))
-              (table.insert violations {:line     index
-                                        :expected expected
-                                        :first    (leading-space-count first)
-                                        :second   (leading-space-count second)}))))))
+            (when (or (not= expected (leading-space-count first))
+                      (not= expected (leading-space-count second)))
+              (table.insert
+               violations
+               {:line     index
+                :expected expected
+                :first    (leading-space-count first)
+                :second   (leading-space-count second)}))))))
     violations))
 
 (deftest stale-leading-whitespace-remaining
   (testing "alignment uses normal indentation for one extra branch space"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 7)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 7)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment uses normal indentation for two extra branch spaces"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 8)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 8)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment uses normal indentation for three extra branch spaces"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 9)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 9)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment uses normal indentation for four extra branch spaces"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 10)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 10)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment uses normal indentation for five extra branch spaces"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 11)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 11)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment uses normal indentation for one under-indented branch space"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 5)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 5)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment uses normal indentation for two under-indented branch spaces"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 4)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 4)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment uses normal indentation for three under-indented branch spaces"
     (is (= (nested-if-expected)
-           (. (format-summary (nested-if-source 3)
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary (nested-if-source 3)
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "alignment does not move an unmoved multiline value continuation"
     (is (= "(let [a (foo\n         bar)]\n  a)"
-           (. (format-summary "(let [a (foo\n         bar)]\n  a)"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(let [a (foo\n         bar)]\n  a)"
+                            {:align-bindings true})
+            :value))))
   (testing "alignment shifts a multiline continuation by one column"
     (is (= "(let [a  (foo\n          bar)\n      bb 2]\n  a)"
-           (. (format-summary (multiline-binding-source "bb")
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary (multiline-binding-source "bb")
+                            {:align-bindings true})
+            :value))))
   (testing "alignment shifts a multiline continuation by two columns"
     (is (= "(let [a   (foo\n           bar)\n      bbb 2]\n  a)"
-           (. (format-summary (multiline-binding-source "bbb")
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary (multiline-binding-source "bbb")
+                            {:align-bindings true})
+            :value))))
   (testing "alignment shifts a multiline continuation by three columns"
     (is (= "(let [a    (foo\n            bar)\n      bbbb 2]\n  a)"
-           (. (format-summary (multiline-binding-source "bbbb")
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary (multiline-binding-source "bbbb")
+                            {:align-bindings true})
+            :value))))
   (testing "repo if branches use the configured two-column indentation"
     (let [config     {:indents        {"deftest" [[:block 1]]
                                        "testing" [[:block 1]]
@@ -539,19 +635,25 @@
       (is (and once twice (= once twice)))))
   (testing "aligns a destructuring map name by its full source width"
     (is (= "(let [{: x}     (f)\n      long-name 2]\n  x)"
-           (. (format-summary "(let [{: x} (f)\n      long-name 2]\n  x)"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(let [{: x} (f)\n      long-name 2]\n  x)"
+                            {:align-bindings true})
+            :value))))
   (testing "aligns a destructuring vector name by its full source width"
     (is (= "(let [[a b]     (g)\n      long-name 2]\n  a)"
-           (. (format-summary "(let [[a b] (g)\n      long-name 2]\n  a)"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(let [[a b] (g)\n      long-name 2]\n  a)"
+                            {:align-bindings true})
+            :value))))
   (testing "aligns an expression map key by its full source width"
     (is (= "{(foo a)  1\n :long-key 2}"
            (. (format-summary "{(foo a) 1\n :long-key 2}" {:align-bindings true}) :value))))
   (testing "ignores a multiline composite binding name while aligning single-line bindings"
     (is (= "(let [{: x\n       : y} (f)\n      a  1\n      bb 2] x)"
-           (. (format-summary "(let [{: x\n       : y} (f)\n      a 1\n      bb 2] x)"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(let [{: x\n       : y} (f)\n      a 1\n      bb 2] x)"
+                            {:align-bindings true})
+            :value))))
   (testing "align-bindings absent preserves the existing output byte-for-byte"
     (let [source "(let [a 1\n      long-name 2]\n  a)"
           result (format-summary source {})]
@@ -560,42 +662,60 @@
 (deftest align-binding-clauses
   (testing "aligns case clauses to the longest single-line pattern"
     (is (= "(case x\n  \"--all\"     (a)\n  \"--changed\" (b)\n  _           (c))"
-           (. (format-summary "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))"
+                            {:align-bindings true})
+            :value))))
   (testing "aligns match clauses to the longest single-line pattern"
     (is (= "(match value\n  :short (a)\n  :long  (b))"
-           (. (format-summary "(match value\n  :short (a)\n  :long (b))"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(match value\n  :short (a)\n  :long (b))"
+                            {:align-bindings true})
+            :value))))
   (testing "aligns case-try clauses but leaves catch unchanged"
     (is (= "(case-try (f)\n  x      (g x)\n  long-y (h y)\n  (catch _ nil))"
-           (. (format-summary "(case-try (f)\n  x (g x)\n  long-y (h y)\n  (catch _ nil))"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(case-try (f)\n  x (g x)\n  long-y (h y)\n  (catch _ nil))"
+                            {:align-bindings true})
+            :value))))
   (testing "aligns match-try clauses but leaves catch unchanged"
     (is (= "(match-try (f)\n  x      (g x)\n  long-y (h y)\n  (catch _ nil))"
-           (. (format-summary "(match-try (f)\n  x (g x)\n  long-y (h y)\n  (catch _ nil))"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(match-try (f)\n  x (g x)\n  long-y (h y)\n  (catch _ nil))"
+                            {:align-bindings true})
+            :value))))
   (testing "aligns multi-clause if test and result children"
     (is (= "(if\n  (> i n)    false\n  (= path x) true\n  (rec))"
-           (. (format-summary "(if\n  (> i n) false\n  (= path x) true\n  (rec))"
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary "(if\n  (> i n) false\n  (= path x) true\n  (rec))"
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "does not align a one-pair if with an else branch"
     (is (= "(if a\n  b\n  c)"
-           (. (format-summary "(if a\n  b\n  c)"
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings true}) :value))))
+           (.
+            (format-summary "(if a\n  b\n  c)"
+                            {:indents        {"if" [[:block 1]]}
+                             :align-bindings true})
+            :value))))
   (testing "does not align a clause pair sharing the case head line"
     (is (= "(case x 1 :a\n  22 :b)"
-           (. (format-summary "(case x 1 :a\n  22 :b)"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(case x 1 :a\n  22 :b)"
+                            {:align-bindings true})
+            :value))))
   (testing "does not align and clauses"
     (is (= "(and\n a true\n long-name false)"
-           (. (format-summary "(and\n  a true\n  long-name false)"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(and\n  a true\n  long-name false)"
+                            {:align-bindings true})
+            :value))))
   (testing "does not align clause lines with comments or multiline patterns"
     (is (= "(case x\n  (foo\n   a) :one\n  long-pattern :two ;; keep\n  short :three)"
-           (. (format-summary "(case x\n  (foo\n   a) :one\n  long-pattern :two ;; keep\n  short :three)"
-                              {:align-bindings true}) :value))))
+           (.
+            (format-summary "(case x\n  (foo\n   a) :one\n  long-pattern :two ;; keep\n  short :three)"
+                            {:align-bindings true})
+            :value))))
   (testing "align-bindings false preserves the case sample byte-for-byte"
     (let [source "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))"]
       (is (= source (. (format-summary source {}) :value)))))
@@ -610,12 +730,16 @@
 (deftest block-one-indentation
   (testing "configured block-one if indents every own-line argument by two spaces"
     (is (= "(if\n  a b\n  c d\n  e)"
-           (. (format-summary "(if\n a b\n  c d\n  e)"
-                              {:indents {"if" [[:block 1]]}}) :value))))
+           (.
+            (format-summary "(if\n a b\n  c d\n  e)"
+                            {:indents {"if" [[:block 1]]}})
+            :value))))
   (testing "configured block-one if indents a simple form by two spaces"
     (is (= "(if\n  a\n  b)"
-           (. (format-summary "(if\n   a\n   b)"
-                              {:indents {"if" [[:block 1]]}}) :value))))
+           (.
+            (format-summary "(if\n   a\n   b)"
+                            {:indents {"if" [[:block 1]]}})
+            :value))))
   (testing "built-in when block indentation uses two spaces for every argument"
     (is (= "(when\n  a\n  b)"
            (. (format-summary "(when\n   a\n   b)" {}) :value)))))

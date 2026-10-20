@@ -71,7 +71,7 @@ local function binding_whitespace_equal_3f(left, right)
   local right_body = string.gsub(right, "^ *", "")
   local left_tokens, left_error = reader.tokenize(left_body)
   local right_tokens, right_error = reader.tokenize(right_body)
-  return (not left_error and not right_error and (left_body ~= right_body) and (string.sub(left_body, -1) ~= " ") and (string.sub(right_body, -1) ~= " ") and token_sequences_equal_3f(left_tokens, right_tokens, 1))
+  return (not left_error and not right_error and (left_body ~= right_body) and token_sequences_equal_3f(left_tokens, right_tokens, 1))
 end
 local function line_equal_3f(line, other, allow_binding_whitespace_3f)
   return ((line == other) or (other == (string.sub(other, 1, leading_spaces(other)) .. string.sub(line, (leading_spaces(line) + 1)))) or (allow_binding_whitespace_3f and binding_whitespace_equal_3f(line, other)) or ((other == "") and spaces_only_3f(line)))

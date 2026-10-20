@@ -5,155 +5,51 @@ do
   pkg_1_auto.loaded["fennel-extras.cli.scan"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.cli.scan"]
 end
+local path = require("fennel-extras.cli.scan.path")
+local scan_cwd = path.cwd
+local scan_join = path.join
+local scan_absolute = path.absolute
+local scan_relative = path.relative
+local scan_fnl_file_3f = path["fnl-file?"]
+local scan_excluded_3f = path["excluded?"]
+local scan_hidden_3f = path["hidden?"]
+local scan_realpath = path.realpath
+local scan_walk_prefix = path["walk-prefix"]
 local cwd
 do
   local function cwd0()
-    return ((vim and vim.loop and vim.loop.cwd()) or (vim and vim.uv and vim.uv.cwd()) or ".")
+    return scan_cwd()
   end
   _2amodule_2a["cwd"] = cwd0
   cwd = _2amodule_2a.cwd
 end
-local function join_with_slash(left, right)
-  if (string.sub(left, -1) == "/") then
-    return (left .. right)
-  else
-    return (left .. "/" .. right)
-  end
-end
-local function join(left, right)
-  if (left == "/") then
-    return (left .. right)
-  else
-    return join_with_slash(left, right)
-  end
-end
-local function absolute(root, path)
-  if (string.sub(path, 1, 1) == "/") then
-    return path
-  else
-    return join(root, path)
-  end
-end
-local function strip_private_prefix(path)
-  if (string.sub(path, 1, 9) == "/private/") then
-    return string.sub(path, 9)
-  else
-    return path
-  end
-end
-local function ensure_trailing_slash(root)
-  if (string.sub(root, -1) == "/") then
-    return root
-  else
-    return (root .. "/")
-  end
-end
-local function strip_relative_prefix(result)
-  if (string.sub(result, 1, 2) == "./") then
-    return string.sub(result, 3)
-  else
-    return result
-  end
-end
-local function relative_result(path, prefix)
-  if (string.sub(path, 1, string.len(prefix)) == prefix) then
-    return string.sub(path, (string.len(prefix) + 1))
-  else
-    return path
-  end
-end
 local relative
 do
-  local function relative0(root, path)
-    local root0 = strip_private_prefix(root)
-    local path0 = strip_private_prefix(path)
-    local prefix = ensure_trailing_slash(root0)
-    local result = relative_result(path0, prefix)
-    return strip_relative_prefix(result)
+  local function relative0(root, path0)
+    return scan_relative(root, path0)
   end
   _2amodule_2a["relative"] = relative0
   relative = _2amodule_2a.relative
 end
-local function extension_matches_3f(path, extension)
-  return (string.sub(path, ( - string.len(extension))) == extension)
-end
-local function matched_result(path, extension, result)
-  if extension_matches_3f(path, extension) then
-    return true
-  else
-    return result
-  end
-end
-local function fnl_file_3f(path, extensions)
-  local result = false
-  for _, extension in ipairs(extensions) do
-    result = (result or extension_matches_3f(path, extension))
-  end
-  return result
-end
-local function clean_prefix(prefix)
-  if (string.sub(prefix, -1) == "/") then
-    return string.sub(prefix, 1, -2)
-  else
-    return prefix
-  end
-end
-local function under_prefix_3f(path, prefix)
-  local clean = clean_prefix(prefix)
-  return ((path == clean) or (string.sub(path, 1, (string.len(clean) + 1)) == (clean .. "/")))
-end
-local function excluded_result(path, prefix, result)
-  if under_prefix_3f(path, prefix) then
-    return true
-  else
-    return result
-  end
-end
-local function excluded_any_3f(path, excludes, index, result)
-  if (index > #excludes) then
-    return result
-  else
-    return excluded_any_3f(path, excludes, (index + 1), excluded_result(path, excludes[index], result))
-  end
-end
-local function excluded_3f(path, excludes)
-  return excluded_any_3f(path, excludes, 1, under_prefix_3f(path, ".git"))
-end
-local function hidden_3f(name)
-  return (string.sub(name, 1, 1) == ".")
-end
 local realpath
 do
-  local function realpath0(uv, path)
-    local ok, resolved = pcall(uv.fs_realpath, path)
-    if ok then
-      return resolved
-    else
-      return nil
-    end
+  local function realpath0(uv, path0)
+    return scan_realpath(uv, path0)
   end
   _2amodule_2a["realpath"] = realpath0
   realpath = _2amodule_2a.realpath
 end
-local function walk_prefix(root, path)
-  local rel = relative(root, path)
-  if (rel == ".") then
-    return ""
-  else
-    return rel
-  end
-end
 local function scan_acc(acc, result)
   return {result = result, seen = acc.seen, visited = acc.visited}
 end
-local function record_file(acc, path, rel, dedupe)
+local function record_file(acc, path0, rel, dedupe)
   acc.seen[dedupe] = true
-  table.insert(acc.result, {relative = rel, absolute = path})
+  table.insert(acc.result, {relative = rel, absolute = path0})
   return scan_acc(acc, acc.result)
 end
-local function add_file(ctx, acc, path, target)
-  if (fnl_file_3f(target.rel, ctx.extensions) and not excluded_3f(target.rel, ctx.excludes) and not acc.seen[target.dedupe]) then
-    return record_file(acc, path, target.rel, target.dedupe)
+local function add_file(ctx, acc, path0, target)
+  if (scan_fnl_file_3f(target.rel, ctx.extensions) and not scan_excluded_3f(target.rel, ctx.excludes) and not acc.seen[target.dedupe]) then
+    return record_file(acc, path0, target.rel, target.dedupe)
   else
     return scan_acc(acc, acc.result)
   end
@@ -167,7 +63,7 @@ local function walk_target(ctx, acc, entry)
   return ctx.walk(ctx, acc, target)
 end
 local function scan_directory_target(ctx, acc, entry, target_stat)
-  if ((target_stat.type == "directory") and not excluded_3f(entry.rel, ctx.excludes) and not acc.visited[entry.path]) then
+  if ((target_stat.type == "directory") and not scan_excluded_3f(entry.rel, ctx.excludes) and not acc.visited[entry.path]) then
     return walk_target(ctx, acc, entry)
   else
     return scan_acc(acc, acc.result), nil
@@ -177,7 +73,7 @@ local function scan_file_dedupe(ctx, entry, target)
   if ctx["follow-symlinks"] then
     return target
   else
-    return relative(ctx.root, entry.path)
+    return scan_relative(ctx.root, entry.path)
   end
 end
 local function add_scan_file(ctx, acc, entry, target)
@@ -198,13 +94,13 @@ local function scan_target_entry(entry, target)
   return {directory = entry.directory, prefix = entry.prefix, name = entry.name, type = entry.type, path = target, target = target, rel = entry.rel, ["error-prefix"] = entry["error-prefix"]}
 end
 local function scan_target_stat_result(ctx, acc, entry, target_stat)
-  local case_18_ = target_stat.type
-  if (case_18_ == "directory") then
+  local case_5_ = target_stat.type
+  if (case_5_ == "directory") then
     return scan_directory_target(ctx, acc, entry, target_stat)
-  elseif (case_18_ == "file") then
+  elseif (case_5_ == "file") then
     return scan_file_target(ctx, acc, entry, target_stat)
   else
-    local _ = case_18_
+    local _ = case_5_
     return scan_acc(acc, acc.result), nil
   end
 end
@@ -219,7 +115,7 @@ local function scan_target_stat(ctx, acc, entry, target)
 end
 local function scan_entry_target_path(ctx, entry)
   if (entry.type == "link") then
-    return realpath(ctx.uv, entry.path)
+    return scan_realpath(ctx.uv, entry.path)
   else
     return entry.path
   end
@@ -244,13 +140,13 @@ local function scan_entry_eligible(ctx, acc, entry)
   end
 end
 local function scan_entry_path(ctx, acc, entry)
-  local path = join(entry.directory, entry.name)
+  local path0 = scan_join(entry.directory, entry.name)
   local rel = scan_entry_rel(entry.prefix, entry.name)
-  local child = {directory = entry.directory, prefix = entry.prefix, name = entry.name, type = entry.type, path = path, rel = rel, ["error-prefix"] = entry["error-prefix"]}
+  local child = {directory = entry.directory, prefix = entry.prefix, name = entry.name, type = entry.type, path = path0, rel = rel, ["error-prefix"] = entry["error-prefix"]}
   return scan_entry_eligible(ctx, acc, child)
 end
 local function scan_entry(ctx, acc, entry)
-  if (ctx["skip-dotfiles"] and hidden_3f(entry.name)) then
+  if (ctx["skip-dotfiles"] and scan_hidden_3f(entry.name)) then
     return scan_acc(acc, acc.result), nil
   else
     return scan_entry_path(ctx, acc, entry)
@@ -276,10 +172,7 @@ local function walk_scan_step(ctx, acc, entry, handle)
     return walk_scan_step_result(ctx, acc, scan_entry_data(entry, name, type), handle)
   end
 end
-local function walk_scan(ctx, acc, entry, handle)
-  return walk_scan_step(ctx, acc, entry, handle)
-end
-local function walk_prefix_or_dot(prefix)
+local function scan_walk_prefix_or_dot(prefix)
   if (prefix == "") then
     return "."
   else
@@ -290,7 +183,7 @@ local function walk_error_prefix(error_prefix, prefix)
   if error_prefix then
     return error_prefix
   else
-    return walk_prefix_or_dot(prefix)
+    return scan_walk_prefix_or_dot(prefix)
   end
 end
 local function walk_scan_error(error_prefix, prefix)
@@ -303,7 +196,7 @@ local function walk(ctx, acc, entry)
   if not handle then
     return walk_scan_error(error_prefix, entry.prefix)
   else
-    return walk_scan(ctx, acc, entry, handle)
+    return walk_scan_step(ctx, acc, entry, handle)
   end
 end
 local function followed_link_entry(entry)
@@ -325,7 +218,7 @@ local function followed_link_result(ctx, acc, entry, target_stat)
 end
 local function add_followed_link(ctx, acc, entry)
   local uv = ctx.uv
-  local target = realpath(uv, entry.path)
+  local target = scan_realpath(uv, entry.path)
   local target_stat = (target and uv.fs_stat(target))
   local target_entry = (target_stat and scan_target_entry(entry, target))
   if target_stat then
@@ -334,11 +227,11 @@ local function add_followed_link(ctx, acc, entry)
     return scan_acc(acc, acc.result), nil
   end
 end
-local function directory_target(ctx, path)
+local function directory_target(ctx, path0)
   if ctx["follow-symlinks"] then
-    return realpath(ctx.uv, path)
+    return scan_realpath(ctx.uv, path0)
   else
-    return path
+    return path0
   end
 end
 local function directory_visited(ctx, target)
@@ -352,7 +245,7 @@ local function add_directory_path(ctx, acc, entry)
   local target = directory_target(ctx, entry.path)
   local visited = directory_visited(ctx, target)
   local next_acc = {result = acc.result, seen = acc.seen, visited = visited}
-  local directory_entry = {directory = target, prefix = walk_prefix(ctx.root, entry.path), path = target, rel = entry.rel, ["error-prefix"] = entry["error-prefix"]}
+  local directory_entry = {directory = target, prefix = scan_walk_prefix(ctx.root, entry.path), path = target, rel = entry.rel, ["error-prefix"] = entry["error-prefix"]}
   return walk(ctx, next_acc, directory_entry)
 end
 local function add_path_link(ctx, acc, entry)
@@ -363,23 +256,23 @@ local function add_path_link(ctx, acc, entry)
   end
 end
 local function add_path_stat(ctx, acc, entry, stat)
-  local case_36_ = stat.type
-  if (case_36_ == "file") then
+  local case_23_ = stat.type
+  if (case_23_ == "file") then
     return add_file(ctx, acc, entry.path, {rel = entry.rel, dedupe = entry.rel})
-  elseif (case_36_ == "link") then
+  elseif (case_23_ == "link") then
     return add_path_link(ctx, acc, entry)
-  elseif (case_36_ == "directory") then
+  elseif (case_23_ == "directory") then
     return add_directory_path(ctx, acc, entry)
   else
-    local _ = case_36_
+    local _ = case_23_
     return acc, nil
   end
 end
 local function add_path(ctx, acc, input)
   local uv = ctx.uv
-  local abs = absolute(ctx.root, input)
+  local abs = scan_absolute(ctx.root, input)
   local stat = uv.fs_lstat(abs)
-  local rel = relative(ctx.root, abs)
+  local rel = scan_relative(ctx.root, abs)
   local entry = {directory = abs, prefix = "", name = input, type = (stat and stat.type), path = abs, rel = rel, ["error-prefix"] = input}
   if stat then
     return add_path_stat(ctx, acc, entry, stat)
@@ -391,17 +284,17 @@ local function sorted_files_failure(failure, error)
   return (error or failure)
 end
 local function sorted_files_success(result)
-  local function _39_(a, b)
+  local function _26_(a, b)
     return (a.relative < b.relative)
   end
-  table.sort(result, _39_)
+  table.sort(result, _26_)
   return result, nil
 end
 local function sorted_files_result(failure, result)
-  local case_40_ = not failure
-  if (case_40_ == false) then
+  local case_27_ = not failure
+  if (case_27_ == false) then
     return nil, failure
-  elseif (case_40_ == true) then
+  elseif (case_27_ == true) then
     return sorted_files_success(result)
   else
     return nil

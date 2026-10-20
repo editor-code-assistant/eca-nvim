@@ -1,13 +1,15 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
-(defn- load-identity []
+(defn- load-identity
+  []
   (let [(ok result) (pcall require :fennel-extras.lint.identity)]
     (if ok
       result
       {:module-missing true})))
 
-(defn- identity-forms [source path]
+(defn- identity-forms
+  [source path]
   (let [identity (load-identity)]
     (if (. identity :module-missing)
       identity
@@ -16,27 +18,31 @@
           forms
           {:reader-error err})))))
 
-(defn- form-ids [source path]
+(defn- form-ids
+  [source path]
   (let [forms (identity-forms source path)]
     (if (or (. forms :module-missing) (. forms :reader-error))
       forms
       (icollect [_ form (ipairs forms)]
         (. form :form)))))
 
-(defn- find-form-id [forms form-id]
+(defn- find-form-id
+  [forms form-id]
   (var result nil)
   (each [_ form (ipairs forms)]
-    (if (= form-id (. form :form))
+    (when (= form-id (. form :form))
       (set result form)))
   result)
 
-(defn- form-by-id [source path form-id]
+(defn- form-by-id
+  [source path form-id]
   (let [forms (identity-forms source path)]
     (if (or (. forms :module-missing) (. forms :reader-error))
       forms
       (find-form-id forms form-id))))
 
-(defn- span-summary [source path form-id]
+(defn- span-summary
+  [source path form-id]
   (let [form (form-by-id source path form-id)]
     (if (or (. form :module-missing) (. form :reader-error))
       form
@@ -45,14 +51,16 @@
        :end-line (. form :end-line)
        :end-col  (. form :end-col)})))
 
-(defn- location-summary [source path form-id]
+(defn- location-summary
+  [source path form-id]
   (let [form (form-by-id source path form-id)]
     (if form
       {:line (. form :line)
        :col  (. form :col)}
       nil)))
 
-(defn- reader-end-summary [source]
+(defn- reader-end-summary
+  [source]
   (let [reader  (require :fennel-extras.reader)
         tokens  (reader.tokenize source)
         closing (. tokens (length tokens))]
@@ -61,7 +69,8 @@
      :end-line (. closing :line)
      :end-col  (+ (. closing :col) 1)}))
 
-(defn- failure-summary [source path]
+(defn- failure-summary
+  [source path]
   (let [identity (load-identity)]
     (if (. identity :module-missing)
       identity
@@ -180,19 +189,21 @@
     (is (= (reader-end-summary "(foo\n  €😀)")
            (span-summary "(foo\n  €😀)" "fnl/utf8.fnl" "fnl/utf8.fnl > top#1")))))
 
-(defn- file-paths []
+(defn- file-paths
+  []
   (let [paths      []
         fnl-files  (vim.fn.globpath "fnl" "**/*.fnl" false true)
         fnlm-files (vim.fn.globpath "fnl" "**/*.fnlm" false true)]
     (each [_ path (ipairs fnl-files)]
-      (if (not (string.find path "^fnl/eca/nfnl/"))
+      (when (not (string.find path "^fnl/eca/nfnl/"))
         (table.insert paths path)))
     (each [_ path (ipairs fnlm-files)]
-      (if (not (string.find path "^fnl/eca/nfnl/"))
+      (when (not (string.find path "^fnl/eca/nfnl/"))
         (table.insert paths path)))
     paths))
 
-(defn- read-source [path]
+(defn- read-source
+  [path]
   (let [(ok result) (pcall (fn []
                              (let [file   (assert (io.open path :r))
                                    source (file:read "*a")]
@@ -202,30 +213,33 @@
       result
       nil)))
 
-(defn- report-duplicate [duplicates reported form-id]
+(defn- report-duplicate
+  [duplicates reported form-id]
   (table.insert duplicates form-id)
   (tset reported form-id true))
 
-(defn- duplicate-form-ids [forms]
+(defn- duplicate-form-ids
+  [forms]
   (let [seen       {}
         reported   {}
         duplicates []]
     (each [_ form (ipairs forms)]
       (let [form-id (. form :form)]
         (if (. seen form-id)
-          (if (not (. reported form-id))
+          (when (not (. reported form-id))
             (report-duplicate duplicates reported form-id))
           (tset seen form-id true))))
     duplicates))
 
-(defn- repo-duplicates []
+(defn- repo-duplicates
+  []
   (let [duplicates []]
     (each [_ path (ipairs (file-paths))]
       (let [source (read-source path)
             forms  (if source (identity-forms source path) nil)]
         (if (and forms (not (. forms :module-missing)) (not (. forms :reader-error)))
           (let [form-duplicates (duplicate-form-ids forms)]
-            (if (> (length form-duplicates) 0)
+            (when (> (length form-duplicates) 0)
               (table.insert duplicates path)))
           (table.insert duplicates path))))
     duplicates))
@@ -290,7 +304,8 @@
            (form-ids "(deftest run (testing \"outer\" (if true (is true) (is false))))"
                      "fnl/testing.fnl")))))
 
-(defn- binding-vector-identities []
+(defn- binding-vector-identities
+  []
   {:let           (form-ids "(defn run [] (let [x xs] [1 2]))" "fnl/bindings.fnl")
    :when-let      (form-ids "(defn run [] (when-let [x xs] [1 2]))" "fnl/bindings.fnl")
    :if-let        (form-ids "(defn run [] (if-let [x xs] [1 2]))" "fnl/bindings.fnl")

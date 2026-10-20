@@ -11,7 +11,8 @@
 (local enabled? registry.enabled?)
 (local rule-severity registry.rule-severity)
 
-(defn- file-size-finding-result [path policy count limit]
+(defn- file-size-finding-result
+  [path policy count limit]
   (if (> count limit)
     [{:kind     "finding"
       :path     path
@@ -26,13 +27,15 @@
       :node     nil}]
     []))
 
-(defn- file-size-finding-source [path policy source]
+(defn- file-size-finding-source
+  [path policy source]
   (let [tokens (reader.tokenize source)
         count  (code-line-count tokens 1 (+ (newline-count source 1 0) 1) 0)
         limit  (or (. policy :max-code-lines) 300)]
     (file-size-finding-result path policy count limit)))
 
-(defn finding [path policy source]
+(defn finding
+  [path policy source]
   (if (and (not (spec-file? path)) (enabled? policy "file-size"))
     (file-size-finding-source path policy source)
     []))

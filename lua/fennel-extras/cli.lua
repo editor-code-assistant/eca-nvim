@@ -8,10 +8,7 @@ end
 local runner = require("fennel-extras.cli.run")
 local run
 do
-  local function run0(args, opts)
-    return runner.run(args, opts)
-  end
-  _2amodule_2a["run"] = run0
+  _2amodule_2a["run"] = runner.run
   run = _2amodule_2a.run
 end
 return nil

@@ -1,7 +1,8 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
-(defn- load-config []
+(defn- load-config
+  []
   (let [(ok result) (pcall require :fennel-extras.config)]
     (if ok
       result
@@ -38,15 +39,19 @@
             err   (. result :error)]
         (if include-location?
           {:value?      (not= nil value)
-           :has-message (and (= nil value) err
-                             (= :table (type err))
-                             (= :string (type (. err :message))))
+           :has-message (and
+                         (= nil value)
+                         err
+                         (= :table (type err))
+                         (= :string (type (. err :message))))
            :line        (and err (. err :line))
            :col         (and err (. err :col))}
           {:value?      (not= nil value)
-           :has-message (and (= nil value) err
-                             (= :table (type err))
-                             (= :string (type (. err :message))))})))))
+           :has-message (and
+                         (= nil value)
+                         err
+                         (= :table (type err))
+                         (= :string (type (. err :message))))})))))
 
 (defn- validate-summary
   [value]
@@ -55,9 +60,12 @@
       config
       (let [(ok result err) (pcall (fn [] (config.validate value)))]
         {:value?      (and ok (not= nil result))
-         :has-message (and ok (= nil result) err
-                           (= :table (type err))
-                           (= :string (type (. err :message))))}))))
+         :has-message (and
+                       ok
+                       (= nil result)
+                       err
+                       (= :table (type err))
+                       (= :string (type (. err :message))))}))))
 
 (defn- validation-error-message
   [text]
@@ -108,7 +116,8 @@
     (file:close)
     path))
 
-(defn- find-load-scenario []
+(defn- find-load-scenario
+  []
   (let [root        (vim.fn.tempname)
         nested      (.. root "/one/two")
         root-config (.. root "/.fnl-extras.fnl")
@@ -149,9 +158,12 @@
                           (let [(ok value err)
                                 (pcall (fn [] (config.load (.. root "/missing.fnl-extras.fnl"))))]
                             {:value?      (and ok (not= nil value))
-                             :has-message (and ok (= nil value) err
-                                               (= :table (type err))
-                                               (= :string (type (. err :message))))})))}))))
+                             :has-message (and
+                                           ok
+                                           (= nil value)
+                                           err
+                                           (= :table (type err))
+                                           (= :string (type (. err :message))))})))}))))
 
 (deftest parse-string
   (testing "parses a realistic data-only configuration and converts keywords to strings"
@@ -332,6 +344,9 @@
   (testing "accepts the no-mutation lint rule from parsed Fennel"
     (is (= {:lint {:rules {"no-mutation" "warning"}}}
            (parse-value "{:lint {:rules {\"no-mutation\" :warning}}}"))))
+  (testing "accepts the defn-args-newline lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"defn-args-newline" "error"}}}
+           (parse-value "{:lint {:rules {\"defn-args-newline\" :error}}}"))))
   (testing "accepts a positive max-code-lines value"
     (is (= {:value? true :has-message false}
            (validate-summary {:lint {:max-code-lines 10}}))))
@@ -494,6 +509,9 @@
                                "spec-direct-require" "error"
                                "one-is-per-testing"  "error"
                                "if-branch-call"      "warning"
+                               "if-without-else"     "warning"
+                               "defn-args-newline"   "warning"
+                               "multiline-layout"    "warning"
                                "function-shape"      "warning"
                                "no-mutation"         "warning"
                                "file-size"           "warning"
@@ -502,9 +520,11 @@
               :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}
              (if (. config :module-missing)
                config
-               (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 300
-                                                                          :rules          {"core-require" "off"}
-                                                                          :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
+               (let [(ok value) (pcall (fn
+                                         []
+                                         (config.lint-policy {:lint {:max-code-lines 300
+                                                                     :rules          {"core-require" "off"}
+                                                                     :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
                  (if ok value {:missing-lint-policy true}))))))))
 (testing "normalizes a configured max-code-lines value"
   (let [config (load-config)]

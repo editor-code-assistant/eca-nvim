@@ -7,10 +7,12 @@
 (local helpers (require :fennel-extras.indent.node))
 (local align (require :fennel-extras.indent.align))
 
-(defn- append-line [lines source start end]
+(defn- append-line
+  [lines source start end]
   (table.insert lines (string.sub source start (- end 1)))
   (+ end 1))
-(defn- split-lines [source]
+(defn- split-lines
+  [source]
   (let [lines []]
     (var start 1)
     (var i 1)
@@ -20,61 +22,72 @@
         (set start (append-line lines source start i))
         nil)
       (set i (+ i 1)))
-    (if (or (<= start n) (= n 0))
+    (when (or (<= start n) (= n 0))
       (table.insert lines (string.sub source start n)))
     (values lines (= (and (> n 0) (= (string.sub source n n) "\n")) true))))
 
-(defn- first-token-on-line [tokens line]
+(defn- first-token-on-line
+  [tokens line]
   (var result nil)
   (each [_ token (ipairs tokens)]
-    (if (and (= result nil) (= token.line line)
-             (not (or (= token.kind :whitespace) (= token.kind :newline))))
+    (when (and
+           (= result nil)
+           (= token.line line)
+           (not (or (= token.kind :whitespace) (= token.kind :newline))))
       (set result token)))
   result)
 
-(defn- newline-count [text]
+(defn- newline-count
+  [text]
   (var count 0)
   (var i 1)
   (let [n (string.len text)]
     (while (<= i n)
-      (if (= (string.sub text i i) "\n")
+      (when (= (string.sub text i i) "\n")
         (set count (+ count 1)))
       (set i (+ i 1))))
   count)
 
-(defn- string-on-line? [tokens line]
+(defn- string-on-line?
+  [tokens line]
   (var result false)
   (each [_ token (ipairs tokens)]
-    (if (and (= token.kind :string) (< token.line line)
-             (<= line (+ token.line (newline-count token.text))))
+    (when (and
+           (= token.kind :string)
+           (< token.line line)
+           (<= line (+ token.line (newline-count token.text))))
       (set result true)))
   result)
 
-(defn- collect-node-entry [node nodes tokens depth]
+(defn- collect-node-entry
+  [node nodes tokens depth]
   (set node.depth depth)
   (table.insert nodes node)
   (table.insert tokens node.open))
 
-(defn- collect-node [node nodes tokens depth]
-  (if (not= node.kind :root)
+(defn- collect-node
+  [node nodes tokens depth]
+  (when (not= node.kind :root)
     (collect-node-entry node nodes tokens depth))
   (each [_ child (ipairs node.children)]
     (if child.text
       (table.insert tokens child)
       (collect-node child nodes tokens (+ depth 1))))
-  (if (and (not= node.kind :root) node.close)
+  (when (and (not= node.kind :root) node.close)
     (table.insert tokens node.close)))
 
-(defn- active-node [nodes line]
+(defn- active-node
+  [nodes line]
   (var result nil)
   (each [_ node (ipairs nodes)]
-    (if (and (< node.open.line line)
-             (or (= node.close nil) (>= node.close.line line))
-             (or (= result nil) (> node.depth result.depth)))
+    (when (and (< node.open.line line)
+               (or (= node.close nil) (>= node.close.line line))
+               (or (= result nil) (> node.depth result.depth)))
       (set result node)))
   result)
 
-(defn- output-column [token line indent strip-leading?]
+(defn- output-column
+  [token line indent strip-leading?]
   (let [spaces        (if strip-leading? (helpers.leading-spaces line) 0)
         content-start (+ spaces 1)
         before        (if (>= token.col content-start)
@@ -82,33 +95,39 @@
                         "")]
     (+ indent (helpers.codepoint-width before))))
 
-(defn- argument-index [node first-token]
+(defn- argument-index
+  [node first-token]
   (let [children (helpers.nontrivia-children node)]
     (var result nil)
     (each [index child (ipairs children)]
       (let [start (helpers.child-start child)]
-        (if (and (= result nil)
-                 (= start.line first-token.line)
-                 (= start.col first-token.col))
+        (when (and (= result nil)
+                   (= start.line first-token.line)
+                   (= start.col first-token.col))
           (set result (- index 2)))))
     result))
 
-(defn- matching-rule-indent [rule node arg-index config]
+(defn- matching-rule-indent
+  [rule node arg-index config]
   (var result nil)
   (each [_ entry (ipairs rule)]
-    (if (= result nil)
+    (when (= result nil)
       (let [kind (. entry 1) value (. entry 2) selected (. entry 3)]
-        (if (and (= kind :inner) (= value 0)
-                 (or (= selected nil) (= selected arg-index)))
+        (if (and
+             (= kind :inner)
+             (= value 0)
+             (or (= selected nil) (= selected arg-index)))
           (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
-          (if (and (= kind :block) (>= arg-index value))
+          (when (and (= kind :block) (>= arg-index value))
             (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
   result)
-(defn- block-argument-index [arg-index first-token node]
+(defn- block-argument-index
+  [arg-index first-token node]
   (if (and (= arg-index 0) (> first-token.line node.open.line))
     1
     arg-index))
-(defn- rule-indent [node first-token line-number config]
+(defn- rule-indent
+  [node first-token line-number config]
   (if (and node (= node.kind :list) (> line-number node.open.line))
     (let [children (helpers.nontrivia-children node)
           head     (. children 1)]
@@ -116,17 +135,21 @@
         (let [rule      (rules.resolve config head.text)
               arg-index (argument-index node first-token)]
           (if (and rule arg-index)
-            (matching-rule-indent rule node
-                                  (block-argument-index arg-index first-token node)
-                                  config)
+            (matching-rule-indent
+             rule
+             node
+             (block-argument-index arg-index first-token node)
+             config)
             nil))
         nil))
     nil))
 
-(defn- started-before? [child line-number]
+(defn- started-before?
+  [child line-number]
   (< (. (helpers.child-start child) :line) line-number))
 
-(defn- default-indent-for [node first-token line-number]
+(defn- default-indent-for
+  [node first-token line-number]
   (if (= node nil)
     0
     (if (= first-token.kind :close)
@@ -151,32 +174,39 @@
               (. (helpers.child-start first-child) :out-col)
               (+ (. node.open :out-col) 1))))))))
 
-(defn- indent-for [node first-token line-number config]
+(defn- indent-for
+  [node first-token line-number config]
   (or (rule-indent node first-token line-number config)
       (default-indent-for node first-token line-number)))
 
-(defn- assign-token-output [token line indent strip-leading?]
+(defn- assign-token-output
+  [token line indent strip-leading?]
   (set (. token :out-col) (output-column token line indent strip-leading?))
-  (if (= token.kind :open)
+  (when (= token.kind :open)
     (set (. token :line-indent) indent)))
 
-(defn- assign-output-columns [tokens line-number line indent strip-leading?]
+(defn- assign-output-columns
+  [tokens line-number line indent strip-leading?]
   (each [_ token (ipairs tokens)]
-    (if (= token.line line-number)
+    (when (= token.line line-number)
       (assign-token-output token line indent strip-leading?))))
 
-(defn- process-string-line [line-number line tokens]
+(defn- process-string-line
+  [line-number line tokens]
   (assign-output-columns tokens line-number line 0 false)
   line)
 
-(defn- process-empty-line [line-number line tokens]
+(defn- process-empty-line
+  [line-number line tokens]
   (assign-output-columns tokens line-number line 0 true)
   "")
 
-(defn- process-unchanged-line [line-number line tokens]
+(defn- process-unchanged-line
+  [line-number line tokens]
   (assign-output-columns tokens line-number line 0 false)
   line)
-(defn- process-line [line-number line nodes tokens config]
+(defn- process-line
+  [line-number line nodes tokens config]
   (let [string-line? (string-on-line? tokens line-number)
         first-token  (first-token-on-line tokens line-number)
         node         (active-node nodes line-number)]
@@ -196,7 +226,8 @@
             (assign-output-columns tokens line-number line indent true)
             (.. (string.rep " " indent) body)))))))
 
-(defn- reindent-once [source config]
+(defn- reindent-once
+  [source config]
   (let [(tree error) (reader.parse source)]
     (if error
       (values nil nil error)
@@ -211,12 +242,14 @@
             (set line-number (+ line-number 1)))
           (values (.. (table.concat output "\n") (if final-newline "\n" "")) tree nil))))))
 
-(defn- alignment-source [source tree]
+(defn- alignment-source
+  [source tree]
   (let [(lines final-newline) (split-lines source)
         aligned               (align.apply lines tree)]
     (.. (table.concat aligned "\n") (if final-newline "\n" ""))))
 
-(defn- alignment-pass [source config]
+(defn- alignment-pass
+  [source config]
   (let [(plain tree error) (reindent-once source config)]
     (if error
       (values nil error)
@@ -224,19 +257,22 @@
             (result _ result-error) (reindent-once aligned config)]
         (values result result-error)))))
 
-(defn- fixed-point-result [source config rounds result recurse]
+(defn- fixed-point-result
+  [source config rounds result recurse]
   (let [next-rounds (- rounds 1)]
     (if (or (= rounds 0) (= result source))
       result
       (recurse result config next-rounds))))
 
-(defn- alignment-fixed-point [source config rounds]
+(defn- alignment-fixed-point
+  [source config rounds]
   (let [(result _ error) (alignment-pass source config)]
     (if error
       (values nil error)
       (fixed-point-result source config rounds result alignment-fixed-point))))
 
-(defn reindent [source config]
+(defn reindent
+  [source config]
   (let [config-error (rules.validate config)]
     (if config-error
       (values nil config-error)
