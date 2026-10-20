@@ -2,7 +2,6 @@
 
 (module fennel-extras.lint.rules.shape.leaf.call)
 
-
 (local ast (require :fennel-extras.lint.rules.ast))
 (local valid (require :fennel-extras.lint.rules.shape.leaf.valid))
 (local meaningful-children ast.meaningful-children)
@@ -14,8 +13,7 @@
 (local leaf-valid? valid.leaf-valid?)
 (defn- plain-call-layer-count
   [layer?]
-  (if
-    layer?
+  (if layer?
     1
     0))
 
@@ -30,10 +28,9 @@
 
 (defn- plain-call-state-step
   [children state child index]
-  (if
-    (and state.valid
-         (>= index 2)
-         (not (quoted-child? children index)))
+  (if (and state.valid
+           (>= index 2)
+           (not (quoted-child? children index)))
     (plain-call-layer-state state child)
     state))
 
@@ -45,14 +42,12 @@
 (defn plain-call-one-layer?
   [node]
   (let [children (meaningful-children node) result   (plain-call-result children)]
-    (and
-     result.valid
-     (>= result.layers 1))))
+    (and result.valid
+         (>= result.layers 1))))
 
 (defn leaf-violations
   [node]
-  (if
-    (leaf-valid? node)
+  (if (leaf-valid? node)
     []
     [node]))
 

@@ -87,7 +87,7 @@ The fourteen rules are:
 - `defn-args-newline` (warning): `defn` and `defn-` argument vectors start on the line below the function name.
 - `no-mutation` (warning): source files do not use `var`, `set`, or `while`; return new values instead.
 - `function-shape` (warning): bodies of `defn`/`defn-`/`fn`/`lambda`/`λ` use an optional first `let` with leaf values, then expressions that are leaves or one layer; move deeper code into named private functions.
-- `multiline-layout` (warning): list heads stay on the opening line; once a form spans lines, each item starts its own line. Maps, binding vectors, and multi-clause `if`/`case`/`match` count pairs; single-clause `if` forms count elements, with the test optionally sharing the head line and each branch on its own line.
+- `multiline-layout` (warning): list heads and first arguments stay on the opening line; once a form spans lines, each item starts its own line. `do` forms are exempt from the first-argument requirement, and `defn`/`defn-` names stay on the head line. Maps, binding vectors, and multi-clause `if`/`case`/`match` count pairs; single-clause `if` forms count elements, with the test sharing the head line and each branch on its own line.
 - `file-size` (warning): source files contain at most the configured number of nonblank, non-comment code lines.
 - `core-require` (error): `eca.nfnl.core` is required as `core`.
 

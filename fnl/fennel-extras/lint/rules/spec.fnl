@@ -15,11 +15,10 @@
 
 (defn spec-import-finding
   [path forms policy valid]
-  (if
-    (and (spec-file? path)
-         (not= path "fnl/spec/eca/macros.fnlm")
-         (enabled? policy "spec-macro-import")
-         (not valid))
+  (if (and (spec-file? path)
+           (not= path "fnl/spec/eca/macros.fnlm")
+           (enabled? policy "spec-macro-import")
+           (not valid))
     [{:kind     "finding" :path     path :line     1 :col      1 :end-line 1 :end-col  1 :severity (rule-severity policy "spec-macro-import") :rule     "spec-macro-import" :form     (.. path " > spec") :message  "specs must import deftest, testing, and is from spec.eca.macros" :node     nil}]
     []))
 

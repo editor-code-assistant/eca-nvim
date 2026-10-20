@@ -39,19 +39,17 @@
             err   (. result :error)]
         (if include-location?
           {:value?      (not= nil value)
-           :has-message (and
-                         (= nil value)
-                         err
-                         (= :table (type err))
-                         (= :string (type (. err :message))))
+           :has-message (and (= nil value)
+                             err
+                             (= :table (type err))
+                             (= :string (type (. err :message))))
            :line        (and err (. err :line))
            :col         (and err (. err :col))}
           {:value?      (not= nil value)
-           :has-message (and
-                         (= nil value)
-                         err
-                         (= :table (type err))
-                         (= :string (type (. err :message))))})))))
+           :has-message (and (= nil value)
+                             err
+                             (= :table (type err))
+                             (= :string (type (. err :message))))})))))
 
 (defn- validate-summary
   [value]
@@ -60,12 +58,11 @@
       config
       (let [(ok result err) (pcall (fn [] (config.validate value)))]
         {:value?      (and ok (not= nil result))
-         :has-message (and
-                       ok
-                       (= nil result)
-                       err
-                       (= :table (type err))
-                       (= :string (type (. err :message))))}))))
+         :has-message (and ok
+                           (= nil result)
+                           err
+                           (= :table (type err))
+                           (= :string (type (. err :message))))}))))
 
 (defn- validation-error-message
   [text]
@@ -127,8 +124,7 @@
     (vim.fn.mkdir nested "p")
     (vim.fn.mkdir stop-nested "p")
     (vim.fn.mkdir stop-git "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file root-config "{:exclude [\"root\"]}")
         (write-file config-path "{:paths [\"fnl\"]}")
@@ -157,12 +153,11 @@
                           (let [(ok value err)
                                 (pcall (fn [] (config.load (.. root "/missing.fnl-extras.fnl"))))]
                             {:value?      (and ok (not= nil value))
-                             :has-message (and
-                                           ok
-                                           (= nil value)
-                                           err
-                                           (= :table (type err))
-                                           (= :string (type (. err :message))))})))}))))
+                             :has-message (and ok
+                                               (= nil value)
+                                               err
+                                               (= :table (type err))
+                                               (= :string (type (. err :message))))})))}))))
 
 (deftest parse-string
   (testing "parses a realistic data-only configuration and converts keywords to strings"
@@ -523,13 +518,11 @@
               :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}
              (if (. config :module-missing)
                config
-               (let [(ok value) (pcall (fn
-                                         []
+               (let [(ok value) (pcall (fn []
                                          (config.lint-policy {:lint {:max-code-lines 300
                                                                      :rules          {"core-require" "off"}
                                                                      :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
-                 (if
-                   ok
+                 (if ok
                    value
                    {:missing-lint-policy true}))))))))
 (testing "normalizes a configured max-code-lines value"
@@ -538,9 +531,8 @@
            (if (. config :module-missing)
              nil
              (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 10}})))]
-               (and
-                ok
-                (. value :max-code-lines))))))))
+               (and ok
+                    (. value :max-code-lines))))))))
 
 (deftest formatter-isolation
   (testing "lint configuration does not change formatter output"

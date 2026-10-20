@@ -35,15 +35,13 @@
 
 (defn- module-import-state
   [state import-info]
-  (if
-    (and import-info (= import-info.target "eca.nfnl.macros.aniseed"))
+  (if (and import-info (= import-info.target "eca.nfnl.macros.aniseed"))
     (has-module-import? import-info.names)
     state.module-import))
 
 (defn- spec-import-state
   [state import-info]
-  (if
-    (and import-info (= import-info.target "spec.eca.macros"))
+  (if (and import-info (= import-info.target "spec.eca.macros"))
     (has-all? import-info.names)
     state.spec-import))
 
@@ -58,8 +56,7 @@
 
 (defn- check-state
   [nodes index state]
-  (if
-    (> index (length nodes))
+  (if (> index (length nodes))
     state
     (check-state-step nodes index state check-state)))
 

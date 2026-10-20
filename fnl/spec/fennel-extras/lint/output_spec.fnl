@@ -40,18 +40,16 @@
   [diagnostics]
   (let [signatures []]
     (each [_ diagnostic (ipairs diagnostics)]
-      (table.insert
-       signatures
-       (..
-        diagnostic.path
-        ":"
-        diagnostic.line
-        ":"
-        diagnostic.rule
-        ":"
-        diagnostic.form
-        ":"
-        diagnostic.message)))
+      (table.insert signatures
+                    (.. diagnostic.path
+                        ":"
+                        diagnostic.line
+                        ":"
+                        diagnostic.rule
+                        ":"
+                        diagnostic.form
+                        ":"
+                        diagnostic.message)))
     (table.concat signatures "\n")))
 
 (defn- finding

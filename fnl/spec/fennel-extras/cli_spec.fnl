@@ -36,10 +36,9 @@
         cli   (load-cli)]
     (if (. cli :module-missing)
       cli
-      {:code  (cli.run
-               args
-               {:cwd   root
-                :print (fn [line] (table.insert lines line))})
+      {:code  (cli.run args
+                       {:cwd   root
+                        :print (fn [line] (table.insert lines line))})
        :lines lines})))
 
 (defn- check-scenario
@@ -48,8 +47,7 @@
         path (.. root "/a.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file path source)
         (let [result (run-cli root ["format" "--check" "a.fnl"])]
@@ -93,8 +91,7 @@
         bad  (.. root "/bad.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :good)
           (write-good-scenario root good)
@@ -150,8 +147,7 @@
     (vim.fn.mkdir src "p")
     (vim.fn.mkdir skip "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :indent)
           (config-indent-scenario root src-file config-path)
@@ -170,8 +166,7 @@
         expected    "(let [a         1\n      long-name 2]\n  a)"]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file config-path "{:align-bindings true}")
         (write-file path source)
@@ -262,8 +257,7 @@
         config-path (.. root "/.fnl-extras.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file config-path (.. "{:extensions [\"" extension "\"]}"))
         (if (= extension ".fnl")
@@ -276,8 +270,7 @@
         path (.. root "/source.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file path "(when x\ny)\n")
         (let [result (run-cli root ["format" "--write"])]
@@ -296,8 +289,7 @@
         git-file    (.. git-dir "/ignored.fnl")]
     (vim.fn.mkdir hidden-dir "p")
     (vim.fn.mkdir git-dir "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file (.. root "/.fnl-extras.fnl") "{:paths [\"fnl\"] :skip-dotfiles false}")
         (write-file hidden-file "(when x\ny)\n")
@@ -320,10 +312,9 @@
     (vim.fn.mkdir fnl-dir "p")
     (vim.fn.mkdir outside "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn []
-        (vim.fn.delete root "rf")
-        (vim.fn.delete outside "rf"))
+    (with-cleanup (fn []
+                    (vim.fn.delete root "rf")
+                    (vim.fn.delete outside "rf"))
       (fn []
         (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
         (write-file target "(when x\ny)\n")
@@ -343,19 +334,17 @@
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir outside "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn []
-        (vim.fn.delete root "rf")
-        (vim.fn.delete outside "rf"))
+    (with-cleanup (fn []
+                    (vim.fn.delete root "rf")
+                    (vim.fn.delete outside "rf"))
       (fn []
         (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
         (write-file target "(when x\ny)\n")
         (assert (vim.loop.fs_symlink outside link))
-        (let [result (run-cli
-                      root
-                      (if (= mode :check)
-                        ["format" "--check"]
-                        ["format" "--write"]))]
+        (let [result (run-cli root
+                              (if (= mode :check)
+                                ["format" "--check"]
+                                ["format" "--write"]))]
           (if (= mode :check)
             {:code   (. result :code)
              :lines  (. result :lines)
@@ -371,16 +360,14 @@
         config-path (.. root "/.fnl-extras.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file path "(when x\ny)\n")
         (write-file config-path "{:parser \"missing.parser.module\"}")
-        (let [result (run-cli
-                      root
-                      (if (= mode :config)
-                        ["format" "--check" "a.fnl"]
-                        ["format" "--check" "--parser" "eca.nfnl.fennel" "a.fnl"]))]
+        (let [result (run-cli root
+                              (if (= mode :config)
+                                ["format" "--check" "a.fnl"]
+                                ["format" "--check" "--parser" "eca.nfnl.fennel" "a.fnl"]))]
           {:code  (. result :code)
            :lines (. result :lines)})))))
 
@@ -391,8 +378,7 @@
         config-path (.. root "/.fnl-extras.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file config-path config)
         (write-file path source)
@@ -410,16 +396,14 @@
         config      "{:skip-dotfiles false\n:paths [\".\"]}\n"]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file config-path config)
         (write-file source-path "(when x\ny)\n")
-        (let [result (run-cli
-                      root
-                      (if (= mode :check)
-                        ["format" "--check"]
-                        ["format" "--write"]))]
+        (let [result (run-cli root
+                              (if (= mode :check)
+                                ["format" "--check"]
+                                ["format" "--write"]))]
           {:code   (. result :code)
            :lines  (. result :lines)
            :config (read-file config-path)
@@ -474,17 +458,15 @@
         script    (.. (vim.fn.getcwd) "/scripts/fennel-extras")]
     (vim.fn.mkdir fnl-dir "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file file "(when x\ny)\n")
         (assert (vim.loop.fs_symlink root loop-path))
-        (let [command (..
-                       "cd "
-                       (vim.fn.shellescape root)
-                       " && perl -e 'alarm shift; exec @ARGV' 10 "
-                       (vim.fn.shellescape script)
-                       " format --check")
+        (let [command (.. "cd "
+                          (vim.fn.shellescape root)
+                          " && perl -e 'alarm shift; exec @ARGV' 10 "
+                          (vim.fn.shellescape script)
+                          " format --check")
               lines   (vim.fn.systemlist ["sh" "-c" command])]
           {:code  vim.v.shell_error
            :lines lines})))))
@@ -511,10 +493,9 @@
         probe     (.. read-only "/probe")]
     (vim.fn.mkdir read-only "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn []
-        (vim.fn.setfperm read-only "rwxr-xr-x")
-        (vim.fn.delete root "rf"))
+    (with-cleanup (fn []
+                    (vim.fn.setfperm read-only "rwxr-xr-x")
+                    (vim.fn.delete root "rf"))
       (fn []
         (write-file good "(when x\ny)\n")
         (write-file blocked "(when y\nz)\n")
@@ -543,8 +524,7 @@
         fnl-dir (.. root "/fnl")]
     (vim.fn.mkdir fnl-dir "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :config)
           (dotfile-config-scenario root fnl-dir)
@@ -561,19 +541,17 @@
     (vim.fn.mkdir fnl-dir "p")
     (vim.fn.mkdir outside "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn []
-        (vim.fn.delete root "rf")
-        (vim.fn.delete outside "rf"))
+    (with-cleanup (fn []
+                    (vim.fn.delete root "rf")
+                    (vim.fn.delete outside "rf"))
       (fn []
         (write-file good "(when x\n  y)\n")
         (write-file target "(when x\ny)\n")
         (assert (vim.loop.fs_symlink target link))
-        (let [result (run-cli
-                      root
-                      (if (= mode :write)
-                        ["format" "--write"]
-                        ["format" "--check" "fnl/link.fnl"]))]
+        (let [result (run-cli root
+                              (if (= mode :write)
+                                ["format" "--write"]
+                                ["format" "--check" "fnl/link.fnl"]))]
           {:code      (. result :code)
            :lines     (. result :lines)
            :link-type (. (vim.loop.fs_lstat link) :type)
@@ -586,8 +564,7 @@
         link   (.. root "/b.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
         (write-file target "(when x\ny)\n")
@@ -606,8 +583,7 @@
         loop-path (.. directory "/loop")]
     (vim.fn.mkdir directory "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
         (write-file file "(when x\ny)\n")
@@ -623,8 +599,7 @@
         link   (.. root "/link.fnl")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file (.. root "/.fnl-extras.fnl") "{:follow-symlinks true}")
         (write-file target "(when x\ny)\n")
@@ -641,10 +616,9 @@
         good    (.. fnl-dir "/a.fnl")]
     (vim.fn.mkdir locked "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn []
-        (vim.fn.setfperm locked "rwxr-xr-x")
-        (vim.fn.delete root "rf"))
+    (with-cleanup (fn []
+                    (vim.fn.setfperm locked "rwxr-xr-x")
+                    (vim.fn.delete root "rf"))
       (fn []
         (write-file good "(when x\n  y)\n")
         (vim.fn.setfperm locked "---------")
@@ -662,28 +636,25 @@
             :lines    ["a.fnl"]
             :content  "(when x\n    y)\n"
             :expected "(when x\n    y)\n"}
-           (rule-config-scenario
-            "{:indent-width 4}"
-            "(when x\ny)\n"
-            "(when x\n    y)\n"))))
+           (rule-config-scenario "{:indent-width 4}"
+                                 "(when x\ny)\n"
+                                 "(when x\n    y)\n"))))
   (testing "disables built-in indentation rules when builtins is false"
     (is (= {:code     0
             :lines    ["a.fnl"]
             :content  "(let [x 1]\n     x)\n"
             :expected "(let [x 1]\n     x)\n"}
-           (rule-config-scenario
-            "{:builtins false}"
-            "(let [x 1]\nx)\n"
-            "(let [x 1]\n     x)\n"))))
+           (rule-config-scenario "{:builtins false}"
+                                 "(let [x 1]\nx)\n"
+                                 "(let [x 1]\n     x)\n"))))
   (testing "disables prefix fallback indentation rules when prefix-fallbacks is false"
     (is (= {:code     0
             :lines    ["a.fnl"]
             :content  "(defn x\n      y)\n"
             :expected "(defn x\n      y)\n"}
-           (rule-config-scenario
-            "{:prefix-fallbacks false}"
-            "(defn x\ny)\n"
-            "(defn x\n      y)\n")))))
+           (rule-config-scenario "{:prefix-fallbacks false}"
+                                 "(defn x\ny)\n"
+                                 "(defn x\n      y)\n")))))
 
 (deftest config-file-discovery
   (testing "does not report the discovered config file as a formatting target"
@@ -749,12 +720,11 @@
 (defn- lint-git-command
   [root args]
   (let [escaped-args (table.concat (icollect [_ arg (ipairs args)] (vim.fn.shellescape arg)) " ")
-        command      (..
-                      "cd "
-                      (vim.fn.shellescape root)
-                      " && perl -e 'alarm shift; exec @ARGV' 30 git "
-                      escaped-args
-                      " </dev/null 2>&1")]
+        command      (.. "cd "
+                         (vim.fn.shellescape root)
+                         " && perl -e 'alarm shift; exec @ARGV' 30 git "
+                         escaped-args
+                         " </dev/null 2>&1")]
     (vim.fn.systemlist ["sh" "-c" command])
     vim.v.shell_error))
 
@@ -780,8 +750,7 @@
         before      {}
         after       {}]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (lint-git-init root)
         (write-file config-path config)
@@ -800,21 +769,19 @@
 
 (defn- lint-grammar-scenario
   [args]
-  (lint-project
-   "{:lint {:rules {\"module-style\" :off}}}"
-   {"a.fnl" "(if x 1 2)\n"}
-   args))
+  (lint-project "{:lint {:rules {\"module-style\" :off}}}"
+                {"a.fnl" "(if x 1 2)\n"}
+                args))
 
 (defn- lint-discovery-scenario
   [mode]
   (let [config "{:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"] :lint {:rules {\"module-style\" :off}}}"
         files  {"src/keep.fnl" "(if x 1 2)\n" "src/skip/no.fnl" "(if x 1 2)\n" "other.fnl" "(if x 1 2)\n"}]
-    (lint-project
-     config
-     files
-     (if (= mode :default)
-       ["lint" "--all"]
-       ["lint" "--all" "src/keep.fnl"]))))
+    (lint-project config
+                  files
+                  (if (= mode :default)
+                    ["lint" "--all"]
+                    ["lint" "--all" "src/keep.fnl"]))))
 
 (defn- lint-output-scenario
   [mode]
@@ -918,13 +885,12 @@
 (defn- real-cli-lines
   [root args]
   (let [script  (.. (vim.fn.getcwd) "/scripts/fennel-extras")
-        command (..
-                 "cd "
-                 (vim.fn.shellescape root)
-                 " && "
-                 (vim.fn.shellescape script)
-                 " "
-                 (shell-args args))]
+        command (.. "cd "
+                    (vim.fn.shellescape root)
+                    " && "
+                    (vim.fn.shellescape script)
+                    " "
+                    (shell-args args))]
     {:code  vim.v.shell_error
      :lines (vim.fn.systemlist ["sh" "-c" (.. command " 2>/dev/null")])}))
 
@@ -954,8 +920,7 @@
         first-source  "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
         second-source "(testing \"c\" (is 1) (is 2))\\n"]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (lint-git-init root)
         (write-file config config-text)
@@ -978,8 +943,7 @@
         first-source  "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
         second-source "(testing \"c\" (is 1) (is 2))\\n"]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (lint-git-init root)
         (write-file config config-text)
@@ -1009,24 +973,22 @@
 (defn- bounded-cli
   [root args]
   (let [script  (.. (vim.fn.getcwd) "/scripts/fennel-extras")
-        command (..
-                 "cd "
-                 (vim.fn.shellescape root)
-                 " && perl -e 'alarm shift; exec @ARGV' 30 "
-                 (vim.fn.shellescape script)
-                 " "
-                 (shell-args args)
-                 " </dev/null 2>&1")]
+        command (.. "cd "
+                    (vim.fn.shellescape root)
+                    " && perl -e 'alarm shift; exec @ARGV' 30 "
+                    (vim.fn.shellescape script)
+                    " "
+                    (shell-args args)
+                    " </dev/null 2>&1")]
     (bounded-command command)))
 
 (defn- git-run
   [root args]
-  (let [command (..
-                 "cd "
-                 (vim.fn.shellescape root)
-                 " && perl -e 'alarm shift; exec @ARGV' 30 git "
-                 (shell-args args)
-                 " </dev/null 2>&1")]
+  (let [command (.. "cd "
+                    (vim.fn.shellescape root)
+                    " && perl -e 'alarm shift; exec @ARGV' 30 git "
+                    (shell-args args)
+                    " </dev/null 2>&1")]
     (. (bounded-command command) :code)))
 
 (defn- git-init
@@ -1043,16 +1005,14 @@
   (let [root (vim.fn.tempname)]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir (.. root "/.git") "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file (.. root "/.fnl-extras.fnl") "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
         (write-file (.. root "/a.fnl") "(if x 1 2)\\n")
-        (let [result (bounded-cli
-                      root
-                      (if (= mode :all)
-                        ["lint" "--all"]
-                        ["lint" "--changed"]))
+        (let [result (bounded-cli root
+                                  (if (= mode :all)
+                                    ["lint" "--all"]
+                                    ["lint" "--changed"]))
               line   (or (. result :lines 1) "")]
           {:code       (. result :code)
            :line       line
@@ -1062,17 +1022,15 @@
   [mode]
   (let [root (vim.fn.tempname)]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (git-init root)
         (write-file (.. root "/.fnl-extras.fnl") "{:lint {:rules {\"core-require\" :off \"if-branch-call\" :off \"module-style\" :off \"one-is-per-testing\" :error \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
         (write-file (.. root "/a.fnl") "(testing \"x\") (import-macros {: testing : is} :spec.eca.macros)\n")
-        (let [result (bounded-cli
-                      root
-                      (if (= mode :all)
-                        ["lint" "--all"]
-                        ["lint" "--changed"]))]
+        (let [result (bounded-cli root
+                                  (if (= mode :all)
+                                    ["lint" "--all"]
+                                    ["lint" "--changed"]))]
           {:code       (. result :code)
            :lines      (. result :lines)
            :timed-out? (. result :timed-out?)})))))
@@ -1123,8 +1081,7 @@
         subdir      (.. root "/nested")]
     (vim.fn.mkdir root "p")
     (vim.fn.mkdir subdir "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (git-init root)
         (write-file config-path (changed-config))
@@ -1152,8 +1109,7 @@
   (let [root        (vim.fn.tempname)
         source-path (.. root "/a.fnl")]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (git-init root)
         (write-file (.. root "/.fnl-extras.fnl") (changed-config))
@@ -1177,8 +1133,7 @@
         base-source    "(local a 1)\n(local b 2)\n(local c 3)\n"
         changed-source "(local a 9)\n(local b 2)\n(local c 3)\n"]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (git-init root)
         (write-file (.. root "/.fnl-extras.fnl") config)
@@ -1213,8 +1168,7 @@
   [mode]
   (let [root (vim.fn.tempname)]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (if (= mode :git)
           (lint-error-repository-scenario root)
@@ -1243,8 +1197,7 @@
                         "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > missing\" :reason \"old intentional branch\"}]}}"
                         "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"gone.fnl > missing\" :reason \"old intentional branch\"}]}}"))]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (git-init root)
         (write-file config-path config)
@@ -1258,11 +1211,10 @@
           (if (= mode :modified)
             (write-file a-path "(if changed (do (foo) (bar)) nil)\n")
             (git-run root ["rm" "-q" "gone.fnl"])))
-        (let [result (bounded-cli
-                      root
-                      (if (= mode :all)
-                        ["lint" "--all"]
-                        ["lint" "--changed"]))]
+        (let [result (bounded-cli root
+                                  (if (= mode :all)
+                                    ["lint" "--all"]
+                                    ["lint" "--changed"]))]
           {:code       (. result :code)
            :lines      (. result :lines)
            :timed-out? (. result :timed-out?)})))))
@@ -1272,18 +1224,15 @@
   (let [source        (vim.fn.tempname)
         clone         (vim.fn.tempname)
         config        "{:lint {:rules {\"module-style\" :off}}}"
-        clone-command (..
-                       "git clone --depth 1 "
-                       (vim.fn.shellescape (.. "file://" source)
-                       )
-                       " "
-                       (vim.fn.shellescape clone)
-                       " </dev/null 2>&1")]
+        clone-command (.. "git clone --depth 1 "
+                          (vim.fn.shellescape (.. "file://" source))
+                          " "
+                          (vim.fn.shellescape clone)
+                          " </dev/null 2>&1")]
     (vim.fn.mkdir source "p")
-    (with-cleanup
-      (fn []
-        (vim.fn.delete source "rf")
-        (vim.fn.delete clone "rf"))
+    (with-cleanup (fn []
+                    (vim.fn.delete source "rf")
+                    (vim.fn.delete clone "rf"))
       (fn []
         (git-init source)
         (write-file (.. source "/.fnl-extras.fnl") config)
@@ -1295,11 +1244,10 @@
             {:code       (. clone-result :code)
              :lines      (. clone-result :lines)
              :timed-out? (. clone-result :timed-out?)}
-            (let [result (bounded-cli
-                          clone
-                          (if (= mode :all)
-                            ["lint" "--all"]
-                            ["lint" "--changed"]))]
+            (let [result (bounded-cli clone
+                                      (if (= mode :all)
+                                        ["lint" "--all"]
+                                        ["lint" "--changed"]))]
               {:code       (. result :code)
                :lines      (. result :lines)
                :timed-out? (. result :timed-out?)})))))))
@@ -1311,8 +1259,7 @@
         warn        (.. root "/warning.fnl")
         config-text "{:lint {:rules {\"core-require\" :off \"function-shape\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :error \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}"]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (write-file config config-text)
         (write-file warn "(if x (do (foo) (bar)) nil)\n")
@@ -1333,8 +1280,7 @@
         error       (.. root "/error.fnl")
         config-text "{:lint {:rules {\"core-require\" :off \"function-shape\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :error \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}"]
     (vim.fn.mkdir root "p")
-    (with-cleanup
-      (fn [] (vim.fn.delete root "rf"))
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
         (git-init root)
         (write-file config config-text)

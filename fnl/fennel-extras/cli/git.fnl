@@ -26,8 +26,7 @@
 
 (defn- git-read-output
   [file]
-  (if
-    file
+  (if file
     (file:read "*a")
     ""))
 
@@ -35,9 +34,8 @@
   [root args]
   (let [file   (io.popen (.. (git-command root args) " </dev/null 2>&1; printf '\\n__ECA_STATUS__%s' $?"))
         output (git-read-output file)]
-    (and
-     file
-     (file:close))
+    (and file
+         (file:close))
     (git-output output (string.find output "\n__ECA_STATUS__"))))
 
 (defn- git-root
@@ -54,8 +52,7 @@
 
 (defn- git-plan-change-data
   [ctx status]
-  (if
-    (or (not= status.status-code 0) (not= status.untracked-code 0))
+  (if (or (not= status.status-code 0) (not= status.untracked-code 0))
     (values nil {:message "could not inspect Git changes"})
     (git-plan-change-success ctx status.status-text status.untracked-text)))
 
@@ -69,22 +66,19 @@
 (defn- git-plan-changed
   [ctx]
   (let [(_ resolved-status) (git-call ctx.root ["rev-parse" "--verify" (.. ctx.base "^{commit}")])]
-    (if
-      (= resolved-status 0)
+    (if (= resolved-status 0)
       (git-plan-changed-data ctx)
       (values nil {:message (.. "unknown base ref: " ctx.base)}))))
 
 (defn- git-plan-root-mode
   [ctx]
-  (if
-    ctx.parsed.all
+  (if ctx.parsed.all
     (values {:root ctx.root} nil)
     (git-plan-changed ctx)))
 
 (defn- git-plan-root
   [ctx shallow shallow-status]
-  (if
-    (and (= shallow-status 0) (= (trim-newlines shallow) "true"))
+  (if (and (= shallow-status 0) (= (trim-newlines shallow) "true"))
     (values nil {:message "lint requires a full clone; shallow repositories are not supported"})
     (git-plan-root-mode ctx)))
 
@@ -96,8 +90,7 @@
 (defn- git-plan
   [start parsed]
   (let [root (git-root start) ctx  {:root root :parsed parsed :base (or parsed.base "HEAD")}]
-    (if
-      (= root nil)
+    (if (= root nil)
       (values nil {:message "lint requires a Git repository"})
       (git-plan-root-check ctx))))
 
@@ -119,8 +112,7 @@
 
 (defn- changed-file
   [root base file whole?]
-  (if
-    whole?
+  (if whole?
     {:path file.path :source file.source :selection true}
     (changed-file-hunks root base file)))
 
@@ -131,17 +123,15 @@
 
 (defn- changed-result
   [result selected]
-  (if
-    selected
+  (if selected
     (append-selected result selected)
     result))
 
 (defn- changed-file-selection
   [ctx file]
   (let [whole? (path-present? ctx.plan.whole file.path 1) hunk?  (path-present? ctx.plan.hunks file.path 1)]
-    (and
-     (or whole? hunk?)
-     (changed-file ctx.root ctx.base file whole?))))
+    (and (or whole? hunk?)
+         (changed-file ctx.root ctx.base file whole?))))
 
 (defn- changed-files-next
   [ctx state]
@@ -150,8 +140,7 @@
 
 (defn- changed-files-step
   [ctx state]
-  (if
-    (> state.index (length ctx.files))
+  (if (> state.index (length ctx.files))
     state.result
     (changed-files-step ctx (changed-files-next ctx state))))
 
@@ -170,15 +159,13 @@
 
 (defn lint-git-info
   [root parsed require-git?]
-  (if
-    require-git?
+  (if require-git?
     (git-plan root parsed)
     (values {:root root :plan {:whole [] :hunks [] :deleted []}} nil)))
 
 (defn lint-selection
   [parsed sources git-info]
-  (if
-    parsed.changed
+  (if parsed.changed
     (values (changed-files-step {:root  git-info.root :base  (or parsed.base "HEAD") :files sources :plan  git-info.plan}
                                 {:index 1 :result []})
             (scope-paths git-info.plan))

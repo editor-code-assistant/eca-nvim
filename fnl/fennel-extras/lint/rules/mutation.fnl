@@ -18,10 +18,9 @@
 
 (defn- mutation-head?
   [head]
-  (or
-   (= head "var")
-   (= head "set")
-   (= head "while")))
+  (or (= head "var")
+      (= head "set")
+      (= head "while")))
 
 (defn- mutation-mode-for-prefix
   [prefix mode]
@@ -34,17 +33,15 @@
 (defn- mutation-mode-for-child
   [node index mode]
   (let [previous-index (previous-meaningful-index node.children index) previous       (and previous-index (. node.children previous-index))]
-    (if
-      (and previous (= previous.kind :prefix))
+    (if (and previous (= previous.kind :prefix))
       (mutation-mode-for-prefix previous.text (mutation-mode-for-child node previous-index mode))
       mode)))
 
 (defn- append-executable-child
   [node result index child mode recurse predicate]
   (let [child-mode (mutation-mode-for-child node index mode)]
-    (if
-      (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
-           (not= child-mode :quoted))
+    (if (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
+             (not= child-mode :quoted))
       (recurse child result child-mode predicate)
       result)))
 
@@ -55,8 +52,7 @@
 
 (defn- executable-node-result
   [node result mode predicate]
-  (if
-    (and (= mode 0) (predicate node))
+  (if (and (= mode 0) (predicate node))
     (core.concat result [node])
     result))
 
@@ -67,8 +63,7 @@
 (defn executable-nodes
   [source predicate]
   (let [root (reader.parse source)]
-    (if
-      root
+    (if root
       (collect-executable-nodes root [] 0 predicate)
       [])))
 
@@ -97,8 +92,7 @@
 
 (defn- add-mutation-finding
   [findings path forms policy node ordinals]
-  (if
-    (and (not (spec-file? path)) (enabled? policy "no-mutation"))
+  (if (and (not (spec-file? path)) (enabled? policy "no-mutation"))
     (append-mutation-finding findings path forms policy node ordinals)
     ordinals))
 

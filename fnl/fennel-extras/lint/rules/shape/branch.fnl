@@ -16,8 +16,7 @@
 (local plain-call-one-layer? leaf.plain-call-one-layer?)
 (local loop-head? leaf.loop-head?)
 (local marker?
-       (fn
-         [node text]
+       (fn [node text]
          (and node
               (= node.kind :symbol)
               (= node.text text))))
@@ -25,8 +24,7 @@
 
 (defn- explicit-if?
   [children index]
-  (if
-    (> index (length children))
+  (if (> index (length children))
     false
     (or (marker? (. children index) "then")
         (marker? (. children index) "elseif")
@@ -35,33 +33,29 @@
 
 (defn- explicit-branch-result
   [children index result recurse]
-  (if
-    (. children (+ index 1))
+  (if (. children (+ index 1))
     (recurse children (+ index 2) (append-nodes result (expression-violations (. children (+ index 1)))))
     (recurse children (+ index 1) result)))
 
 (defn- validate-if-explicit-step
   [children index result recurse]
   (let [child (. children index)]
-    (if
-      (or (marker? child "then") (marker? child "elseif") (marker? child "else"))
+    (if (or (marker? child "then") (marker? child "elseif") (marker? child "else"))
       (explicit-branch-result children index result recurse)
       (recurse children (+ index 1) (append-nodes result (expression-violations child))))))
 
 (defn- validate-if-explicit
   [children index result]
-  (if
-    (> index (length children))
+  (if (> index (length children))
     result
     (validate-if-explicit-step children index result validate-if-explicit)))
 
 (defn- implicit-branch-values
   [children index]
-  (append-nodes
-   (or (and (. children (+ index 1))
-            (expression-violations (. children (+ index 1))))
-       [])
-   (expression-violations (. children index))))
+  (append-nodes (or (and (. children (+ index 1))
+                         (expression-violations (. children (+ index 1))))
+                    [])
+                (expression-violations (. children index))))
 
 (defn- append-implicit-branch
   [children index result]
@@ -69,8 +63,7 @@
 
 (defn- validate-if-implicit
   [children index result]
-  (if
-    (> index (length children))
+  (if (> index (length children))
     result
     (or (and (= index (length children))
              (= (% index 2) 0)
@@ -79,8 +72,7 @@
 
 (defn- validate-if-children
   [children]
-  (if
-    (explicit-if? children 2)
+  (if (explicit-if? children 2)
     (validate-if-explicit children 2 [])
     (validate-if-implicit children 2 [])))
 
@@ -90,8 +82,7 @@
 
 (defn- validate-when-head
   [children result]
-  (if
-    (. children 2)
+  (if (. children 2)
     (append-nodes result (expression-violations (. children 2)))
     result))
 
@@ -113,15 +104,13 @@
 
 (defn- loop-bindings
   [children]
-  (if
-    (and (. children 2) (= (. (. children 2) :kind) :sequence))
+  (if (and (. children 2) (= (. (. children 2) :kind) :sequence))
     (meaningful-children (. children 2))
     []))
 
 (defn- loop-start
   [bindings]
-  (if
-    (> (length bindings) 0)
+  (if (> (length bindings) 0)
     3
     2))
 
@@ -159,14 +148,12 @@
   (let [info (function-info node) body (or (and info info.body) [])]
     (and info
          (accumulate [state true _ child (ipairs body)]
-           (and
-            state
-            (leaf-valid? child))))))
+           (and state
+                (leaf-valid? child))))))
 
 (defn- validate-function-layer
   [node]
-  (if
-    (function-layer-valid? node)
+  (if (function-layer-valid? node)
     []
     [node]))
 
@@ -197,8 +184,7 @@
 
 (defn- validate-let-binding-step
   [binding-children result index child]
-  (if
-    (and (= (% index 2) 0) (not (quoted-child? binding-children index)))
+  (if (and (= (% index 2) 0) (not (quoted-child? binding-children index)))
     (append-nodes result (leaf-violations child))
     result))
 
@@ -209,8 +195,7 @@
 
 (defn- validate-let-bindings
   [bindings result]
-  (if
-    (and bindings (= bindings.kind :sequence))
+  (if (and bindings (= bindings.kind :sequence))
     (validate-let-bindings-children (meaningful-children bindings) result)
     result))
 
@@ -228,21 +213,18 @@
 
 (defn- function-first-let?
   [body]
-  (and
-   (. body 1)
-   (= (list-head (. body 1)) "let")))
+  (and (. body 1)
+       (= (list-head (. body 1)) "let")))
 
 (defn- function-body-start-index
   [first-let?]
-  (if
-    first-let?
+  (if first-let?
     2
     1))
 
 (defn- function-body-initial
   [body result first-let?]
-  (if
-    first-let?
+  (if first-let?
     (append-nodes result (validate-let (. body 1)))
     result))
 

@@ -40,8 +40,7 @@
 
 (defn- append-pair-unit
   [result children start-index index]
-  (if
-    (pair-index? index start-index)
+  (if (pair-index? index start-index)
     (core.concat result [(unit children index (math.min (+ index 1) (length children)))])
     result))
 
@@ -74,15 +73,13 @@
 (defn- offending-adjacency?
   [node index previous current]
   (let [opening-line     node.open.line opening-list?    (and (= node.kind :list) (= index 2)) allowed-opening? (and opening-list? (= current.start opening-line))]
-    (and
-     (not allowed-opening?)
-     (<= current.start previous.end))))
+    (and (not allowed-opening?)
+         (<= current.start previous.end))))
 
 (defn- offending-units-step
   [node units index previous]
   (let [current (. units index)]
-    (if
-      (> index (length units))
+    (if (> index (length units))
       false
       (or (and previous (offending-adjacency? node index previous current))
           (offending-units-step node units (+ index 1) current)))))
@@ -104,10 +101,9 @@
 
 (defn- layout-container?
   [node]
-  (or
-   (= node.kind :list)
-   (= node.kind :sequence)
-   (= node.kind :table)))
+  (or (= node.kind :list)
+      (= node.kind :sequence)
+      (= node.kind :table)))
 
 (defn- layout-excluded?
   [node head]
@@ -116,23 +112,24 @@
       (and (= node.kind :sequence)
            (= (math.fmod (length (meaningful-children node)) 2) 0))))
 
-(defn- delayed-list-head?
-  [node]
-  (let [children (meaningful-children node) head     (. children 1) head-line (child-line head)]
+(defn- delayed-list-argument?
+  [node head]
+  (let [children (meaningful-children node) argument (. children 2)]
     (and (= node.kind :list)
-         head
-         (not= head-line node.open.line))))
+         (not= head "do")
+         argument
+         (> node.close.line node.open.line)
+         (not= (child-line argument) node.open.line))))
 
 (defn- layout-body-result
   [node head]
-  (if
-    (and (= node.kind :list) (. binding-heads head))
+  (if (and (= node.kind :list) (. binding-heads head))
     (binding-layout? node)
     (offending-units? node)))
 
 (defn- layout-result
   [node head]
-  (or (delayed-list-head? node)
+  (or (delayed-list-argument? node head)
       (layout-body-result node head)))
 
 (defn- layout-node?
@@ -159,8 +156,7 @@
 (defn- append-finding
   [findings path forms policy node ordinals]
   (let [base (or (form-for-node forms node nil) (nearest-form forms node) {:form path}) key  (.. base.form ":" node.open.line)]
-    (if
-      (. ordinals key)
+    (if (. ordinals key)
       ordinals
       (insert-finding findings path forms policy node ordinals key))))
 

@@ -33,8 +33,7 @@
 
 (defn symbol-text
   [node]
-  (when
-    (and node (= node.kind :symbol))
+  (when (and node (= node.kind :symbol))
     node.text))
 
 (defn list-head
@@ -54,21 +53,18 @@
 
 (defn spec-file?
   [path]
-  (and
-   (= (string.sub path 1 9) "fnl/spec/")
-   true))
+  (and (= (string.sub path 1 9) "fnl/spec/")
+       true))
 
 (defn- newline-value
   [text index]
-  (if
-    (= (string.sub text index index) "\n")
+  (if (= (string.sub text index index) "\n")
     1
     0))
 
 (defn newline-count
   [text index count]
-  (if
-    (> index (string.len text))
+  (if (> index (string.len text))
     count
     (newline-count text (+ index 1) (+ count (newline-value text index)))))
 
@@ -82,8 +78,7 @@
 (defn- string-token-on-line-step
   [tokens line index]
   (let [token (. tokens index)]
-    (if
-      (> index (length tokens))
+    (if (> index (length tokens))
       false
       (or (string-token-on-line-value token line)
           (string-token-on-line-step tokens line (+ index 1))))))
@@ -101,8 +96,7 @@
 (defn- first-token-on-line-step
   [tokens line index]
   (let [token (. tokens index)]
-    (if
-      (> index (length tokens))
+    (if (> index (length tokens))
       nil
       (or (first-token-on-line-value token line)
           (first-token-on-line-step tokens line (+ index 1))))))
@@ -119,37 +113,32 @@
 
 (defn- code-line-value
   [tokens line]
-  (if
-    (code-line? tokens line)
+  (if (code-line? tokens line)
     1
     0))
 
 (defn code-line-count
   [tokens line total count]
-  (if
-    (> line total)
+  (if (> line total)
     count
     (code-line-count tokens (+ line 1) total (+ count (code-line-value tokens line)))))
 
 (defn- collect-macro-names-step
   [children index names recurse]
   (let [key   (symbol-text (. children index)) value (symbol-text (. children (+ index 1)))]
-    (if
-      (and (= key ":") value)
+    (if (and (= key ":") value)
       (recurse children (+ index 2) (core.assoc names value true))
       (recurse children (+ index 2) names))))
 
 (defn- collect-macro-names
   [children index names]
-  (if
-    (> index (length children))
+  (if (> index (length children))
     names
     (collect-macro-names-step children index names collect-macro-names)))
 
 (defn- macro-binding-children
   [bindings]
-  (if
-    (and bindings (= bindings.kind :table))
+  (if (and bindings (= bindings.kind :table))
     (meaningful-children bindings)
     []))
 
@@ -166,24 +155,21 @@
 
 (defn has-all?
   [names]
-  (and
-   (. names "deftest")
-   (. names "testing")
-   (. names "is")))
+  (and (. names "deftest")
+       (. names "testing")
+       (. names "is")))
 
 (defn has-module-import?
   [names]
-  (and
-   (. names "module")
-   (. names "def")
-   (. names "defn")
-   (. names "defn-")))
+  (and (. names "module")
+       (. names "def")
+       (. names "defn")
+       (. names "defn-")))
 
 (defn previous-meaningful-child
   [children previous-index]
   (let [previous (. children previous-index)]
-    (if
-      (<= previous-index 0)
+    (if (<= previous-index 0)
       nil
       (or (and (trivia? previous)
                (previous-meaningful-child children (- previous-index 1)))
@@ -192,15 +178,13 @@
 (defn- previous-meaningful-index-step
   [children index recurse]
   (let [previous-index (- index 1)]
-    (if
-      (trivia? (. children previous-index))
+    (if (trivia? (. children previous-index))
       (recurse children previous-index recurse)
       previous-index)))
 
 (defn previous-meaningful-index
   [children index]
-  (if
-    (<= index 1)
+  (if (<= index 1)
     nil
     (previous-meaningful-index-step children index previous-meaningful-index)))
 
@@ -211,9 +195,8 @@
 (defn- prefixed-child?
   [children index]
   (let [previous (previous-meaningful children index)]
-    (and
-     previous
-     (= previous.kind :prefix))))
+    (and previous
+         (= previous.kind :prefix))))
 
 (defn- prefixed-root-child?
   [root index]
@@ -267,8 +250,7 @@
 (defn count-is
   [node index count]
   (let [child (. node.children index)]
-    (if
-      (> index (length node.children))
+    (if (> index (length node.children))
       count
       (count-is-child node child index count count-is))))
 (defn append-nodes
@@ -278,8 +260,7 @@
   target)
 (defn- skip-first-form-step
   [index value]
-  (when
-    (> index 1)
+  (when (> index 1)
     value))
 
 (defn- forms-without-first
@@ -290,16 +271,14 @@
 (defn- form-for-node-step
   [forms node fallback recurse]
   (let [form (. forms 1)]
-    (if
-      (or (= form.node node)
-          (and node.open (= form.line node.open.line) (= form.col node.open.col)))
+    (if (or (= form.node node)
+            (and node.open (= form.line node.open.line) (= form.col node.open.col)))
       form
       (recurse (forms-without-first forms) node fallback))))
 
 (defn form-for-node
   [forms node fallback]
-  (if
-    (> (length forms) 0)
+  (if (> (length forms) 0)
     (form-for-node-step forms node fallback form-for-node)
     fallback))
 (defn- position-before-or-at?
@@ -323,15 +302,13 @@
 
 (defn- narrower-form
   [candidate current]
-  (if
-    (or (not current) (< (form-span-size candidate) (form-span-size current)))
+  (if (or (not current) (< (form-span-size candidate) (form-span-size current)))
     candidate
     current))
 
 (defn- nearest-form-step
   [current form node]
-  (if
-    (form-contains-node? form node)
+  (if (form-contains-node? form node)
     (narrower-form form current)
     current))
 

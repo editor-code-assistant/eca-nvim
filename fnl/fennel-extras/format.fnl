@@ -25,10 +25,9 @@
   (var same true)
   (each [i line (ipairs left)]
     (let [other  (. right i) body   (string.sub line (+ (leading-spaces line) 1)) spaces (string.sub other 1 (leading-spaces other))]
-      (when (not (or
-                  (= line other)
-                  (= other (.. spaces body))
-                  (and (= other "") (spaces-only? line))))
+      (when (not (or (= line other)
+                     (= other (.. spaces body))
+                     (and (= other "") (spaces-only? line))))
         (set same false))))
   same)
 (defn- token-kind-equal?
@@ -46,8 +45,7 @@
 
 (defn- token-text-equal?
   [left right]
-  (if
-    (= left.kind :whitespace)
+  (if (= left.kind :whitespace)
     (whitespace-token-equal? left right)
     (non-whitespace-token-equal? left right)))
 
@@ -60,8 +58,7 @@
 
 (defn- token-sequences-equal?
   [left right index]
-  (if
-    (> index (length left))
+  (if (> index (length left))
     true
     (token-sequence-step left right index token-sequences-equal?)))
 
@@ -76,17 +73,15 @@
 (defn- line-equal?
   [line other allow-binding-whitespace?]
   (or (= line other)
-      (=
-       other
-       (.. (string.sub other 1 (leading-spaces other)) (string.sub line (+ (leading-spaces line) 1))))
+      (= other
+         (.. (string.sub other 1 (leading-spaces other)) (string.sub line (+ (leading-spaces line) 1))))
       (and allow-binding-whitespace?
            (binding-whitespace-equal? line other))
       (and (= other "") (spaces-only? line))))
 
 (defn- lines-equal?
   [left right index allow-binding-whitespace?]
-  (if
-    (> index (length left))
+  (if (> index (length left))
     true
     (and (line-equal? (. left index) (. right index) allow-binding-whitespace?)
          (lines-equal? left right (+ index 1) allow-binding-whitespace?))))
@@ -99,35 +94,32 @@
 
 (defn- ignored?
   [key]
-  (or
-   (= key :filename)
-   (= key :line)
-   (= key :col)
-   (= key :bytestart)
-   (= key :byteend)
-   (= key :endline)
-   (= key :endcol)
-   (= key :closer)
-   (= key "filename")
-   (= key "line")
-   (= key "col")
-   (= key "bytestart")
-   (= key "byteend")
-   (= key "endline")
-   (= key "endcol")
-   (= key "closer")))
+  (or (= key :filename)
+      (= key :line)
+      (= key :col)
+      (= key :bytestart)
+      (= key :byteend)
+      (= key :endline)
+      (= key :endcol)
+      (= key :closer)
+      (= key "filename")
+      (= key "line")
+      (= key "col")
+      (= key "bytestart")
+      (= key "byteend")
+      (= key "endline")
+      (= key "endcol")
+      (= key "closer")))
 
 (defn- symbol?
   [value]
   (let [meta (and (= (type value) :table) (getmetatable value))]
-    (and
-     meta
-     (= (tostring (. meta 1)) "SYMBOL"))))
+    (and meta
+         (= (tostring (. meta 1)) "SYMBOL"))))
 
 (defn- equal-key?
   [a b]
-  (if
-    (and (symbol? a) (symbol? b))
+  (if (and (symbol? a) (symbol? b))
     (= (tostring a) (tostring b))
     (= a b)))
 
@@ -156,15 +148,13 @@
 
 (defn- continue-equal-entries
   [continue equal parser left right found-index]
-  (if
-    found-index
+  (if found-index
     (remove-and-continue continue equal parser left right found-index)
     false))
 
 (defn- equal-entries?
   [equal parser left right]
-  (if
-    (= (length left) 0)
+  (if (= (length left) 0)
     true
     (let [entry       (table.remove left 1) found-index (matching-entry equal parser entry right)]
       (continue-equal-entries equal-entries? equal parser left right found-index))))
@@ -177,13 +167,10 @@
 
 (defn- equal-value
   [parser a b]
-  (if
-    (not= (type a) (type b))
+  (if (not= (type a) (type b))
     false
-    (if
-      (= (type a) :table)
-      (if
-        (or (symbol? a) (parser.comment? a))
+    (if (= (type a) :table)
+      (if (or (symbol? a) (parser.comment? a))
         (= (tostring a) (tostring b))
         (equal-table? equal-value parser a b))
       (= a b))))
@@ -194,8 +181,7 @@
     (var done false)
     (while (not done)
       (let [(ok form) (iterator)]
-        (if
-          ok
+        (if ok
           (table.insert forms form)
           (set done true))))
     forms))
@@ -211,26 +197,20 @@
   [parser a b]
   (let [(ok result) (pcall (fn []
                              (let [left (parse-all parser a) right (parse-all parser b)]
-                               (if
-                                 (not= (length left) (length right))
+                               (if (not= (length left) (length right))
                                  false
                                  (forms-equal? parser left right)))))]
-    (and
-     ok
-     result)))
+    (and ok
+         result)))
 
 (defn format-string
   [source opts]
-  (let
-    [config      (or (. opts :config) {}) parser      (. opts :parser) (out error) (indent.reindent source config)]
-    (if
-      error
+  (let [config      (or (. opts :config) {}) parser      (. opts :parser) (out error) (indent.reindent source config)]
+    (if error
       (values nil error)
-      (if
-        (not (indent-only? source out (and (. config :align-bindings) true)))
+      (if (not (indent-only? source out (and (. config :align-bindings) true)))
         (values nil {:message "formatter changed more than indentation"})
-        (if
-          (and parser (not (ast-equal? parser source out)))
+        (if (and parser (not (ast-equal? parser source out)))
           (values nil {:message "formatter changed the parsed form"})
           out)))))
 

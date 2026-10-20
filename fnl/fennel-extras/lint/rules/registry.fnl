@@ -15,9 +15,8 @@
 (defn rule-scope
   [rule]
   (let [properties (. rule-properties rule)]
-    (and
-     properties
-     (. properties :scope))))
+    (and properties
+         (. properties :scope))))
 (defn finding
   [path form severity rule message node]
   {:kind     "finding" :path     path :line     form.line :col      form.col :end-line form.end-line :end-col  form.end-col :severity severity :rule     rule :form     form.form :message  message :node     node})
@@ -25,9 +24,8 @@
 (defn rule-severity
   [policy rule]
   (let [override (and policy (. policy rule))]
-    (or
-     override
-     (. defaults-map rule))))
+    (or override
+        (. defaults-map rule))))
 
 (defn enabled?
   [policy rule]

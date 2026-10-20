@@ -17,8 +17,7 @@
 
 (defn- meaningful-child
   [child]
-  (when
-    (not (trivia? child))
+  (when (not (trivia? child))
     child))
 
 (defn container?
@@ -40,8 +39,7 @@
 (defn- head-name
   [node]
   (let [children (meaningful-children node) head     (symbol-text (. children 1)) name     (symbol-text (. children 2))]
-    (if
-      (and head name)
+    (if (and head name)
       (values head name)
       (values head nil))))
 
@@ -56,8 +54,7 @@
 
 (defn- local-fn-value-children
   [value]
-  (if
-    (and value (= value.kind :list))
+  (if (and value (= value.kind :list))
     (meaningful-children value)
     []))
 
@@ -73,8 +70,7 @@
 
 (defn- declaration-segment
   [head name node]
-  (if
-    (named-declaration? head)
+  (if (named-declaration? head)
     (.. head ":" name)
     (local-named-segment head name node)))
 
@@ -87,9 +83,8 @@
 (defn- anonymous-list-kind
   [node]
   (let [children (meaningful-children node)]
-    (or
-     (symbol-text (. children 1))
-     "list")))
+    (or (symbol-text (. children 1))
+        "list")))
 
 (defn- anonymous-container-kind
   [node]
@@ -100,8 +95,7 @@
 
 (defn- anonymous-kind
   [node]
-  (if
-    (= node.kind :list)
+  (if (= node.kind :list)
     (anonymous-list-kind node)
     (anonymous-container-kind node)))
 
@@ -119,22 +113,19 @@
 
 (defn- increment-meaningful
   [ordinal child]
-  (if
-    (not (trivia? child))
+  (if (not (trivia? child))
     (+ ordinal 1)
     ordinal))
 
 (defn- advance-meaningful-index
   [ordinal child-index index child]
-  (if
-    (<= index child-index)
+  (if (<= index child-index)
     (increment-meaningful ordinal child)
     ordinal))
 
 (defn- index-result
   [child-index index ordinal result]
-  (if
-    (= index child-index)
+  (if (= index child-index)
     ordinal
     result))
 
@@ -161,17 +152,15 @@
 
 (defn- branch-kind-after-then
   [branch-index child-count]
-  (if
-    (and (> child-count 3)
-         (= branch-index child-count)
-         (= (% branch-index 2) 0))
+  (if (and (> child-count 3)
+           (= branch-index child-count)
+           (= (% branch-index 2) 0))
     "else"
     (numbered-then-kind branch-index)))
 
 (defn- branch-kind-for-index
   [branch-index child-count]
-  (if
-    (= branch-index 3)
+  (if (= branch-index 3)
     "then"
     (branch-kind-after-then branch-index child-count)))
 
@@ -186,8 +175,7 @@
 
 (defn- function-parameter-index
   [named-fn?]
-  (if
-    named-fn?
+  (if named-fn?
     3
     2))
 
@@ -222,8 +210,7 @@
 
 (defn append-path
   [path segment]
-  (if
-    segment
+  (if segment
     (.. path " > " segment)
     path))
 
@@ -244,15 +231,13 @@
 
 (defn- node-path-without-segment
   [node state top-level?]
-  (if
-    top-level?
+  (if top-level?
     (top-level-path state)
     (anonymous-path node state)))
 
 (defn node-path
   [node state top-level?]
   (let [segment (named-segment node)]
-    (if
-      segment
+    (if segment
       (values (append-path state.ancestor segment) state)
       (node-path-without-segment node state top-level?))))

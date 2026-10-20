@@ -13,8 +13,7 @@
 
 (defn- file-size-finding-result
   [path policy count limit]
-  (if
-    (> count limit)
+  (if (> count limit)
     [{:kind     "finding"
       :path     path
       :line     1
@@ -35,7 +34,6 @@
 
 (defn finding
   [path policy source]
-  (if
-    (and (not (spec-file? path)) (enabled? policy "file-size"))
+  (if (and (not (spec-file? path)) (enabled? policy "file-size"))
     (file-size-finding-source path policy source)
     []))

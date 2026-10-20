@@ -32,7 +32,6 @@
 
 (defn continuation-indent
   [indent tokens line-number]
-  (if
-    (code-before-comment-on-line? tokens (- line-number 1))
+  (if (code-before-comment-on-line? tokens (- line-number 1))
     (+ indent 1)
     indent))

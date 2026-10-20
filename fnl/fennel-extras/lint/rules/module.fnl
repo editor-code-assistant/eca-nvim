@@ -16,14 +16,12 @@
 
 (defn module-finding
   [path forms policy module-ok]
-  (if
-    (and (not (spec-file? path)) (enabled? policy "module-style") (not module-ok))
+  (if (and (not (spec-file? path)) (enabled? policy "module-style") (not module-ok))
     [{:kind     "finding" :path     path :line     1 :col      1 :end-line 1 :end-col  1 :severity (rule-severity policy "module-style") :rule     "module-style" :form     (.. path " > file") :message  "file must use the module style" :node     nil}]
     []))
 (defn- core-finding-form
   [path form head children]
-  (if
-    (= head "local")
+  (if (= head "local")
     {:line     form.line :col      form.col :end-line form.end-line :end-col  form.end-col :form     (.. path " > local:" (symbol-text (. children 2)))}
     form))
 
@@ -35,9 +33,8 @@
   nil)
 (defn- core-require-form
   [head children node]
-  (or
-   (and (= head "local") (. children 3))
-   node))
+  (or (and (= head "local") (. children 3))
+      node))
 
 (defn- core-require-target
   [require-form require-children]
@@ -59,8 +56,7 @@
 
 (defn- core-require-children
   [require-form]
-  (if
-    require-form
+  (if require-form
     (meaningful-children require-form)
     []))
 

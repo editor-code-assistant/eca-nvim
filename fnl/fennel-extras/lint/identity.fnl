@@ -30,8 +30,7 @@
 
 (defn- child-state-ordinals
   [state segmented?]
-  (if
-    segmented?
+  (if segmented?
     {}
     state.ordinals))
 
@@ -45,9 +44,8 @@
 
 (defn- walk-local-fn-child
   [walker node fn-child next-state fn-index]
-  (if
-    (and (naming.container? fn-child)
-         (not (naming.quoted-child? node.children fn-index)))
+  (if (and (naming.container? fn-child)
+           (not (naming.quoted-child? node.children fn-index)))
     (walker fn-child next-state false nil false (naming.parameter-list? node fn-index fn-child))
     next-state))
 
@@ -68,15 +66,13 @@
 
 (defn- walk-child
   [walker node child state index local-fn]
-  (if
-    (and local-fn (= (naming.list-head child) "fn"))
+  (if (and local-fn (= (naming.list-head child) "fn"))
     (walk-local-fn-children walker child state)
     (walk-regular-child walker node child state index)))
 
 (defn- walk-child-step
   [walker node local-fn current index child]
-  (if
-    (naming.container? child)
+  (if (naming.container? child)
     (walk-child walker node child current index local-fn)
     current))
 
@@ -88,50 +84,43 @@
 
 (defn- walk-children
   [walker node state final-path segmented? head quoted?]
-  (if
-    (not quoted?)
+  (if (not quoted?)
     (walk-children-step walker node state final-path segmented? head)
     state))
 
 (defn- non-interesting-path
   [state branch-path skip-identity?]
-  (if
-    skip-identity?
+  (if skip-identity?
     state.ancestor
     branch-path))
 
 (defn- final-path-for-node
   [node state node-state branch-path top-level? node-interesting? skip-identity?]
-  (if
-    node-interesting?
+  (if node-interesting?
     (naming.node-path node node-state top-level?)
     (values (non-interesting-path state branch-path skip-identity?) node-state)))
 
 (defn- branch-info
   [state branch-segment]
-  (if
-    branch-segment
+  (if branch-segment
     (state-for-branch state branch-segment)
     {:state state :path (naming.append-path state.ancestor branch-segment)}))
 
 (defn- add-branch-identity
   [branch? final-state branch-path node]
-  (if
-    branch?
+  (if branch?
     (add-identity final-state branch-path node)
     final-state))
 
 (defn- add-node-identity
   [node-interesting? with-branch final-path node]
-  (if
-    node-interesting?
+  (if node-interesting?
     (add-identity with-branch final-path node)
     with-branch))
 
 (defn- walk-node-ordinals
   [node-interesting? final-state child-result]
-  (if
-    node-interesting?
+  (if node-interesting?
     final-state.ordinals
     child-result.ordinals))
 
@@ -153,15 +142,13 @@
 (defn- walk-root-child
   [root path state index child]
   (let [quoted?    (naming.quoted-child? root.children index) segment    (naming.named-segment child) next-state (walk-node child state true nil quoted? false)]
-    (if
-      (= (naming.list-head child) "module")
+    (if (= (naming.list-head child) "module")
       (core.assoc next-state :ancestor (naming.append-path path segment))
       next-state)))
 
 (defn- walk-root-container-child
   [root path current index child]
-  (if
-    (naming.container? child)
+  (if (naming.container? child)
     (walk-root-child root path current index child)
     current))
 
@@ -178,7 +165,6 @@
 (defn forms
   [source path]
   (let [(root error) (reader.parse source)]
-    (if
-      root
+    (if root
       (walk-root root path)
       (values nil error))))

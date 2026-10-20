@@ -22,14 +22,12 @@
 (defn- docstring?
   [children]
   (let [third (. children 3)]
-    (and
-     third
-     (= third.kind :string))))
+    (and third
+         (= third.kind :string))))
 
 (defn- parameter-index
   [children]
-  (if
-    (docstring? children)
+  (if (docstring? children)
     4
     3))
 
@@ -41,10 +39,9 @@
 (defn- invalid-layout?
   [node]
   (let [children (meaningful-children node) name     (. children 2) args     (parameter-vector node)]
-    (and
-     name
-     args
-     (<= args.open.line name.line))))
+    (and name
+         args
+         (<= args.open.line name.line))))
 
 (defn- finding-form
   [path forms node]

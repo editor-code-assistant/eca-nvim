@@ -101,11 +101,10 @@ end
 local function layout_excluded_3f(node, head)
   return (((node.kind == "list") and ((head == "defn") or (head == "defn-"))) or ((node.kind == "sequence") and (math.fmod(#meaningful_children(node), 2) == 0)))
 end
-local function delayed_list_head_3f(node)
+local function delayed_list_argument_3f(node, head)
   local children = meaningful_children(node)
-  local head = children[1]
-  local head_line = child_line(head)
-  return ((node.kind == "list") and head and (head_line ~= node.open.line))
+  local argument = children[2]
+  return ((node.kind == "list") and (head ~= "do") and argument and (node.close.line > node.open.line) and (child_line(argument) ~= node.open.line))
 end
 local function layout_body_result(node, head)
   if ((node.kind == "list") and binding_heads[head]) then
@@ -115,7 +114,7 @@ local function layout_body_result(node, head)
   end
 end
 local function layout_result(node, head)
-  return (delayed_list_head_3f(node) or layout_body_result(node, head))
+  return (delayed_list_argument_3f(node, head) or layout_body_result(node, head))
 end
 local function layout_node_3f(node)
   local head = list_head(node)

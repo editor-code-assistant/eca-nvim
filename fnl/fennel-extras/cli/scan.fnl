@@ -2,7 +2,6 @@
 
 (module fennel-extras.cli.scan)
 
-
 (local api (require :fennel-extras.cli.scan.api))
 (local path (require :fennel-extras.cli.scan.path))
 (local scan-join path.join)
@@ -30,10 +29,9 @@
 
 (defn- add-file
   [ctx acc path target]
-  (if
-    (and (scan-fnl-file? target.rel (. ctx :extensions))
-         (not (scan-excluded? target.rel (. ctx :excludes)))
-         (not (. acc.seen target.dedupe)))
+  (if (and (scan-fnl-file? target.rel (. ctx :extensions))
+           (not (scan-excluded? target.rel (. ctx :excludes)))
+           (not (. acc.seen target.dedupe)))
     (record-file acc path target.rel target.dedupe)
     (scan-acc acc acc.result)))
 
@@ -46,17 +44,15 @@
 
 (defn- scan-directory-target
   [ctx acc entry target-stat]
-  (if
-    (and (= target-stat.type "directory")
-         (not (scan-excluded? entry.rel (. ctx :excludes)))
-         (not (. acc.visited entry.path)))
+  (if (and (= target-stat.type "directory")
+           (not (scan-excluded? entry.rel (. ctx :excludes)))
+           (not (. acc.visited entry.path)))
     (walk-target ctx acc entry)
     (values (scan-acc acc acc.result) nil)))
 
 (defn- scan-file-dedupe
   [ctx entry target]
-  (if
-    (. ctx :follow-symlinks)
+  (if (. ctx :follow-symlinks)
     target
     (scan-relative (. ctx :root) entry.path)))
 
@@ -66,17 +62,15 @@
 
 (defn- scan-file-target
   [ctx acc entry target-stat]
-  (if
-    (= target-stat.type "file")
+  (if (= target-stat.type "file")
     (add-scan-file ctx acc entry entry.target)
     (scan-acc acc acc.result)))
 
 (defn- scan-entry-target-stat
   [ctx target]
   (let [uv (. ctx :uv)]
-    (and
-     target
-     (uv.fs_stat target))))
+    (and target
+         (uv.fs_stat target))))
 
 (defn- scan-target-entry
   [entry target]
@@ -92,15 +86,13 @@
 (defn- scan-target-stat
   [ctx acc entry target]
   (let [target-stat  (scan-entry-target-stat ctx target) target-entry (and target-stat (scan-target-entry entry target))]
-    (if
-      target-stat
+    (if target-stat
       (scan-target-stat-result ctx acc target-entry target-stat)
       (values (scan-acc acc acc.result) nil))))
 
 (defn- scan-entry-target-path
   [ctx entry]
-  (if
-    (= entry.type "link")
+  (if (= entry.type "link")
     (scan-realpath (. ctx :uv) entry.path)
     entry.path))
 
@@ -111,8 +103,7 @@
 
 (defn- scan-entry-rel
   [prefix name]
-  (if
-    (= prefix "")
+  (if (= prefix "")
     name
     (.. prefix "/" name)))
 
@@ -121,8 +112,7 @@
   (let [eligible (or (and (= entry.type "directory") (not (= entry.name ".git")))
                      (= entry.type "file")
                      (and (. ctx :follow-symlinks) (= entry.type "link")))]
-    (if
-      eligible
+    (if eligible
       (scan-entry-target ctx acc entry)
       (values (scan-acc acc acc.result) nil))))
 
@@ -135,8 +125,7 @@
 
 (defn- scan-entry
   [ctx acc entry]
-  (if
-    (and (. ctx :skip-dotfiles) (scan-hidden? entry.name))
+  (if (and (. ctx :skip-dotfiles) (scan-hidden? entry.name))
     (values (scan-acc acc acc.result) nil)
     (scan-entry-path ctx acc entry)))
 
@@ -147,30 +136,26 @@
 (defn- walk-scan-step-result
   [ctx acc entry handle]
   (let [(next-acc error) (scan-entry ctx acc entry)]
-    (if
-      error
+    (if error
       (values nil error)
       ((. ctx :step) ctx next-acc entry handle))))
 
 (defn- walk-scan-step
   [ctx acc entry handle]
   (let [uv          (. ctx :uv) (name type) (uv.fs_scandir_next handle)]
-    (if
-      (not name)
+    (if (not name)
       (values (scan-acc acc acc.result) nil)
       (walk-scan-step-result ctx acc (scan-entry-data entry name type) handle))))
 
 (defn- scan-walk-prefix-or-dot
   [prefix]
-  (if
-    (= prefix "")
+  (if (= prefix "")
     "."
     prefix))
 
 (defn- walk-error-prefix
   [error-prefix prefix]
-  (if
-    error-prefix
+  (if error-prefix
     error-prefix
     (scan-walk-prefix-or-dot prefix)))
 
@@ -181,8 +166,7 @@
 (defn- walk
   [ctx acc entry]
   (let [uv           (. ctx :uv) (handle err) (uv.fs_scandir entry.directory) error-prefix (or entry.error-prefix (. ctx :error-prefix))]
-    (if
-      (not handle)
+    (if (not handle)
       (walk-scan-error error-prefix entry.prefix)
       (walk-scan-step ctx acc entry handle))))
 
@@ -197,30 +181,26 @@
 
 (defn- followed-link-result
   [ctx acc entry target-stat]
-  (if
-    (= target-stat.type "file")
+  (if (= target-stat.type "file")
     (add-file ctx acc entry.target {:rel entry.rel :dedupe entry.target})
     (followed-link-directory ctx acc entry target-stat)))
 
 (defn- add-followed-link
   [ctx acc entry]
   (let [uv           (. ctx :uv) target       (scan-realpath uv entry.path) target-stat  (and target (uv.fs_stat target)) target-entry (and target-stat (scan-target-entry entry target))]
-    (if
-      target-stat
+    (if target-stat
       (followed-link-result ctx acc target-entry target-stat)
       (values (scan-acc acc acc.result) nil))))
 
 (defn- directory-target
   [ctx path]
-  (if
-    (. ctx :follow-symlinks)
+  (if (. ctx :follow-symlinks)
     (scan-realpath (. ctx :uv) path)
     path))
 
 (defn- directory-visited
   [ctx target]
-  (if
-    (. ctx :follow-symlinks)
+  (if (. ctx :follow-symlinks)
     {target true}
     {}))
 
@@ -234,8 +214,7 @@
 
 (defn- add-path-link
   [ctx acc entry]
-  (if
-    (. ctx :follow-symlinks)
+  (if (. ctx :follow-symlinks)
     (add-followed-link ctx acc entry)
     (values nil (.. entry.rel ": symlinks are not supported"))))
 
@@ -254,16 +233,14 @@
         stat  (uv.fs_lstat abs)
         rel   (scan-relative (. ctx :root) abs)
         entry {:directory    abs :prefix       "" :name         input :type         (and stat stat.type) :path         abs :rel          rel :error-prefix input}]
-    (if
-      stat
+    (if stat
       (add-path-stat ctx acc entry stat)
       (values (scan-acc acc acc.result) nil))))
 
 (defn- sorted-files-failure
   [failure error]
-  (or
-   error
-   failure))
+  (or error
+      failure))
 
 (defn- sorted-files-success
   [result]
@@ -284,15 +261,13 @@
 
 (defn- sorted-files-step
   [ctx state input]
-  (if
-    state.failure
+  (if state.failure
     state
     (sorted-files-add ctx state input)))
 
 (defn- sorted-files-loop
   [ctx inputs index state]
-  (if
-    (> index (length inputs))
+  (if (> index (length inputs))
     (sorted-files-result state.failure state.acc.result)
     (sorted-files-loop ctx inputs (+ index 1) (sorted-files-step ctx state (. inputs index)))))
 

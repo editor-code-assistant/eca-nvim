@@ -22,49 +22,42 @@
 
 (defn- status-first-path
   [parts index record tab separated?]
-  (if
-    separated?
+  (if separated?
     (string.sub record (+ tab 1))
     (. parts (+ index 1))))
 
 (defn- status-old-path
   [rename first-path]
-  (when
-    rename
+  (when rename
     first-path))
 
 (defn- status-offset
   [separated?]
-  (if
-    separated?
+  (if separated?
     1
     2))
 
 (defn- status-destination
   [parts index rename separated? first-path]
-  (if
-    rename
+  (if rename
     (. parts (+ index (status-offset separated?)))
     first-path))
 
 (defn- status-rename-offset
   [separated?]
-  (if
-    separated?
+  (if separated?
     2
     3))
 
 (defn- status-normal-offset
   [separated?]
-  (if
-    separated?
+  (if separated?
     1
     2))
 
 (defn- status-next-index
   [index rename separated?]
-  (if
-    rename
+  (if rename
     (+ index (status-rename-offset separated?))
     (+ index (status-normal-offset separated?))))
 
@@ -75,16 +68,14 @@
 
 (defn- parse-status-parts
   [parts index result]
-  (if
-    (> index (length parts))
+  (if (> index (length parts))
     result
     (parse-status-parts-step parts index result parse-status-parts)))
 
 (defn parse-name-status
   [text]
   (let [parts (split-nul text)]
-    (if
-      (= (length parts) 0)
+    (if (= (length parts) 0)
       []
       (parse-status-parts parts 1 []))))
 
@@ -98,8 +89,7 @@
 
 (defn- hunk-count
   [new-count]
-  (if
-    (= new-count "")
+  (if (= new-count "")
     1
     (tonumber new-count)))
 
@@ -118,16 +108,14 @@
 (defn- overlaps-step
   [form intervals index recurse]
   (let [interval (. intervals index)]
-    (if
-      (and (<= interval.start form.end-line)
-           (<= form.line interval.end))
+    (if (and (<= interval.start form.end-line)
+             (<= form.line interval.end))
       true
       (recurse form intervals (+ index 1)))))
 
 (defn- overlaps?
   [form intervals index]
-  (if
-    (> index (length intervals))
+  (if (> index (length intervals))
     false
     (overlaps-step form intervals index overlaps?)))
 
@@ -137,15 +125,13 @@
 
 (defn- add-unique
   [items value]
-  (if
-    (or (= value nil) (. items value))
+  (if (or (= value nil) (. items value))
     items
     (core.assoc items value true)))
 
 (defn- append-if-new
   [seen items value]
-  (if
-    (. seen value)
+  (if (. seen value)
     {:seen seen :items items}
     {:seen  (core.assoc seen value true) :items (append-item items value)}))
 
@@ -156,8 +142,7 @@
 
 (defn- add-record-path
   [state seen-key items-key path]
-  (if
-    (. (. state seen-key) path)
+  (if (. (. state seen-key) path)
     state
     (add-record-path-new state seen-key items-key path)))
 
@@ -190,10 +175,9 @@
 
 (defn- add-old-path
   [state record]
-  (if
-    (and (or (= record.status "R") (= record.status "C"))
-         record.old-path
-         (not (. state.deleted-set record.old-path)))
+  (if (and (or (= record.status "R") (= record.status "C"))
+           record.old-path
+           (not (. state.deleted-set record.old-path)))
     (add-old-path-new state record)
     state))
 
@@ -204,8 +188,7 @@
 
 (defn- add-untracked-path
   [state path]
-  (if
-    (or (= path nil) (. state.whole-set path))
+  (if (or (= path nil) (. state.whole-set path))
     state
     (add-untracked-path-new state path)))
 
@@ -226,12 +209,10 @@
 
 (defn- plan-state
   [records untracked]
-  (add-old-paths
-   (add-records
-    (add-untracked-paths {:whole-set   {} :hunks-set   {} :deleted-set {} :whole       [] :hunks       [] :deleted     []}
-                         untracked)
-    records)
-   records))
+  (add-old-paths (add-records (add-untracked-paths {:whole-set   {} :hunks-set   {} :deleted-set {} :whole       [] :hunks       [] :deleted     []}
+                                                   untracked)
+                              records)
+                 records))
 
 (defn- plan-result
   [final-state]

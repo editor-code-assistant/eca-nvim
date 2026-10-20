@@ -26,10 +26,9 @@
 
 (defn- function-target
   [base offending]
-  (if
-    (and (= (list-head offending) "if")
-         (or (string.match base.form " > then$")
-             (string.match base.form " > else$")))
+  (if (and (= (list-head offending) "if")
+           (or (string.match base.form " > then$")
+               (string.match base.form " > else$")))
     (core.assoc base :form (.. base.form " > if#1"))
     base))
 
@@ -67,9 +66,8 @@
              (= node.kind :list)
              (or (= (list-head node) "fn") (= (list-head node) "lambda") (= (list-head node) "λ")))
     (table.insert result node))
-  (and
-   node
-   (collect-function-children node result collect-function-nodes))
+  (and node
+       (collect-function-children node result collect-function-nodes))
   result)
 
 (defn- synthetic-form
@@ -130,9 +128,8 @@
 (defn- function-finding-contained?
   [finding findings]
   (accumulate [contained? false _ candidate (ipairs findings)]
-    (or
-     contained?
-     (contained-function-finding? finding candidate))))
+    (or contained?
+        (contained-function-finding? finding candidate))))
 
 (defn- keep-function-finding
   [finding findings]
