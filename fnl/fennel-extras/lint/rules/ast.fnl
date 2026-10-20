@@ -33,7 +33,10 @@
 
 (defn symbol-text
   [node]
-  (when (and node (= node.kind :symbol)) node.text))
+  (
+   when
+    (and node (= node.kind :symbol))
+    node.text))
 
 (defn list-head
   [node]
@@ -52,11 +55,16 @@
 
 (defn spec-file?
   [path]
-  (and (= (string.sub path 1 9) "fnl/spec/") true))
+  (
+   and
+   (= (string.sub path 1 9) "fnl/spec/")
+   true))
 
 (defn- newline-value
   [text index]
-  (if (= (string.sub text index index) "\n") 1 0))
+  (
+   if (= (string.sub text index index) "\n") 1
+    0))
 
 (defn newline-count
   [text index count]
@@ -111,7 +119,9 @@
 
 (defn- code-line-value
   [tokens line]
-  (if (code-line? tokens line) 1 0))
+  (
+   if (code-line? tokens line) 1
+    0))
 
 (defn code-line-count
   [tokens line total count]
@@ -159,11 +169,20 @@
 
 (defn has-all?
   [names]
-  (and (. names "deftest") (. names "testing") (. names "is")))
+  (
+   and
+   (. names "deftest")
+   (. names "testing")
+   (. names "is")))
 
 (defn has-module-import?
   [names]
-  (and (. names "module") (. names "def") (. names "defn") (. names "defn-")))
+  (
+   and
+   (. names "module")
+   (. names "def")
+   (. names "defn")
+   (. names "defn-")))
 
 (defn previous-meaningful-child
   [children previous-index]
@@ -194,7 +213,10 @@
 (defn- prefixed-child?
   [children index]
   (let [previous (previous-meaningful children index)]
-    (and previous (= previous.kind :prefix))))
+    (
+     and
+     previous
+     (= previous.kind :prefix))))
 
 (defn- prefixed-root-child?
   [root index]
@@ -259,7 +281,10 @@
   target)
 (defn- skip-first-form-step
   [index value]
-  (when (> index 1) value))
+  (
+   when
+    (> index 1)
+    value))
 
 (defn- forms-without-first
   [forms]

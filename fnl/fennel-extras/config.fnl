@@ -27,7 +27,10 @@
 
 (defn- integer?
   [value]
-  (and (= (type value) :number) (= value (math.floor value))))
+  (
+   and
+   (= (type value) :number)
+   (= value (math.floor value))))
 
 (defn- valid-rule?
   [rule]
@@ -66,7 +69,10 @@
 
 (defn- boolean?
   [value]
-  (or (= value true) (= value false)))
+  (
+   or
+   (= value true)
+   (= value false)))
 
 (defn- extensions?
   [value]
@@ -82,7 +88,10 @@
 
 (defn- configuration-error-with-lint
   [failure lint]
-  (or failure (and lint (lint-config.lint-error lint))))
+  (
+   or
+   failure
+   (and lint (lint-config.lint-error lint))))
 
 (defn- configuration-error
   [tbl]

@@ -347,6 +347,9 @@
   (testing "accepts the defn-args-newline lint rule from parsed Fennel"
     (is (= {:lint {:rules {"defn-args-newline" "error"}}}
            (parse-value "{:lint {:rules {\"defn-args-newline\" :error}}}"))))
+  (testing "accepts the control-layout lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"control-layout" "warning"}}}
+           (parse-value "{:lint {:rules {\"control-layout\" :warning}}}"))))
   (testing "accepts a positive max-code-lines value"
     (is (= {:value? true :has-message false}
            (validate-summary {:lint {:max-code-lines 10}}))))
@@ -510,6 +513,7 @@
                                "one-is-per-testing"  "error"
                                "if-branch-call"      "warning"
                                "if-without-else"     "warning"
+                               "control-layout"      "warning"
                                "defn-args-newline"   "warning"
                                "multiline-layout"    "warning"
                                "function-shape"      "warning"
@@ -525,14 +529,21 @@
                                          (config.lint-policy {:lint {:max-code-lines 300
                                                                      :rules          {"core-require" "off"}
                                                                      :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
-                 (if ok value {:missing-lint-policy true}))))))))
+                 (
+                  if
+                   ok
+                   value
+                   {:missing-lint-policy true}))))))))
 (testing "normalizes a configured max-code-lines value"
   (let [config (load-config)]
     (is (= 10
            (if (. config :module-missing)
              nil
              (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 10}})))]
-               (and ok (. value :max-code-lines))))))))
+               (
+                and
+                ok
+                (. value :max-code-lines))))))))
 
 (deftest formatter-isolation
   (testing "lint configuration does not change formatter output"

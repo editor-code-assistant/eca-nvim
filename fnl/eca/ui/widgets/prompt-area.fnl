@@ -26,11 +26,11 @@
   (fn update-status-virt []
     "Update status virtual text below the separator."
     (let [ns (ensure-ns)]
-         ;; Always remove old extmark
+      ;; Always remove old extmark
       (when state.status-extmark-id
         (pcall nvim.nvim_buf_del_extmark buf-id ns state.status-extmark-id)
         (set state.status-extmark-id nil))
-         ;; Recreate at current tracked position
+      ;; Recreate at current tracked position
       (when state.status-text
         (let [dots       (string.rep "." (+ (% state.status-dots 3) 1))
               status-str (.. state.status-text dots)
@@ -73,8 +73,8 @@
      returns saved text, or empty string if prompt not yet rendered."
     (let [total (nvim.nvim_buf_line_count buf-id)
           start state.prompt-start-line]
-         ;; Only read if prompt has been rendered at a valid position
-         ;; and the line actually contains our prefix
+      ;; Only read if prompt has been rendered at a valid position
+      ;; and the line actually contains our prefix
       (when (and (> start 0) (<= start (- total 1)))
         (let [first-line (or (. (nvim.nvim_buf_get_lines buf-id start (+ start 1) false) 1) "")]
           (when (vim.startswith first-line idle-prefix.text)
@@ -85,8 +85,8 @@
   (fn render [start-line ?skip-read]
     "Render: prompt area (stop is virtual text).
      Preserves user's live input text from buffer unless ?skip-read is true."
-      ;; Read live text before overwriting (skip when called from builder re-render
-      ;; because the buffer was already cleared and state.prompt-text is correct)
+    ;; Read live text before overwriting (skip when called from builder re-render
+    ;; because the buffer was already cleared and state.prompt-text is correct)
     (when (not ?skip-read)
       (let [live-text (or (read-live-prompt-text) state.prompt-text)]
         (set state.prompt-text live-text)))
@@ -94,27 +94,27 @@
     (let [ns    (ensure-ns)
           _     (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
           lines []]
-         ;; 1. Prompt (always "> " + preserved user text, may be multi-line)
+      ;; 1. Prompt (always "> " + preserved user text, may be multi-line)
       (let [text-lines (vim.split state.prompt-text "\n" {:plain true})]
         (table.insert lines (.. idle-prefix.text (or (. text-lines 1) "")))
         (for [i 2 (length text-lines)]
           (table.insert lines (. text-lines i))))
 
-         ;; Write all lines
+      ;; Write all lines
       (nvim.nvim_buf_set_lines buf-id start-line -1 false lines)
 
-         ;; Compute prompt line index (always the last rendered line)
+      ;; Compute prompt line index (always the last rendered line)
       (let [prompt-line-idx (- (+ start-line (length lines)) 1)]
         (set state.prompt-start-line prompt-line-idx)
 
-           ;; Highlight prompt prefix "> "
+        ;; Highlight prompt prefix "> "
         (let [buf-line (or (. (nvim.nvim_buf_get_lines buf-id prompt-line-idx (+ prompt-line-idx 1) false) 1) "")]
           (when (>= (length buf-line) (length idle-prefix.text))
             (nvim.nvim_buf_set_extmark buf-id ns prompt-line-idx 0
                                        {:end_col  (length idle-prefix.text)
                                         :hl_group idle-prefix.hl-group}))))
 
-         ;; Virtual lines above prompt: status + stop
+      ;; Virtual lines above prompt: status + stop
       (update-virt-lines)
 
       (length lines)))
@@ -125,16 +125,16 @@
     (set state.prompt-start-line prompt-line)
     (let [ns (ensure-ns)]
       (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
-         ;; Highlight prompt prefix "> "
+      ;; Highlight prompt prefix "> "
       (let [buf-line (or (. (nvim.nvim_buf_get_lines buf-id prompt-line (+ prompt-line 1) false) 1) "")]
         (when (>= (length buf-line) (length idle-prefix.text))
           (nvim.nvim_buf_set_extmark buf-id ns prompt-line 0
                                      {:end_col  (length idle-prefix.text)
                                       :hl_group idle-prefix.hl-group})))
-         ;; Virtual lines: status + stop
+      ;; Virtual lines: status + stop
       (update-virt-lines)))
 
-    ;; ── Status indicator ──────────────────────────────────
+  ;; ── Status indicator ──────────────────────────────────
 
   (fn animate-dots []
     (set state.status-dots (+ state.status-dots 1))
@@ -158,7 +158,7 @@
         (set state.status-timer nil)
         (update-virt-lines))))
 
-    ;; ── Loading ───────────────────────────────────────────
+  ;; ── Loading ───────────────────────────────────────────
 
   (fn set-loading [bool]
     (set state.loading? bool)
@@ -170,7 +170,7 @@
 
 
 
-    ;; ── Text management ───────────────────────────────────
+  ;; ── Text management ───────────────────────────────────
 
   (fn get-text []
     "Read prompt text from prompt-start-line to end of buffer.
@@ -178,7 +178,7 @@
     (let [total (nvim.nvim_buf_line_count buf-id)
           start state.prompt-start-line
           lines (nvim.nvim_buf_get_lines buf-id start total false)]
-         ;; Strip the "> " prefix from the first line
+      ;; Strip the "> " prefix from the first line
       (when (> (length lines) 0)
         (let [first-line (. lines 1)]
           (when (vim.startswith first-line idle-prefix.text)
@@ -191,9 +191,9 @@
           total       (nvim.nvim_buf_line_count buf-id)
           text-lines  (vim.split state.prompt-text "\n" {:plain true})
           buf-lines   []]
-         ;; First line gets the "> " prefix
+      ;; First line gets the "> " prefix
       (table.insert buf-lines (.. idle-prefix.text (or (. text-lines 1) "")))
-         ;; Remaining lines go as-is
+      ;; Remaining lines go as-is
       (for [i 2 (length text-lines)]
         (table.insert buf-lines (. text-lines i)))
       (when (<= prompt-line (- total 1))
@@ -222,7 +222,7 @@
       (do (set state.history-idx (+ (length state.history) 1))
         (set-text ""))))
 
-    ;; Strip "> " prefix from yanked text on the prompt line.
+  ;; Strip "> " prefix from yanked text on the prompt line.
   (nvim.nvim_create_autocmd :TextYankPost
                             {:buffer   buf-id
                              :callback (fn []
@@ -241,7 +241,7 @@
                                                   (vim.fn.setreg "+" lines event.regtype)
                                                   (vim.fn.setreg "*" lines event.regtype)))))))})
 
-    ;; Protect the "> " prefix — keep cursor at col >= 2 on the prompt line.
+  ;; Protect the "> " prefix — keep cursor at col >= 2 on the prompt line.
   (nvim.nvim_create_autocmd :CursorMovedI
                             {:buffer   buf-id
                              :callback (fn []

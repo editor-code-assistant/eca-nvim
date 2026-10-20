@@ -42,7 +42,10 @@
 
 (defn- integer?
   [value]
-  (and (= (type value) :number) (= value (math.floor value))))
+  (
+   and
+   (= (type value) :number)
+   (= value (math.floor value))))
 
 (defn- validate-rule
   [rule]
@@ -61,7 +64,10 @@
   [value]
   (var failure nil)
   (each [_ rule (ipairs value)]
-    (when (= failure nil) (set failure (validate-rule rule))))
+    (
+     when
+      (= failure nil)
+      (set failure (validate-rule rule))))
   failure)
 (defn- validate-rule-list
   [value]
@@ -238,20 +244,38 @@
   (each [key _ (pairs config)]
     (when (and (= failure nil) (not (. allowed-keys key)))
       (set failure (error "unknown indentation configuration key"))))
-  (when (= failure nil) (set failure (validate-map (. config :indents) true)))
-  (when (= failure nil) (set failure (validate-map (. config :format-as) false)))
-  (when (= failure nil) (set failure (validate-patterns (. config :indent-patterns))))
+  (
+   when
+    (= failure nil)
+    (set failure (validate-map (. config :indents) true)))
+  (
+   when
+    (= failure nil)
+    (set failure (validate-map (. config :format-as) false)))
+  (
+   when
+    (= failure nil)
+    (set failure (validate-patterns (. config :indent-patterns))))
   (when (= failure nil)
     (let [width (. config :indent-width)]
       (when (and (not= width nil) (not (and (integer? width) (> width 0))))
         (set failure (error "indent-width must be a positive integer")))))
-  (when (= failure nil) (set failure (validate-align-bindings config)))
-  (when (= failure nil) (set failure (validate-custom-config config)))
+  (
+   when
+    (= failure nil)
+    (set failure (validate-align-bindings config)))
+  (
+   when
+    (= failure nil)
+    (set failure (validate-custom-config config)))
   (when (= failure nil)
     (each [name _ (pairs (or (. config :format-as) {}))]
       (when (= failure nil)
         (let [(_ err) (resolve-name config name {})]
-          (when err (set failure err))))))
+          (
+           when
+            err
+            (set failure err))))))
   (when (= failure nil)
     (each [name _ (pairs (or config.indents {}))]
       (when (and (= failure nil) (. (or (. config :format-as) {}) name))
@@ -268,4 +292,8 @@
 (defn resolve
   [config name]
   (let [(rule _ found) (resolve-name (or config {}) name {})]
-    (if found rule nil)))
+    (
+     if
+      found
+      rule
+      nil)))

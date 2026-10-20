@@ -24,7 +24,7 @@
         lines         []
         highlights    []]
     (if collapsed?
-        ;; Collapsed: single line with collapse-prefix + first line of content
+      ;; Collapsed: single line with collapse-prefix + first line of content
       (let [cpfx          (or collapse-prefix "▸ ")
             first-content (or (. content-lines 1) "")
             line          (.. cpfx first-content)]
@@ -33,7 +33,7 @@
                       {:line-idx 0 :hl-group (or hl :EcaExpandableLabel)
                        :col-start 0 :col-end (length cpfx)})
         (table.insert lines ""))
-        ;; Expanded: full content with prefix
+      ;; Expanded: full content with prefix
       (do
         (each [i line (ipairs content-lines)]
           (let [full (if (= i 1) (.. pfx line) line)]

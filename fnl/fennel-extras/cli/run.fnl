@@ -19,11 +19,17 @@
 (defn- config-default
   [cfg key default]
   (let [value (. cfg key)]
-    (if (= value nil) default value)))
+    (
+     if (= value nil) default
+      value)))
 
 (defn- load-parser-result
   [name ok parser]
-  (if ok parser (values nil (.. "could not require parser module: " name))))
+  (
+   if
+    ok
+    parser
+    (values nil (.. "could not require parser module: " name))))
 
 (defn- load-parser-result-call
   [name]

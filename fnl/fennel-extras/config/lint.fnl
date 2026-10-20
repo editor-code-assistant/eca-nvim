@@ -12,7 +12,10 @@
   [value]
   (and (= (type value) :table)
        (let [metadata (getmetatable value)]
-         (and metadata (. metadata :fennel-extras-table)))))
+         (
+          and
+          metadata
+          (. metadata :fennel-extras-table)))))
 
 (defn- lint-rule-known?
   [rule]
@@ -20,7 +23,11 @@
 
 (defn- lint-severity?
   [severity]
-  (or (= severity "error") (= severity "warning") (= severity "off")))
+  (
+   or
+   (= severity "error")
+   (= severity "warning")
+   (= severity "off")))
 
 (defn- lint-key-sort-value
   [key]

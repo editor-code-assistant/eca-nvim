@@ -10,6 +10,7 @@
         :one-is-per-testing  "error"
         :if-branch-call      "warning"
         :if-without-else     "warning"
+        :control-layout      "warning"
         :defn-args-newline   "warning"
         :function-shape      "warning"
         :no-mutation         "warning"
@@ -29,7 +30,10 @@
 (defn rule-scope
   [rule]
   (let [properties (. rule-properties rule)]
-    (and properties (. properties :scope))))
+    (
+     and
+     properties
+     (. properties :scope))))
 (defn finding
   [path form severity rule message node]
   {:kind     "finding"
@@ -47,7 +51,10 @@
 (defn rule-severity
   [policy rule]
   (let [override (and policy (. policy rule))]
-    (or override (. defaults-map rule))))
+    (
+     or
+     override
+     (. defaults-map rule))))
 
 (defn enabled?
   [policy rule]

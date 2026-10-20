@@ -127,7 +127,10 @@
 (defn- symbol?
   [value]
   (let [meta (and (= (type value) :table) (getmetatable value))]
-    (and meta (= (tostring (. meta 1)) "SYMBOL"))))
+    (
+     and
+     meta
+     (= (tostring (. meta 1)) "SYMBOL"))))
 
 (defn- equal-key?
   [a b]
@@ -194,7 +197,11 @@
     (var done false)
     (while (not done)
       (let [(ok form) (iterator)]
-        (if ok (table.insert forms form) (set done true))))
+        (
+         if
+          ok
+          (table.insert forms form)
+          (set done true))))
     forms))
 
 (defn- forms-equal?
@@ -210,7 +217,10 @@
                              (let [left (parse-all parser a) right (parse-all parser b)]
                                (if (not= (length left) (length right)) false
                                  (forms-equal? parser left right)))))]
-    (and ok result)))
+    (
+     and
+     ok
+     result)))
 
 (defn format-string
   [source opts]

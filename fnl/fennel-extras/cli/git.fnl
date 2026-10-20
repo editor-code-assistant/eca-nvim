@@ -30,13 +30,20 @@
 
 (defn- git-read-output
   [file]
-  (if file (file:read "*a") ""))
+  (
+   if
+    file
+    (file:read "*a")
+    ""))
 
 (defn- git-call
   [root args]
   (let [file   (io.popen (.. (git-command root args) " </dev/null 2>&1; printf '\\n__ECA_STATUS__%s' $?"))
         output (git-read-output file)]
-    (and file (file:close))
+    (
+     and
+     file
+     (file:close))
     (git-output output (string.find output "\n__ECA_STATUS__"))))
 
 (defn- git-root
@@ -134,13 +141,20 @@
 
 (defn- changed-result
   [result selected]
-  (if selected (append-selected result selected) result))
+  (
+   if
+    selected
+    (append-selected result selected)
+    result))
 
 (defn- changed-file-selection
   [ctx file]
   (let [whole? (path-present? ctx.plan.whole file.path 1)
         hunk?  (path-present? ctx.plan.hunks file.path 1)]
-    (and (or whole? hunk?) (changed-file ctx.root ctx.base file whole?))))
+    (
+     and
+     (or whole? hunk?)
+     (changed-file ctx.root ctx.base file whole?))))
 
 (defn- changed-files-next
   [ctx state]

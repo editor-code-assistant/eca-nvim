@@ -74,7 +74,10 @@
   (let [opening-line     node.open.line
         opening-list?    (and (= node.kind :list) (= index 2))
         allowed-opening? (and opening-list? (= current.start opening-line))]
-    (and (not allowed-opening?) (<= current.start previous.end))))
+    (
+     and
+     (not allowed-opening?)
+     (<= current.start previous.end))))
 
 (defn- offending-units-step
   [node units index previous]
@@ -105,7 +108,11 @@
 
 (defn- layout-container?
   [node]
-  (or (= node.kind :list) (= node.kind :sequence) (= node.kind :table)))
+  (
+   or
+   (= node.kind :list)
+   (= node.kind :sequence)
+   (= node.kind :table)))
 
 (defn- layout-excluded?
   [node head]

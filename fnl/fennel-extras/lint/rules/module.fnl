@@ -52,7 +52,10 @@
   nil)
 (defn- core-require-form
   [head children node]
-  (or (and (= head "local") (. children 3)) node))
+  (
+   or
+   (and (= head "local") (. children 3))
+   node))
 
 (defn- core-require-target
   [require-form require-children]
@@ -74,7 +77,11 @@
 
 (defn- core-require-children
   [require-form]
-  (if require-form (meaningful-children require-form) []))
+  (
+   if
+    require-form
+    (meaningful-children require-form)
+    []))
 
 (defn core-require-finding
   [findings path form head node policy]

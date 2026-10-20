@@ -9,6 +9,7 @@ local reader = require("fennel-extras.reader")
 local rules = require("fennel-extras.rules")
 local helpers = require("fennel-extras.indent.node")
 local align = require("fennel-extras.indent.align")
+local comments = require("fennel-extras.indent.comment")
 local function append_line(lines, source, start, _end)
   table.insert(lines, string.sub(source, start, (_end - 1)))
   return (_end + 1)
@@ -219,6 +220,34 @@ end
 local function indent_for(node, first_token, line_number, config)
   return (rule_indent(node, first_token, line_number, config) or default_indent_for(node, first_token, line_number))
 end
+local function next_token_indent(token, node, config)
+  if (token.kind == "close") then
+    return (node.open["out-col"] + 1)
+  else
+    return indent_for(node, token, token.line, config)
+  end
+end
+local function comment_indent(tokens, nodes, line_number, config)
+  local token = comments["first-code-token-after"](tokens, line_number)
+  local node = (token and active_node(nodes, token.line))
+  return ((token and node and next_token_indent(token, node, config)) or 0)
+end
+local function default_line_indent(node, first_token, line_number, tokens, config)
+  local rule = rule_indent(node, first_token, line_number, config)
+  local indent = indent_for(node, first_token, line_number, config)
+  if ((rule == nil) and (line_number > 1)) then
+    return comments["continuation-indent"](indent, tokens, line_number)
+  else
+    return indent
+  end
+end
+local function line_indent(node, first_token, line_number, tokens, nodes, config)
+  if (first_token.kind == "comment") then
+    return comment_indent(tokens, nodes, line_number, config)
+  else
+    return default_line_indent(node, first_token, line_number, tokens, config)
+  end
+end
 local function assign_token_output(token, line, indent, strip_leading_3f)
   token["out-col"] = output_column(token, line, indent, strip_leading_3f)
   if (token.kind == "open") then
@@ -262,7 +291,7 @@ local function process_line(line_number, line, nodes, tokens, config)
       if (node and (node.open.col > 1) and ((first_token.kind == "close") or ((first_token.kind == "number") and (helpers["leading-spaces"](line) > 20)))) then
         return process_unchanged_line(line_number, line, tokens)
       else
-        local indent = indent_for(node, first_token, line_number, config)
+        local indent = line_indent(node, first_token, line_number, tokens, nodes, config)
         local spaces = helpers["leading-spaces"](line)
         local body = string.sub(line, (spaces + 1))
         assign_output_columns(tokens, line_number, line, indent, true)
@@ -286,25 +315,25 @@ local function reindent_once(source, config)
       table.insert(output, process_line(line_number, line, nodes, tokens, config))
       line_number = (line_number + 1)
     end
-    local _34_
+    local _37_
     if final_newline then
-      _34_ = "\n"
+      _37_ = "\n"
     else
-      _34_ = ""
+      _37_ = ""
     end
-    return (table.concat(output, "\n") .. _34_), tree, nil
+    return (table.concat(output, "\n") .. _37_), tree, nil
   end
 end
 local function alignment_source(source, tree)
   local lines, final_newline = split_lines(source)
   local aligned = align.apply(lines, tree)
-  local _37_
+  local _40_
   if final_newline then
-    _37_ = "\n"
+    _40_ = "\n"
   else
-    _37_ = ""
+    _40_ = ""
   end
-  return (table.concat(aligned, "\n") .. _37_)
+  return (table.concat(aligned, "\n") .. _40_)
 end
 local function alignment_pass(source, config)
   local plain, tree, error = reindent_once(source, config)

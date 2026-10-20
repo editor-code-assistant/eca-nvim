@@ -40,7 +40,10 @@
   [value]
   (and (= (type value) :table)
        (let [metadata (getmetatable value)]
-         (and metadata (. metadata table-marker)))))
+         (
+          and
+          metadata
+          (. metadata table-marker)))))
 
 (defn- error-at
   [message token]

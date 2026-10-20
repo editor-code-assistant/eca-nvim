@@ -11,7 +11,9 @@
 
 (defn- severity-rank
   [severity]
-  (if (= severity "error") 1 2))
+  (
+   if (= severity "error") 1
+    2))
 
 (defn- finding-less?
   [a b]
@@ -78,11 +80,19 @@
 
 (defn- valid-continuation?
   [byte]
-  (and byte (>= byte 128) (<= byte 191)))
+  (
+   and
+   byte
+   (>= byte 128)
+   (<= byte 191)))
 
 (defn- valid-two-byte?
   [first second]
-  (and (>= first 194) (<= first 223) (valid-continuation? second)))
+  (
+   and
+   (>= first 194)
+   (<= first 223)
+   (valid-continuation? second)))
 
 (defn- valid-three-byte?
   [first second third]

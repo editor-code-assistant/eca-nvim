@@ -704,13 +704,13 @@
     (is (= {:code 1 :lines ["fnl/a.fnl"]} (symlink-loop-scenario))))
   (testing "does not partially write files when a later write fails"
     (let [result (two-phase-write-scenario)]
-         ;; Root can write through read-only directories, so this environment cannot exercise the failure.
+      ;; Root can write through read-only directories, so this environment cannot exercise the failure.
       (is (= (if (. result :skipped-root)
                {:skipped-root true}
                {:code 2 :a-unchanged true})
              result))))
   (testing "does not discover a dotfile config as source"
-           ;; This documents the decision that configuration is data, not source; current glob behavior already passes it.
+    ;; This documents the decision that configuration is data, not source; current glob behavior already passes it.
     (is (= {:code 0 :lines []} (dotfile-scenario :config))))
   (testing "does not discover a dotfile with a Fennel extension"
     (is (= {:code 2 :lines ["no files found"]} (dotfile-scenario :source))))
@@ -728,7 +728,7 @@
               :mentions-symlink (not (not (string.match (or (. lines 1) "") "symlink")))}))))
   (testing "reports an unreadable directory"
     (let [result (unreadable-directory-scenario)]
-         ;; Root can read mode-000 directories, so this environment cannot exercise the failure.
+      ;; Root can read mode-000 directories, so this environment cannot exercise the failure.
       (is (= (if (. result :skipped-root)
                {:skipped-root true}
                {:code 2 :mentions-read-error true})
@@ -1079,7 +1079,7 @@
 
 (defn- changed-config
   []
-  "{:lint {:rules {\"core-require\" :off \"defn-args-newline\" :off \"function-shape\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
+  "{:lint {:rules {\"core-require\" :off \"defn-args-newline\" :off \"function-shape\" :off \"control-layout\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}")
 
 (defn- changed-source
   [which]

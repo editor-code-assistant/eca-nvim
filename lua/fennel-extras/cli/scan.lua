@@ -5,8 +5,8 @@ do
   pkg_1_auto.loaded["fennel-extras.cli.scan"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.cli.scan"]
 end
+local api = require("fennel-extras.cli.scan.api")
 local path = require("fennel-extras.cli.scan.path")
-local scan_cwd = path.cwd
 local scan_join = path.join
 local scan_absolute = path.absolute
 local scan_relative = path.relative
@@ -17,26 +17,17 @@ local scan_realpath = path.realpath
 local scan_walk_prefix = path["walk-prefix"]
 local cwd
 do
-  local function cwd0()
-    return scan_cwd()
-  end
-  _2amodule_2a["cwd"] = cwd0
+  _2amodule_2a["cwd"] = api.cwd
   cwd = _2amodule_2a.cwd
 end
 local relative
 do
-  local function relative0(root, path0)
-    return scan_relative(root, path0)
-  end
-  _2amodule_2a["relative"] = relative0
+  _2amodule_2a["relative"] = api.relative
   relative = _2amodule_2a.relative
 end
 local realpath
 do
-  local function realpath0(uv, path0)
-    return scan_realpath(uv, path0)
-  end
-  _2amodule_2a["realpath"] = realpath0
+  _2amodule_2a["realpath"] = api.realpath
   realpath = _2amodule_2a.realpath
 end
 local function scan_acc(acc, result)

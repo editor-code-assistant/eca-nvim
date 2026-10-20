@@ -18,7 +18,11 @@
 
 (defn- mutation-head?
   [head]
-  (or (= head "var") (= head "set") (= head "while")))
+  (
+   or
+   (= head "var")
+   (= head "set")
+   (= head "while")))
 
 (defn- mutation-mode-for-prefix
   [prefix mode]

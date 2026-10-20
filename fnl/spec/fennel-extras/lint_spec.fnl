@@ -696,7 +696,7 @@
 (deftest exclusions
   (let [source   "(defn run [] (if ok (do a b) c))"
         path     "fnl/app.fnl"
-        rules    {"module-style" :off "function-shape" :off "defn-args-newline" :off}
+        rules    {"module-style" :off "function-shape" :off "defn-args-newline" :off "control-layout" :off}
         baseline (check-context source {:path path :rules rules})
         form     (first-finding-form baseline "if-branch-call")]
     (testing "an exclusion suppresses only an exact rule and form match"
@@ -978,7 +978,11 @@
           rules    {"module-style" :off}
           baseline (defn-args-newline-findings source path rules)
           result   (check-context source {:path path :rules rules :exclusions [{:rule "defn-args-newline" :form (. baseline 1 :form) :reason "intentional"}]})]
-      (is (= 1 (length (icollect [_ finding (ipairs result)] (when (= (. finding :rule) "defn-args-newline") finding)))))))
+      (is (= 1
+             (length
+              (icollect [_ finding (ipairs result)]
+                (when (= (. finding :rule) "defn-args-newline")
+                  finding)))))))
   (testing "reports one finding across defn args and multiline layout"
     (let [result (check-source "(defn f [a]\n  (foo a b\n    c))" "fnl/app.fnl" {"module-style" :off})
           rules  (icollect [_ finding (ipairs result)] (. finding :rule))]
@@ -1075,6 +1079,148 @@
                   "(foo a b\n  c)"
                   "fnl/app.fnl"
                   {"module-style" :off "multiline-layout" :off})))))
+)
+
+(defn- control-layout-findings
+  [source path rules]
+  (let [result (check-source source path rules)]
+    (if (or (. result :module-missing) (. result :value-nil?))
+      result
+      (icollect [_ finding (ipairs result)]
+        (when (= (. finding :rule) "control-layout")
+          finding)))))
+
+(deftest control-layout
+  (testing "flags a one-line if in direct function statement position"
+    (is (=
+         1
+         (length (control-layout-findings
+                  "(defn f\n  [ok resolved]\n  (if ok resolved nil))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "accepts a broken-out if in direct function statement position"
+    (is (=
+         0
+         (length (control-layout-findings
+                  "(defn f\n  [ok resolved]\n  (if ok\n    resolved\n    nil))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "flags a one-line when in direct function statement position"
+    (is (=
+         1
+         (length (control-layout-findings
+                  "(defn f\n  [file]\n  (when (kept? file) file))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "flags a one-line or in a loop body"
+    (is (=
+         1
+         (length (control-layout-findings
+                  "(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r (m? e))))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "flags a one-line and in direct function statement position"
+    (is (=
+         1
+         (length (control-layout-findings
+                  "(defn f\n  [a b]\n  (and a b))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "accepts a control form in a when branch position"
+    (is (=
+         0
+         (length (control-layout-findings
+                  "(defn f\n  [a b c]\n  (when a\n    (if b c a)))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "accepts a broken-out or in a loop body"
+    (is (=
+         0
+         (length (control-layout-findings
+                  "(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r\n      (m? e))))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "flags one-line case and match forms in statement position"
+    (is (=
+         2
+         (length (control-layout-findings
+                  "(defn f\n  [x]\n  (do (case x 1 :one _ :other)\n      (match x 1 :one _ :other)))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "does not require control forms in value, call, vector, map, or branch positions"
+    (is (=
+         0
+         (length (control-layout-findings
+                  "(defn f\n  [a b c]\n  (let [x (or a b)]\n    {:p (if a b c)\n     :q [(when a b)]}\n    (foo (if a b c))\n    (if a\n      (or b c)\n      c)))"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "reports nested offending statement forms with distinct deterministic identities"
+    (let [source "(defn f\n  []\n  (do (if a b c)\n      (when a b)))"
+          first  (control-layout-findings source "fnl/app.fnl" {"module-style" :off})
+          second (control-layout-findings source "fnl/app.fnl" {"module-style" :off})]
+      (is (and (= 2 (length first))
+               (not= (. first 1 :form) (. first 2 :form))
+               (vim.deep_equal
+                (icollect [_ finding (ipairs first)] (. finding :form))
+                (icollect [_ finding (ipairs second)] (. finding :form)))))))
+  (testing "applies to spec files"
+    (is (=
+         1
+         (length (control-layout-findings
+                  "(defn f [] (if a b c))"
+                  "fnl/spec/app_spec.fnl"
+                  nil)))))
+  (testing "ignores quoted control-form data"
+    (is (=
+         0
+         (length (control-layout-findings
+                  "'(if a b c)"
+                  "fnl/app.fnl"
+                  {"module-style" :off})))))
+  (testing "uses the stable identity, warning severity, and prescribed message"
+    (let [finding (. (control-layout-findings
+                      "(defn f [] (if a b c))"
+                      "fnl/app.fnl"
+                      {"module-style" :off})
+                     1)]
+      (is (= {:form     "fnl/app.fnl > defn:f > if#1"
+              :severity "warning"
+              :message  "put this control form on several lines"}
+             {:form     (. finding :form)
+              :severity (. finding :severity)
+              :message  (. finding :message)}))))
+  (testing "uses error severity when configured"
+    (is (= "error"
+           (. (control-layout-findings
+               "(defn f [] (if a b c))"
+               "fnl/app.fnl"
+               {"module-style" :off "control-layout" :error})
+              1
+              :severity))))
+  (testing "does not report when disabled"
+    (is (=
+         0
+         (length (control-layout-findings
+                  "(defn f [] (if a b c))"
+                  "fnl/app.fnl"
+                  {"module-style" :off "control-layout" :off})))))
+  (testing "an exclusion removes only the selected control-layout finding"
+    (let [source   "(defn f [] (do (if a b c) (when a b)))"
+          path     "fnl/app.fnl"
+          rules    {"module-style" :off}
+          baseline (control-layout-findings source path rules)
+          result   (check-context
+                    source
+                    {:path       path
+                     :rules      rules
+                     :exclusions [{:rule   "control-layout"
+                                   :form   (. baseline 1 :form)
+                                   :reason "intentional"}]})]
+      (is (=
+           1
+           (length (icollect [_ finding (ipairs result)]
+                     (when (= (. finding :rule) "control-layout")
+                       finding)))))))
 )
 
 (defn- repeated-code

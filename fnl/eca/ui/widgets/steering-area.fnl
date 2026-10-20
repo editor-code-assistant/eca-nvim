@@ -26,15 +26,15 @@
                       (.. (string.sub combined 1 60) "...")
                       combined)
           prefix    (.. "Steering: " truncated " [")]
-         ;; Inline virt text before "-"
+      ;; Inline virt text before "-"
       (nvim.nvim_buf_set_extmark buf-id ns line-num 0
                                  {:virt_text     [[prefix :EcaSteeringLabel]]
                                   :virt_text_pos :inline})
-         ;; Inline virt text after "-"
+      ;; Inline virt text after "-"
       (nvim.nvim_buf_set_extmark buf-id ns line-num 1
                                  {:virt_text     [["]" :EcaStopLabel]]
                                   :virt_text_pos :inline})
-         ;; Highlight the "-" itself
+      ;; Highlight the "-" itself
       (nvim.nvim_buf_set_extmark buf-id ns line-num 0
                                  {:end_col 1 :hl_group :EcaStopLabel})))
 

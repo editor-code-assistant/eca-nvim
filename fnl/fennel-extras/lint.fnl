@@ -46,7 +46,10 @@
 (defn- selected-branch?
   [finding forms scope]
   (let [branch (branch-form finding.form)]
-    (and branch (selected-form? forms branch scope 1))))
+    (
+     and
+     branch
+     (selected-form? forms branch scope 1))))
 
 (defn- selected-scope?
   [finding forms scope]

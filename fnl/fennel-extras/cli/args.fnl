@@ -6,7 +6,9 @@
 
 (defn lint-inputs
   [parsed cfg]
-  (if (> (length parsed.paths) 0) parsed.paths (or (. cfg :paths) ["."])))
+  (if (> (length parsed.paths) 0)
+    parsed.paths
+    (or (. cfg :paths) ["."])))
 
 (defn- lint-state
   [args index result]
@@ -32,19 +34,13 @@
   [state value]
   (if (and (not= value "text") (not= value "json"))
     (values nil "format must be text or json")
-    (values (lint-advance state
-                          2
-                          (table-update.update state.result {:format value :format-seen true}))
-            nil)))
+    (values (lint-advance state 2 (table-update.update state.result {:format value :format-seen true})) nil)))
 
 (defn- parse-lint-value-present
   [state key value]
   (case key
     "--format" (parse-lint-format-value state value)
-    _          (values (lint-advance state
-                                     2
-                                     (table-update.update state.result {:base value :changed true}))
-                       nil)))
+    _          (values (lint-advance state 2 (table-update.update state.result {:base value :changed true})) nil)))
 
 (defn- parse-lint-value
   [state key]
@@ -54,10 +50,7 @@
 
 (defn- parse-lint-path
   [state]
-  (values (lint-advance state
-                        1
-                        (table-update.update state.result {:paths (append-path state.result.paths (. state.args state.index))}))
-          nil))
+  (values (lint-advance state 1 (table-update.update state.result {:paths (append-path state.result.paths (. state.args state.index))})) nil))
 
 (defn- parse-lint-all
   [state]

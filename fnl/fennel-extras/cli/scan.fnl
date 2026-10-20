@@ -3,8 +3,8 @@
 (module fennel-extras.cli.scan)
 
 
+(local api (require :fennel-extras.cli.scan.api))
 (local path (require :fennel-extras.cli.scan.path))
-(local scan-cwd path.cwd)
 (local scan-join path.join)
 (local scan-absolute path.absolute)
 (local scan-relative path.relative)
@@ -14,17 +14,9 @@
 (local scan-realpath path.realpath)
 (local scan-walk-prefix path.walk-prefix)
 
-(defn cwd
-  []
-  (scan-cwd))
-
-(defn relative
-  [root path]
-  (scan-relative root path))
-
-(defn realpath
-  [uv path]
-  (scan-realpath uv path))
+(def cwd api.cwd)
+(def relative api.relative)
+(def realpath api.realpath)
 
 (defn- scan-acc
   [acc result]
@@ -65,7 +57,11 @@
 
 (defn- scan-file-dedupe
   [ctx entry target]
-  (if (. ctx :follow-symlinks) target (scan-relative (. ctx :root) entry.path)))
+  (
+   if
+    (. ctx :follow-symlinks)
+    target
+    (scan-relative (. ctx :root) entry.path)))
 
 (defn- add-scan-file
   [ctx acc entry target]
@@ -80,7 +76,10 @@
 (defn- scan-entry-target-stat
   [ctx target]
   (let [uv (. ctx :uv)]
-    (and target (uv.fs_stat target))))
+    (
+     and
+     target
+     (uv.fs_stat target))))
 
 (defn- scan-target-entry
   [entry target]
@@ -110,7 +109,11 @@
 
 (defn- scan-entry-target-path
   [ctx entry]
-  (if (= entry.type "link") (scan-realpath (. ctx :uv) entry.path) entry.path))
+  (
+   if
+    (= entry.type "link")
+    (scan-realpath (. ctx :uv) entry.path)
+    entry.path))
 
 (defn- scan-entry-target
   [ctx acc entry]
@@ -119,7 +122,11 @@
 
 (defn- scan-entry-rel
   [prefix name]
-  (if (= prefix "") name (.. prefix "/" name)))
+  (
+   if
+    (= prefix "")
+    name
+    (.. prefix "/" name)))
 
 (defn- scan-entry-eligible
   [ctx acc entry]
@@ -170,7 +177,9 @@
 
 (defn- scan-walk-prefix-or-dot
   [prefix]
-  (if (= prefix "") "." prefix))
+  (
+   if (= prefix "") "."
+    prefix))
 
 (defn- walk-error-prefix
   [error-prefix prefix]
@@ -223,11 +232,19 @@
 
 (defn- directory-target
   [ctx path]
-  (if (. ctx :follow-symlinks) (scan-realpath (. ctx :uv) path) path))
+  (
+   if
+    (. ctx :follow-symlinks)
+    (scan-realpath (. ctx :uv) path)
+    path))
 
 (defn- directory-visited
   [ctx target]
-  (if (. ctx :follow-symlinks) {target true} {}))
+  (
+   if
+    (. ctx :follow-symlinks)
+    {target true}
+    {}))
 
 (defn- add-directory-path
   [ctx acc entry]
@@ -274,7 +291,10 @@
 
 (defn- sorted-files-failure
   [failure error]
-  (or error failure))
+  (
+   or
+   error
+   failure))
 
 (defn- sorted-files-success
   [result]

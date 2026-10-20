@@ -6,6 +6,7 @@
 (local rules (require :fennel-extras.rules))
 (local helpers (require :fennel-extras.indent.node))
 (local align (require :fennel-extras.indent.align))
+(local comments (require :fennel-extras.indent.comment))
 
 (defn- append-line
   [lines source start end]
@@ -179,6 +180,30 @@
   (or (rule-indent node first-token line-number config)
       (default-indent-for node first-token line-number)))
 
+(defn- next-token-indent
+  [token node config]
+  (if (= token.kind :close) (+ node.open.out-col 1)
+    (indent-for node token token.line config)))
+
+(defn- comment-indent
+  [tokens nodes line-number config]
+  (let [token (comments.first-code-token-after tokens line-number)
+        node  (and token (active-node nodes token.line))]
+    (or (and token node (next-token-indent token node config))
+        0)))
+
+(defn- default-line-indent
+  [node first-token line-number tokens config]
+  (let [rule   (rule-indent node first-token line-number config)
+        indent (indent-for node first-token line-number config)]
+    (if (and (= rule nil) (> line-number 1)) (comments.continuation-indent indent tokens line-number)
+      indent)))
+
+(defn- line-indent
+  [node first-token line-number tokens nodes config]
+  (if (= first-token.kind :comment) (comment-indent tokens nodes line-number config)
+    (default-line-indent node first-token line-number tokens config)))
+
 (defn- assign-token-output
   [token line indent strip-leading?]
   (set (. token :out-col) (output-column token line indent strip-leading?))
@@ -220,7 +245,7 @@
                      (and (= first-token.kind :number)
                           (> (helpers.leading-spaces line) 20))))
           (process-unchanged-line line-number line tokens)
-          (let [indent (indent-for node first-token line-number config)
+          (let [indent (line-indent node first-token line-number tokens nodes config)
                 spaces (helpers.leading-spaces line)
                 body   (string.sub line (+ spaces 1))]
             (assign-output-columns tokens line-number line indent true)

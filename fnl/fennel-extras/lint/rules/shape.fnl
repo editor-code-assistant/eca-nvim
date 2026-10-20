@@ -68,7 +68,10 @@
              (= node.kind :list)
              (or (= (list-head node) "fn") (= (list-head node) "lambda") (= (list-head node) "λ")))
     (table.insert result node))
-  (and node (collect-function-children node result collect-function-nodes))
+  (
+   and
+   node
+   (collect-function-children node result collect-function-nodes))
   result)
 
 (defn- synthetic-form
@@ -138,7 +141,10 @@
                _
                candidate
                (ipairs findings)]
-    (or contained? (contained-function-finding? finding candidate))))
+    (
+     or
+     contained?
+     (contained-function-finding? finding candidate))))
 
 (defn- keep-function-finding
   [finding findings]

@@ -1348,7 +1348,7 @@ local function unborn_git_scenario(mode)
   return with_cleanup(_154_, _155_)
 end
 local function changed_config()
-  return "{:lint {:rules {\"core-require\" :off \"defn-args-newline\" :off \"function-shape\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}"
+  return "{:lint {:rules {\"core-require\" :off \"defn-args-newline\" :off \"function-shape\" :off \"control-layout\" :off \"if-branch-call\" :warning \"module-style\" :off \"one-is-per-testing\" :off \"spec-direct-require\" :off \"spec-macro-import\" :off \"spec-no-module\" :off}}}"
 end
 local function changed_source(which)
   if (which == "changed") then

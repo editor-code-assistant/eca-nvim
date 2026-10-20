@@ -28,11 +28,19 @@
 
 (defn- status-old-path
   [rename first-path]
-  (if rename first-path nil))
+  (
+   if
+    rename
+    first-path
+    nil))
 
 (defn- status-offset
   [separated?]
-  (if separated? 1 2))
+  (
+   if
+    separated?
+    1
+    2))
 
 (defn- status-destination
   [parts index rename separated? first-path]
@@ -42,11 +50,19 @@
 
 (defn- status-rename-offset
   [separated?]
-  (if separated? 2 3))
+  (
+   if
+    separated?
+    2
+    3))
 
 (defn- status-normal-offset
   [separated?]
-  (if separated? 1 2))
+  (
+   if
+    separated?
+    1
+    2))
 
 (defn- status-next-index
   [index rename separated?]
@@ -90,7 +106,11 @@
 
 (defn- hunk-count
   [new-count]
-  (if (= new-count "") 1 (tonumber new-count)))
+  (
+   if
+    (= new-count "")
+    1
+    (tonumber new-count)))
 
 (defn- hunk-line
   [line]

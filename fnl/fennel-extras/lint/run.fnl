@@ -157,7 +157,10 @@
 
 (defn- exclusion-path
   [exclusion]
-  (or (string.match exclusion.form "^(.-) > ") exclusion.form))
+  (
+   or
+   (string.match exclusion.form "^(.-) > ")
+   exclusion.form))
 
 (defn- path-in-scope?
   [paths path index]
@@ -241,7 +244,9 @@
 
 (defn- result-status
   [findings]
-  (if (has-errors? findings 1) 1 0))
+  (
+   if (has-errors? findings 1) 1
+    0))
 
 (defn- result
   [findings format]

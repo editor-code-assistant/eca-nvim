@@ -15,7 +15,12 @@
 (local function-info leaf.function-info)
 (local plain-call-one-layer? leaf.plain-call-one-layer?)
 (local loop-head? leaf.loop-head?)
-(local marker? (fn [node text] (and node (= node.kind :symbol) (= node.text text))))
+(local marker?
+       (fn
+         [node text]
+         (and node
+              (= node.kind :symbol)
+              (= node.text text))))
 (local function-head? leaf.function-head?)
 
 (defn- explicit-if?
@@ -113,7 +118,9 @@
 
 (defn- loop-start
   [bindings]
-  (if (> (length bindings) 0) 3 2))
+  (
+   if (> (length bindings) 0) 3
+    2))
 
 (defn- append-if-unquoted
   [bindings result index value]
@@ -158,11 +165,18 @@
                       _
                       child
                       (ipairs body)]
-           (and state (leaf-valid? child))))))
+           (
+            and
+            state
+            (leaf-valid? child))))))
 
 (defn- validate-function-layer
   [node]
-  (if (function-layer-valid? node) [] [node]))
+  (
+   if
+    (function-layer-valid? node)
+    []
+    [node]))
 
 (defn- validate-layer-by-head
   [node head]
@@ -226,11 +240,18 @@
 
 (defn- function-first-let?
   [body]
-  (and (. body 1) (= (list-head (. body 1)) "let")))
+  (
+   and
+   (. body 1)
+   (= (list-head (. body 1)) "let")))
 
 (defn- function-body-start-index
   [first-let?]
-  (if first-let? 2 1))
+  (
+   if
+    first-let?
+    2
+    1))
 
 (defn- function-body-initial
   [body result first-let?]

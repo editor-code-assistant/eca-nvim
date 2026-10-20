@@ -42,7 +42,11 @@
 
 (defn- alignment-node?
   [node parent]
-  (or (= node.kind :table) (alignment-form? node parent) (clause-form? node)))
+  (
+   or
+   (= node.kind :table)
+   (alignment-form? node parent)
+   (clause-form? node)))
 
 (defn- append-alignment-node
   [result node]
@@ -65,7 +69,10 @@
 
 (defn- single-line-name?
   [name-start name-end]
-  (and name-end (= name-start.line name-end.line)))
+  (
+   and
+   name-end
+   (= name-start.line name-end.line)))
 
 (defn- append-pair-candidate
   [result pair]
@@ -132,7 +139,11 @@
 
 (defn- pair-count-step
   [count pair line]
-  (if (= pair.line line) (+ count 1) count))
+  (
+   if
+    (= pair.line line)
+    (+ count 1)
+    count))
 
 (defn- pair-count
   [pairs line]
@@ -141,7 +152,10 @@
 
 (defn- single-pair
   [pairs pair]
-  (when (= (pair-count pairs pair.line) 1) pair))
+  (
+   when
+    (= (pair-count pairs pair.line) 1)
+    pair))
 
 (defn- single-pairs
   [pairs]
@@ -167,16 +181,24 @@
 (defn- clause-start-index
   [node]
   (let [head (. (helpers.nontrivia-children node) 1)]
-    (if (= head.text "if") 2 3)))
+    (
+     if (= head.text "if") 2
+      3)))
 
 (defn- clause-pair?
   [node pair]
-  (or (not (clause-form? node)) (> pair.line node.open.line)))
+  (
+   or
+   (not (clause-form? node))
+   (> pair.line node.open.line)))
 
 (defn- comment-on-line?
   [node line]
   (accumulate [found false _ child (ipairs node.children)]
-    (or found (and child.text (= child.kind :comment) (= child.line line)))))
+    (
+     or
+     found
+     (and child.text (= child.kind :comment) (= child.line line)))))
 
 (defn- usable-pair?
   [node pair]
@@ -185,7 +207,10 @@
 
 (defn- usable-pair-result
   [node pair]
-  (when (usable-pair? node pair) pair))
+  (
+   when
+    (usable-pair? node pair)
+    pair))
 
 (defn- usable-pairs
   [node pairs]
@@ -199,7 +224,11 @@
 
 (defn- alignment-start
   [node]
-  (if (clause-form? node) (clause-start-index node) 1))
+  (
+   if
+    (clause-form? node)
+    (clause-start-index node)
+    1))
 
 (defn- alignment-plan
   [node]
@@ -251,7 +280,10 @@
 
 (defn- line-edit
   [line-number edit]
-  (when (= edit.line line-number) edit))
+  (
+   when
+    (= edit.line line-number)
+    edit))
 
 (defn- line-edits
   [edits line-number]

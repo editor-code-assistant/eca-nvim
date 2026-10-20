@@ -37,7 +37,7 @@
                                                 {:mode :n :lhs "<CR>" :rhs "<cmd>EcaChatSubmit<CR>"}])}})]
         (chat-ui.open)
         (self.register-chat chat-ui)
-           ;; Mock server data
+        ;; Mock server data
         (chat-ui.set-welcome "Welcome to ECA Chat")
         (chat-ui.update-header [{:title "model" :value "claude/opus-4.6"}
                                 {:title "agent" :value "code"}
@@ -46,7 +46,7 @@
         (chat-ui.update-footer [{:value "~/dev/eca-nvim"}
                                 {:value "⏱ 0s"}
                                 {:value "0/200K ($0.00)"}])
-           ;; Mock context
+        ;; Mock context
         (chat-ui.add-context {:text "@cursor(README.md 3:1)" :hl-group :EcaContextCursor})))))
 
 (fn self.chat-close []
@@ -89,16 +89,16 @@
 (fn self.default-on-submit [text]
   (let [chat (self.resolve-chat)]
     (when chat
-          ;; Show user message
+      ;; Show user message
       (chat.append-message
        {:id              (tostring (os.time))
         :content         text
         :collapsed?      true
         :collapse-prefix "▸ "})
-          ;; Set loading + status
+      ;; Set loading + status
       (chat.set-loading true)
       (chat.set-status "Generating")
-          ;; Simulate streaming
+      ;; Simulate streaming
       (let [reply-id   (.. "reply-" (tostring (os.time)))
             full-text  (.. "You said: " text "\n\n(This is a mock streaming response)")
             chunks     []

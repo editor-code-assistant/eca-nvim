@@ -65,7 +65,8 @@
 (defn fnl-file?
   [path extensions]
   (accumulate [result false _ extension (ipairs extensions)]
-    (or result (extension-matches? path extension))))
+    (or result
+        (extension-matches? path extension))))
 
 (defn- clean-prefix
   [prefix]
@@ -89,10 +90,7 @@
   [path excludes index result]
   (if (> index (length excludes))
     result
-    (excluded-any? path
-                   excludes
-                   (+ index 1)
-                   (excluded-result path (. excludes index) result))))
+    (excluded-any? path excludes (+ index 1) (excluded-result path (. excludes index) result))))
 
 (defn excluded?
   [path excludes]
@@ -105,7 +103,9 @@
 (defn realpath
   [uv path]
   (let [(ok resolved) (pcall uv.fs_realpath path)]
-    (if ok resolved nil)))
+    (if ok
+      resolved
+      nil)))
 
 (defn walk-prefix
   [root path]

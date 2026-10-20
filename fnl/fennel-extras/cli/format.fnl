@@ -45,7 +45,8 @@
 
 (defn- without-config-file-item
   [file config-path]
-  (when (config-file-kept? file config-path) file))
+  (when (config-file-kept? file config-path)
+    file))
 
 (defn- without-config-file-result
   [files config-path]
@@ -73,7 +74,9 @@
 (defn- check-files
   [changed printer]
   (each [_ path (ipairs changed)] (printer path))
-  (if (> (length changed) 0) 1 0))
+  (
+   if (> (length changed) 0) 1
+    0))
 
 (defn- write-failure-result
   [temps write-failure printer]
@@ -102,7 +105,6 @@
 
 (defn- rename-files
   [temps]
-       ;; Cross-file atomicity is limited to the staging phase.
   (rename-loop temps 1 nil))
 
 (defn- rename-failure-result

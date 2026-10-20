@@ -1216,4 +1216,90 @@ local function _167_()
   end
   return require("plenary.busted").it("built-in when block indentation uses two spaces for every argument", _170_)
 end
-return require("plenary.busted").describe("block-one-indentation", _167_)
+require("plenary.busted").describe("block-one-indentation", _167_)
+local function comment_format_scenario(source, align_bindings)
+  return format_summary(source, {indents = {deftest = {{"block", 1}}, testing = {{"block", 1}}, ["if"] = {{"block", 1}}}, ["align-bindings"] = align_bindings})
+end
+local function _171_()
+  local function _172_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(defn- rename-files\n  ;; comment\n  [temps]\n  (rename-loop temps 1 nil))"
+    local actual_7_auto = comment_format_scenario("(defn- rename-files\n       ;; comment\n[temps]\n(rename-loop temps 1 nil))", false).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings false indents a defn header comment like the following code", _172_)
+  local function _173_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(defn- rename-files\n  ;; comment\n  [temps]\n  (rename-loop temps 1 nil))"
+    local actual_7_auto = comment_format_scenario("(defn- rename-files\n       ;; comment\n[temps]\n(rename-loop temps 1 nil))", true).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings true indents a defn header comment like the following code", _173_)
+  local function _174_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(defn foo\n  [x]\n  ;; between\n  (bar)\n  (baz))"
+    local actual_7_auto = comment_format_scenario("(defn foo\n[x]\n      ;; between\n(bar)\n(baz))", false).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings false indents a comment between defn body expressions", _174_)
+  local function _175_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(defn foo\n  [x]\n  ;; between\n  (bar)\n  (baz))"
+    local actual_7_auto = comment_format_scenario("(defn foo\n[x]\n      ;; between\n(bar)\n(baz))", true).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings true indents a comment between defn body expressions", _175_)
+  local function _176_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [x 1]\n  ;; in let\n  x)"
+    local actual_7_auto = comment_format_scenario("(let [x 1]\n     ;; in let\nx)", false).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings false indents a let comment like the following body", _176_)
+  local function _177_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [x 1]\n  ;; in let\n  x)"
+    local actual_7_auto = comment_format_scenario("(let [x 1]\n     ;; in let\nx)", true).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings true indents a let comment like the following body", _177_)
+  local function _178_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [m {:a 1\n         ;; in map\n         :b 2}]\n  m)"
+    local actual_7_auto = comment_format_scenario("(let [m {:a 1\n;; in map\n:b 2}]\nm)", false).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings false indents a map comment like the following key", _178_)
+  local function _179_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(let [m {:a 1\n         ;; in map\n         :b 2}]\n  m)"
+    local actual_7_auto = comment_format_scenario("(let [m {:a 1\n;; in map\n:b 2}]\nm)", true).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings true indents a map comment like the following key", _179_)
+  local function _180_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = ";; first\n;; second\n(let [x 1]\n  x)"
+    local actual_7_auto = comment_format_scenario(";; first\n;; second\n(let [x 1]\nx)", true).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a full-line comment block remains unchanged at top level", _180_)
+  local function _181_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(foo ;; eol\n  bar)"
+    local actual_7_auto = comment_format_scenario("(foo ;; eol\nbar)", true).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("an end-of-line comment stays attached while following code is indented", _181_)
+end
+return require("plenary.busted").describe("comment-indentation", _171_)

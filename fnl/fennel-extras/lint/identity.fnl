@@ -33,7 +33,11 @@
 
 (defn- child-state-ordinals
   [state segmented?]
-  (if segmented? {} state.ordinals))
+  (
+   if
+    segmented?
+    {}
+    state.ordinals))
 
 (defn- child-state
   [state final-path segmented?]
@@ -143,7 +147,11 @@
 
 (defn- walk-node-ordinals
   [node-interesting? final-state child-result]
-  (if node-interesting? final-state.ordinals child-result.ordinals))
+  (
+   if
+    node-interesting?
+    final-state.ordinals
+    child-result.ordinals))
 
 (defn- walk-node
   [node state top-level? branch-segment quoted? skip-identity?]

@@ -41,7 +41,11 @@
 
 (defn child-start
   [child]
-  (if child.text child child.open))
+  (
+   if
+    child.text
+    child
+    child.open))
 
 (defn child-end
   [child]

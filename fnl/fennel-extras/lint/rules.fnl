@@ -12,6 +12,7 @@
 (local mutation-rule (require :fennel-extras.lint.rules.mutation))
 (local defn-rule (require :fennel-extras.lint.rules.defn))
 (local layout-rule (require :fennel-extras.lint.rules.layout))
+(local control-rule (require :fennel-extras.lint.rules.control))
 (local when-rule (require :fennel-extras.lint.rules.when))
 (local shape-rule (require :fennel-extras.lint.rules.shape))
 (local shape-leaf (require :fennel-extras.lint.rules.shape.leaf))
@@ -125,6 +126,7 @@
         findings    (when-rule.findings findings path forms policy source)
         findings    (defn-rule.findings findings path forms policy source)
         findings    (layout-rule.findings findings path forms policy source)
+        findings    (control-rule.findings findings path forms policy source)
         findings    (mutation-rule.findings findings path forms policy source)]
     (remove-contained-function-findings findings)))
 

@@ -17,7 +17,10 @@
 
 (defn- meaningful-child
   [child]
-  (when (not (trivia? child)) child))
+  (
+   when
+    (not (trivia? child))
+    child))
 
 (defn container?
   [node]
@@ -86,7 +89,10 @@
 (defn- anonymous-list-kind
   [node]
   (let [children (meaningful-children node)]
-    (or (symbol-text (. children 1)) "list")))
+    (
+     or
+     (symbol-text (. children 1))
+     "list")))
 
 (defn- anonymous-container-kind
   [node]
@@ -184,7 +190,11 @@
 
 (defn- function-parameter-index
   [named-fn?]
-  (if named-fn? 3 2))
+  (
+   if
+    named-fn?
+    3
+    2))
 
 (defn parameter-list?
   [parent child-index child]
