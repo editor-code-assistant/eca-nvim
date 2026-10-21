@@ -15,6 +15,8 @@
 (local control-rule (require :fennel-extras.lint.rules.control))
 (local discard-rule (require :fennel-extras.lint.rules.discard))
 (local when-rule (require :fennel-extras.lint.rules.when))
+(local binding-rule (require :fennel-extras.lint.rules.binding))
+(local call-rule (require :fennel-extras.lint.rules.call))
 (local shape-rule (require :fennel-extras.lint.rules.shape))
 (local shape-leaf (require :fennel-extras.lint.rules.shape.leaf))
 
@@ -48,7 +50,7 @@
 
 (defn- update-check-state
   [state import-info head]
-  {:module-import (module-import-state state import-info) :module-form   (or state.module-form (= head "module")) :spec-import   (spec-import-state state import-info)})
+  {:module-import (module-import-state state import-info) :module-form (or state.module-form (= head "module")) :spec-import (spec-import-state state import-info)})
 
 (defn- check-state-step
   [nodes index state recurse]
@@ -69,7 +71,9 @@
 
 (defn- evaluate-form
   [path form forms policy]
-  (let [node     form.node head     (list-head node) findings []]
+  (let [node     form.node
+        head     (list-head node)
+        findings []]
     (when (and (spec-file? path) (= head "module") (enabled? policy "spec-no-module"))
       (table.insert findings
                     (finding path form (rule-severity policy "spec-no-module") "spec-no-module" "specs must not declare a module" node)))
@@ -114,7 +118,9 @@
         findings    (layout-rule.findings findings path forms policy source)
         findings    (control-rule.findings findings path forms policy source)
         findings    (discard-rule.findings findings path forms policy source)
-        findings    (mutation-rule.findings findings path forms policy source)]
+        findings    (mutation-rule.findings findings path forms policy source)
+        findings    (binding-rule.findings findings path forms policy source)
+        findings    (call-rule.findings findings path forms policy source)]
     (remove-contained-function-findings findings)))
 
 (defn check

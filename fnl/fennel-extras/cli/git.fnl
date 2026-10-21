@@ -45,8 +45,9 @@
 
 (defn- git-plan-change-success
   [ctx status-text untracked-text]
-  (let [records   (lint-selection.parse-name-status status-text) untracked (lint-selection.parse-untracked untracked-text)]
-    (values {:root      ctx.root :records   records :untracked untracked :plan      (lint-selection.plan records untracked)}
+  (let [records   (lint-selection.parse-name-status status-text)
+        untracked (lint-selection.parse-untracked untracked-text)]
+    (values {:root ctx.root :records records :untracked untracked :plan (lint-selection.plan records untracked)}
             nil)))
 
 (defn- git-plan-change-data
@@ -60,7 +61,7 @@
   (let [(status-text status-code)       (git-call ctx.root ["diff" "--name-status" "-z" "--find-renames" "--find-copies" ctx.base "--"])
         (untracked-text untracked-code) (git-call ctx.root ["ls-files" "--others" "--exclude-standard" "-z"])]
     (git-plan-change-data ctx
-                          {:status-text    status-text :status-code    status-code :untracked-text untracked-text :untracked-code untracked-code})))
+                          {:status-text status-text :status-code status-code :untracked-text untracked-text :untracked-code untracked-code})))
 
 (defn- git-plan-changed
   [ctx]
@@ -88,7 +89,8 @@
 
 (defn- git-plan
   [start parsed]
-  (let [root (git-root start) ctx  {:root root :parsed parsed :base (or parsed.base "HEAD")}]
+  (let [root (git-root start)
+        ctx  {:root root :parsed parsed :base (or parsed.base "HEAD")}]
     (if (= root nil)
       (values nil {:message "lint requires a Git repository"})
       (git-plan-root-check ctx))))
@@ -128,13 +130,16 @@
 
 (defn- changed-file-selection
   [ctx file]
-  (let [whole? (path-present? ctx.plan.whole file.path 1) hunk?  (path-present? ctx.plan.hunks file.path 1)]
+  (let [whole? (path-present? ctx.plan.whole file.path 1)
+        hunk?  (path-present? ctx.plan.hunks file.path 1)]
     (and (or whole? hunk?)
          (changed-file ctx.root ctx.base file whole?))))
 
 (defn- changed-files-next
   [ctx state]
-  (let [file     (. ctx.files state.index) selected (changed-file-selection ctx file) result   (changed-result state.result selected)]
+  (let [file     (. ctx.files state.index)
+        selected (changed-file-selection ctx file)
+        result   (changed-result state.result selected)]
     {:index (+ state.index 1) :result result}))
 
 (defn- changed-files-step
@@ -165,7 +170,7 @@
 (defn lint-selection
   [parsed sources git-info]
   (if parsed.changed
-    (values (changed-files-step {:root  git-info.root :base  (or parsed.base "HEAD") :files sources :plan  git-info.plan}
+    (values (changed-files-step {:root git-info.root :base (or parsed.base "HEAD") :files sources :plan git-info.plan}
                                 {:index 1 :result []})
             (scope-paths git-info.plan))
     (values sources nil)))

@@ -137,7 +137,10 @@
 
 (defn- normalize-utf8-bytes
   [value index chunks recurse]
-  (let [first  (string.byte value index) second (string.byte value (+ index 1)) third  (string.byte value (+ index 2)) fourth (string.byte value (+ index 3))]
+  (let [first  (string.byte value index)
+        second (string.byte value (+ index 1))
+        third  (string.byte value (+ index 2))
+        fourth (string.byte value (+ index 3))]
     (normalize-utf8-step value index chunks first second third fourth recurse)))
 
 (defn- normalize-utf8-at
@@ -193,29 +196,29 @@
 
 (defn- finding-json
   [finding]
-  (table.concat [(json-string-field "kind" finding.kind)
-                 (json-string-field "path" finding.path)
-                 (json-field "line" (tostring finding.line))
-                 (json-field "col" (tostring finding.col))
-                 (json-field "end-line" (tostring finding.end-line))
-                 (json-field "end-col" (tostring finding.end-col))
-                 (json-string-field "severity" finding.severity)
-                 (json-string-field "rule" finding.rule)
-                 (json-string-field "form" finding.form)
-                 (json-string-field "message" finding.message)]
-                ","))
+  (let [fields [(json-string-field "kind" finding.kind)
+                (json-string-field "path" finding.path)
+                (json-field "line" (tostring finding.line))
+                (json-field "col" (tostring finding.col))
+                (json-field "end-line" (tostring finding.end-line))
+                (json-field "end-col" (tostring finding.end-col))
+                (json-string-field "severity" finding.severity)
+                (json-string-field "rule" finding.rule)
+                (json-string-field "form" finding.form)
+                (json-string-field "message" finding.message)]]
+    (table.concat fields ",")))
 
 (defn- stale-json
   [finding]
-  (table.concat [(json-string-field "kind" finding.kind)
-                 (json-string-field "path" finding.path)
-                 (json-field "line" (tostring finding.line))
-                 (json-field "col" (tostring finding.col))
-                 (json-string-field "severity" finding.severity)
-                 (json-string-field "rule" finding.rule)
-                 (json-string-field "form" finding.form)
-                 (json-string-field "message" finding.message)]
-                ","))
+  (let [fields [(json-string-field "kind" finding.kind)
+                (json-string-field "path" finding.path)
+                (json-field "line" (tostring finding.line))
+                (json-field "col" (tostring finding.col))
+                (json-string-field "severity" finding.severity)
+                (json-string-field "rule" finding.rule)
+                (json-string-field "form" finding.form)
+                (json-string-field "message" finding.message)]]
+    (table.concat fields ",")))
 
 (defn- diagnostic-json
   [finding]

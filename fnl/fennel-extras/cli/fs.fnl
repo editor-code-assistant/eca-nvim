@@ -35,7 +35,8 @@
 
 (defn- temp-open-attempt
   [state]
-  (let [temp          (.. state.path ".tmp-" (tostring (math.random 1000000000))) (ok fd error) (pcall state.uv.fs_open temp "wx" 420)]
+  (let [temp          (.. state.path ".tmp-" (tostring (math.random 1000000000)))
+        (ok fd error) (pcall state.uv.fs_open temp "wx" 420)]
     (temp-open-result (table-copy.update state {:temp temp :ok ok :fd fd :error error}))))
 
 (defn- temp-open-loop
@@ -55,7 +56,7 @@
 (defn temp-write
   [path text]
   (let [uv                     (or vim.uv vim.loop)
-        (temp file open-error) (temp-open-loop {:loop-fn      temp-open-loop :uv           uv :path         path :attempt      1 :max-attempts 10})]
+        (temp file open-error) (temp-open-loop {:loop-fn temp-open-loop :uv uv :path path :attempt 1 :max-attempts 10})]
     (if open-error
       (values nil open-error)
       (temp-write-open uv temp file text))))

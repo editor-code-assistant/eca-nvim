@@ -72,10 +72,11 @@
 
 (defn- read-lint-item-result
   [state]
-  (let [file           (. state.files state.index) (source error) (read-lint-item file)]
+  (let [file           (. state.files state.index)
+        (source error) (read-lint-item file)]
     (if error
       (values nil {:path file.relative :error error})
-      (values {:files  state.files :index  (+ state.index 1) :result (append-lint-source state.result file source)}
+      (values {:files state.files :index (+ state.index 1) :result (append-lint-source state.result file source)}
               nil))))
 
 (defn- read-lint-step-result
@@ -150,7 +151,7 @@
         follow-symlinks              (config-default context.cfg :follow-symlinks false)
         (discovered discovery-error) (scan.sorted-files context.git-info.root
                                                         inputs
-                                                        {:excludes        (or (. context.cfg :exclude) []) :extensions      extensions :skip-dotfiles   skip-dotfiles :follow-symlinks follow-symlinks})
+                                                        {:excludes (or (. context.cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks})
         files                        (and discovered (format.without-config-file discovered context.config-path))]
     (if discovery-error
       (git.emit-git-error context.printer discovery-error)
@@ -178,7 +179,7 @@
         follow-symlinks              (config-default cfg :follow-symlinks false)
         (discovered discovery-error) (scan.sorted-files root
                                                         inputs
-                                                        {:excludes        (or (. cfg :exclude) []) :extensions      extensions :skip-dotfiles   skip-dotfiles :follow-symlinks follow-symlinks})]
+                                                        {:excludes (or (. cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks})]
     (values (and discovered (format.without-config-file discovered config-path)) discovery-error)))
 
 (defn- run-format-files-result
@@ -213,7 +214,10 @@
 
 (defn run
   [args opts]
-  (let [opts                 (or opts {}) printer              (or (. opts :print) default-print) root                 (or (. opts :cwd) (scan.cwd)) (parsed parse-error) ((. arg_parser :parse-args) args)]
+  (let [opts                 (or opts {})
+        printer              (or (. opts :print) default-print)
+        root                 (or (. opts :cwd) (scan.cwd))
+        (parsed parse-error) ((. arg_parser :parse-args) args)]
     (if parse-error
       (git.emit-git-error printer parse-error)
       (run-command {:root root :args args :parsed parsed :printer printer}))))

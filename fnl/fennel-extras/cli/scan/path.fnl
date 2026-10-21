@@ -52,7 +52,10 @@
 
 (defn relative
   [root path]
-  (let [root   (strip-private-prefix root) path   (strip-private-prefix path) prefix (ensure-trailing-slash root) result (relative-result path prefix)]
+  (let [root   (strip-private-prefix root)
+        path   (strip-private-prefix path)
+        prefix (ensure-trailing-slash root)
+        result (relative-result path prefix)]
     (strip-relative-prefix result)))
 
 (defn- extension-matches?

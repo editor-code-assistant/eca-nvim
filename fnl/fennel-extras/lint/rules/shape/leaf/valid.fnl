@@ -93,7 +93,11 @@
 
 (defn function-info
   [node]
-  (let [children   (meaningful-children node) head       (symbol-text (. children 1)) parameter  (function-parameter children head) body-start (function-body-start children parameter) body       (function-body children body-start)]
+  (let [children   (meaningful-children node)
+        head       (symbol-text (. children 1))
+        parameter  (function-parameter children head)
+        body-start (function-body-start children parameter)
+        body       (function-body children body-start)]
     (and (function-head? head)
          parameter
          {:head head :children children :parameter parameter :body body})))
@@ -153,7 +157,8 @@
 
 (defn- function-argument-leaf-valid?
   [node valid?]
-  (let [info (function-info node) body (or (and info info.body) [])]
+  (let [info (function-info node)
+        body (or (and info info.body) [])]
     (and info
          (accumulate [state true _ child (ipairs body)]
            (and state
@@ -188,7 +193,7 @@
 
 (defn- leaf-valid-call-state-update
   [state child valid?]
-  {:valid  (and state.valid (valid? child)) :layers state.layers})
+  {:valid (and state.valid (valid? child)) :layers state.layers})
 
 (defn- leaf-valid-call-state-step
   [children state child index valid?]
@@ -242,7 +247,8 @@
 
 (defn- leaf-valid-list-node?
   [node valid?]
-  (let [children (meaningful-children node) head     (symbol-text (. children 1))]
+  (let [children (meaningful-children node)
+        head     (symbol-text (. children 1))]
     (case head
       "do"    (and (= (length children) 2)
                    (or (quoted-child? children 2)

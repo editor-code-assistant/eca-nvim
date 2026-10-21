@@ -1389,16 +1389,258 @@
                              :exclusions [{:rule   "no-mutation"
                                            :form   form
                                            :reason "intentional"}]}))))))
-(testing "an exclusion for one nested mutation leaves the other finding"
-  (let [source    "(defn f [] (let [a (set x 1)] (set y 2)))"
-        path      "fnl/app.fnl"
-        rules     {"module-style" :off "defn-args-newline" :off}
-        baseline  (check-context source {:path path :rules rules})
-        form      (first-finding-form baseline "no-mutation")
-        remaining (check-context source
-                                 {:path       path
-                                  :rules      rules
-                                  :exclusions [{:rule   "no-mutation"
-                                                :form   form
-                                                :reason "intentional"}]})]
-    (is (= 1 (length remaining)))))
+(deftest no-mutation-nested-exclusion
+  (testing "an exclusion for one nested mutation leaves the other finding"
+    (let [source    "(defn f [] (let [a (set x 1)] (set y 2)))"
+          path      "fnl/app.fnl"
+          rules     {"module-style" :off "defn-args-newline" :off}
+          baseline  (check-context source {:path path :rules rules})
+          form      (first-finding-form baseline "no-mutation")
+          remaining (check-context source
+                                   {:path       path
+                                    :rules      rules
+                                    :exclusions [{:rule   "no-mutation"
+                                                  :form   form
+                                                  :reason "intentional"}]})]
+      (is (= 1 (length remaining))))))
+
+(defn- findings-for-named-rule
+  [source path rule rules]
+  (let [result (check-source source path rules)]
+    (if (or (. result :module-missing) (. result :value-nil?))
+      result
+      (icollect [_ finding (ipairs result)]
+        (when (= (. finding :rule) rule)
+          finding)))))
+
+(defn- safe-findings-for-named-rule
+  [source path rule rules]
+  (let [(ok result) (pcall (fn [] (findings-for-named-rule source path rule rules)))]
+    {:ok    ok
+     :count (if ok (length result) -1)}))
+
+(deftest binding-per-line
+  (testing "flags multiple let bindings sharing one line"
+    (is (= 1
+           (length (findings-for-named-rule "(defn f\n  []\n  (let [a 1 b 2]\n    a))"
+                                            "fnl/app.fnl"
+                                            "binding-per-line"
+                                            {"module-style"     :off
+                                             "multiline-layout" :off})))))
+  (testing "accepts one binding pair per line"
+    (is (= 0
+           (length (findings-for-named-rule "(let [a 1\n      b 2]\n  a)"
+                                            "fnl/app.fnl"
+                                            "binding-per-line"
+                                            {"module-style"     :off
+                                             "multiline-layout" :off})))))
+  (testing "accepts a single binding pair"
+    (is (= 0
+           (length (findings-for-named-rule "(let [a 1]\n  a)"
+                                            "fnl/app.fnl"
+                                            "binding-per-line"
+                                            {"module-style" :off})))))
+  (testing "does not apply to each bindings"
+    (is (= 0
+           (length (findings-for-named-rule "(each [k v (pairs t)]\n  k)"
+                                            "fnl/app.fnl"
+                                            "binding-per-line"
+                                            {"module-style" :off})))))
+  (testing "reports one binding-per-line finding for a mixed multiline vector"
+    (is (= 1
+           (length (findings-for-named-rule "(let [a 1 b 2\n      c 3]\n  a)"
+                                            "fnl/app.fnl"
+                                            "binding-per-line"
+                                            {"module-style" :off})))))
+  (testing "applies to when-let if-let and with-open"
+    (is (= 3
+           (length (findings-for-named-rule "(when-let [a 1 b 2] a)\n(if-let [a 1 b 2] a b)\n(with-open [a 1 b 2] a)"
+                                            "fnl/app.fnl"
+                                            "binding-per-line"
+                                            {"module-style" :off})))))
+  (testing "applies to spec files"
+    (is (= 1
+           (length (findings-for-named-rule "(let [a 1 b 2]\n  a)"
+                                            "fnl/spec/app_spec.fnl"
+                                            "binding-per-line"
+                                            nil)))))
+  (testing "ignores quoted binding data"
+    (is (= 0
+           (length (findings-for-named-rule "'(let [a 1 b 2]\n  a)"
+                                            "fnl/app.fnl"
+                                            "binding-per-line"
+                                            {"module-style" :off})))))
+  (testing "uses the prescribed warning and message"
+    (let [finding (. (findings-for-named-rule "(let [a 1 b 2])"
+                                              "fnl/app.fnl"
+                                              "binding-per-line"
+                                              {"module-style" :off})
+                     1)]
+      (is (= {:severity "warning"
+              :message  "put each binding on its own line"}
+             {:severity (. finding :severity)
+              :message  (. finding :message)}))))
+  (testing "supports error severity and disabling"
+    (is (= ["error" 0]
+           [(let [finding (. (findings-for-named-rule "(let [a 1 b 2])"
+                                                      "fnl/app.fnl"
+                                                      "binding-per-line"
+                                                      {"module-style"     :off
+                                                       "binding-per-line" :error})
+                              1)]
+              (. finding :severity))
+            (length (findings-for-named-rule "(let [a 1 b 2])"
+                                             "fnl/app.fnl"
+                                             "binding-per-line"
+                                             {"module-style"     :off
+                                              "binding-per-line" :off}))]))))
+(testing "skips an odd-length binding vector without crashing"
+  (is (= {:ok true :count 0}
+         (safe-findings-for-named-rule "(let [a nil b])"
+                                       "fnl/app.fnl"
+                                       "binding-per-line"
+                                       {"module-style" :off}))))
+(testing "skips a longer odd-length binding vector without crashing"
+  (is (= {:ok true :count 0}
+         (safe-findings-for-named-rule "(let [a 1 b 2 c])"
+                                       "fnl/app.fnl"
+                                       "binding-per-line"
+                                       {"module-style" :off}))))
+(testing "accepts a comment-only opening binding line"
+  (is (= 0
+         (length (findings-for-named-rule "(let [;; note\n      a 1\n      b 2]\n  a)"
+                                          "fnl/app.fnl"
+                                          "binding-per-line"
+                                          {"module-style" :off})))))
+(testing "flags bindings sharing a line after a comment-only opening line"
+  (is (= 1
+         (length (findings-for-named-rule "(let [;; note\n      a 1 b 2]\n  a)"
+                                          "fnl/app.fnl"
+                                          "binding-per-line"
+                                          {"module-style" :off})))))
+(testing "keeps distinct identities stable across repeated linting"
+  (let [source "(let [a 1 b 2])"
+        first  (findings-for-named-rule source "fnl/app.fnl" "binding-per-line" {"module-style" :off})
+        second (findings-for-named-rule source "fnl/app.fnl" "binding-per-line" {"module-style" :off})]
+    (is (and (not= nil (. first 1 :form))
+             (= (. first 1 :form) (. second 1 :form))))))
+(testing "an exact exclusion suppresses only the selected binding finding"
+  (let [source   "(let [a 1 b 2])\n(let [c 3 d 4])"
+        path     "fnl/app.fnl"
+        rules    {"module-style" :off}
+        baseline (findings-for-named-rule source path "binding-per-line" rules)
+        context  {:path       path
+                  :rules      rules
+                  :exclusions [{:rule   "binding-per-line"
+                                :form   (. baseline 1 :form)
+                                :reason "intentional"}]}
+        result   (check-context source context)]
+    (is (= 1
+           (length (icollect [_ finding (ipairs result)]
+                     (when (= (. finding :rule) "binding-per-line")
+                       finding)))))))
+
+(deftest call-data-arg
+  (testing "flags a multiline map literal passed to a plain call"
+    (is (= 1
+           (length (findings-for-named-rule "(foo a {:x 1\n         :y 2})"
+                                            "fnl/app.fnl"
+                                            "call-data-arg"
+                                            {"module-style"     :off
+                                             "multiline-layout" :off})))))
+  (testing "accepts a one-line map literal call argument"
+    (is (= 0
+           (length (findings-for-named-rule "(foo a {:x 1 :y 2})"
+                                            "fnl/app.fnl"
+                                            "call-data-arg"
+                                            {"module-style" :off})))))
+  (testing "accepts a map bound in a let before the call"
+    (is (= 0
+           (length (findings-for-named-rule "(let [opts {:x 1\n            :y 2}]\n  (foo a opts))"
+                                            "fnl/app.fnl"
+                                            "call-data-arg"
+                                            {"module-style"     :off
+                                             "multiline-layout" :off})))))
+  (testing "excludes fn arguments from plain call data findings"
+    (is (= 0
+           (length (findings-for-named-rule "(foo (fn []\n  1))"
+                                            "fnl/app.fnl"
+                                            "call-data-arg"
+                                            {"module-style" :off})))))
+  (testing "treats values as a plain call"
+    (is (= 1
+           (length (findings-for-named-rule "(values {:a 1\n         :b 2} nil)"
+                                            "fnl/app.fnl"
+                                            "call-data-arg"
+                                            {"module-style"     :off
+                                             "multiline-layout" :off})))))
+  (testing "flags a multiline vector literal passed to a plain call"
+    (is (= 1
+           (length (findings-for-named-rule "(foo [1\n      2])"
+                                            "fnl/app.fnl"
+                                            "call-data-arg"
+                                            {"module-style"     :off
+                                             "multiline-layout" :off})))))
+  (testing "does not report in spec files"
+    (is (= 0
+           (length (findings-for-named-rule "(foo {:x 1\n      :y 2})"
+                                            "fnl/spec/app_spec.fnl"
+                                            "call-data-arg"
+                                            nil)))))
+  (testing "ignores quoted call data"
+    (is (= 0
+           (length (findings-for-named-rule "'(foo {:x 1\n      :y 2})"
+                                            "fnl/app.fnl"
+                                            "call-data-arg"
+                                            {"module-style" :off})))))
+  (testing "uses the prescribed warning and message"
+    (let [finding (. (findings-for-named-rule "(foo {:x 1\n      :y 2})"
+                                              "fnl/app.fnl"
+                                              "call-data-arg"
+                                              {"module-style"     :off
+                                               "multiline-layout" :off})
+                     1)]
+      (is (= {:severity "warning"
+              :message  "move this multi-line map/vector into a let binding so the call fits on one line"}
+             {:severity (. finding :severity)
+              :message  (. finding :message)}))))
+  (testing "supports error severity and disabling"
+    (is (= ["error" 0]
+           [(let [finding (. (findings-for-named-rule "(foo {:x 1\n      :y 2})"
+                                                      "fnl/app.fnl"
+                                                      "call-data-arg"
+                                                      {"module-style"     :off
+                                                       "multiline-layout" :off
+                                                       "call-data-arg"    :error})
+                              1)]
+              (. finding :severity))
+            (length (findings-for-named-rule "(foo {:x 1\n      :y 2})"
+                                             "fnl/app.fnl"
+                                             "call-data-arg"
+                                             {"module-style"     :off
+                                              "multiline-layout" :off
+                                              "call-data-arg"    :off}))]))))
+(testing "keeps identities stable across repeated linting"
+  (let [source "(foo {:x 1\n      :y 2})"
+        rules  {"module-style"     :off
+                "multiline-layout" :off}
+        first  (findings-for-named-rule source "fnl/app.fnl" "call-data-arg" rules)
+        second (findings-for-named-rule source "fnl/app.fnl" "call-data-arg" rules)]
+    (is (and (not= nil (. first 1 :form))
+             (= (. first 1 :form) (. second 1 :form))))))
+(testing "an exact exclusion suppresses the selected call finding"
+  (let [source   "(foo {:x 1\n      :y 2})\n(bar {:a 1\n      :b 2})"
+        path     "fnl/app.fnl"
+        rules    {"module-style"     :off
+                  "multiline-layout" :off}
+        baseline (findings-for-named-rule source path "call-data-arg" rules)
+        context  {:path       path
+                  :rules      rules
+                  :exclusions [{:rule   "call-data-arg"
+                                :form   (. baseline 1 :form)
+                                :reason "intentional"}]}
+        result   (check-context source context)]
+    (is (= 1
+           (length (icollect [_ finding (ipairs result)]
+                     (when (= (. finding :rule) "call-data-arg")
+                       finding)))))))

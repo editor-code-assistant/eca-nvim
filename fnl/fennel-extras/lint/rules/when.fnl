@@ -15,7 +15,8 @@
 
 (defn- if-without-else?
   [node]
-  (let [children (meaningful-children node) else-child (. children 4)]
+  (let [children   (meaningful-children node)
+        else-child (. children 4)]
     (and (= node.kind :list)
          (= (list-head node) "if")
          (or (= (length children) 3)
@@ -27,7 +28,7 @@
   [path forms node]
   (or (form-for-node forms node nil)
       (nearest-form forms node)
-      {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     path :node     node}))
+      {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form path :node node}))
 
 (defn- append-finding
   [findings path forms policy node]

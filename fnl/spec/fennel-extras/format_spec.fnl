@@ -35,48 +35,73 @@
         "(a)\n(b)"
         second-b
         "(a)\n(c)"]
-    {:indent-same     (if (. format :error)
-                        false
-                        (format.indent-only? same-a same-b))
-     :indent-string   (if (. format :error)
-                        true
-                        (format.indent-only? "(foo \"a\")" "(foo \"b\")"))
-     :indent-trailing (if (. format :error)
-                        true
-                        (format.indent-only? "(foo)" "(foo) "))
-     :indent-lines    (if (. format :error)
-                        true
-                        (format.indent-only? "(foo)\n(bar)" "(foo)"))
-     :indent-char     (if (. format :error)
-                        true
-                        (format.indent-only? "(foo)" "(bar)"))
-     :binding-aligned (if (. format :error)
-                        false
-                        (format.indent-only? "(let [a 1\n      long-name 2])"
-                                             "(let [a         1\n      long-name 2])"
-                                             true))
-     :binding-joined  (if (. format :error)
-                        true
-                        (format.indent-only? "(let [a 1\n      long-name 2])"
-                                             "(let [a1\n      long-name 2])"
-                                             true))
-     :binding-string  (if (. format :error)
-                        true
-                        (format.indent-only? "(let [x \"a b\"])"
-                                             "(let [x \"a  b\"])"
-                                             true))
-     :ast-same        (if (or (. format :error) (. parser :error))
-                        false
-                        (format.ast-equal? parser same-a same-b))
-     :ast-symbol      (if (or (. format :error) (. parser :error))
-                        true
-                        (format.ast-equal? parser symbol-a symbol-b))
-     :ast-comment     (if (or (. format :error) (. parser :error))
-                        true
-                        (format.ast-equal? parser comment-a comment-b))
-     :ast-second      (if (or (. format :error) (. parser :error))
-                        true
-                        (format.ast-equal? parser second-a second-b))}))
+    {:indent-same        (if (. format :error)
+                           false
+                           (format.indent-only? same-a same-b))
+     :indent-string      (if (. format :error)
+                           true
+                           (format.indent-only? "(foo \"a\")" "(foo \"b\")"))
+     :indent-trailing    (if (. format :error)
+                           true
+                           (format.indent-only? "(foo)" "(foo) "))
+     :indent-lines       (if (. format :error)
+                           true
+                           (format.indent-only? "(foo)\n(bar)" "(foo)"))
+     :indent-char        (if (. format :error)
+                           true
+                           (format.indent-only? "(foo)" "(bar)"))
+     :binding-aligned    (if (. format :error)
+                           false
+                           (format.indent-only? "(let [a 1\n      long-name 2])"
+                                                "(let [a         1\n      long-name 2])"
+                                                true))
+     :binding-joined     (if (. format :error)
+                           true
+                           (format.indent-only? "(let [a 1\n      long-name 2])"
+                                                "(let [a1\n      long-name 2])"
+                                                true))
+     :binding-string     (if (. format :error)
+                           true
+                           (format.indent-only? "(let [x \"a b\"])"
+                                                "(let [x \"a  b\"])"
+                                                true))
+     :newline-removed    (if (. format :error)
+                           true
+                           (format.indent-only? "(let [a 1\n b 2])"
+                                                "(let [a 1 b 2])"
+                                                true))
+     :newline-added      (if (. format :error)
+                           false
+                           (format.indent-only? "(let [a 1 b 2])"
+                                                "(let [a 1\n      b 2])"
+                                                true))
+     :blank-line-removed (if (. format :error)
+                           true
+                           (format.indent-only? "(f a\n\n  b)"
+                                                "(f a\n  b)"
+                                                true))
+     :spaces-collapsed   (if (. format :error)
+                           false
+                           (format.indent-only? "(f a    b)"
+                                                "(f a b)"
+                                                true))
+     :separation-removed (if (. format :error)
+                           true
+                           (format.indent-only? "(f a b)"
+                                                "(f ab)"
+                                                true))
+     :ast-same           (if (or (. format :error) (. parser :error))
+                           false
+                           (format.ast-equal? parser same-a same-b))
+     :ast-symbol         (if (or (. format :error) (. parser :error))
+                           true
+                           (format.ast-equal? parser symbol-a symbol-b))
+     :ast-comment        (if (or (. format :error) (. parser :error))
+                           true
+                           (format.ast-equal? parser comment-a comment-b))
+     :ast-second         (if (or (. format :error) (. parser :error))
+                           true
+                           (format.ast-equal? parser second-a second-b))}))
 
 (defn- format-summary
   [source config]
@@ -102,6 +127,17 @@
          value
          :error
          err}))))
+
+(defn- odd-binding-scenario
+  []
+  (let [source "(let [a 1 b])"
+        format (load-format)]
+    (if (. format :error)
+      format
+      (let [(ok value err) (pcall (fn [] (format.format-string source {:config {:align-bindings true}})))]
+        {:ok    ok
+         :value value
+         :error err}))))
 
 (defn- file-paths
   []
@@ -194,6 +230,16 @@
     (is (not (. (verifier-scenario) :binding-joined))))
   (testing "binding whitespace rejects changed spaces inside string literals"
     (is (not (. (verifier-scenario) :binding-string))))
+  (testing "indent-only rejects a removed newline"
+    (is (not (. (verifier-scenario) :newline-removed))))
+  (testing "indent-only accepts an added newline"
+    (is (. (verifier-scenario) :newline-added)))
+  (testing "indent-only rejects a removed blank line"
+    (is (not (. (verifier-scenario) :blank-line-removed))))
+  (testing "indent-only accepts collapsed spaces"
+    (is (. (verifier-scenario) :spaces-collapsed)))
+  (testing "indent-only rejects removed token separation"
+    (is (not (. (verifier-scenario) :separation-removed))))
   (testing "ast-equal accepts differently indented equivalent forms"
     (is (. (verifier-scenario) :ast-same)))
   (testing "ast-equal rejects changed symbols"
@@ -307,6 +353,14 @@
            (let [value     (. (format-summary "(when x\n(print :a)\n(print :b))" {}) :value)
                  (_ count) (string.gsub value "\n" "")]
              (+ count 1))))))
+
+(deftest odd-binding-vector
+  (testing "align-bindings leaves an odd-length binding vector unchanged without crashing"
+    (is (= {:ok true :value "(let [a 1 b])" :error nil}
+           (let [result (odd-binding-scenario)]
+             {:ok    (. result :ok)
+              :value (. result :value)
+              :error (. result :error)})))))
 
 (defn- format-summary-with-parser
   [source config]
@@ -640,8 +694,8 @@
   (testing "aligns map entries to the longest key"
     (is (= "{:a    1\n :long 2}"
            (. (format-summary "{:a 1\n :long 2}" {:align-bindings true}) :value))))
-  (testing "aligns only single-pair lines in a mixed binding line"
-    (is (= "(let [a 1 b 2\n      long-name 3\n      c         4]\n  a)"
+  (testing "splits and aligns mixed binding lines"
+    (is (= "(let [a         1\n      b         2\n      long-name 3\n      c         4]\n  a)"
            (. (format-summary "(let [a 1 b 2\n      long-name 3\n      c 4]\n  a)" {:align-bindings true}) :value))))
   (testing "aligns when-let bindings"
     (is (= "(when-let [a         1\n           long-name 2]\n  a)"
@@ -831,3 +885,106 @@
            (. (comment-format-scenario "(foo ;; eol\nbar)"
                                        true)
               :value)))))
+
+(deftest align-bindings-one-line-padding
+  (testing "splits a one-line let binding vector"
+    (is (= "(let [a  1\n      bb 2]\n  a)"
+           (. (format-summary "(let [a 1 bb 2]\n  a)" {:align-bindings true}) :value))))
+  (testing "splits and collapses padding in a one-line let binding vector"
+    (is (= "(let [a  1\n      bb 2]\n  a)"
+           (. (format-summary "(let [a     1 bb    2]\n  a)" {:align-bindings true}) :value))))
+  (testing "collapses padding in a one-line map"
+    (is (= "{:a 1 :bb 2}"
+           (. (format-summary "{:a     1 :bb    2}" {:align-bindings true}) :value))))
+  (testing "collapses padding in one-line case clauses"
+    (is (= "(case x 1 :a 2 :b)"
+           (. (format-summary "(case x 1     :a 2     :b)" {:align-bindings true}) :value))))
+  (testing "leaves string contents unchanged"
+    (is (= "{:a \"x  y\"}"
+           (. (format-summary "{:a \"x  y\"}" {:align-bindings true}) :value))))
+  (testing "leaves end-of-line comments unchanged"
+    (is (= "(foo a)   ;; c"
+           (. (format-summary "(foo a)   ;; c" {:align-bindings true}) :value))))
+  (testing "keeps multiline aligned forms aligned"
+    (is (= "(let [a  1\n      bb 2]\n  a)"
+           (. (format-summary "(let [a  1\n      bb 2]\n  a)" {:align-bindings true}) :value))))
+  (testing "leaves padding unchanged when alignment is off"
+    (is (= "(let [a     1 bb    2]\n  a)"
+           (. (format-summary "(let [a     1 bb    2]\n  a)" {:align-bindings false}) :value))))
+  (testing "alignment is idempotent"
+    (let [first  (. (format-summary "(let [a 1 bb 2]\n  a)" {:align-bindings true}) :value)
+          second (. (format-summary first {:align-bindings true}) :value)]
+      (is (= first second))))
+  (testing "preserves a one-line map with a multi-byte key already single-spaced"
+    (is (= "(local function-heads {:defn true :defn- true :fn true :lambda true :λ true})"
+           (. (format-summary "(local function-heads {:defn true :defn- true :fn true :lambda true :λ true})"
+                              {:align-bindings true})
+              :value))))
+  (testing "collapses one-line map padding with a multi-byte key"
+    (is (= "(local m {:a true :λ true})"
+           (. (format-summary "(local m {:a     true :λ  true})"
+                              {:align-bindings true})
+              :value))))
+  (testing "aligns a multi-byte let name by display width"
+    (is (= "(let [λ  1\n      bb 2]\n  λ)"
+           (. (format-summary "(let [λ 1\n      bb 2]\n  λ)"
+                              {:align-bindings true})
+              :value))))
+  (testing "splits a one-line let with a multi-byte string value"
+    (is (= "(let [a \"λλ\"\n      b 2]\n  a)"
+           (. (format-summary "(let [a     \"λλ\" b 2]\n  a)"
+                              {:align-bindings true})
+              :value)))))
+
+(deftest align-bindings-split
+  (testing "splits a partially split let binding vector"
+    (is (= "(let [a 1\n      b 2\n      c 3]\n  a)"
+           (. (format-summary "(let [a 1 b 2\n      c 3]\n  a)" {:align-bindings true}) :value))))
+  (testing "splits let bindings nested inside a call"
+    (is (= "(foo (let [a 1\n           b 2] a))"
+           (. (format-summary "(foo (let [a 1 b 2] a))" {:align-bindings true}) :value))))
+  (testing "splits when-let bindings"
+    (is (= "(when-let [a 1\n           b 2] a)"
+           (. (format-summary "(when-let [a 1 b 2] a)" {:align-bindings true}) :value))))
+  (testing "splits if-let bindings"
+    (is (= "(if-let [a 1\n         b 2] a b)"
+           (. (format-summary "(if-let [a 1 b 2] a b)" {:align-bindings true}) :value))))
+  (testing "splits after a value spanning lines"
+    (is (= "(let [a (foo\n         1)\n      b 2]\n  a)"
+           (. (format-summary "(let [a (foo\n         1) b 2]\n  a)" {:align-bindings true}) :value))))
+  (testing "splits a destructuring binding name"
+    (is (= "(let [[x y] pt\n      z     3]\n  x)"
+           (. (format-summary "(let [[x y] pt z 3]\n  x)" {:align-bindings true}) :value))))
+  (testing "does not split each binding vectors"
+    (is (= "(each [k v (pairs t)]\n  (print k v))"
+           (. (format-summary "(each [k v (pairs t)]\n  (print k v))" {:align-bindings true}) :value))))
+  (testing "does not split single-pair let vectors"
+    (is (= "(let [a 1]\n  a)"
+           (. (format-summary "(let [a 1]\n  a)" {:align-bindings true}) :value))))
+  (testing "does not split quoted let data"
+    (is (= "'(let [a 1 b 2] a)"
+           (. (format-summary "'(let [a 1 b 2] a)" {:align-bindings true}) :value))))
+  (testing "does not split let vectors when alignment is off"
+    (is (= "(let [a 1 b 2]\n  a)"
+           (. (format-summary "(let [a 1 b 2]\n  a)" {:align-bindings false}) :value))))
+  (testing "splits a four-pair let binding vector"
+    (is (= "(let [a 1\n      b 2\n      c 3\n      d 4]\n  a)"
+           (. (format-summary "(let [a 1 b 2 c 3 d 4]\n  a)" {:align-bindings true}) :value))))
+  (testing "splits a partially split five-pair let binding vector"
+    (is (= "(let [a 1\n      b 2\n      c 3\n      d 4\n      e 5]\n  a)"
+           (. (format-summary "(let [a 1 b 2\n      c 3 d 4\n      e 5]\n  a)" {:align-bindings true}) :value))))
+  (testing "keeps a comment before split let bindings"
+    (is (= "(let [;; note\n      a 1\n      b 2]\n  a)"
+           (. (format-summary "(let [;; note\n      a 1 b 2]\n  a)" {:align-bindings true}) :value)))))
+
+(deftest align-bindings-idempotence
+  (testing "formats a nested multi-pair let idempotently"
+    (let [source
+          "(defn- parse-lint-args\n  [args]\n  (let [result {:a 1} state (lint-state args 2 result) (final-state error) (parse-lint-loop state)]\n    (parse-lint-result final-state error)))"
+          once
+          (. (format-summary source {:align-bindings true}) :value)
+          twice
+          (. (format-summary once {:align-bindings true}) :value)
+          expected
+          "(defn- parse-lint-args\n  [args]\n  (let [result              {:a 1}\n        state               (lint-state args 2 result)\n        (final-state error) (parse-lint-loop state)]\n    (parse-lint-result final-state error)))"]
+      (is (= [expected once] [once twice])))))

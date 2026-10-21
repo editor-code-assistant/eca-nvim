@@ -6,6 +6,22 @@
   [text]
   (select 2 (string.gsub text "[^\128-\191]" "")))
 
+(defn- continuation-byte?
+  [line index]
+  (and (>= (string.byte line index) 128)
+       (<= (string.byte line index) 191)))
+
+(defn- byte-column-step
+  [line column index continuation?]
+  (if (or continuation? (continuation-byte? line index))
+    (byte-column-step line column (+ index 1) false)
+    (or (and (= column 1) index)
+        (byte-column-step line (- column 1) (+ index 1) false))))
+
+(defn byte-column
+  [line column]
+  (byte-column-step line column 1 false))
+
 (defn- leading-spaces-step
   [line index]
   (if (and (<= index (string.len line)) (= (string.sub line index index) " "))

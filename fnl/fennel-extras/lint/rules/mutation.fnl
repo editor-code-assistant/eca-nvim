@@ -32,7 +32,8 @@
 
 (defn- mutation-mode-for-child
   [node index mode]
-  (let [previous-index (previous-meaningful-index node.children index) previous       (and previous-index (. node.children previous-index))]
+  (let [previous-index (previous-meaningful-index node.children index)
+        previous       (and previous-index (. node.children previous-index))]
     (if (and previous (= previous.kind :prefix))
       (mutation-mode-for-prefix previous.text (mutation-mode-for-child node previous-index mode))
       mode)))
@@ -76,11 +77,14 @@
 
 (defn- mutation-form
   [path node base ordinal]
-  {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     (.. base.form " > no-mutation#" ordinal) :node     node})
+  {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form (.. base.form " > no-mutation#" ordinal) :node node})
 
 (defn- append-mutation-finding
   [findings path forms policy node ordinals]
-  (let [existing (form-for-node forms node nil) base     (or existing (nearest-form forms node) {:form path}) ordinal  (+ (or (. ordinals base.form) 0) 1) form     (or existing (mutation-form path node base ordinal))]
+  (let [existing (form-for-node forms node nil)
+        base     (or existing (nearest-form forms node) {:form path})
+        ordinal  (+ (or (. ordinals base.form) 0) 1)
+        form     (or existing (mutation-form path node base ordinal))]
     (table.insert findings
                   (finding path
                            form

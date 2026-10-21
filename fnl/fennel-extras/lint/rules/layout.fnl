@@ -31,7 +31,7 @@
 
 (defn- unit
   [children first-index last-index]
-  {:start (child-line (. children first-index)) :end   (child-end-line (. children last-index))})
+  {:start (child-line (. children first-index)) :end (child-end-line (. children last-index))})
 
 (defn- pair-index?
   [index start-index]
@@ -72,7 +72,9 @@
 
 (defn- offending-adjacency?
   [node index previous current]
-  (let [opening-line     node.open.line opening-list?    (and (= node.kind :list) (= index 2)) allowed-opening? (and opening-list? (= current.start opening-line))]
+  (let [opening-line     node.open.line
+        opening-list?    (and (= node.kind :list) (= index 2))
+        allowed-opening? (and opening-list? (= current.start opening-line))]
     (and (not allowed-opening?)
          (<= current.start previous.end))))
 
@@ -114,7 +116,8 @@
 
 (defn- delayed-list-argument?
   [node head]
-  (let [children (meaningful-children node) argument (. children 2)]
+  (let [children (meaningful-children node)
+        argument (. children 2)]
     (and (= node.kind :list)
          (not= head "do")
          argument
@@ -141,9 +144,11 @@
 
 (defn- finding-form
   [path forms node ordinals]
-  (let [existing (form-for-node forms node nil) base     (or existing (nearest-form forms node) {:form path}) ordinal  (+ (or (. ordinals base.form) 0) 1)]
+  (let [existing (form-for-node forms node nil)
+        base     (or existing (nearest-form forms node) {:form path})
+        ordinal  (+ (or (. ordinals base.form) 0) 1)]
     (values (or existing
-                {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     (.. base.form " > multiline-layout#" ordinal) :node     node})
+                {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form (.. base.form " > multiline-layout#" ordinal) :node node})
             (core.assoc ordinals base.form ordinal))))
 
 (defn- insert-finding
@@ -155,7 +160,8 @@
 
 (defn- append-finding
   [findings path forms policy node ordinals]
-  (let [base (or (form-for-node forms node nil) (nearest-form forms node) {:form path}) key  (.. base.form ":" node.open.line)]
+  (let [base (or (form-for-node forms node nil) (nearest-form forms node) {:form path})
+        key  (.. base.form ":" node.open.line)]
     (if (. ordinals key)
       ordinals
       (insert-finding findings path forms policy node ordinals key))))

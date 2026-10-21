@@ -63,7 +63,15 @@
 
 (defn- parse-status-parts-step
   [parts index result recurse]
-  (let [record      (. parts index) tab         (string.find record "\t") status      (status-letter (string.sub record 1 (or tab 1))) rename      (or (= status "R") (= status "C")) separated?  (not= tab nil) first-path  (status-first-path parts index record tab separated?) old-path    (status-old-path rename first-path) destination (status-destination parts index rename separated? first-path) next-index  (status-next-index index rename separated?)]
+  (let [record      (. parts index)
+        tab         (string.find record "\t")
+        status      (status-letter (string.sub record 1 (or tab 1)))
+        rename      (or (= status "R") (= status "C"))
+        separated?  (not= tab nil)
+        first-path  (status-first-path parts index record tab separated?)
+        old-path    (status-old-path rename first-path)
+        destination (status-destination parts index rename separated? first-path)
+        next-index  (status-next-index index rename separated?)]
     (recurse parts next-index (add-status result status destination old-path))))
 
 (defn- parse-status-parts
@@ -133,7 +141,7 @@
   [seen items value]
   (if (. seen value)
     {:seen seen :items items}
-    {:seen  (core.assoc seen value true) :items (append-item items value)}))
+    {:seen (core.assoc seen value true) :items (append-item items value)}))
 
 (defn- add-record-path-new
   [state seen-key items-key path]
@@ -209,7 +217,7 @@
 
 (defn- plan-state
   [records untracked]
-  (add-old-paths (add-records (add-untracked-paths {:whole-set   {} :hunks-set   {} :deleted-set {} :whole       [] :hunks       [] :deleted     []}
+  (add-old-paths (add-records (add-untracked-paths {:whole-set {} :hunks-set {} :deleted-set {} :whole [] :hunks [] :deleted []}
                                                    untracked)
                               records)
                  records))

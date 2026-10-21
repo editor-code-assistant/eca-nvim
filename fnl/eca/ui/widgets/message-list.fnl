@@ -128,10 +128,10 @@
           (set state.end-line (+ state.start-line (length state.welcome-lines.lines))))
         (each [_ msg (ipairs state.messages)]
           (let [;; For streaming msg, render with displayed content
-                 render-msg    (if (= msg.id state.streaming-id)
-                                 (vim.tbl_extend :force msg {:content state.streaming-displayed})
-                                 msg)
-                 lines-written (render-single-message render-msg state.end-line)]
+                render-msg    (if (= msg.id state.streaming-id)
+                                (vim.tbl_extend :force msg {:content state.streaming-displayed})
+                                msg)
+                lines-written (render-single-message render-msg state.end-line)]
             (set state.end-line (+ state.end-line lines-written)))))))
 
   (fn append-message [msg]

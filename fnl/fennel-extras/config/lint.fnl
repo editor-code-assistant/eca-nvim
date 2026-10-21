@@ -165,5 +165,8 @@
   [lint]
   (if (not= (type lint) :table)
     {:message "lint must be a table"}
-    (let [rules          (. lint :rules) exclusions     (. lint :exclusions) max-code-lines (. lint :max-code-lines) unknown-key    (first-unknown-lint-key lint nil nil)]
+    (let [rules          (. lint :rules)
+          exclusions     (. lint :exclusions)
+          max-code-lines (. lint :max-code-lines)
+          unknown-key    (first-unknown-lint-key lint nil nil)]
       (lint-table-error rules exclusions max-code-lines unknown-key))))

@@ -9,6 +9,7 @@ local reader = require("fennel-extras.reader")
 local rules = require("fennel-extras.rules")
 local helpers = require("fennel-extras.indent.node")
 local align = require("fennel-extras.indent.align")
+local split = require("fennel-extras.indent.split")
 local comments = require("fennel-extras.indent.comment")
 local function append_line(lines, source, start, _end)
   table.insert(lines, string.sub(source, start, (_end - 1)))
@@ -361,6 +362,19 @@ local function alignment_fixed_point(source, config, rounds)
     return fixed_point_result(source, config, rounds, result, alignment_fixed_point)
   end
 end
+local function split_and_align(source, config)
+  local prepared, error, edits = split.split(source)
+  if error then
+    return nil, error
+  else
+    local result, result_error = alignment_fixed_point(prepared, config, 3)
+    if result_error then
+      return nil, result_error
+    else
+      return result, nil
+    end
+  end
+end
 local reindent
 do
   local function reindent0(source, config)
@@ -369,7 +383,7 @@ do
       return nil, config_error
     else
       if (config and config["align-bindings"]) then
-        return alignment_fixed_point(source, config, 3)
+        return split_and_align(source, config)
       else
         local result, _, error = reindent_once(source, config)
         return result, error

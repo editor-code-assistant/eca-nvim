@@ -125,7 +125,8 @@
 
 (defn- collect-macro-names-step
   [children index names recurse]
-  (let [key   (symbol-text (. children index)) value (symbol-text (. children (+ index 1)))]
+  (let [key   (symbol-text (. children index))
+        value (symbol-text (. children (+ index 1)))]
     (if (and (= key ":") value)
       (recurse children (+ index 2) (core.assoc names value true))
       (recurse children (+ index 2) names))))
@@ -145,11 +146,13 @@
 (defn- macro-import-data
   [bindings target]
   (let [binding-children (macro-binding-children bindings)]
-    {:target target :names  (collect-macro-names binding-children 1 {})}))
+    {:target target :names (collect-macro-names binding-children 1 {})}))
 
 (defn macro-import?
   [node]
-  (let [children (meaningful-children node) bindings (. children 2) target   (literal-text (. children 3))]
+  (let [children (meaningful-children node)
+        bindings (. children 2)
+        target   (literal-text (. children 3))]
     (when (= (list-head node) "import-macros")
       (macro-import-data bindings target))))
 
@@ -219,7 +222,8 @@
 
 (defn root-forms
   [source]
-  (let [root  (reader.parse source) forms []]
+  (let [root  (reader.parse source)
+        forms []]
     (when root
       (collect-root-forms root forms))
     forms))

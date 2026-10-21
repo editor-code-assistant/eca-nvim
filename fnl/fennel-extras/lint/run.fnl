@@ -43,7 +43,7 @@
 
 (defn- stale-exclusion
   [exclusion config-path]
-  {:kind     "stale-exclusion" :path     config-path :line     1 :col      1 :severity "error" :rule     exclusion.rule :form     exclusion.form :message  (.. "stale exclusion: " exclusion.form)})
+  {:kind "stale-exclusion" :path config-path :line 1 :col 1 :severity "error" :rule exclusion.rule :form exclusion.form :message (.. "stale exclusion: " exclusion.form)})
 
 (defn- append-stale-item
   [result exclusion findings config-path]
@@ -81,7 +81,7 @@
 
 (defn- normalized-finding
   [finding]
-  {:kind     finding.kind :path     finding.path :line     finding.line :col      finding.col :end-line finding.end-line :end-col  finding.end-col :severity finding.severity :rule     finding.rule :form     (normalized-form finding) :message  finding.message})
+  {:kind finding.kind :path finding.path :line finding.line :col finding.col :end-line finding.end-line :end-col finding.end-col :severity finding.severity :rule finding.rule :form (normalized-form finding) :message finding.message})
 
 (defn- normalize-findings-step
   [findings index result recurse]
@@ -98,10 +98,10 @@
 (defn- lint-file
   [file policy]
   (let [(findings error) (lint.check file.source
-                                     {:path           file.path :rules          policy.rules :max-code-lines policy.max-code-lines :selection      file.selection})]
+                                     {:path file.path :rules policy.rules :max-code-lines policy.max-code-lines :selection file.selection})]
     (if error
       (values nil
-              {:message error.message :line    error.line :col     error.col :path    file.path})
+              {:message error.message :line error.line :col error.col :path file.path})
       (values (normalize-findings findings 1 []) nil))))
 
 (defn- append-findings
@@ -184,7 +184,10 @@
 
 (defn- diagnostics
   [findings policy config-path scope-paths]
-  (let [exclusions (scoped-exclusions policy.exclusions scope-paths 1 []) filtered   (keep-finding findings exclusions 1 []) stale      (append-stale exclusions findings config-path 1 []) source     (diagnostic-source filtered policy stale scope-paths)]
+  (let [exclusions (scoped-exclusions policy.exclusions scope-paths 1 [])
+        filtered   (keep-finding findings exclusions 1 [])
+        stale      (append-stale exclusions findings config-path 1 [])
+        source     (diagnostic-source filtered policy stale scope-paths)]
     (output.sort (append-stale-findings source stale))))
 
 (defn- has-errors?
@@ -208,7 +211,7 @@
 
 (defn- result
   [findings format]
-  {:lines  (render findings format) :status (result-status findings)})
+  {:lines (render findings format) :status (result-status findings)})
 
 (defn lint-files
   [files policy config-path format scope-paths]

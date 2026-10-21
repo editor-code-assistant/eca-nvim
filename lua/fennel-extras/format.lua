@@ -38,17 +38,24 @@ local function indentation_lines_equal_3f(left, right)
   end
   return same
 end
+local function whitespace_kind_3f(kind)
+  return ((kind == "whitespace") or (kind == "newline"))
+end
 local function token_kind_equal_3f(left, right)
-  return (left.kind == right.kind)
+  return ((left.kind == right.kind) or (whitespace_kind_3f(left.kind) and whitespace_kind_3f(right.kind)))
 end
 local function non_whitespace_token_equal_3f(left, right)
   return (left.text == right.text)
 end
+local function newline_count(text)
+  local count = select(2, string.gsub(text, "\n", ""))
+  return count
+end
 local function whitespace_token_equal_3f(left, right)
-  return ((string.len(left.text) > 0) and (string.len(right.text) > 0))
+  return ((string.len(left.text) > 0) and (string.len(right.text) > 0) and (newline_count(right.text) >= newline_count(left.text)))
 end
 local function token_text_equal_3f(left, right)
-  if (left.kind == "whitespace") then
+  if whitespace_kind_3f(left.kind) then
     return whitespace_token_equal_3f(left, right)
   else
     return non_whitespace_token_equal_3f(left, right)
@@ -83,12 +90,41 @@ local function lines_equal_3f(left, right, index, allow_binding_whitespace_3f)
     return (line_equal_3f(left[index], right[index], allow_binding_whitespace_3f) and lines_equal_3f(left, right, (index + 1), allow_binding_whitespace_3f))
   end
 end
+local function replace_last_token(tokens, token)
+  table.remove(tokens)
+  return table.insert(tokens, token)
+end
+local function merged_whitespace_token(previous, token)
+  return {kind = "whitespace", text = (previous.text .. token.text)}
+end
+local function merge_whitespace_token(tokens, token)
+  local previous = tokens[#tokens]
+  if (previous and whitespace_kind_3f(previous.kind) and whitespace_kind_3f(token.kind)) then
+    return replace_last_token(tokens, merged_whitespace_token(previous, token))
+  else
+    return table.insert(tokens, token)
+  end
+end
+local function normalized_tokens(tokens)
+  local result = {}
+  for _, token in ipairs(tokens) do
+    merge_whitespace_token(result, token)
+  end
+  return result
+end
+local function token_whitespace_only_3f(before, after)
+  local left, left_error = reader.tokenize(before)
+  local right, right_error = reader.tokenize(after)
+  local left_normalized = normalized_tokens(left)
+  local right_normalized = normalized_tokens(right)
+  return (not left_error and not right_error and (#left_normalized == #right_normalized) and token_sequences_equal_3f(left_normalized, right_normalized, 1))
+end
 local indent_only_3f
 do
   local function indent_only_3f0(before, after, allow_binding_whitespace_3f)
     local left = split_lines(before)
     local right = split_lines(after)
-    return ((#left == #right) and lines_equal_3f(left, right, 1, allow_binding_whitespace_3f))
+    return (((#left == #right) and lines_equal_3f(left, right, 1, allow_binding_whitespace_3f)) or (allow_binding_whitespace_3f and token_whitespace_only_3f(before, after)))
   end
   _2amodule_2a["indent-only?"] = indent_only_3f0
   indent_only_3f = _2amodule_2a["indent-only?"]
@@ -195,7 +231,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _15_()
+    local function _16_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -204,7 +240,7 @@ do
         return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_15_)
+    ok, result = pcall(_16_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0

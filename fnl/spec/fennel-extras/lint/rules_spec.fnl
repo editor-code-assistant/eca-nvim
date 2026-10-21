@@ -26,8 +26,10 @@
         (sort-severities entries)))))
 
 (deftest defaults
-  (testing "all fifteen lint rules have the approved default severities"
-    (is (= [["control-layout" "warning"]
+  (testing "all seventeen lint rules have the approved default severities"
+    (is (= [["binding-per-line" "warning"]
+            ["call-data-arg" "warning"]
+            ["control-layout" "warning"]
             ["core-require" "error"]
             ["defn-args-newline" "warning"]
             ["file-size" "warning"]

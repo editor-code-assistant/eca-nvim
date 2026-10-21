@@ -13,6 +13,24 @@ do
   _2amodule_2a["codepoint-width"] = codepoint_width0
   codepoint_width = _2amodule_2a["codepoint-width"]
 end
+local function continuation_byte_3f(line, index)
+  return ((string.byte(line, index) >= 128) and (string.byte(line, index) <= 191))
+end
+local function byte_column_step(line, column, index, continuation_3f)
+  if (continuation_3f or continuation_byte_3f(line, index)) then
+    return byte_column_step(line, column, (index + 1), false)
+  else
+    return (((column == 1) and index) or byte_column_step(line, (column - 1), (index + 1), false))
+  end
+end
+local byte_column
+do
+  local function byte_column0(line, column)
+    return byte_column_step(line, column, 1, false)
+  end
+  _2amodule_2a["byte-column"] = byte_column0
+  byte_column = _2amodule_2a["byte-column"]
+end
 local function leading_spaces_step(line, index)
   if ((index <= string.len(line)) and (string.sub(line, index, index) == " ")) then
     return leading_spaces_step(line, (index + 1))

@@ -67,6 +67,15 @@ local function value_index(children, index)
     return index
   end
 end
+local function pair_data(name_start, name_end, value_start, details)
+  return {name = name_start, ["name-end"] = name_end, value = value_start, ["value-node"] = details.value, ["parent-kind"] = details["parent-kind"], line = name_start.line}
+end
+local function pair_details(value_start, value, parent_kind)
+  return {["value-start"] = value_start, value = value, ["parent-kind"] = parent_kind}
+end
+local function append_pair_candidate_with_details(result, name_start, name_end, details)
+  return append_pair_candidate(result, pair_data(name_start, name_end, details["value-start"], details))
+end
 local function pair_candidate(children, index, result, parent_kind)
   local name_end_position = name_end_index(children, index)
   local name = children[index]
@@ -77,7 +86,7 @@ local function pair_candidate(children, index, result, parent_kind)
   local name_start = helpers["child-start"](name)
   local value_start = (value_start_child and helpers["child-start"](value_start_child))
   if (value and value_start and (name_start.line == value_start.line) and single_line_name_3f(name_start, name_end)) then
-    return append_pair_candidate(result, {name = name_start, ["name-end"] = name_end, value = value_start, ["value-node"] = value, ["parent-kind"] = parent_kind, line = name_start.line})
+    return append_pair_candidate_with_details(result, name_start, name_end, pair_details(value_start, value, parent_kind))
   else
     return result
   end
@@ -185,11 +194,55 @@ local function usable_pairs(node, pairs)
   end
   return tbl_26_
 end
-local function alignment_plan_result(pairs)
-  if (#pairs > 1) then
+local function single_line_node_3f(node)
+  return (node.close and (node.open.line == node.close.line))
+end
+local function node_plan(node, pairs)
+  if single_line_node_3f(node) then
+    return {pairs = pairs, collapse = true}
+  else
     return {pairs = pairs, width = alignment_width(pairs)}
+  end
+end
+local function alignment_plan_result(node, pairs)
+  if (#pairs > 1) then
+    return node_plan(node, pairs)
   else
     return nil
+  end
+end
+local function usable_single_line_pair(node, pair)
+  if not comment_on_line_3f(node, pair.line) then
+    return pair
+  else
+    return nil
+  end
+end
+local function all_usable_pairs(node, pairs)
+  local tbl_26_ = {}
+  local i_27_ = 0
+  for _, pair in ipairs(pairs) do
+    local val_28_ = usable_single_line_pair(node, pair)
+    if (nil ~= val_28_) then
+      i_27_ = (i_27_ + 1)
+      tbl_26_[i_27_] = val_28_
+    else
+    end
+  end
+  return tbl_26_
+end
+local function candidate_pairs(node, pairs)
+  if single_line_node_3f(node) then
+    return all_usable_pairs(node, pairs)
+  else
+    return usable_pairs(node, pairs)
+  end
+end
+local function alignment_pairs(node, pairs)
+  if single_line_node_3f(node) then
+    return pairs
+  else
+    return single_pairs(pairs)
   end
 end
 local function alignment_start(node)
@@ -202,9 +255,10 @@ end
 local function alignment_plan(node)
   local children = helpers["nontrivia-children"](node)
   local start = alignment_start(node)
-  local pairs = single_pairs(pair_candidates(children, start, {}, node.kind))
-  local usable = usable_pairs(node, pairs)
-  return alignment_plan_result(usable)
+  local pairs = pair_candidates(children, start, {}, node.kind)
+  local aligned = alignment_pairs(node, pairs)
+  local usable = candidate_pairs(node, aligned)
+  return alignment_plan_result(node, usable)
 end
 local function alignment_plans(nodes)
   local tbl_26_ = {}
@@ -219,11 +273,19 @@ local function alignment_plans(nodes)
   end
   return tbl_26_
 end
+local function edit_spaces(plan, pair, name_end_column)
+  if plan.collapse then
+    return 1
+  else
+    return (pair_target(pair, plan.width) - name_end_column)
+  end
+end
 local function append_alignment_edit(edits, plan, pair)
   local name_width = pair_name_width(pair)
   local name_end_column = (pair.name["out-col"] + name_width)
-  local target = pair_target(pair, plan.width)
-  return table.insert(edits, {line = pair.line, start = (name_end_column + 1), finish = (pair.value["out-col"] + 1), spaces = (target - name_end_column)})
+  local spaces = edit_spaces(plan, pair, name_end_column)
+  local edit = {line = pair.line, start = (name_end_column + 1), finish = (pair.value["out-col"] + 1), spaces = spaces}
+  return table.insert(edits, edit)
 end
 local function append_plan_pairs(edits, plan)
   for _, pair in ipairs(plan.pairs) do
@@ -245,8 +307,18 @@ local function alignment_edits(plans)
   end
   return edits
 end
+local function replace_edit(line, start, finish, spaces)
+  return (string.sub(line, 1, (start - 1)) .. string.rep(" ", spaces) .. string.sub(line, finish))
+end
 local function apply_edit(line, edit)
-  return (string.sub(line, 1, (edit.start - 1)) .. string.rep(" ", edit.spaces) .. string.sub(line, edit.finish))
+  local start = helpers["byte-column"](line, edit.start)
+  local finish = helpers["byte-column"](line, edit.finish)
+  local spaces = string.rep(" ", edit.spaces)
+  if (string.sub(line, start, (finish - 1)) == spaces) then
+    return line
+  else
+    return replace_edit(line, start, finish, edit.spaces)
+  end
 end
 local function line_edit(line_number, edit)
   if (edit.line == line_number) then
@@ -269,10 +341,10 @@ local function line_edits(edits, line_number)
   return tbl_26_
 end
 local function apply_edits(line, edits)
-  local function _19_(left, right)
+  local function _26_(left, right)
     return (left.start > right.start)
   end
-  table.sort(edits, _19_)
+  table.sort(edits, _26_)
   local result = line
   for _, edit in ipairs(edits) do
     result = apply_edit(result, edit)

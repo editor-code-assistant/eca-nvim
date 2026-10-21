@@ -41,7 +41,7 @@ end
 local function _5_()
   local function _6_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {{"control-layout", "warning"}, {"core-require", "error"}, {"defn-args-newline", "warning"}, {"file-size", "warning"}, {"function-shape", "warning"}, {"if-branch-call", "warning"}, {"if-without-else", "warning"}, {"module-style", "error"}, {"multiline-layout", "warning"}, {"no-mutation", "warning"}, {"one-is-per-testing", "error"}, {"spec-direct-require", "error"}, {"spec-macro-import", "error"}, {"spec-no-module", "error"}, {"unused-and-or", "warning"}}
+    local expected_6_auto = {{"binding-per-line", "warning"}, {"call-data-arg", "warning"}, {"control-layout", "warning"}, {"core-require", "error"}, {"defn-args-newline", "warning"}, {"file-size", "warning"}, {"function-shape", "warning"}, {"if-branch-call", "warning"}, {"if-without-else", "warning"}, {"module-style", "error"}, {"multiline-layout", "warning"}, {"no-mutation", "warning"}, {"one-is-per-testing", "error"}, {"spec-direct-require", "error"}, {"spec-macro-import", "error"}, {"spec-no-module", "error"}, {"unused-and-or", "warning"}}
     local actual_7_auto
     do
       local entries = default_severities()
@@ -54,7 +54,7 @@ local function _5_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("all fifteen lint rules have the approved default severities", _6_)
+  return require("plenary.busted").it("all seventeen lint rules have the approved default severities", _6_)
 end
 require("plenary.busted").describe("defaults", _5_)
 local function core_require_scenario()

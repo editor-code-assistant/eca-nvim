@@ -3,11 +3,11 @@
 (module fennel-extras.rules)
 
 (local built-in-rules
-       {:fn         [[:inner 0]] :lambda     [[:inner 0]] :macro      [[:inner 0]] :let        [[:block 1]] :when       [[:block 1]] :when-let   [[:block 1]] :if-let     [[:block 1]] :each       [[:block 1]] :for        [[:block 1]] :icollect   [[:block 1]] :collect    [[:block 1]] :accumulate [[:block 1]] :case       [[:block 1]] :match      [[:block 1]] :case-try   [[:block 1]] :match-try  [[:block 1]] :while      [[:block 1]] :with-open  [[:block 1]] :do         [[:block 0]]})
+       {:fn [[:inner 0]] :lambda [[:inner 0]] :macro [[:inner 0]] :let [[:block 1]] :when [[:block 1]] :when-let [[:block 1]] :if-let [[:block 1]] :each [[:block 1]] :for [[:block 1]] :icollect [[:block 1]] :collect [[:block 1]] :accumulate [[:block 1]] :case [[:block 1]] :match [[:block 1]] :case-try [[:block 1]] :match-try [[:block 1]] :while [[:block 1]] :with-open [[:block 1]] :do [[:block 0]]})
 
 (local prefix-rules {:def [[:inner 0]] :with- [[:block 1]]})
 (local allowed-keys
-       {:indents          true :format-as        true :indent-patterns  true :indent-width     true :builtins         true :prefix-fallbacks true :align-bindings   true})
+       {:indents true :format-as true :indent-patterns true :indent-width true :builtins true :prefix-fallbacks true :align-bindings true})
 (var resolve-name nil)
 (var alias-rule nil)
 
@@ -23,7 +23,9 @@
 (defn- validate-rule
   [rule]
   (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
-    (let [kind (. rule 1) value (. rule 2) index (. rule 3)]
+    (let [kind  (. rule 1)
+          value (. rule 2)
+          index (. rule 3)]
       (if (= kind :block)
         (if (and (integer? value) (>= value 0) (= index nil)) nil (error "invalid block rule"))
         (if (= kind :inner)
@@ -132,7 +134,11 @@
   (values result found))
 (set resolve-name
      (fn [config name seen]
-       (let [indents  (or (. config :indents) {}) aliases  (or (. config :format-as) {}) patterns (or (. config :indent-patterns) {}) builtins (effective-builtins config) prefixes (effective-prefix-rules config)]
+       (let [indents  (or (. config :indents) {})
+             aliases  (or (. config :format-as) {})
+             patterns (or (. config :indent-patterns) {})
+             builtins (effective-builtins config)
+             prefixes (effective-prefix-rules config)]
          (if (. indents name)
            (values (. indents name) nil true)
            (if (. aliases name)
@@ -179,7 +185,8 @@
 
 (defn- validate-custom-config
   [config]
-  (let [builtins (. config :builtins) fallbacks (. config :prefix-fallbacks)]
+  (let [builtins  (. config :builtins)
+        fallbacks (. config :prefix-fallbacks)]
     (if (and (not= builtins nil)
              (not (= builtins true))
              (not (= builtins false))

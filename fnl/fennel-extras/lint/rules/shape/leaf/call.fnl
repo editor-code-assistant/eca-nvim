@@ -41,7 +41,8 @@
 
 (defn plain-call-one-layer?
   [node]
-  (let [children (meaningful-children node) result   (plain-call-result children)]
+  (let [children (meaningful-children node)
+        result   (plain-call-result children)]
     (and result.valid
          (>= result.layers 1))))
 

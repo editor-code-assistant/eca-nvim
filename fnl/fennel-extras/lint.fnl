@@ -25,7 +25,8 @@
 
 (defn- branch-form
   [form]
-  (let [then-base (branch-base form " > then$") else-base (branch-base form " > else$")]
+  (let [then-base (branch-base form " > then$")
+        else-base (branch-base form " > else$")]
     (or (and (not= then-base form) then-base)
         (and (not= else-base form) else-base))))
 
@@ -70,7 +71,8 @@
 
 (defn- filter-findings-step
   [findings forms exclusions scope index result recurse]
-  (let [finding     (. findings index) next-result (append-selected-finding result finding forms exclusions scope)]
+  (let [finding     (. findings index)
+        next-result (append-selected-finding result finding forms exclusions scope)]
     (recurse findings forms exclusions scope (+ index 1) next-result)))
 
 (defn- filter-findings
@@ -87,5 +89,10 @@
 
 (defn check
   [source context]
-  (let [path           (or (. context :path) "") policy         (or (. context :rules) {}) max-code-lines (or (. context :max-code-lines) 300) exclusions     (or (. context :exclusions) []) scope          (. context :selection) (forms error)  (identity.forms source path)]
+  (let [path           (or (. context :path) "")
+        policy         (or (. context :rules) {})
+        max-code-lines (or (. context :max-code-lines) 300)
+        exclusions     (or (. context :exclusions) [])
+        scope          (. context :selection)
+        (forms error)  (identity.forms source path)]
     (checked-findings forms error path policy max-code-lines exclusions scope source)))

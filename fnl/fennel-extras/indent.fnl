@@ -6,6 +6,7 @@
 (local rules (require :fennel-extras.rules))
 (local helpers (require :fennel-extras.indent.node))
 (local align (require :fennel-extras.indent.align))
+(local split (require :fennel-extras.indent.split))
 (local comments (require :fennel-extras.indent.comment))
 
 (defn- append-line
@@ -110,7 +111,9 @@
   (var result nil)
   (each [_ entry (ipairs rule)]
     (when (= result nil)
-      (let [kind (. entry 1) value (. entry 2) selected (. entry 3)]
+      (let [kind     (. entry 1)
+            value    (. entry 2)
+            selected (. entry 3)]
         (if (and (= kind :inner)
                  (= value 0)
                  (or (= selected nil) (= selected arg-index)))
@@ -126,9 +129,11 @@
 (defn- rule-indent
   [node first-token line-number config]
   (when (and node (= node.kind :list) (> line-number node.open.line))
-    (let [children (helpers.nontrivia-children node) head     (. children 1)]
+    (let [children (helpers.nontrivia-children node)
+          head     (. children 1)]
       (when (and head (= head.kind :symbol))
-        (let [rule      (rules.resolve config head.text) arg-index (argument-index node first-token)]
+        (let [rule      (rules.resolve config head.text)
+              arg-index (argument-index node first-token)]
           (when (and rule arg-index)
             (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
 
@@ -142,7 +147,9 @@
     0
     (if (= first-token.kind :close)
       (or (. node.open :line-indent) (. node.open :out-col))
-      (let [children     (helpers.nontrivia-children node) first-child  (. children 1) second-child (. children 2)]
+      (let [children     (helpers.nontrivia-children node)
+            first-child  (. children 1)
+            second-child (. children 2)]
         (if (= first-child nil)
           (+ (. node.open :out-col) 1)
           (if (and (= node.kind :list) (= first-child.kind :symbol))
@@ -173,13 +180,15 @@
 
 (defn- comment-indent
   [tokens nodes line-number config]
-  (let [token (comments.first-code-token-after tokens line-number) node  (and token (active-node nodes token.line))]
+  (let [token (comments.first-code-token-after tokens line-number)
+        node  (and token (active-node nodes token.line))]
     (or (and token node (next-token-indent token node config))
         0)))
 
 (defn- default-line-indent
   [node first-token line-number tokens config]
-  (let [rule   (rule-indent node first-token line-number config) indent (indent-for node first-token line-number config)]
+  (let [rule   (rule-indent node first-token line-number config)
+        indent (indent-for node first-token line-number config)]
     (if (and (= rule nil) (> line-number 1))
       (comments.continuation-indent indent tokens line-number)
       indent)))
@@ -218,7 +227,9 @@
   line)
 (defn- process-line
   [line-number line nodes tokens config]
-  (let [string-line? (string-on-line? tokens line-number) first-token  (first-token-on-line tokens line-number) node         (active-node nodes line-number)]
+  (let [string-line? (string-on-line? tokens line-number)
+        first-token  (first-token-on-line tokens line-number)
+        node         (active-node nodes line-number)]
     (if string-line?
       (process-string-line line-number line tokens)
       (if (= first-token nil)
@@ -229,7 +240,9 @@
                      (and (= first-token.kind :number)
                           (> (helpers.leading-spaces line) 20))))
           (process-unchanged-line line-number line tokens)
-          (let [indent (line-indent node first-token line-number tokens nodes config) spaces (helpers.leading-spaces line) body   (string.sub line (+ spaces 1))]
+          (let [indent (line-indent node first-token line-number tokens nodes config)
+                spaces (helpers.leading-spaces line)
+                body   (string.sub line (+ spaces 1))]
             (assign-output-columns tokens line-number line indent true)
             (.. (string.rep " " indent) body)))))))
 
@@ -260,7 +273,8 @@
   (let [(plain tree error) (reindent-once source config)]
     (if error
       (values nil error)
-      (let [aligned                 (alignment-source plain tree) (result _ result-error) (reindent-once aligned config)]
+      (let [aligned                 (alignment-source plain tree)
+            (result _ result-error) (reindent-once aligned config)]
         (values result result-error)))))
 
 (defn- fixed-point-result
@@ -277,12 +291,22 @@
       (values nil error)
       (fixed-point-result source config rounds result alignment-fixed-point))))
 
+(defn- split-and-align
+  [source config]
+  (let [(prepared error edits) (split.split source)]
+    (if error
+      (values nil error)
+      (let [(result result-error) (alignment-fixed-point prepared config 3)]
+        (if result-error
+          (values nil result-error)
+          (values result nil))))))
+
 (defn reindent
   [source config]
   (let [config-error (rules.validate config)]
     (if config-error
       (values nil config-error)
       (if (and config (. config :align-bindings))
-        (alignment-fixed-point source config 3)
+        (split-and-align source config)
         (let [(result _ error) (reindent-once source config)]
           (values result error))))))

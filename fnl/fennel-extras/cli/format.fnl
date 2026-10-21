@@ -9,14 +9,16 @@
 
 (defn error-line
   [path error]
-  (let [message (or (. error :message) (tostring error)) line    (. error :line) col     (or (. error :col) (. error :column))]
+  (let [message (or (. error :message) (tostring error))
+        line    (. error :line)
+        col     (or (. error :col) (. error :column))]
     (if (and line col)
       (.. path ":" line ":" col ": " message)
       (.. path ": " message))))
 
 (defn- formatter-config
   [cfg]
-  {:indents          (. cfg :indents) :format-as        (. cfg :format-as) :indent-patterns  (. cfg :indent-patterns) :indent-width     (. cfg :indent-width) :builtins         (. cfg :builtins) :prefix-fallbacks (. cfg :prefix-fallbacks) :align-bindings   (. cfg :align-bindings)})
+  {:indents (. cfg :indents) :format-as (. cfg :format-as) :indent-patterns (. cfg :indent-patterns) :indent-width (. cfg :indent-width) :builtins (. cfg :builtins) :prefix-fallbacks (. cfg :prefix-fallbacks) :align-bindings (. cfg :align-bindings)})
 
 (defn- normalized-path
   [path]
@@ -26,7 +28,9 @@
 
 (defn- same-path?
   [left right]
-  (let [uv    (or vim.uv vim.loop) left  (normalized-path (or (scan.realpath uv left) left)) right (normalized-path (or (scan.realpath uv right) right))]
+  (let [uv    (or vim.uv vim.loop)
+        left  (normalized-path (or (scan.realpath uv left) left))
+        right (normalized-path (or (scan.realpath uv right) right))]
     (= left right)))
 
 (defn- config-file-kept?
@@ -209,5 +213,6 @@
 
 (defn run-files
   [context parser files]
-  (let [ctx   (table-copy.update context {:mode context.parsed.mode :parser parser}) state {:formatted [] :changed [] :failure nil}]
+  (let [ctx   (table-copy.update context {:mode context.parsed.mode :parser parser})
+        state {:formatted [] :changed [] :failure nil}]
     (run-files-result ctx (run-files-loop ctx state files 1))))

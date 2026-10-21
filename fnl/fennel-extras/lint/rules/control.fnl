@@ -28,7 +28,8 @@
 
 (defn- quoted-mode-for-child
   [node index mode]
-  (let [previous-index (previous-meaningful-index node.children index) previous       (and previous-index (. node.children previous-index))]
+  (let [previous-index (previous-meaningful-index node.children index)
+        previous       (and previous-index (. node.children previous-index))]
     (if (and previous (= previous.kind :prefix))
       (quoted-mode-for-prefix previous.text (quoted-mode-for-child node previous-index mode))
       mode)))
@@ -156,7 +157,7 @@
 (defn- visit-node
   [findings path forms policy node statement? mode ordinals]
   (let [next-ordinals (next-ordinals findings path forms policy node statement? mode ordinals)
-        state         {:findings findings :path     path :forms    forms :policy   policy :node     node :mode     mode :ordinals next-ordinals :visit    visit-node}]
+        state         {:findings findings :path path :forms forms :policy policy :node node :mode mode :ordinals next-ordinals :visit visit-node}]
     (accumulate [result next-ordinals index child (ipairs (or node.children []))]
       (visit-child (core.assoc state :ordinals result) index child))))
 
@@ -167,7 +168,8 @@
 
 (defn- append-control-findings
   [findings path forms policy source]
-  (let [reader (require :fennel-extras.reader) root   (reader.parse source)]
+  (let [reader (require :fennel-extras.reader)
+        root   (reader.parse source)]
     (if root
       (visit-root findings path forms policy root)
       findings)))

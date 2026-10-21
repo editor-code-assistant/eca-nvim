@@ -12,15 +12,23 @@
                       (= token.kind :comment)))
              token))))
 
-(defn- code-before-comment?
-  [tokens line-number comment-token]
-  (accumulate [before false _ prior (ipairs tokens)]
+(defn- code-before-comment-step
+  [before prior line-number comment-token]
+  (if (and (= prior.line line-number)
+           (< prior.col comment-token.col)
+           (= prior.kind :open))
+    false
     (or before
         (and (= prior.line line-number)
              (< prior.col comment-token.col)
              (not (or (= prior.kind :whitespace)
                       (= prior.kind :newline)
                       (= prior.kind :comment)))))))
+
+(defn- code-before-comment?
+  [tokens line-number comment-token]
+  (accumulate [before false _ prior (ipairs tokens)]
+    (code-before-comment-step before prior line-number comment-token)))
 
 (defn- code-before-comment-on-line?
   [tokens line-number]

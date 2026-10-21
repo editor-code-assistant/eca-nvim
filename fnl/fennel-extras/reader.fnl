@@ -120,7 +120,8 @@
 
 (defn- next-token
   [source i line col]
-  (let [shebang? (and (= i 1) (= (string.sub source 1 1) "#") (= (string.sub source 2 2) "!")) kind     (if shebang? :comment (classify (string.sub source i i)))]
+  (let [shebang? (and (= i 1) (= (string.sub source 1 1) "#") (= (string.sub source 2 2) "!"))
+        kind     (if shebang? :comment (classify (string.sub source i i)))]
     (case kind
       :string
       (let [(end result) (scan-string source i)]
@@ -134,7 +135,8 @@
       (let [end (scan-whitespace source i)]
         (values (token :whitespace (string.sub source i end) line col) (+ end 1)))
       :atom
-      (let [end  (scan-atom source i) text (string.sub source i end)]
+      (let [end  (scan-atom source i)
+            text (string.sub source i end)]
         (values (token (if (number? text) :number :symbol) text line col) (+ end 1)))
       :open
       (values (token :open (string.sub source i i) line col) (+ i 1))
@@ -172,13 +174,15 @@
     (table.remove stack)))
 (defn tokenize
   [source]
-  (let [tokens [] n      (string.len source)]
+  (let [tokens []
+        n      (string.len source)]
     (var i 1)
     (var line 1)
     (var col 1)
     (var error nil)
     (while (and (<= i n) (not error))
-      (let [old-i              i (tok end-or-error) (next-token source i line col)]
+      (let [old-i              i
+            (tok end-or-error) (next-token source i line col)]
         (if tok
           (if (<= end-or-error old-i)
             (set error {:message "tokenizer made no progress" :line line :col col})
@@ -210,11 +214,13 @@
   (let [(tokens error) (tokenize source)]
     (if error
       (values nil error)
-      (let [root  {:kind :root :children []} stack [{:node root :open nil}]]
+      (let [root  {:kind :root :children []}
+            stack [{:node root :open nil}]]
         (var failure nil)
         (each [_ tok (ipairs tokens)]
           (when (not failure)
-            (let [frame (. stack (length stack)) node  frame.node]
+            (let [frame (. stack (length stack))
+                  node  frame.node]
               (if (= tok.kind :open)
                 (push-open-node node stack tok)
                 (if (= tok.kind :close)

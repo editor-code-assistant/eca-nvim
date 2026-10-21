@@ -72,7 +72,9 @@
 
 (defn- decode-string
   [token]
-  (let [text   token.text n      (string.len text) result []]
+  (let [text   token.text
+        n      (string.len text)
+        result []]
     (var i 2)
     (while (< i n)
       (let [c (string.sub text i i)]
@@ -123,7 +125,8 @@
 (defn- convert
   [node]
   (if (= node.kind :table)
-    (let [children (meaningful-children node.children) result   {}]
+    (let [children (meaningful-children node.children)
+          result   {}]
       (if (= (math.fmod (length children) 2) 1)
         (error (error-at "table must contain key/value pairs" node.open) 0)
         (let [failure (convert-table-children convert children result)]

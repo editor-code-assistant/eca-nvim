@@ -33,7 +33,9 @@
 (defn- valid-rule?
   [rule]
   (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
-    (let [kind (. rule 1) value (. rule 2) index (. rule 3)]
+    (let [kind  (. rule 1)
+          value (. rule 2)
+          index (. rule 3)]
       (if (= kind :block)
         (and (integer? value) (>= value 0) (= index nil))
         (if (= kind :inner)
@@ -89,7 +91,15 @@
 
 (defn- configuration-error
   [tbl]
-  (let [width           (. tbl :indent-width) builtins        (. tbl :builtins) fallbacks       (. tbl :prefix-fallbacks) extensions      (. tbl :extensions) skip-dotfiles   (. tbl :skip-dotfiles) follow-symlinks (. tbl :follow-symlinks) align-bindings  (. tbl :align-bindings) parser          (. tbl :parser) lint            (. tbl :lint)]
+  (let [width           (. tbl :indent-width)
+        builtins        (. tbl :builtins)
+        fallbacks       (. tbl :prefix-fallbacks)
+        extensions      (. tbl :extensions)
+        skip-dotfiles   (. tbl :skip-dotfiles)
+        follow-symlinks (. tbl :follow-symlinks)
+        align-bindings  (. tbl :align-bindings)
+        parser          (. tbl :parser)
+        lint            (. tbl :lint)]
     (var failure nil)
     (when (and (= failure nil)
                (not= width nil)
@@ -126,7 +136,7 @@
   [tbl]
   (if (not= (type tbl) :table)
     (values nil {:message "configuration must be a table"})
-    (let [allowed {:indents          true :format-as        true :indent-patterns  true :paths            true :exclude          true :indent-width     true :builtins         true :prefix-fallbacks true :extensions       true :skip-dotfiles    true :follow-symlinks  true :align-bindings   true :parser           true :lint             true}]
+    (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true :indent-width true :builtins true :prefix-fallbacks true :extensions true :skip-dotfiles true :follow-symlinks true :align-bindings true :parser true :lint true}]
       (var failure nil)
       (each [key _ (pairs tbl)]
         (when (not (. allowed key))
@@ -144,8 +154,11 @@
 
 (defn- valid-lint-policy
   [cfg]
-  (let [lint           (. cfg :lint) overrides      (or (and lint (. lint :rules)) {}) exclusions     (or (and lint (. lint :exclusions)) []) max-code-lines (or (and lint (. lint :max-code-lines)) 300)]
-    {:rules          (core.merge (lint-rules.defaults) overrides) :exclusions     exclusions :max-code-lines max-code-lines}))
+  (let [lint           (. cfg :lint)
+        overrides      (or (and lint (. lint :rules)) {})
+        exclusions     (or (and lint (. lint :exclusions)) [])
+        max-code-lines (or (and lint (. lint :max-code-lines)) 300)]
+    {:rules (core.merge (lint-rules.defaults) overrides) :exclusions exclusions :max-code-lines max-code-lines}))
 
 (defn lint-policy
   [cfg]

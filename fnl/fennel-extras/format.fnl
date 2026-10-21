@@ -24,34 +24,48 @@
   [left right]
   (var same true)
   (each [i line (ipairs left)]
-    (let [other  (. right i) body   (string.sub line (+ (leading-spaces line) 1)) spaces (string.sub other 1 (leading-spaces other))]
+    (let [other  (. right i)
+          body   (string.sub line (+ (leading-spaces line) 1))
+          spaces (string.sub other 1 (leading-spaces other))]
       (when (not (or (= line other)
                      (= other (.. spaces body))
                      (and (= other "") (spaces-only? line))))
         (set same false))))
   same)
+(defn- whitespace-kind?
+  [kind]
+  (or (= kind :whitespace) (= kind :newline)))
+
 (defn- token-kind-equal?
   [left right]
-  (= left.kind right.kind))
+  (or (= left.kind right.kind)
+      (and (whitespace-kind? left.kind) (whitespace-kind? right.kind))))
 
 (defn- non-whitespace-token-equal?
   [left right]
   (= left.text right.text))
 
+(defn- newline-count
+  [text]
+  (let [count (select 2 (string.gsub text "\n" ""))]
+    count))
+
 (defn- whitespace-token-equal?
   [left right]
   (and (> (string.len left.text) 0)
-       (> (string.len right.text) 0)))
+       (> (string.len right.text) 0)
+       (>= (newline-count right.text) (newline-count left.text))))
 
 (defn- token-text-equal?
   [left right]
-  (if (= left.kind :whitespace)
+  (if (whitespace-kind? left.kind)
     (whitespace-token-equal? left right)
     (non-whitespace-token-equal? left right)))
 
 (defn- token-sequence-step
   [left right index next]
-  (let [token (. left index) other (. right index)]
+  (let [token (. left index)
+        other (. right index)]
     (and (token-kind-equal? token other)
          (token-text-equal? token other)
          (next left right (+ index 1)))))
@@ -64,7 +78,10 @@
 
 (defn- binding-whitespace-equal?
   [left right]
-  (let [left-body                  (string.gsub left "^ *" "") right-body                 (string.gsub right "^ *" "") (left-tokens left-error)   (reader.tokenize left-body) (right-tokens right-error) (reader.tokenize right-body)]
+  (let [left-body                  (string.gsub left "^ *" "")
+        right-body                 (string.gsub right "^ *" "")
+        (left-tokens left-error)   (reader.tokenize left-body)
+        (right-tokens right-error) (reader.tokenize right-body)]
     (and (not left-error)
          (not right-error)
          (not= left-body right-body)
@@ -86,11 +103,50 @@
     (and (line-equal? (. left index) (. right index) allow-binding-whitespace?)
          (lines-equal? left right (+ index 1) allow-binding-whitespace?))))
 
+(defn- replace-last-token
+  [tokens token]
+  (table.remove tokens)
+  (table.insert tokens token))
+
+(defn- merged-whitespace-token
+  [previous token]
+  {:kind :whitespace :text (.. previous.text token.text)})
+
+(defn- merge-whitespace-token
+  [tokens token]
+  (let [previous (. tokens (length tokens))]
+    (if (and previous
+             (whitespace-kind? previous.kind)
+             (whitespace-kind? token.kind))
+      (replace-last-token tokens (merged-whitespace-token previous token))
+      (table.insert tokens token))))
+
+(defn- normalized-tokens
+  [tokens]
+  (let [result []]
+    (each [_ token (ipairs tokens)]
+      (merge-whitespace-token result token))
+    result))
+
+(defn- token-whitespace-only?
+  [before after]
+  (let [(left left-error)   (reader.tokenize before)
+        (right right-error) (reader.tokenize after)
+        left-normalized     (normalized-tokens left)
+        right-normalized    (normalized-tokens right)]
+    (and (not left-error)
+         (not right-error)
+         (= (length left-normalized) (length right-normalized))
+         (token-sequences-equal? left-normalized right-normalized 1))))
+
 (defn indent-only?
   [before after allow-binding-whitespace?]
-  (let [left (split-lines before) right (split-lines after)]
-    (and (= (length left) (length right))
-         (lines-equal? left right 1 allow-binding-whitespace?))))
+  (let [left  (split-lines before)
+        right (split-lines after)]
+    (or (and (= (length left) (length right))
+             (lines-equal? left right 1 allow-binding-whitespace?))
+        (and allow-binding-whitespace?
+             (token-whitespace-only? before after)))))
 
 (defn- ignored?
   [key]
@@ -156,12 +212,14 @@
   [equal parser left right]
   (if (= (length left) 0)
     true
-    (let [entry       (table.remove left 1) found-index (matching-entry equal parser entry right)]
+    (let [entry       (table.remove left 1)
+          found-index (matching-entry equal parser entry right)]
       (continue-equal-entries equal-entries? equal parser left right found-index))))
 
 (defn- equal-table?
   [equal parser a b]
-  (let [left (entries a) right (entries b)]
+  (let [left  (entries a)
+        right (entries b)]
     (and (= (length left) (length right))
          (equal-entries? equal parser left right))))
 
@@ -177,7 +235,8 @@
 
 (defn- parse-all
   [parser source]
-  (let [iterator (parser.parser source "fennel-extras" {:comments true}) forms []]
+  (let [iterator (parser.parser source "fennel-extras" {:comments true})
+        forms    []]
     (var done false)
     (while (not done)
       (let [(ok form) (iterator)]
@@ -196,7 +255,8 @@
 (defn ast-equal?
   [parser a b]
   (let [(ok result) (pcall (fn []
-                             (let [left (parse-all parser a) right (parse-all parser b)]
+                             (let [left  (parse-all parser a)
+                                   right (parse-all parser b)]
                                (if (not= (length left) (length right))
                                  false
                                  (forms-equal? parser left right)))))]
@@ -205,7 +265,9 @@
 
 (defn format-string
   [source opts]
-  (let [config      (or (. opts :config) {}) parser      (. opts :parser) (out error) (indent.reindent source config)]
+  (let [config      (or (. opts :config) {})
+        parser      (. opts :parser)
+        (out error) (indent.reindent source config)]
     (if error
       (values nil error)
       (if (not (indent-only? source out (and (. config :align-bindings) true)))

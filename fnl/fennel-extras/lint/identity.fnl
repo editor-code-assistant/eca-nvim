@@ -25,7 +25,7 @@
 (defn- state-for-branch
   [state branch-segment]
   (let [branch-path (naming.append-path state.ancestor branch-segment)]
-    {:state {:forms       state.forms :ancestor    branch-path :ordinals    {} :top-ordinal 0}
+    {:state {:forms state.forms :ancestor branch-path :ordinals {} :top-ordinal 0}
      :path  branch-path}))
 
 (defn- child-state-ordinals
@@ -36,7 +36,7 @@
 
 (defn- child-state
   [state final-path segmented?]
-  {:forms       state.forms :ancestor    final-path :ordinals    (child-state-ordinals state segmented?) :top-ordinal 0})
+  {:forms state.forms :ancestor final-path :ordinals (child-state-ordinals state segmented?) :top-ordinal 0})
 
 (defn- add-identity
   [state path node]
@@ -78,7 +78,8 @@
 
 (defn- walk-children-step
   [walker node state final-path segmented? head]
-  (let [next-state (child-state state final-path segmented?) local-fn   (and (= head "local") (naming.local-fn? node))]
+  (let [next-state (child-state state final-path segmented?)
+        local-fn   (and (= head "local") (naming.local-fn? node))]
     (accumulate [current next-state index child (ipairs node.children)]
       (walk-child-step walker node local-fn current index child))))
 
@@ -137,11 +138,13 @@
         with-branch              (add-branch-identity branch? final-state branch-path node)
         with-node                (add-node-identity node-interesting? with-branch final-path node)
         child-result             (walk-children walk-node node with-node final-path (or branch-segment node-interesting?) head quoted?)]
-    {:forms       child-result.forms :ancestor    state.ancestor :ordinals    (walk-node-ordinals node-interesting? final-state child-result) :top-ordinal final-state.top-ordinal}))
+    {:forms child-result.forms :ancestor state.ancestor :ordinals (walk-node-ordinals node-interesting? final-state child-result) :top-ordinal final-state.top-ordinal}))
 
 (defn- walk-root-child
   [root path state index child]
-  (let [quoted?    (naming.quoted-child? root.children index) segment    (naming.named-segment child) next-state (walk-node child state true nil quoted? false)]
+  (let [quoted?    (naming.quoted-child? root.children index)
+        segment    (naming.named-segment child)
+        next-state (walk-node child state true nil quoted? false)]
     (if (= (naming.list-head child) "module")
       (core.assoc next-state :ancestor (naming.append-path path segment))
       next-state)))
@@ -159,7 +162,8 @@
 
 (defn- walk-root
   [root path]
-  (let [state       {:forms [] :ancestor path :ordinals {} :top-ordinal 0} final-state (walk-root-state root path state)]
+  (let [state       {:forms [] :ancestor path :ordinals {} :top-ordinal 0}
+        final-state (walk-root-state root path state)]
     final-state.forms))
 
 (defn forms

@@ -21,7 +21,8 @@
 
 (defn function-violations
   [node]
-  (let [info (function-info node) body (or (and info info.body) [])]
+  (let [info (function-info node)
+        body (or (and info info.body) [])]
     (validate-function-body body [])))
 
 (defn- function-target
@@ -34,7 +35,8 @@
 
 (defn- add-function-finding
   [findings path form forms policy offending]
-  (let [base   (form-for-node forms offending form) target (function-target base offending)]
+  (let [base   (form-for-node forms offending form)
+        target (function-target base offending)]
     (table.insert findings
                   (finding path
                            target
@@ -80,7 +82,7 @@
 
 (defn- synthetic-form
   [path node]
-  {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     (.. path " > function-shape") :node     node})
+  {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form (.. path " > function-shape") :node node})
 (defn- function-nodes
   [source]
   (let [functions []]

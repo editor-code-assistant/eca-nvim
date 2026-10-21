@@ -39,7 +39,7 @@
   [ctx acc entry]
   (let [visited acc.visited
         _       (tset visited entry.path true)
-        target  {:directory    entry.path :prefix       entry.rel :path         entry.path :rel          entry.rel :error-prefix entry.rel}]
+        target  {:directory entry.path :prefix entry.rel :path entry.path :rel entry.rel :error-prefix entry.rel}]
     ((. ctx :walk) ctx acc target)))
 
 (defn- scan-directory-target
@@ -74,7 +74,7 @@
 
 (defn- scan-target-entry
   [entry target]
-  {:directory    entry.directory :prefix       entry.prefix :name         entry.name :type         entry.type :path         target :target       target :rel          entry.rel :error-prefix entry.error-prefix})
+  {:directory entry.directory :prefix entry.prefix :name entry.name :type entry.type :path target :target target :rel entry.rel :error-prefix entry.error-prefix})
 
 (defn- scan-target-stat-result
   [ctx acc entry target-stat]
@@ -85,7 +85,8 @@
 
 (defn- scan-target-stat
   [ctx acc entry target]
-  (let [target-stat  (scan-entry-target-stat ctx target) target-entry (and target-stat (scan-target-entry entry target))]
+  (let [target-stat  (scan-entry-target-stat ctx target)
+        target-entry (and target-stat (scan-target-entry entry target))]
     (if target-stat
       (scan-target-stat-result ctx acc target-entry target-stat)
       (values (scan-acc acc acc.result) nil))))
@@ -120,7 +121,7 @@
   [ctx acc entry]
   (let [path  (scan-join entry.directory entry.name)
         rel   (scan-entry-rel entry.prefix entry.name)
-        child {:directory    entry.directory :prefix       entry.prefix :name         entry.name :type         entry.type :path         path :rel          rel :error-prefix entry.error-prefix}]
+        child {:directory entry.directory :prefix entry.prefix :name entry.name :type entry.type :path path :rel rel :error-prefix entry.error-prefix}]
     (scan-entry-eligible ctx acc child)))
 
 (defn- scan-entry
@@ -142,7 +143,8 @@
 
 (defn- walk-scan-step
   [ctx acc entry handle]
-  (let [uv          (. ctx :uv) (name type) (uv.fs_scandir_next handle)]
+  (let [uv          (. ctx :uv)
+        (name type) (uv.fs_scandir_next handle)]
     (if (not name)
       (values (scan-acc acc acc.result) nil)
       (walk-scan-step-result ctx acc (scan-entry-data entry name type) handle))))
@@ -165,14 +167,16 @@
 
 (defn- walk
   [ctx acc entry]
-  (let [uv           (. ctx :uv) (handle err) (uv.fs_scandir entry.directory) error-prefix (or entry.error-prefix (. ctx :error-prefix))]
+  (let [uv           (. ctx :uv)
+        (handle err) (uv.fs_scandir entry.directory)
+        error-prefix (or entry.error-prefix (. ctx :error-prefix))]
     (if (not handle)
       (walk-scan-error error-prefix entry.prefix)
       (walk-scan-step ctx acc entry handle))))
 
 (defn- followed-link-entry
   [entry]
-  {:directory    entry.target :prefix       entry.rel :path         entry.target :rel          entry.rel :error-prefix entry.error-prefix})
+  {:directory entry.target :prefix entry.rel :path entry.target :rel entry.rel :error-prefix entry.error-prefix})
 
 (defn- followed-link-directory
   [ctx acc entry target-stat]
@@ -187,7 +191,10 @@
 
 (defn- add-followed-link
   [ctx acc entry]
-  (let [uv           (. ctx :uv) target       (scan-realpath uv entry.path) target-stat  (and target (uv.fs_stat target)) target-entry (and target-stat (scan-target-entry entry target))]
+  (let [uv           (. ctx :uv)
+        target       (scan-realpath uv entry.path)
+        target-stat  (and target (uv.fs_stat target))
+        target-entry (and target-stat (scan-target-entry entry target))]
     (if target-stat
       (followed-link-result ctx acc target-entry target-stat)
       (values (scan-acc acc acc.result) nil))))
@@ -209,7 +216,7 @@
   (let [target          (directory-target ctx entry.path)
         visited         (directory-visited ctx target)
         next-acc        {:result acc.result :seen acc.seen :visited visited}
-        directory-entry {:directory    target :prefix       (scan-walk-prefix (. ctx :root) entry.path) :path         target :rel          entry.rel :error-prefix entry.error-prefix}]
+        directory-entry {:directory target :prefix (scan-walk-prefix (. ctx :root) entry.path) :path target :rel entry.rel :error-prefix entry.error-prefix}]
     (walk ctx next-acc directory-entry)))
 
 (defn- add-path-link
@@ -232,7 +239,7 @@
         abs   (scan-absolute (. ctx :root) input)
         stat  (uv.fs_lstat abs)
         rel   (scan-relative (. ctx :root) abs)
-        entry {:directory    abs :prefix       "" :name         input :type         (and stat stat.type) :path         abs :rel          rel :error-prefix input}]
+        entry {:directory abs :prefix "" :name input :type (and stat stat.type) :path abs :rel rel :error-prefix input}]
     (if stat
       (add-path-stat ctx acc entry stat)
       (values (scan-acc acc acc.result) nil))))
@@ -274,7 +281,7 @@
 (defn sorted-files
   [root inputs options]
   (let [uv    (or vim.uv vim.loop)
-        ctx   {:walk            walk :step            walk-scan-step :root            root :excludes        (. options :excludes) :extensions      (. options :extensions) :skip-dotfiles   (. options :skip-dotfiles) :follow-symlinks (. options :follow-symlinks) :error-prefix    nil :uv              uv}
+        ctx   {:walk walk :step walk-scan-step :root root :excludes (. options :excludes) :extensions (. options :extensions) :skip-dotfiles (. options :skip-dotfiles) :follow-symlinks (. options :follow-symlinks) :error-prefix nil :uv uv}
         acc   {:result [] :seen {} :visited {}}
         state {:acc acc :failure nil}]
     (sorted-files-loop ctx inputs 1 state)))

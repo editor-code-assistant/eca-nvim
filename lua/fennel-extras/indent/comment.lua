@@ -17,10 +17,17 @@ do
   _2amodule_2a["first-code-token-after"] = first_code_token_after0
   first_code_token_after = _2amodule_2a["first-code-token-after"]
 end
+local function code_before_comment_step(before, prior, line_number, comment_token)
+  if ((prior.line == line_number) and (prior.col < comment_token.col) and (prior.kind == "open")) then
+    return false
+  else
+    return (before or ((prior.line == line_number) and (prior.col < comment_token.col) and not ((prior.kind == "whitespace") or (prior.kind == "newline") or (prior.kind == "comment"))))
+  end
+end
 local function code_before_comment_3f(tokens, line_number, comment_token)
   local before = false
   for _, prior in ipairs(tokens) do
-    before = (before or ((prior.line == line_number) and (prior.col < comment_token.col) and not ((prior.kind == "whitespace") or (prior.kind == "newline") or (prior.kind == "comment"))))
+    before = code_before_comment_step(before, prior, line_number, comment_token)
   end
   return before
 end

@@ -134,7 +134,9 @@
 
 (defn- parse-lint-args
   [args]
-  (let [result              {:all false :base nil :changed false :format "text" :format-seen false :paths []} state               (lint-state args 2 result) (final-state error) (parse-lint-loop state)]
+  (let [result              {:all false :base nil :changed false :format "text" :format-seen false :paths []}
+        state               (lint-state args 2 result)
+        (final-state error) (parse-lint-loop state)]
     (parse-lint-result final-state error)))
 
 (defn- parse-format-mode-value
@@ -147,14 +149,14 @@
   [state]
   (if state.mode
     (values nil "unknown or duplicate mode flag")
-    (values {:args   state.args :index  (+ state.index 1) :mode   (parse-format-mode-value (. state.args state.index)) :parser state.parser :paths  state.paths}
+    (values {:args state.args :index (+ state.index 1) :mode (parse-format-mode-value (. state.args state.index)) :parser state.parser :paths state.paths}
             nil)))
 
 (defn- parse-format-parser
   [state]
   (if (>= state.index (length state.args))
     (values nil "missing argument for --parser")
-    (values {:args   state.args :index  (+ state.index 2) :mode   state.mode :parser (. state.args (+ state.index 1)) :paths  state.paths}
+    (values {:args state.args :index (+ state.index 2) :mode state.mode :parser (. state.args (+ state.index 1)) :paths state.paths}
             nil)))
 
 (defn- parse-format-path
@@ -162,7 +164,7 @@
   (let [arg (. state.args state.index)]
     (if (= (string.sub arg 1 2) "--")
       (values nil (.. "unknown flag: " arg))
-      (values {:args   state.args :index  (+ state.index 1) :mode   state.mode :parser state.parser :paths  (append-path state.paths arg)}
+      (values {:args state.args :index (+ state.index 1) :mode state.mode :parser state.parser :paths (append-path state.paths arg)}
               nil))))
 
 (defn- parse-format-arg

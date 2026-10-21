@@ -133,7 +133,9 @@
 
 (defn- validate-loop
   [node]
-  (let [children (meaningful-children node) bindings (loop-bindings children) start    (loop-start bindings)]
+  (let [children (meaningful-children node)
+        bindings (loop-bindings children)
+        start    (loop-start bindings)]
     (validate-loop-body children start (validate-loop-bindings bindings []))))
 
 (defn- validate-case
@@ -145,7 +147,8 @@
 
 (defn- function-layer-valid?
   [node]
-  (let [info (function-info node) body (or (and info info.body) [])]
+  (let [info (function-info node)
+        body (or (and info info.body) [])]
     (and info
          (accumulate [state true _ child (ipairs body)]
            (and state
@@ -212,7 +215,8 @@
 
 (defn- validate-let
   [node]
-  (let [children (meaningful-children node) bindings (. children 2)]
+  (let [children (meaningful-children node)
+        bindings (. children 2)]
     (validate-let-body children (validate-let-bindings bindings []))))
 
 (defn- function-first-let?
@@ -239,7 +243,9 @@
 
 (defn validate-function-body
   [body result]
-  (let [first-let? (function-first-let? body) start (function-body-start-index first-let?) initial (function-body-initial body result first-let?)]
+  (let [first-let? (function-first-let? body)
+        start      (function-body-start-index first-let?)
+        initial    (function-body-initial body result first-let?)]
     (each [index child (ipairs body)]
       (validate-function-body-child initial start index child))
     initial))

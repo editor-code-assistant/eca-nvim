@@ -35,7 +35,7 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
   - `:paths` (default `["."]`): list of file or directory paths to scan.
   - `:exclude` (default `[]`): list of path prefixes to skip. `.git` is skipped even when it is not listed.
   - `:indent-width` (default `2`): positive integer used for continuation indentation.
-  - `:align-bindings` (default `false`): boolean. When true, align one binding/key pair per line in supported binding vectors and multi-line maps, plus one pattern/test → result clause pair per line in `case`, `match`, `case-try`, `match-try`, and multi-clause `if` forms.
+  - `:align-bindings` (default `false`): boolean. When true, split multi-pair `let`/`when-let`/`if-let`/`with-open` binding vectors one pair per line before aligning supported binding/key pairs and clauses.
   - `:builtins` (default `true`): `true`, `false`, or a map of form names to rule lists. Built-ins include rules for forms such as `fn`, `let`, `when`, and `do`.
   - `:prefix-fallbacks` (default `{"def" [[:inner 0]] "with-" [[:block 1]]}`): `false` or a map of prefixes to rule lists. The built-in prefixes are `def` and `with-`.
   - `:extensions` (default `[".fnl" ".fnlm"]`): non-empty list of strings, each starting with `.`.
@@ -43,7 +43,7 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
   - `:follow-symlinks` (default `false`): boolean. When true, follow links, write to the real target, and process each real path once.
   - `:parser` (default none): string module name for the parser. The `--parser` flag overrides this setting.
 
-Indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > built-ins > prefix fallbacks > default. The default is no special rule. By default, the formatter only changes leading indentation; with `:align-bindings true`, it also normalizes whitespace between names or keys and values. It never breaks or joins lines, so one-line forms stay one line.
+Indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > built-ins > prefix fallbacks > default. The default is no special rule. By default, the formatter only changes leading indentation; with `:align-bindings true`, it also normalizes whitespace between names or keys and values and splits supported multi-pair binding vectors across lines.
 
 For example, the repository configuration contains:
 
@@ -74,7 +74,7 @@ The argument vector must start below the name, with a docstring allowed between 
 
 `make style` runs `scripts/fennel-extras lint` with no selection flag by default, checking all configured files without requiring Git. Set `STYLE_FLAGS=--changed` to check changed forms and files against `HEAD`, or `STYLE_FLAGS="--base <ref>"` to use another Git base. `--all` is an explicit alias for the no-selection mode; `--changed` and `--all` cannot be combined; `--all` and `--base` cannot be combined. Explicit paths restrict discovery in any mode. Add `--format json` for JSON Lines output.
 
-The fifteen rules are:
+The seventeen rules are:
 
 - `module-style` (error): non-spec files use the module style.
 - `spec-macro-import` (error): specs import `deftest`, `testing`, and `is` from `spec.eca.macros`.
@@ -85,6 +85,8 @@ The fifteen rules are:
 - `if-without-else` (warning): `(if test then)` and `(if test then nil)` are written as `when`.
 - `control-layout` (warning): control forms span several lines only when they are the sole expression of a body.
 - `unused-and-or` (warning): discarded `and`/`or` results in statement bodies use `when`.
+- `binding-per-line` (warning): multi-pair `let`/`when-let`/`if-let`/`with-open` binding vectors put each pair on its own line.
+- `call-data-arg` (warning): source calls move multi-line map/vector literals into a `let` binding.
 - `defn-args-newline` (warning): `defn` and `defn-` argument vectors start on the line below the function name.
 - `no-mutation` (warning): source files do not use `var`, `set`, or `while`; return new values instead.
 - `function-shape` (warning): bodies of `defn`/`defn-`/`fn`/`lambda`/`λ` use an optional first `let` with leaf values, then expressions that are leaves or one layer; move deeper code into named private functions.

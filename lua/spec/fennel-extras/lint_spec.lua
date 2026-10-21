@@ -2834,16 +2834,357 @@ local function _360_()
 end
 require("plenary.busted").describe("no-mutation-exclusions", _360_)
 local function _362_()
-  local source = "(defn f [] (let [a (set x 1)] (set y 2)))"
-  local path = "fnl/app.fnl"
-  local rules = {["module-style"] = "off", ["defn-args-newline"] = "off"}
-  local baseline = check_context(source, {path = path, rules = rules})
-  local form = first_finding_form(baseline, "no-mutation")
-  local remaining = check_context(source, {path = path, rules = rules, exclusions = {{rule = "no-mutation", form = form, reason = "intentional"}}})
+  local function _363_()
+    local source = "(defn f [] (let [a (set x 1)] (set y 2)))"
+    local path = "fnl/app.fnl"
+    local rules = {["module-style"] = "off", ["defn-args-newline"] = "off"}
+    local baseline = check_context(source, {path = path, rules = rules})
+    local form = first_finding_form(baseline, "no-mutation")
+    local remaining = check_context(source, {path = path, rules = rules, exclusions = {{rule = "no-mutation", form = form, reason = "intentional"}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #remaining
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("an exclusion for one nested mutation leaves the other finding", _363_)
+end
+require("plenary.busted").describe("no-mutation-nested-exclusion", _362_)
+local function findings_for_named_rule(source, path, rule, rules)
+  local result = check_source(source, path, rules)
+  if (result["module-missing"] or result["value-nil?"]) then
+    return result
+  else
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, finding in ipairs(result) do
+      local val_28_
+      if (finding.rule == rule) then
+        val_28_ = finding
+      else
+        val_28_ = nil
+      end
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    return tbl_26_
+  end
+end
+local function safe_findings_for_named_rule(source, path, rule, rules)
+  local ok, result
+  local function _367_()
+    return findings_for_named_rule(source, path, rule, rules)
+  end
+  ok, result = pcall(_367_)
+  local _368_
+  if ok then
+    _368_ = #result
+  else
+    _368_ = -1
+  end
+  return {ok = ok, count = _368_}
+end
+local function _370_()
+  local function _371_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_named_rule("(defn f\n  []\n  (let [a 1 b 2]\n    a))", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off", ["multiline-layout"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("flags multiple let bindings sharing one line", _371_)
+  local function _372_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("(let [a 1\n      b 2]\n  a)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off", ["multiline-layout"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("accepts one binding pair per line", _372_)
+  local function _373_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("(let [a 1]\n  a)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("accepts a single binding pair", _373_)
+  local function _374_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("(each [k v (pairs t)]\n  k)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("does not apply to each bindings", _374_)
+  local function _375_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_named_rule("(let [a 1 b 2\n      c 3]\n  a)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("reports one binding-per-line finding for a mixed multiline vector", _375_)
+  local function _376_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 3
+    local actual_7_auto = #findings_for_named_rule("(when-let [a 1 b 2] a)\n(if-let [a 1 b 2] a b)\n(with-open [a 1 b 2] a)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("applies to when-let if-let and with-open", _376_)
+  local function _377_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_named_rule("(let [a 1 b 2]\n  a)", "fnl/spec/app_spec.fnl", "binding-per-line", nil)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("applies to spec files", _377_)
+  local function _378_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("'(let [a 1 b 2]\n  a)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("ignores quoted binding data", _378_)
+  local function _379_()
+    local finding = findings_for_named_rule("(let [a 1 b 2])", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})[1]
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {severity = "warning", message = "put each binding on its own line"}
+    local actual_7_auto = {severity = finding.severity, message = finding.message}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("uses the prescribed warning and message", _379_)
+  local function _380_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {"error", 0}
+    local actual_7_auto
+    local _381_
+    do
+      local finding = findings_for_named_rule("(let [a 1 b 2])", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off", ["binding-per-line"] = "error"})[1]
+      _381_ = finding.severity
+    end
+    actual_7_auto = {_381_, #findings_for_named_rule("(let [a 1 b 2])", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off", ["binding-per-line"] = "off"})}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("supports error severity and disabling", _380_)
+end
+require("plenary.busted").describe("binding-per-line", _370_)
+local function _382_()
   local assert_5_auto = require("luassert")
-  local expected_6_auto = 1
-  local actual_7_auto = #remaining
+  local expected_6_auto = {ok = true, count = 0}
+  local actual_7_auto = safe_findings_for_named_rule("(let [a nil b])", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
   assert_5_auto.same(expected_6_auto, actual_7_auto)
   return true
 end
-return require("plenary.busted").it("an exclusion for one nested mutation leaves the other finding", _362_)
+require("plenary.busted").it("skips an odd-length binding vector without crashing", _382_)
+local function _383_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {ok = true, count = 0}
+  local actual_7_auto = safe_findings_for_named_rule("(let [a 1 b 2 c])", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("skips a longer odd-length binding vector without crashing", _383_)
+local function _384_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = 0
+  local actual_7_auto = #findings_for_named_rule("(let [;; note\n      a 1\n      b 2]\n  a)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("accepts a comment-only opening binding line", _384_)
+local function _385_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = 1
+  local actual_7_auto = #findings_for_named_rule("(let [;; note\n      a 1 b 2]\n  a)", "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("flags bindings sharing a line after a comment-only opening line", _385_)
+local function _386_()
+  local source = "(let [a 1 b 2])"
+  local first = findings_for_named_rule(source, "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+  local second = findings_for_named_rule(source, "fnl/app.fnl", "binding-per-line", {["module-style"] = "off"})
+  local assert_28_auto = require("luassert")
+  local value_29_auto = ((nil ~= first[1].form) and (first[1].form == second[1].form))
+  assert_28_auto.is_truthy(value_29_auto, "(and (not= nil (. first 1 \"form\")) (= (. first 1 \"form\") (. second 1 \"form\")))")
+  return true
+end
+require("plenary.busted").it("keeps distinct identities stable across repeated linting", _386_)
+local function _387_()
+  local source = "(let [a 1 b 2])\n(let [c 3 d 4])"
+  local path = "fnl/app.fnl"
+  local rules = {["module-style"] = "off"}
+  local baseline = findings_for_named_rule(source, path, "binding-per-line", rules)
+  local context = {path = path, rules = rules, exclusions = {{rule = "binding-per-line", form = baseline[1].form, reason = "intentional"}}}
+  local result = check_context(source, context)
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = 1
+  local actual_7_auto
+  local _388_
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, finding in ipairs(result) do
+      local val_28_
+      if (finding.rule == "binding-per-line") then
+        val_28_ = finding
+      else
+        val_28_ = nil
+      end
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    _388_ = tbl_26_
+  end
+  actual_7_auto = #_388_
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("an exact exclusion suppresses only the selected binding finding", _387_)
+local function _391_()
+  local function _392_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_named_rule("(foo a {:x 1\n         :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off", ["multiline-layout"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("flags a multiline map literal passed to a plain call", _392_)
+  local function _393_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("(foo a {:x 1 :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("accepts a one-line map literal call argument", _393_)
+  local function _394_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("(let [opts {:x 1\n            :y 2}]\n  (foo a opts))", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off", ["multiline-layout"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("accepts a map bound in a let before the call", _394_)
+  local function _395_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("(foo (fn []\n  1))", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("excludes fn arguments from plain call data findings", _395_)
+  local function _396_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_named_rule("(values {:a 1\n         :b 2} nil)", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off", ["multiline-layout"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("treats values as a plain call", _396_)
+  local function _397_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_named_rule("(foo [1\n      2])", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off", ["multiline-layout"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("flags a multiline vector literal passed to a plain call", _397_)
+  local function _398_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/spec/app_spec.fnl", "call-data-arg", nil)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("does not report in spec files", _398_)
+  local function _399_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_named_rule("'(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off"})
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("ignores quoted call data", _399_)
+  local function _400_()
+    local finding = findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off", ["multiline-layout"] = "off"})[1]
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {severity = "warning", message = "move this multi-line map/vector into a let binding so the call fits on one line"}
+    local actual_7_auto = {severity = finding.severity, message = finding.message}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("uses the prescribed warning and message", _400_)
+  local function _401_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {"error", 0}
+    local actual_7_auto
+    local _402_
+    do
+      local finding = findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off", ["multiline-layout"] = "off", ["call-data-arg"] = "error"})[1]
+      _402_ = finding.severity
+    end
+    actual_7_auto = {_402_, #findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = "off", ["multiline-layout"] = "off", ["call-data-arg"] = "off"})}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("supports error severity and disabling", _401_)
+end
+require("plenary.busted").describe("call-data-arg", _391_)
+local function _403_()
+  local source = "(foo {:x 1\n      :y 2})"
+  local rules = {["module-style"] = "off", ["multiline-layout"] = "off"}
+  local first = findings_for_named_rule(source, "fnl/app.fnl", "call-data-arg", rules)
+  local second = findings_for_named_rule(source, "fnl/app.fnl", "call-data-arg", rules)
+  local assert_28_auto = require("luassert")
+  local value_29_auto = ((nil ~= first[1].form) and (first[1].form == second[1].form))
+  assert_28_auto.is_truthy(value_29_auto, "(and (not= nil (. first 1 \"form\")) (= (. first 1 \"form\") (. second 1 \"form\")))")
+  return true
+end
+require("plenary.busted").it("keeps identities stable across repeated linting", _403_)
+local function _404_()
+  local source = "(foo {:x 1\n      :y 2})\n(bar {:a 1\n      :b 2})"
+  local path = "fnl/app.fnl"
+  local rules = {["module-style"] = "off", ["multiline-layout"] = "off"}
+  local baseline = findings_for_named_rule(source, path, "call-data-arg", rules)
+  local context = {path = path, rules = rules, exclusions = {{rule = "call-data-arg", form = baseline[1].form, reason = "intentional"}}}
+  local result = check_context(source, context)
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = 1
+  local actual_7_auto
+  local _405_
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, finding in ipairs(result) do
+      local val_28_
+      if (finding.rule == "call-data-arg") then
+        val_28_ = finding
+      else
+        val_28_ = nil
+      end
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    _405_ = tbl_26_
+  end
+  actual_7_auto = #_405_
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+return require("plenary.busted").it("an exact exclusion suppresses the selected call finding", _404_)

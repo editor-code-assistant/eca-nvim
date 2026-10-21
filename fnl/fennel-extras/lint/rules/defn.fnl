@@ -33,21 +33,25 @@
 
 (defn- parameter-vector
   [node]
-  (let [children (meaningful-children node) index    (parameter-index children)]
+  (let [children (meaningful-children node)
+        index    (parameter-index children)]
     (. children index)))
 
 (defn- invalid-layout?
   [node]
-  (let [children (meaningful-children node) name     (. children 2) args     (parameter-vector node)]
+  (let [children (meaningful-children node)
+        name     (. children 2)
+        args     (parameter-vector node)]
     (and name
          args
          (<= args.open.line name.line))))
 
 (defn- finding-form
   [path forms node]
-  (let [existing (form-for-node forms node nil) base     (or existing (nearest-form forms node) {:form path})]
+  (let [existing (form-for-node forms node nil)
+        base     (or existing (nearest-form forms node) {:form path})]
     (or existing
-        {:line     node.open.line :col      node.open.col :end-line node.close.line :end-col  (+ node.close.col 1) :form     (.. base.form " > defn-args-newline") :node     node})))
+        {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form (.. base.form " > defn-args-newline") :node node})))
 
 (defn- add-finding
   [findings path policy node form]

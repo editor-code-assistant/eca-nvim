@@ -163,10 +163,12 @@ local function json_string_field(name, value)
   return json_field(name, json_string(value))
 end
 local function finding_json(finding)
-  return table.concat({json_string_field("kind", finding.kind), json_string_field("path", finding.path), json_field("line", tostring(finding.line)), json_field("col", tostring(finding.col)), json_field("end-line", tostring(finding["end-line"])), json_field("end-col", tostring(finding["end-col"])), json_string_field("severity", finding.severity), json_string_field("rule", finding.rule), json_string_field("form", finding.form), json_string_field("message", finding.message)}, ",")
+  local fields = {json_string_field("kind", finding.kind), json_string_field("path", finding.path), json_field("line", tostring(finding.line)), json_field("col", tostring(finding.col)), json_field("end-line", tostring(finding["end-line"])), json_field("end-col", tostring(finding["end-col"])), json_string_field("severity", finding.severity), json_string_field("rule", finding.rule), json_string_field("form", finding.form), json_string_field("message", finding.message)}
+  return table.concat(fields, ",")
 end
 local function stale_json(finding)
-  return table.concat({json_string_field("kind", finding.kind), json_string_field("path", finding.path), json_field("line", tostring(finding.line)), json_field("col", tostring(finding.col)), json_string_field("severity", finding.severity), json_string_field("rule", finding.rule), json_string_field("form", finding.form), json_string_field("message", finding.message)}, ",")
+  local fields = {json_string_field("kind", finding.kind), json_string_field("path", finding.path), json_field("line", tostring(finding.line)), json_field("col", tostring(finding.col)), json_string_field("severity", finding.severity), json_string_field("rule", finding.rule), json_string_field("form", finding.form), json_string_field("message", finding.message)}
+  return table.concat(fields, ",")
 end
 local function diagnostic_json(finding)
   if (finding.kind == "finding") then

@@ -18,6 +18,8 @@ local layout_rule = require("fennel-extras.lint.rules.layout")
 local control_rule = require("fennel-extras.lint.rules.control")
 local discard_rule = require("fennel-extras.lint.rules.discard")
 local when_rule = require("fennel-extras.lint.rules.when")
+local binding_rule = require("fennel-extras.lint.rules.binding")
+local call_rule = require("fennel-extras.lint.rules.call")
 local shape_rule = require("fennel-extras.lint.rules.shape")
 local shape_leaf = require("fennel-extras.lint.rules.shape.leaf")
 local defaults_map = registry["defaults-map"]
@@ -125,7 +127,9 @@ local function check_result(path, forms, policy, source, max_code_lines, state)
   local findings6 = control_rule.findings(findings5, path, forms, policy, source)
   local findings7 = discard_rule.findings(findings6, path, forms, policy, source)
   local findings8 = mutation_rule.findings(findings7, path, forms, policy, source)
-  return remove_contained_function_findings(findings8)
+  local findings9 = binding_rule.findings(findings8, path, forms, policy, source)
+  local findings10 = call_rule.findings(findings9, path, forms, policy, source)
+  return remove_contained_function_findings(findings10)
 end
 local check
 do

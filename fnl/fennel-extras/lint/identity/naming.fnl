@@ -38,7 +38,9 @@
 
 (defn- head-name
   [node]
-  (let [children (meaningful-children node) head     (symbol-text (. children 1)) name     (symbol-text (. children 2))]
+  (let [children (meaningful-children node)
+        head     (symbol-text (. children 1))
+        name     (symbol-text (. children 2))]
     (if (and head name)
       (values head name)
       (values head nil))))
@@ -60,7 +62,9 @@
 
 (defn local-fn?
   [node]
-  (let [children       (meaningful-children node) value          (. children 3) value-children (local-fn-value-children value)]
+  (let [children       (meaningful-children node)
+        value          (. children 3)
+        value-children (local-fn-value-children value)]
     (= "fn" (symbol-text (. value-children 1)))))
 
 (defn- local-named-segment
@@ -132,7 +136,7 @@
 (defn- meaningful-index-state
   [state child-index index child]
   (let [ordinal (advance-meaningful-index state.ordinal child-index index child)]
-    {:ordinal ordinal :result  (index-result child-index index ordinal state.result)}))
+    {:ordinal ordinal :result (index-result child-index index ordinal state.result)}))
 
 (defn- meaningful-index-result
   [children child-index]
@@ -217,7 +221,7 @@
 (defn identity-form
   [path node]
   (let [(end-line end-col) (node-end node)]
-    {:form     path :line     node.open.line :col      node.open.col :end-line end-line :end-col  end-col :node     node}))
+    {:form path :line node.open.line :col node.open.col :end-line end-line :end-col end-col :node node}))
 
 (defn- top-level-path
   [state]
@@ -226,7 +230,8 @@
 
 (defn- anonymous-path
   [node state]
-  (let [kind    (anonymous-kind node) ordinal (+ (or (. state.ordinals kind) 0) 1)]
+  (let [kind    (anonymous-kind node)
+        ordinal (+ (or (. state.ordinals kind) 0) 1)]
     (values (append-path state.ancestor (.. kind "#" ordinal)) (core.assoc state :ordinals (core.assoc state.ordinals kind ordinal)))))
 
 (defn- node-path-without-segment

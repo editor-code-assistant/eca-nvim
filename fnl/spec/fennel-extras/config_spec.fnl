@@ -338,6 +338,12 @@
   (testing "accepts the no-mutation lint rule from parsed Fennel"
     (is (= {:lint {:rules {"no-mutation" "warning"}}}
            (parse-value "{:lint {:rules {\"no-mutation\" :warning}}}"))))
+  (testing "accepts the binding-per-line lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"binding-per-line" "warning"}}}
+           (parse-value "{:lint {:rules {\"binding-per-line\" :warning}}}"))))
+  (testing "accepts the call-data-arg lint rule from parsed Fennel"
+    (is (= {:lint {:rules {"call-data-arg" "warning"}}}
+           (parse-value "{:lint {:rules {\"call-data-arg\" :warning}}}"))))
   (testing "accepts the defn-args-newline lint rule from parsed Fennel"
     (is (= {:lint {:rules {"defn-args-newline" "error"}}}
            (parse-value "{:lint {:rules {\"defn-args-newline\" :error}}}"))))
@@ -517,7 +523,9 @@
                                "no-mutation"         "warning"
                                "file-size"           "warning"
                                "core-require"        "off"
-                               "unused-and-or"       "warning"}
+                               "unused-and-or"       "warning"
+                               "binding-per-line"    "warning"
+                               "call-data-arg"       "warning"}
               :max-code-lines 300
               :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}
              (if (. config :module-missing)
