@@ -16,7 +16,9 @@
 
 (defn module-finding
   [path forms policy module-ok]
-  (if (and (not (spec-file? path)) (enabled? policy "module-style") (not module-ok))
+  (if (and (not (spec-file? path policy.spec-files policy.matcher))
+           (enabled? policy "module-style")
+           (not module-ok))
     [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1 :severity (rule-severity policy "module-style") :rule "module-style" :form (.. path " > file") :message "file must use the module style" :node nil}]
     []))
 (defn- core-finding-form
@@ -42,16 +44,17 @@
        (literal-text (. require-children 2))))
 
 (defn- canonical-core-require?
-  [head children require-children]
+  [head children require-children binding]
   (or (and (= head "local")
            (= (length children) 3)
-           (= (symbol-text (. children 2)) "core")
+           (= (symbol-text (. children 2)) binding)
            (= (length require-children) 2))
       (and (= head "require") (= (length children) 2))))
 
 (defn- maybe-add-core-require-finding
   [findings path form head children node policy target canonical]
-  (when (and (= target "eca.nfnl.core") (not canonical))
+  (when (and (= target (. (registry.rule-options policy "core-require") :module))
+             (not canonical))
     (add-core-finding findings path form head children node policy)))
 
 (defn- core-require-children
@@ -66,5 +69,6 @@
         require-form     (core-require-form head children node)
         require-children (core-require-children require-form)
         target           (core-require-target require-form require-children)
-        canonical        (canonical-core-require? head children require-children)]
+        binding          (. (registry.rule-options policy "core-require") :binding)
+        canonical        (canonical-core-require? head children require-children binding)]
     (maybe-add-core-require-finding findings path form head children node policy target canonical)))

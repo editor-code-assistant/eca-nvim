@@ -15,8 +15,16 @@ local nearest_form = ast["nearest-form"]
 local finding = registry.finding
 local enabled_3f = registry["enabled?"]
 local rule_severity = registry["rule-severity"]
-local function defn_node_3f(node)
-  return ((node.kind == "list") and ((list_head(node) == "defn") or (list_head(node) == "defn-")))
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
+local function defn_node_3f(node, policy)
+  local heads = registry["rule-options"](policy, "defn-args-newline").forms
+  return ((node.kind == "list") and contains_3f(heads, list_head(node), 1))
 end
 local function docstring_3f(children)
   local third = children[3]
@@ -58,8 +66,14 @@ end
 local function append_node_finding(findings, path, forms, policy, node)
   return append_finding(findings, path, forms, policy, node)
 end
+local function defn_nodes(source, policy)
+  local function _4_(node)
+    return defn_node_3f(node, policy)
+  end
+  return mutation["executable-nodes"](source, _4_)
+end
 local function append_node_findings(findings, path, forms, policy, source)
-  for _, node in ipairs(mutation["executable-nodes"](source, defn_node_3f)) do
+  for _, node in ipairs(defn_nodes(source, policy)) do
     append_node_finding(findings, path, forms, policy, node)
   end
   return findings

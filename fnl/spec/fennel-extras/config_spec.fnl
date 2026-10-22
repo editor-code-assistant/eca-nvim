@@ -95,6 +95,16 @@
         {:value-nil? (and ok (= nil policy))
          :message    (and ok (= nil policy) err (. err :message))}))))
 
+(defn- lint-policy-value
+  [value]
+  (let [config (load-config)]
+    (if (. config :module-missing)
+      config
+      (let [(ok policy err) (pcall (fn [] (config.lint-policy value)))]
+        (if (and ok policy)
+          policy
+          {:error (and err (. err :message))})))))
+
 (defn- unknown-lint-key-summary
   [value]
   (let [config (load-config)]
@@ -302,6 +312,53 @@
     (is (= "align-bindings must be a boolean"
            (validation-error-message "{:align-bindings \"yes\"}")))))
 
+(deftest alignment-configuration
+  (testing "accepts an alignment table"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:alignment {:maps true}}))))
+  (testing "rejects a boolean alignment value with the exact validation message"
+    (is (= "alignment must be a table"
+           (validation-error-message "{:alignment true}"))))
+  (testing "rejects a string alignment value with the exact validation message"
+    (is (= "alignment must be a table"
+           (validation-error-message "{:alignment \"yes\"}"))))
+  (testing "rejects an unknown alignment key with the key in the error"
+    (is (= "unknown alignment key: nope"
+           (validation-error-message "{:alignment {:nope true}}"))))
+  (testing "rejects a non-boolean alignment toggle with the exact validation message"
+    (is (= "alignment key maps must be a boolean"
+           (validation-error-message "{:alignment {:maps 1}}"))))
+  (testing "rejects a non-list binding-forms value with the exact validation message"
+    (is (= "alignment key binding-forms must be a list of strings"
+           (validation-error-message "{:alignment {:binding-forms \"let\"}}"))))
+  (testing "rejects a map binding-forms value with the exact validation message"
+    (is (= "alignment key binding-forms must be a list of strings"
+           (validation-error-message "{:alignment {:binding-forms {:foo \"bar\"}}}"))))
+  (testing "rejects a non-string clause form with the exact validation message"
+    (is (= "alignment key clause-forms must be a list of strings"
+           (validation-error-message "{:alignment {:clause-forms [1]}}"))))
+  (testing "rejects a map clause-forms value with the exact validation message"
+    (is (= "alignment key clause-forms must be a list of strings"
+           (validation-error-message "{:alignment {:clause-forms {:foo \"bar\"}}}"))))
+  (testing "expands align-bindings true into all alignment toggles"
+    (let [config (load-config)]
+      (is (= {:bindings         true
+              :maps             true
+              :clauses          true
+              :split-bindings   true
+              :collapse-padding true}
+             (. (config.validate {:align-bindings true}) :alignment)))))
+  (testing "explicit alignment toggles override the shorthand expansion"
+    (let [config (load-config)
+          value  {:align-bindings true
+                  :alignment      {:split-bindings false}}]
+      (is (= {:bindings         true
+              :maps             true
+              :clauses          true
+              :split-bindings   false
+              :collapse-padding true}
+             (. (config.validate value) :alignment))))))
+
 (defn- formatter-projection
   [config]
   {:indents          (. config :indents)
@@ -497,6 +554,60 @@
   (testing "rejects duplicate lint exclusions"
     (is (= "lint exclusion 2: duplicate of exclusion 1"
            (validation-error-message "{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"one\"} {:rule \"if-branch-call\" :form \"x\" :reason \"two\"}]}}")))))
+(testing "accepts duplicate rule exclusions when their line ranges differ"
+  (is (= {:value? true :has-message false}
+         (validate-summary {:lint {:exclusions [{:rule  "if-branch-call"
+                                                 :lines {:from 1 :to 2}}
+                                                {:rule  "if-branch-call"
+                                                 :lines {:from 3 :to 4}}]}}))))
+(testing "accepts general exclusions when their rule lists differ"
+  (is (= {:value? true :has-message false}
+         (validate-summary {:lint {:exclusions [{:rules ["if-branch-call" "module-style"]
+                                                 :line  1}
+                                                {:rules ["if-branch-call" "no-mutation"]
+                                                 :line  1}]}}))))
+
+(deftest exclusion-shapes
+  (testing "accepts per-rule exclusions without a rule selector"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:lint {:rules {"if-without-else" {:severity   "warning"
+                                                                :exclusions [{:pattern "^fnl/" :line 1}]}}}}))))
+  (testing "rejects a rule selector inside a per-rule exclusion"
+    (is (not= nil
+              (validation-error-message "{:lint {:rules {\"if-without-else\" {:severity :warning :exclusions [{:rule \"if-without-else\" :line 1}]}}}}"))))
+  (testing "accepts a general exclusion with a rule selector"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:lint {:exclusions [{:rule "if-without-else" :line 1}]}}))))
+  (testing "accepts a general exclusion with multiple rule selectors"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:lint {:exclusions [{:rules ["if-without-else" "module-style"] :line 1}]}}))))
+  (testing "accepts a general exclusion without a rule selector"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:lint {:exclusions [{:line 1}]}}))))
+  (testing "rejects both rule selector forms together"
+    (is (not= nil
+              (validation-error-message "{:lint {:exclusions [{:rule \"if-without-else\" :rules [\"module-style\"] :line 1}]}}"))))
+  (testing "rejects an unknown exclusion key"
+    (is (not= nil
+              (validation-error-message "{:lint {:exclusions [{:wat true :line 1}]}}"))))
+  (testing "rejects an exclusion without a selector"
+    (is (not= nil
+              (validation-error-message "{:lint {:exclusions [{:rule \"if-without-else\"}]}}"))))
+  (testing "rejects line and lines together"
+    (is (not= nil
+              (validation-error-message "{:lint {:exclusions [{:line 1 :lines {:from 1 :to 2}}]}}"))))
+  (testing "rejects invalid line ranges"
+    (is (not= nil
+              (validation-error-message "{:lint {:exclusions [{:lines {:from 3 :to 2}}]}}"))))
+  (testing "accepts an omitted reason"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:lint {:exclusions [{:line 1}]}}))))
+  (testing "rejects a blank reason"
+    (is (not= nil
+              (validation-error-message "{:lint {:exclusions [{:line 1 :reason \"  \"}]}}"))))
+  (testing "parses doubled backslashes in a regex selector"
+    (is (= {:lint {:exclusions [{:pattern "\\d\\+" :line 1}]}}
+           (parse-value "{:lint {:exclusions [{:pattern \\\"\\\\d\\\\+\\\" :line 1}]}}")))))
 
 (deftest lint-policy
   (testing "returns a validation error for a malformed lint rule key"
@@ -507,44 +618,156 @@
            (lint-policy-summary {:lint {:exclusions [{:rule   "if-branch-call"
                                                       :form   "x"
                                                       :reason ""}]}}))))
-  (testing "normalizes lint defaults and overrides without formatter keys"
-    (let [config (load-config)]
-      (is (= {:rules          {"module-style"        "error"
-                               "spec-macro-import"   "error"
-                               "spec-no-module"      "error"
-                               "spec-direct-require" "error"
-                               "one-is-per-testing"  "error"
-                               "if-branch-call"      "warning"
-                               "if-without-else"     "warning"
-                               "control-layout"      "warning"
-                               "defn-args-newline"   "warning"
-                               "multiline-layout"    "warning"
-                               "function-shape"      "warning"
-                               "no-mutation"         "warning"
-                               "file-size"           "warning"
+  (testing "normalizes lint defaults to every rule off without formatter keys"
+    (let [policy (lint-policy-value {:lint {}})]
+      (is (= {:rules          {"module-style"        "off"
+                               "spec-macro-import"   "off"
+                               "spec-no-module"      "off"
+                               "spec-direct-require" "off"
+                               "one-is-per-testing"  "off"
+                               "if-branch-call"      "off"
+                               "if-without-else"     "off"
+                               "control-layout"      "off"
+                               "defn-args-newline"   "off"
+                               "multiline-layout"    "off"
+                               "function-shape"      "off"
+                               "no-mutation"         "off"
+                               "file-size"           "off"
                                "core-require"        "off"
-                               "unused-and-or"       "warning"
-                               "binding-per-line"    "warning"
-                               "call-data-arg"       "warning"}
+                               "unused-and-or"       "off"
+                               "binding-per-line"    "off"
+                               "call-data-arg"       "off"}
+              :options        (. policy :options)
+              :spec-files     ["^fnl/spec/"]
               :max-code-lines 300
-              :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}
+              :exclusions     []}
+             policy))))
+  (testing "normalizes a configured max-code-lines value"
+    (let [config (load-config)]
+      (is (= 10
+             (if (. config :module-missing)
+               nil
+               (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 10}})))]
+                 (and ok
+                      (. value :max-code-lines))))))))
+
+  (deftest lint-policy-opt-in
+    (testing "a rule map accepts severity and options"
+      (is (= {:rules   {"file-size" "warning"}
+              :options {"file-size" {:applies-to     "source"
+                                     :max-code-lines 25}}}
+             (let [policy (lint-policy-value {:lint {:rules {"file-size" {:severity "warning"
+                                                                          :options  {:max-code-lines 25}}}}})]
+               (if (. policy :error)
+                 policy
+                 {:rules   {"file-size" (. (. policy :rules) "file-size")}
+                  :options {"file-size" (. (. policy :options) "file-size")}})))))
+    (testing "a rule map without severity is a configuration error"
+      (is (= "lint rule file-size severity must be error, warning, or off"
+             (validation-error-message "{:lint {:rules {\"file-size\" {:options {:max-code-lines 25}}}}}"))))
+    (testing "unknown rule map keys are configuration errors"
+      (is (= "lint rule file-size: unknown key extra"
+             (validation-error-message "{:lint {:rules {\"file-size\" {:severity :warning :extra true}}}}"))))
+    (testing "unknown options are rejected even when the rule is off"
+      (is (= "unknown option nope for lint rule file-size"
+             (validation-error-message "{:lint {:rules {\"file-size\" {:severity :off :options {:nope 1}}}}}"))))
+    (testing "legacy and nested max-code-lines values must agree"
+      (is (= "lint max-code-lines conflicts with file-size option max-code-lines"
+             (validation-error-message "{:lint {:max-code-lines 10 :rules {\"file-size\" {:severity :warning :options {:max-code-lines 20}}}}}"))))
+    (testing "equal legacy and nested max-code-lines values are accepted"
+      (is (= {:value? true :has-message false}
+             (validate-summary (parse-value "{:lint {:max-code-lines 10 :rules {\"file-size\" {:severity :warning :options {:max-code-lines 10}}}}}")))))))
+
+(deftest repo-policy
+  (testing "repository config enables all seventeen rules with approved severities"
+    (let [config (load-config)
+          path   (.. (vim.fn.getcwd) "/.fnl-extras.fnl")]
+      (is (= {"module-style"        "error"
+              "spec-macro-import"   "error"
+              "spec-no-module"      "error"
+              "spec-direct-require" "error"
+              "one-is-per-testing"  "error"
+              "if-branch-call"      "warning"
+              "if-without-else"     "warning"
+              "control-layout"      "warning"
+              "defn-args-newline"   "warning"
+              "multiline-layout"    "warning"
+              "function-shape"      "warning"
+              "no-mutation"         "warning"
+              "file-size"           "warning"
+              "core-require"        "error"
+              "unused-and-or"       "warning"
+              "binding-per-line"    "warning"
+              "call-data-arg"       "warning"}
              (if (. config :module-missing)
                config
-               (let [(ok value) (pcall (fn []
-                                         (config.lint-policy {:lint {:max-code-lines 300
-                                                                     :rules          {"core-require" "off"}
-                                                                     :exclusions     [{:rule "if-branch-call" :form "x" :reason "why"}]}})))]
-                 (if ok
-                   value
-                   {:missing-lint-policy true}))))))))
-(testing "normalizes a configured max-code-lines value"
-  (let [config (load-config)]
-    (is (= 10
-           (if (. config :module-missing)
-             nil
-             (let [(ok value) (pcall (fn [] (config.lint-policy {:lint {:max-code-lines 10}})))]
-               (and ok
-                    (. value :max-code-lines))))))))
+               (let [(ok loaded) (pcall (fn [] (config.load path)))]
+                 (if (not ok)
+                   {:load-error true}
+                   (let [policy (config.lint-policy loaded)]
+                     (. policy :rules))))))))))
+
+(deftest lint-rule-option-validation
+  (testing "rejects a string option with the wrong type"
+    (is (= "macro-module must be a string"
+           (validation-error-message "{:lint {:rules {\"module-style\" {:severity :warning :options {:macro-module 1}}}}}"))))
+  (testing "rejects a list option with the wrong type"
+    (is (= "required-macros must be a list of strings"
+           (validation-error-message "{:lint {:rules {\"module-style\" {:severity :warning :options {:required-macros \"module\"}}}}}"))))
+  (testing "rejects a positive integer option with the wrong type"
+    (is (= "count must be a positive integer"
+           (validation-error-message "{:lint {:rules {\"one-is-per-testing\" {:severity :warning :options {:count 0}}}}}"))))
+  (testing "rejects a boolean option with the wrong type"
+    (is (= "flag-nil-else must be a boolean"
+           (validation-error-message "{:lint {:rules {\"if-without-else\" {:severity :warning :options {:flag-nil-else \"yes\"}}}}}"))))
+  (testing "rejects an unknown option with the rule and option names"
+    (is (= "unknown option nope for lint rule module-style"
+           (validation-error-message "{:lint {:rules {\"module-style\" {:severity :off :options {:nope true}}}}}"))))
+  (testing "rejects an invalid applies-to value"
+    (is (= "applies-to must be source, spec, or all"
+           (validation-error-message "{:lint {:rules {\"module-style\" {:severity :off :options {:applies-to :tests}}}}}"))))
+  (testing "rejects spec-files when it is not a list"
+    (is (= "spec-files must be a list of strings"
+           (validation-error-message "{:lint {:spec-files \"^test/\"}}"))))
+  (testing "normalizes defaults for every rule option"
+    (is (= {:spec-files     ["^fnl/spec/"]
+            :rules          {"module-style"        "off"
+                             "spec-macro-import"   "off"
+                             "spec-no-module"      "off"
+                             "spec-direct-require" "off"
+                             "one-is-per-testing"  "off"
+                             "if-branch-call"      "off"
+                             "if-without-else"     "off"
+                             "control-layout"      "off"
+                             "unused-and-or"       "off"
+                             "defn-args-newline"   "off"
+                             "function-shape"      "off"
+                             "no-mutation"         "off"
+                             "multiline-layout"    "off"
+                             "file-size"           "off"
+                             "core-require"        "off"
+                             "binding-per-line"    "off"
+                             "call-data-arg"       "off"}
+            :options        {"module-style"        {:applies-to :source :macro-module "eca.nfnl.macros.aniseed" :required-macros ["module" "def" "defn" "defn-"]}
+                             "spec-macro-import"   {:applies-to :spec :macro-module "spec.eca.macros" :required-macros ["deftest" "testing" "is"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+                             "spec-no-module"      {:applies-to :spec :module-form "module"}
+                             "spec-direct-require" {:applies-to :spec :forbidden-modules ["plenary.busted" "luassert"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+                             "one-is-per-testing"  {:applies-to :all :testing-form "testing" :assertion-form "is" :count 1}
+                             "if-branch-call"      {:applies-to :all :if-forms ["if"]}
+                             "if-without-else"     {:applies-to :all :if-forms ["if"] :flag-nil-else true}
+                             "control-layout"      {:applies-to :all :control-forms ["if" "when" "and" "or" "case" "match"]}
+                             "unused-and-or"       {:applies-to :all :forms ["and" "or"]}
+                             "defn-args-newline"   {:applies-to :all :forms ["defn" "defn-"]}
+                             "function-shape"      {:applies-to :all :function-forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                             "no-mutation"         {:applies-to :source :forms ["var" "set" "while"]}
+                             "multiline-layout"    {:applies-to :all :clause-forms ["case" "match" "case-try" "match-try"] :binding-forms ["let" "when-let" "if-let" "with-open"]}
+                             "file-size"           {:applies-to :source :max-code-lines 300}
+                             "core-require"        {:applies-to :all :module "eca.nfnl.core" :binding "core"}
+                             "binding-per-line"    {:applies-to :all :forms ["let" "when-let" "if-let" "with-open"]}
+                             "call-data-arg"       {:applies-to :source :ignore-forms []}}
+            :max-code-lines 300
+            :exclusions     []}
+           (lint-policy-value {:lint {}})))))
 
 (deftest formatter-isolation
   (testing "lint configuration does not change formatter output"

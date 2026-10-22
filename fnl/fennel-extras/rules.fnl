@@ -2,12 +2,14 @@
 
 (module fennel-extras.rules)
 
+(local alignment (require :fennel-extras.indent.settings))
+
 (local built-in-rules
        {:fn [[:inner 0]] :lambda [[:inner 0]] :macro [[:inner 0]] :let [[:block 1]] :when [[:block 1]] :when-let [[:block 1]] :if-let [[:block 1]] :each [[:block 1]] :for [[:block 1]] :icollect [[:block 1]] :collect [[:block 1]] :accumulate [[:block 1]] :case [[:block 1]] :match [[:block 1]] :case-try [[:block 1]] :match-try [[:block 1]] :while [[:block 1]] :with-open [[:block 1]] :do [[:block 0]]})
 
 (local prefix-rules {:def [[:inner 0]] :with- [[:block 1]]})
 (local allowed-keys
-       {:indents true :format-as true :indent-patterns true :indent-width true :builtins true :prefix-fallbacks true :align-bindings true})
+       {:indents true :format-as true :indent-patterns true :indent-width true :builtins true :prefix-fallbacks true :align-bindings true :alignment true})
 (var resolve-name nil)
 (var alias-rule nil)
 
@@ -208,6 +210,15 @@
     (when (and (not= align-bindings nil) (not= (type align-bindings) :boolean))
       (error "align-bindings must be a boolean"))))
 
+(defn- validate-alignment
+  [config]
+  (alignment.validate (. config :alignment)))
+
+(defn- validate-alignment-config
+  [config]
+  (or (validate-align-bindings config)
+      (validate-alignment config)))
+
 (defn- validate-config-table
   [config]
   (var failure nil)
@@ -225,7 +236,7 @@
       (when (and (not= width nil) (not (and (integer? width) (> width 0))))
         (set failure (error "indent-width must be a positive integer")))))
   (when (= failure nil)
-    (set failure (validate-align-bindings config)))
+    (set failure (validate-alignment-config config)))
   (when (= failure nil)
     (set failure (validate-custom-config config)))
   (when (= failure nil)

@@ -9,18 +9,22 @@
 (local root-forms ast.root-forms)
 (local previous-meaningful-index ast.previous-meaningful-index)
 (local list-head ast.list-head)
-(local spec-file? ast.spec-file?)
 (local form-for-node ast.form-for-node)
 (local nearest-form ast.nearest-form)
 (local finding registry.finding)
 (local enabled? registry.enabled?)
 (local rule-severity registry.rule-severity)
 
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
 (defn- mutation-head?
-  [head]
-  (or (= head "var")
-      (= head "set")
-      (= head "while")))
+  [head policy]
+  (contains? (. (registry.rule-options policy "no-mutation") :forms) head 1))
 
 (defn- mutation-mode-for-prefix
   [prefix mode]
@@ -69,11 +73,11 @@
       [])))
 
 (defn- mutation-nodes
-  [source]
+  [source policy]
   (executable-nodes source
                     (fn [node]
                       (and (= node.kind :list)
-                           (mutation-head? (list-head node))))))
+                           (mutation-head? (list-head node) policy)))))
 
 (defn- mutation-form
   [path node base ordinal]
@@ -96,12 +100,12 @@
 
 (defn- add-mutation-finding
   [findings path forms policy node ordinals]
-  (if (and (not (spec-file? path)) (enabled? policy "no-mutation"))
+  (if (enabled? policy "no-mutation")
     (append-mutation-finding findings path forms policy node ordinals)
     ordinals))
 
 (defn findings
   [findings path forms policy source]
-  (accumulate [ordinals {} _ node (ipairs (mutation-nodes source))]
+  (accumulate [ordinals {} _ node (ipairs (mutation-nodes source policy))]
     (add-mutation-finding findings path forms policy node ordinals))
   findings)

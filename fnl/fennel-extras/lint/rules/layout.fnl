@@ -14,8 +14,12 @@
 (local enabled? registry.enabled?)
 (local rule-severity registry.rule-severity)
 
-(local clause-heads {:case true :match true :case-try true :match-try true})
-(local binding-heads {:let true :when-let true :if-let true :with-open true})
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
 
 (defn- child-line
   [child]
@@ -54,20 +58,28 @@
   (icollect [index _ (ipairs children)]
     (unit children index index)))
 
+(defn- clause-units
+  [head children]
+  (if (or (= head "case") (= head "match") (= head "case-try") (= head "match-try"))
+    (pair-units children 3)
+    (ordinary-units children)))
+
 (defn- units-for-list
-  [node children]
-  (let [head (list-head node)]
+  [node children policy]
+  (let [head         (list-head node)
+        clause-forms (. (registry.rule-options policy "multiline-layout") :clause-forms)]
     (or (and (= head "if")
              (>= (length children) 5)
              (pair-units children 2))
-        (and (. clause-heads head) (pair-units children 3))
+        (and (contains? clause-forms head 1)
+             (clause-units head children))
         (ordinary-units children))))
 
 (defn- units-for-node
-  [node]
+  [node policy]
   (let [children (meaningful-children node)]
     (or (and (= node.kind :table) (pair-units children 1))
-        (and (= node.kind :list) (units-for-list node children))
+        (and (= node.kind :list) (units-for-list node children policy))
         (ordinary-units children))))
 
 (defn- offending-adjacency?
@@ -87,19 +99,20 @@
           (offending-units-step node units (+ index 1) current)))))
 
 (defn- offending-units?
-  [node]
-  (let [units (units-for-node node)]
+  [node policy]
+  (let [units (units-for-node node policy)]
     (and (> node.close.line node.open.line)
          (offending-units-step node units 2 (. units 1)))))
 
 (defn- binding-layout?
-  [node]
-  (let [children (meaningful-children node)]
-    (and (. binding-heads (list-head node))
+  [node policy]
+  (let [children      (meaningful-children node)
+        binding-forms (. (registry.rule-options policy "multiline-layout") :binding-forms)]
+    (and (contains? binding-forms (list-head node) 1)
          (accumulate [result false _ child (ipairs children)]
            (or result
                (and (= child.kind :sequence)
-                    (offending-units? (core.assoc child :kind :table))))))))
+                    (offending-units? (core.assoc child :kind :table) policy)))))))
 
 (defn- layout-container?
   [node]
@@ -114,6 +127,16 @@
       (and (= node.kind :sequence)
            (= (math.fmod (length (meaningful-children node)) 2) 0))))
 
+(defn- escaped-newline-child?
+  [child]
+  (and (= child.kind :symbol)
+       (string.find child.text "\\n" 1 true)))
+
+(defn- escaped-newline?
+  [node]
+  (accumulate [result false _ child (ipairs (or node.children []))]
+    (or result (escaped-newline-child? child))))
+
 (defn- delayed-list-argument?
   [node head]
   (let [children (meaningful-children node)
@@ -125,22 +148,31 @@
          (not= (child-line argument) node.open.line))))
 
 (defn- layout-body-result
-  [node head]
-  (if (and (= node.kind :list) (. binding-heads head))
-    (binding-layout? node)
-    (offending-units? node)))
+  [node head policy]
+  (let [binding-forms (. (registry.rule-options policy "multiline-layout") :binding-forms)]
+    (if (and (= node.kind :list) (contains? binding-forms head 1))
+      (binding-layout? node policy)
+      (offending-units? node policy))))
+
+(defn- escaped-layout?
+  [node head policy]
+  (let [options (. (registry.rule-options policy "multiline-layout"))]
+    (and (escaped-newline? node)
+         (or (contains? options.clause-forms head 1)
+             (contains? options.binding-forms head 1)))))
 
 (defn- layout-result
-  [node head]
-  (or (delayed-list-argument? node head)
-      (layout-body-result node head)))
+  [node head policy]
+  (or (escaped-layout? node head policy)
+      (delayed-list-argument? node head)
+      (layout-body-result node head policy)))
 
 (defn- layout-node?
-  [node]
+  [node policy]
   (let [head (list-head node)]
     (and (layout-container? node)
          (not (layout-excluded? node head))
-         (layout-result node head))))
+         (layout-result node head policy))))
 
 (defn- finding-form
   [path forms node ordinals]
@@ -166,9 +198,13 @@
       ordinals
       (insert-finding findings path forms policy node ordinals key))))
 
+(defn- layout-nodes
+  [source policy]
+  (mutation.executable-nodes source (fn [node] (layout-node? node policy))))
+
 (defn- append-layout-findings
   [findings path forms policy source]
-  (accumulate [ordinals {} _ node (ipairs (mutation.executable-nodes source layout-node?))]
+  (accumulate [ordinals {} _ node (ipairs (layout-nodes source policy))]
     (append-finding findings path forms policy node ordinals)))
 
 (defn findings

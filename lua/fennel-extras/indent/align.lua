@@ -6,37 +6,38 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.indent.align"]
 end
 local helpers = require("fennel-extras.indent.node")
-local function alignment_form_name_3f(head)
-  return (head and (head.kind == "symbol") and ((head.text == "let") or (head.text == "when-let") or (head.text == "if-let") or (head.text == "with-open")))
+local settings = require("fennel-extras.indent.settings")
+local function alignment_form_name_3f(head, alignment)
+  return (head and (head.kind == "symbol") and settings["binding-form?"](alignment, head.text))
 end
-local function alignment_form_3f(node, parent)
-  return (parent and (node.kind == "sequence") and (parent.kind == "list") and alignment_form_name_3f(helpers["nontrivia-children"](parent)[1]))
+local function alignment_form_3f(node, parent, alignment)
+  return (parent and (node.kind == "sequence") and (parent.kind == "list") and alignment_form_name_3f(helpers["nontrivia-children"](parent)[1], alignment))
 end
-local function clause_form_name_3f(head)
-  return (head and (head.kind == "symbol") and ((head.text == "case") or (head.text == "match") or (head.text == "case-try") or (head.text == "match-try") or (head.text == "if")))
+local function clause_form_name_3f(head, alignment)
+  return (head and (head.kind == "symbol") and settings["clause-form?"](alignment, head.text))
 end
-local function clause_form_3f(node)
-  return ((node.kind == "list") and clause_form_name_3f(helpers["nontrivia-children"](node)[1]))
+local function clause_form_3f(node, alignment)
+  return ((node.kind == "list") and clause_form_name_3f(helpers["nontrivia-children"](node)[1], alignment))
 end
-local function alignment_node_3f(node, parent)
-  return ((node.kind == "table") or alignment_form_3f(node, parent) or clause_form_3f(node))
+local function alignment_node_3f(node, parent, alignment)
+  return ((alignment.maps and (node.kind == "table")) or (alignment.bindings and alignment_form_3f(node, parent, alignment)) or (alignment.clauses and clause_form_3f(node, alignment)))
 end
 local function append_alignment_node(result, node)
   table.insert(result, node)
   return result
 end
-local function alignment_node_result(result, node, parent)
-  if alignment_node_3f(node, parent) then
+local function alignment_node_result(result, node, parent, alignment)
+  if alignment_node_3f(node, parent, alignment) then
     return append_alignment_node(result, node)
   else
     return result
   end
 end
-local function collect_alignment_nodes(node, parent, result)
-  local next_result = alignment_node_result(result, node, parent)
+local function collect_alignment_nodes(node, parent, result, alignment)
+  local next_result = alignment_node_result(result, node, parent, alignment)
   local state = next_result
   for _, child in ipairs((node.children or {})) do
-    state = ((child.text and state) or (child.children and collect_alignment_nodes(child, node, state)) or state)
+    state = ((child.text and state) or (child.children and collect_alignment_nodes(child, node, state, alignment)) or state)
   end
   return state
 end
@@ -161,8 +162,8 @@ local function clause_start_index(node)
     return 3
   end
 end
-local function clause_pair_3f(node, pair)
-  return (not clause_form_3f(node) or (pair.line > node.open.line))
+local function clause_pair_3f(node, pair, alignment)
+  return (not clause_form_3f(node, alignment) or (pair.line > node.open.line))
 end
 local function comment_on_line_3f(node, line)
   local found = false
@@ -171,21 +172,21 @@ local function comment_on_line_3f(node, line)
   end
   return found
 end
-local function usable_pair_3f(node, pair)
-  return (clause_pair_3f(node, pair) and not comment_on_line_3f(node, pair.line))
+local function usable_pair_3f(node, pair, alignment)
+  return (clause_pair_3f(node, pair, alignment) and not comment_on_line_3f(node, pair.line))
 end
-local function usable_pair_result(node, pair)
-  if usable_pair_3f(node, pair) then
+local function usable_pair_result(node, pair, alignment)
+  if usable_pair_3f(node, pair, alignment) then
     return pair
   else
     return nil
   end
 end
-local function usable_pairs(node, pairs)
+local function usable_pairs(node, pairs, alignment)
   local tbl_26_ = {}
   local i_27_ = 0
   for _, pair in ipairs(pairs) do
-    local val_28_ = usable_pair_result(node, pair)
+    local val_28_ = usable_pair_result(node, pair, alignment)
     if (nil ~= val_28_) then
       i_27_ = (i_27_ + 1)
       tbl_26_[i_27_] = val_28_
@@ -197,16 +198,16 @@ end
 local function single_line_node_3f(node)
   return (node.close and (node.open.line == node.close.line))
 end
-local function node_plan(node, pairs)
-  if single_line_node_3f(node) then
+local function node_plan(node, pairs, alignment)
+  if (alignment["collapse-padding"] and single_line_node_3f(node)) then
     return {pairs = pairs, collapse = true}
   else
     return {pairs = pairs, width = alignment_width(pairs)}
   end
 end
-local function alignment_plan_result(node, pairs)
+local function alignment_plan_result(node, pairs, alignment)
   if (#pairs > 1) then
-    return node_plan(node, pairs)
+    return node_plan(node, pairs, alignment)
   else
     return nil
   end
@@ -231,11 +232,11 @@ local function all_usable_pairs(node, pairs)
   end
   return tbl_26_
 end
-local function candidate_pairs(node, pairs)
+local function candidate_pairs(node, pairs, alignment)
   if single_line_node_3f(node) then
     return all_usable_pairs(node, pairs)
   else
-    return usable_pairs(node, pairs)
+    return usable_pairs(node, pairs, alignment)
   end
 end
 local function alignment_pairs(node, pairs)
@@ -245,26 +246,26 @@ local function alignment_pairs(node, pairs)
     return single_pairs(pairs)
   end
 end
-local function alignment_start(node)
-  if clause_form_3f(node) then
+local function alignment_start(node, alignment)
+  if clause_form_3f(node, alignment) then
     return clause_start_index(node)
   else
     return 1
   end
 end
-local function alignment_plan(node)
+local function alignment_plan(node, alignment)
   local children = helpers["nontrivia-children"](node)
-  local start = alignment_start(node)
+  local start = alignment_start(node, alignment)
   local pairs = pair_candidates(children, start, {}, node.kind)
   local aligned = alignment_pairs(node, pairs)
-  local usable = candidate_pairs(node, aligned)
-  return alignment_plan_result(node, usable)
+  local usable = candidate_pairs(node, aligned, alignment)
+  return alignment_plan_result(node, usable, alignment)
 end
-local function alignment_plans(nodes)
+local function alignment_plans(nodes, alignment)
   local tbl_26_ = {}
   local i_27_ = 0
   for _, node in ipairs(nodes) do
-    local val_28_ = alignment_plan(node)
+    local val_28_ = alignment_plan(node, alignment)
     if (nil ~= val_28_) then
       i_27_ = (i_27_ + 1)
       tbl_26_[i_27_] = val_28_
@@ -367,9 +368,9 @@ local function apply_alignment(lines, plans)
 end
 local apply
 do
-  local function apply0(output, tree)
-    local nodes = collect_alignment_nodes(tree, nil, {})
-    return apply_alignment(output, alignment_plans(nodes))
+  local function apply0(output, tree, alignment)
+    local nodes = collect_alignment_nodes(tree, nil, {}, alignment)
+    return apply_alignment(output, alignment_plans(nodes, alignment))
   end
   _2amodule_2a["apply"] = apply0
   apply = _2amodule_2a.apply

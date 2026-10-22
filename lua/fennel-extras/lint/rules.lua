@@ -41,32 +41,34 @@ do
   _2amodule_2a["defaults"] = defaults0
   defaults = _2amodule_2a.defaults
 end
-local function module_import_state(state, import_info)
-  if (import_info and (import_info.target == "eca.nfnl.macros.aniseed")) then
+local function module_import_state(state, import_info, policy)
+  local target_module = registry["rule-options"](policy, "module-style")["macro-module"]
+  if (import_info and (import_info.target == target_module)) then
     return has_module_import_3f(import_info.names)
   else
     return state["module-import"]
   end
 end
-local function spec_import_state(state, import_info)
-  if (import_info and (import_info.target == "spec.eca.macros")) then
-    return has_all_3f(import_info.names)
+local function spec_import_state(state, import_info, policy)
+  local target_module = registry["rule-options"](policy, "spec-macro-import")["macro-module"]
+  if (import_info and (import_info.target == target_module)) then
+    return has_all_3f(import_info.names, registry["rule-options"](policy, "spec-macro-import")["required-macros"])
   else
     return state["spec-import"]
   end
 end
-local function update_check_state(state, import_info, head)
-  return {["module-import"] = module_import_state(state, import_info), ["module-form"] = (state["module-form"] or (head == "module")), ["spec-import"] = spec_import_state(state, import_info)}
+local function update_check_state(state, import_info, head, policy)
+  return {["module-import"] = module_import_state(state, import_info, policy), ["module-form"] = (state["module-form"] or (head == "module")), ["spec-import"] = spec_import_state(state, import_info, policy)}
 end
-local function check_state_step(nodes, index, state, recurse)
+local function check_state_step(nodes, index, state, policy, recurse)
   local node = nodes[index]
-  return recurse(nodes, (index + 1), update_check_state(state, macro_import_3f(node), list_head(node)))
+  return recurse(nodes, (index + 1), update_check_state(state, macro_import_3f(node), list_head(node), policy), policy)
 end
-local function check_state(nodes, index, state)
+local function check_state(nodes, index, state, policy)
   if (index > #nodes) then
     return state
   else
-    return check_state_step(nodes, index, state, check_state)
+    return check_state_step(nodes, index, state, policy, check_state)
   end
 end
 local function append_all(target, items)
@@ -75,15 +77,22 @@ local function append_all(target, items)
   end
   return target
 end
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
 local function evaluate_form(path, form, forms, policy)
   local node = form.node
   local head = list_head(node)
   local findings = {}
-  if (spec_file_3f(path) and (head == "module") and enabled_3f(policy, "spec-no-module")) then
+  if (spec_file_3f(path, policy["spec-files"], policy.matcher) and (head == "module") and enabled_3f(policy, "spec-no-module")) then
     table.insert(findings, finding(path, form, rule_severity(policy, "spec-no-module"), "spec-no-module", "specs must not declare a module", node))
   else
   end
-  if (spec_file_3f(path) and not spec_rule["direct-require?"](path) and require_node_3f(node)) then
+  if (spec_file_3f(path, policy["spec-files"], policy.matcher) and require_node_3f(node)) then
     spec_rule["spec-direct-require-finding"](findings, path, form, policy, node)
   else
   end
@@ -91,7 +100,7 @@ local function evaluate_form(path, form, forms, policy)
     spec_rule["testing-finding"](findings, path, form, policy, node)
   else
   end
-  if (node and shape_leaf["function-head?"](head)) then
+  if (node and contains_3f(registry["rule-options"](policy, "function-shape")["function-forms"], head, 1)) then
     shape_rule["add-function-findings"](findings, path, form, forms, policy, node)
   else
   end
@@ -115,6 +124,24 @@ end
 local function remove_contained_function_findings(findings)
   return shape_rule["remove-contained-function-findings"](findings)
 end
+local function append_applicable_finding(result, finding0, policy, spec_3f)
+  if registry["applies-to?"](policy, finding0.rule, spec_3f) then
+    table.insert(result, finding0)
+  else
+  end
+  return result
+end
+local function applicable_findings_step(findings, policy, spec_3f, index, result, recurse)
+  local next_result = append_applicable_finding(result, findings[index], policy, spec_3f)
+  return recurse(findings, policy, spec_3f, (index + 1), next_result)
+end
+local function applicable_findings(findings, policy, spec_3f, index, result)
+  if (index > #findings) then
+    return result
+  else
+    return applicable_findings_step(findings, policy, spec_3f, index, result, applicable_findings)
+  end
+end
 local function check_result(path, forms, policy, source, max_code_lines, state)
   local file_policy = core.assoc(policy, "max-code-lines", max_code_lines)
   local findings = size_rule.finding(path, file_policy, source)
@@ -134,8 +161,10 @@ end
 local check
 do
   local function check0(path, forms, policy, source, max_code_lines)
-    local state = check_state(root_forms(source), 1, {["module-form"] = false, ["module-import"] = false, ["spec-import"] = false})
-    return check_result(path, forms, policy, source, (max_code_lines or 300), state)
+    local state = check_state(root_forms(source), 1, {["module-form"] = false, ["module-import"] = false, ["spec-import"] = false}, policy)
+    local result = check_result(path, forms, policy, source, (max_code_lines or 300), state)
+    local spec_3f = spec_file_3f(path, policy["spec-files"], policy.matcher)
+    return applicable_findings(result, policy, spec_3f, 1, {})
   end
   _2amodule_2a["check"] = check0
   check = _2amodule_2a.check

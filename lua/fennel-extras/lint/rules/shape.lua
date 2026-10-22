@@ -7,13 +7,12 @@ do
 end
 local core = require("eca.nfnl.core")
 local ast = require("fennel-extras.lint.rules.ast")
+local mutation = require("fennel-extras.lint.rules.mutation")
 local registry = require("fennel-extras.lint.rules.registry")
 local leaf = require("fennel-extras.lint.rules.shape.leaf")
 local branch = require("fennel-extras.lint.rules.shape.branch")
 local meaningful_children = ast["meaningful-children"]
 local list_head = ast["list-head"]
-local quoted_child_3f = ast["quoted-child?"]
-local root_forms = ast["root-forms"]
 local form_for_node = ast["form-for-node"]
 local function_info = leaf["function-info"]
 local validate_function_body = branch["validate-function-body"]
@@ -21,10 +20,46 @@ local function_head_3f = leaf["function-head?"]
 local finding = registry.finding
 local rule_severity = registry["rule-severity"]
 local enabled_3f = registry["enabled?"]
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
+local function configured_function_child(index, child)
+  if (index == 1) then
+    return core.assoc(child, "text", "fn")
+  else
+    return child
+  end
+end
+local function configured_function_children(node)
+  local tbl_26_ = {}
+  local i_27_ = 0
+  for index, child in ipairs(node.children) do
+    local val_28_ = configured_function_child(index, child)
+    if (nil ~= val_28_) then
+      i_27_ = (i_27_ + 1)
+      tbl_26_[i_27_] = val_28_
+    else
+    end
+  end
+  return tbl_26_
+end
+local function configured_function_node(node, policy)
+  local forms = registry["rule-options"](policy, "function-shape")["function-forms"]
+  if contains_3f(forms, list_head(node), 1) then
+    return core.assoc(node, "children", configured_function_children(node))
+  else
+    return node
+  end
+end
 local function_violations
 do
-  local function function_violations0(node)
-    local info = function_info(node)
+  local function function_violations0(node, policy)
+    local target = configured_function_node(node, policy)
+    local info = function_info(target)
     local body = ((info and info.body) or {})
     return validate_function_body(body, {})
   end
@@ -44,7 +79,7 @@ local function add_function_finding(findings, path, form, forms, policy, offendi
   return table.insert(findings, finding(path, target, rule_severity(policy, "function-shape"), "function-shape", "function body is too deep; move this into a named private function", offending))
 end
 local function add_function_findings_for_node(findings, path, form, forms, policy, node)
-  for _, offending in ipairs(function_violations(node)) do
+  for _, offending in ipairs(function_violations(node, policy)) do
     add_function_finding(findings, path, form, forms, policy, offending)
   end
   return nil
@@ -61,48 +96,23 @@ do
   _2amodule_2a["add-function-findings"] = add_function_findings0
   add_function_findings = _2amodule_2a["add-function-findings"]
 end
-local function function_child_3f(node, index, child)
-  return (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and not quoted_child_3f(node.children, index))
-end
-local function collect_function_child(node, result, walker, index, child)
-  if function_child_3f(node, index, child) then
-    return walker(child, result)
-  else
-    return nil
-  end
-end
-local function collect_function_children(node, result, walker)
-  for index, child in ipairs((node.children or {})) do
-    collect_function_child(node, result, walker, index, child)
-  end
-  return result
-end
-local function collect_function_nodes(node, result)
-  if (node and (node.kind == "list") and ((list_head(node) == "fn") or (list_head(node) == "lambda") or (list_head(node) == "\206\187"))) then
-    table.insert(result, node)
-  else
-  end
-  if node then
-    collect_function_children(node, result, collect_function_nodes)
-  else
-  end
-  return result
+local function configured_function_3f(node, policy)
+  return ((node.kind == "list") and contains_3f(registry["rule-options"](policy, "function-shape")["function-forms"], list_head(node), 1))
 end
 local function synthetic_form(path, node)
   return {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (path .. " > function-shape"), node = node}
 end
-local function function_nodes(source)
-  local functions = {}
-  for _, root in ipairs(root_forms(source)) do
-    collect_function_nodes(root, functions)
+local function function_nodes(source, policy)
+  local function _7_(node)
+    return configured_function_3f(node, policy)
   end
-  return functions
+  return mutation["executable-nodes"](source, _7_)
 end
 local function append_synthetic_node(all, path, forms, policy, node)
   return (not form_for_node(forms, node, nil) and add_function_findings(all, path, synthetic_form(path, node), forms, policy, node))
 end
 local function append_synthetic_nodes(all, path, forms, policy, source)
-  for _, node in ipairs(function_nodes(source)) do
+  for _, node in ipairs(function_nodes(source, policy)) do
     append_synthetic_node(all, path, forms, policy, node)
   end
   return all

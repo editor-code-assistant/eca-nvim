@@ -74,29 +74,73 @@ The argument vector must start below the name, with a docstring allowed between 
 
 `make style` runs `scripts/fennel-extras lint` with no selection flag by default, checking all configured files without requiring Git. Set `STYLE_FLAGS=--changed` to check changed forms and files against `HEAD`, or `STYLE_FLAGS="--base <ref>"` to use another Git base. `--all` is an explicit alias for the no-selection mode; `--changed` and `--all` cannot be combined; `--all` and `--base` cannot be combined. Explicit paths restrict discovery in any mode. Add `--format json` for JSON Lines output.
 
+Lint rules are off by default. Enable them under `:lint :rules`. A rule can use a severity shorthand (`:warning`, `:error`, or `:off`) or a map with `:severity`, `:options`, and `:exclusions`. If any rule override is present, unspecified rules use the compatibility severities; set them to `:off` when needed.
+
 The seventeen rules are:
 
-- `module-style` (error): non-spec files use the module style.
-- `spec-macro-import` (error): specs import `deftest`, `testing`, and `is` from `spec.eca.macros`.
-- `spec-no-module` (error): specs do not declare a module.
-- `spec-direct-require` (error): specs use the shared macros instead of requiring `plenary.busted` or `luassert` directly.
-- `one-is-per-testing` (error): each `testing` form contains exactly one `is`.
-- `if-branch-call` (warning): multi-expression `if` branches are moved to a named helper.
-- `if-without-else` (warning): `(if test then)` and `(if test then nil)` are written as `when`.
-- `control-layout` (warning): control forms span several lines only when they are the sole expression of a body.
-- `unused-and-or` (warning): discarded `and`/`or` results in statement bodies use `when`.
-- `binding-per-line` (warning): multi-pair `let`/`when-let`/`if-let`/`with-open` binding vectors put each pair on its own line.
-- `call-data-arg` (warning): source calls move multi-line map/vector literals into a `let` binding.
-- `defn-args-newline` (warning): `defn` and `defn-` argument vectors start on the line below the function name.
-- `no-mutation` (warning): source files do not use `var`, `set`, or `while`; return new values instead.
-- `function-shape` (warning): bodies of `defn`/`defn-`/`fn`/`lambda`/`λ` use an optional first `let` with leaf values, then expressions that are leaves or one layer; move deeper code into named private functions.
-- `multiline-layout` (warning): list heads and first arguments stay on the opening line; once a form spans lines, each item starts its own line. `do` forms are exempt from the first-argument requirement, and `defn`/`defn-` names stay on the head line. Maps, binding vectors, and multi-clause `if`/`case`/`match` count pairs; single-clause `if` forms count elements, with the test sharing the head line and each branch on its own line.
-- `file-size` (warning): source files contain at most the configured number of nonblank, non-comment code lines.
-- `core-require` (error): `eca.nfnl.core` is required as `core`.
+| Rule | Default `:applies-to` | Options (type; default) |
+| --- | --- | --- |
+| `module-style` | `source` | `:macro-module` (string; `"eca.nfnl.macros.aniseed"`), `:required-macros` (strings; `["module" "def" "defn" "defn-"]`) |
+| `spec-macro-import` | `spec` | `:macro-module` (string; `"spec.eca.macros"`), `:required-macros` (strings; `["deftest" "testing" "is"]`), `:exempt-files` (strings; `["^fnl/spec/eca/macros[.]fnlm$"]`) |
+| `spec-no-module` | `spec` | `:module-form` (string; `"module"`) |
+| `spec-direct-require` | `spec` | `:forbidden-modules` (strings; `["plenary.busted" "luassert"]`), `:exempt-files` (strings; `["^fnl/spec/eca/macros[.]fnlm$"]`) |
+| `one-is-per-testing` | `all` | `:testing-form` (string; `"testing"`), `:assertion-form` (string; `"is"`), `:count` (positive integer; `1`) |
+| `if-branch-call` | `all` | `:if-forms` (strings; `["if"]`) |
+| `if-without-else` | `all` | `:if-forms` (strings; `["if"]`), `:flag-nil-else` (boolean; `true`) |
+| `control-layout` | `all` | `:control-forms` (strings; `["if" "when" "and" "or" "case" "match"]`) |
+| `unused-and-or` | `all` | `:forms` (strings; `["and" "or"]`) |
+| `defn-args-newline` | `all` | `:forms` (strings; `["defn" "defn-"]`) |
+| `function-shape` | `all` | `:function-forms` (strings; `["defn" "defn-" "fn" "lambda" "λ"]`) |
+| `no-mutation` | `source` | `:forms` (strings; `["var" "set" "while"]`) |
+| `multiline-layout` | `all` | `:clause-forms` (strings; `["case" "match" "case-try" "match-try"]`), `:binding-forms` (strings; `["let" "when-let" "if-let" "with-open"]`) |
+| `file-size` | `source` | `:max-code-lines` (positive integer; `300`) |
+| `core-require` | `all` | `:module` (string; `"eca.nfnl.core"`), `:binding` (string; `"core"`) |
+| `binding-per-line` | `all` | `:forms` (strings; `["let" "when-let" "if-let" "with-open"]`) |
+| `call-data-arg` | `source` | `:ignore-forms` (strings; `[]`) |
 
-Module-style is a convert-on-touch rule. When a change selects a legacy module, convert that file to module style. `--all` reports all remaining legacy files.
+`module-style` is a convert-on-touch rule. `--all` reports remaining legacy files. `:max-code-lines` is an alias for the `file-size` option. The top-level `:lint :max-code-lines` defaults to `300`; it conflicts with a different `file-size` `:max-code-lines`. `:lint :spec-files` defaults to `["^fnl/spec/"]` and is a list of strings.
 
-Lint configuration uses `:lint` with optional `:rules`, `:max-code-lines`, and `:exclusions` keys. `:max-code-lines` defaults to `300` and must be a positive integer. Set rule severities under `:rules` to `error`, `warning`, or `off`. Add `:exclusions` entries as `{:rule :form :reason}`; copy the printed exclusion snippet. A stale exclusion (one that no longer matches a finding) fails the command when its file is in the checked scope; `--all` checks every exclusion.
+Exclusions can be per-rule, inside that rule's entry, or general under `:lint :exclusions`. A general exclusion with no `:rule` or `:rules` selects all rules. Selectors are `:pattern` (Vim regex on the repository-relative path), `:line`, `:lines {:from :to}`, `:code` (Vim regex on the flagged form's source; not for file-level findings), or legacy exact `:form`. Add optional `:reason`; it is not required. Selectors combine with AND. `:rule` and `:rules` are mutually exclusive. A stale exclusion is an error when its file is in scope; `--changed` and `--base` only check exclusions in their scope. An exclusion for a disabled rule reports that the rule is disabled.
+
+Exclusion patterns use Vim regex search semantics, not full-string matching. In Fennel config strings, double the backslashes, for example `"\\d\\+"` for Vim's digit-plus pattern.
+
+Formatter alignment is configured by `:alignment`:
+
+| Key | Type | Default |
+| --- | --- | --- |
+| `:bindings` | boolean | `false` |
+| `:maps` | boolean | `false` |
+| `:clauses` | boolean | `false` |
+| `:split-bindings` | boolean | `false` |
+| `:collapse-padding` | boolean | `false` |
+| `:binding-forms` | list of strings | `["let" "when-let" "if-let" "with-open"]` |
+| `:clause-forms` | list of strings | `["case" "match" "case-try" "match-try" "if"]` |
+
+The legacy `:align-bindings true` shorthand enables all five boolean switches. Explicit `:alignment` keys override the shorthand. `:align-bindings` defaults to `false`.
+
+Complete example (the `:lint` and `:alignment` additions marked illustrative are examples):
+
+```fennel
+{:indents {"deftest" [[:block 1]]
+           "testing" [[:block 1]]
+           "if" [[:block 1]]}
+ :parser "eca.nfnl.fennel"
+ :paths ["fnl"]
+ :exclude ["fnl/eca/nfnl"]
+ ;; illustrative lint configuration
+ :lint {:rules {:module-style :error
+                :file-size {:severity :warning
+                            :options {:max-code-lines 350}
+                            :exclusions [{:pattern "^fnl/generated/"
+                                          :reason "generated source"}]}}
+        :exclusions [{:rule :function-shape
+                      :pattern "^fnl/legacy/"
+                      :reason "migration in progress"}]
+        :spec-files ["^fnl/spec/"]}
+ ;; illustrative formatter options
+ :alignment {:maps true
+             :split-bindings true}}
+```
 
 Exit code 0 means no errors, 1 means an error or stale exclusion, and 2 means a command, configuration, Git, read, parse, or internal failure. The default and `--all` modes do not require Git; `--changed` and `--base` require a valid full Git clone and report Git errors with exit 2. Findings are written to stdout. CI runs `make style` on pull requests to `main`.
 

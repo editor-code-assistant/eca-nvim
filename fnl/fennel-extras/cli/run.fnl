@@ -10,6 +10,7 @@
 (local fs (require :fennel-extras.cli.fs))
 (local git (require :fennel-extras.cli.git))
 (local format (require :fennel-extras.cli.format))
+(local matcher (require :fennel-extras.cli.matcher))
 
 (defn- default-print
   [line]
@@ -136,12 +137,61 @@
       (lint-read-error context.printer read-error)
       (run-lint-sources context policy sources))))
 
+(defn- compile-exclusion-entry
+  [entry]
+  (when entry.pattern
+    (matcher.compile-pattern entry.pattern))
+  (when entry.code
+    (matcher.compile-pattern entry.code)))
+
+(defn- compile-exclusion-patterns-step
+  [exclusions index recurse]
+  (compile-exclusion-entry (. exclusions index))
+  (recurse exclusions (+ index 1) recurse))
+
+(defn- compile-exclusion-patterns
+  [exclusions index recurse]
+  (if (> index (length exclusions))
+    nil
+    (compile-exclusion-patterns-step exclusions index recurse)))
+
+(defn- compile-spec-file-pattern
+  [spec-files index recurse]
+  (let [(ok compile-error) (pcall matcher.compile-pattern (. spec-files index))]
+    (if ok
+      (recurse spec-files (+ index 1) recurse)
+      {:index index :error compile-error})))
+
+(defn- compile-spec-files-patterns-step
+  [spec-files index recurse]
+  (if (> index (length spec-files))
+    nil
+    (compile-spec-file-pattern spec-files index recurse)))
+
+(defn- compile-spec-files-patterns
+  [spec-files index recurse]
+  (compile-spec-files-patterns-step spec-files index recurse))
+
+(defn- run-lint-policy-spec-files
+  [context files policy]
+  (let [spec-error (compile-spec-files-patterns policy.spec-files 1 compile-spec-files-patterns)]
+    (if spec-error
+      (lint-policy-error context.root context.config-path context.printer {:message (.. "invalid spec-files regex " spec-error.index ": " (tostring spec-error.error))})
+      (run-lint-files context (table-update.update policy {:matcher (matcher.vim-matcher)}) files))))
+
+(defn- run-lint-policy-success
+  [context files policy]
+  (let [(ok compile-error) (pcall compile-exclusion-patterns policy.exclusions 1 compile-exclusion-patterns)]
+    (if (not ok)
+      (lint-policy-error context.root context.config-path context.printer {:message (.. "invalid exclusion pattern regex: " (tostring compile-error))})
+      (run-lint-policy-spec-files context files policy))))
+
 (defn- run-lint-policy
   [context files]
   (let [(policy policy-error) (config.lint-policy context.cfg)]
     (if policy-error
       (lint-policy-error context.root context.config-path context.printer policy-error)
-      (run-lint-files context policy files))))
+      (run-lint-policy-success context files policy))))
 
 (defn- run-lint-discovery
   [context]

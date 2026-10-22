@@ -58,17 +58,47 @@
       false)
     false))
 
+(defn- append-meaningful-child
+  [result child]
+  (when (not (trivia? child))
+    (table.insert result child)))
+
 (defn- meaningful-children
   [children]
   (let [result []]
     (each [_ child (ipairs children)]
-      (when (not (trivia? child))
-        (table.insert result child)))
+      (append-meaningful-child result child))
     result))
 
 (defn- append-decoded-char
   [result c]
   (table.insert result c))
+
+(defn- normalize-escaped-delimiters-step
+  [state]
+  (let [text      state.text
+        index     state.index
+        in-string state.in-string
+        result    state.result]
+    (if (> index (string.len text))
+      result
+      (let [c    (string.sub text index index)
+            next (string.sub text (+ index 1) (+ index 1))]
+        (if (and (not in-string) (= c "\\") (= next "\""))
+          (normalize-escaped-delimiters-step {:text text :index (+ index 2) :in-string in-string :result (.. result next)})
+          (if (and in-string (= c "\\"))
+            (normalize-escaped-delimiters-step {:text text :index (+ index 2) :in-string in-string :result (.. result c next)})
+            (normalize-escaped-delimiters-step {:text text :index (+ index 1) :in-string (if (= c "\"") (not in-string) in-string) :result (.. result c)})))))))
+
+(defn- normalize-escaped-delimiters
+  [text]
+  (let [state {:text text :index 1 :in-string false :result ""}]
+    (normalize-escaped-delimiters-step state)))
+
+(defn- append-unsupported-escape
+  [result escaped]
+  (table.insert result "\\")
+  (table.insert result escaped))
 
 (defn- decode-string
   [token]
@@ -88,7 +118,7 @@
                   (table.insert result "\n")
                   (if (= escaped "t")
                     (table.insert result "\t")
-                    (error (error-at "unsupported string escape" token) 0)))))
+                    (append-unsupported-escape result escaped)))))
             (set i (+ i 2)))
           (let [_ (append-decoded-char result c)]
             (set i (+ i 1))))))
@@ -161,7 +191,7 @@
 (defn parse-string
   [text]
   (let [(ok result) (pcall (fn []
-                             (let [(root reader-error) (reader.parse text)]
+                             (let [(root reader-error) (reader.parse (normalize-escaped-delimiters text))]
                                (if reader-error
                                  {:error reader-error}
                                  (let [children (meaningful-children root.children)]

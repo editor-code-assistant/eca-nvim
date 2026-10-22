@@ -5,8 +5,10 @@ do
   pkg_1_auto.loaded["fennel-extras.lint.run"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.run"]
 end
+local core = require("eca.nfnl.core")
 local lint = require("fennel-extras.lint")
 local output = require("fennel-extras.lint.output")
+local exclusion_matcher = require("fennel-extras.lint.exclusion")
 local function exclusion_match_3f(exclusion, finding)
   return ((exclusion.rule == finding.rule) and (exclusion.form == finding.form))
 end
@@ -35,69 +37,65 @@ local function keep_finding(findings, exclusions, index, result)
     return keep_finding_step(findings, exclusions, index, result, keep_finding)
   end
 end
-local function matching_exclusion_3f(exclusion, findings, index)
+local function matching_exclusion_3f(exclusion, findings, matcher, index)
   if (index > #findings) then
     return false
   else
-    return (exclusion_match_3f(exclusion, findings[index]) or matching_exclusion_3f(exclusion, findings, (index + 1)))
+    return (exclusion_matcher["matches?"](exclusion, findings[index], nil, matcher) or matching_exclusion_3f(exclusion, findings, matcher, (index + 1)))
   end
 end
-local function stale_exclusion(exclusion, config_path)
-  return {kind = "stale-exclusion", path = config_path, line = 1, col = 1, severity = "error", rule = exclusion.rule, form = exclusion.form, message = ("stale exclusion: " .. exclusion.form)}
+local function stale_message(exclusion, policy)
+  if (exclusion.rule and (policy.rules[exclusion.rule] == "off")) then
+    return ("stale exclusion: rule " .. exclusion.rule .. " is not enabled")
+  else
+    return ("stale exclusion: " .. (exclusion.form or exclusion.pattern or exclusion.code or "selector"))
+  end
 end
-local function append_stale_item(result, exclusion, findings, config_path)
-  if not matching_exclusion_3f(exclusion, findings, 1) then
-    table.insert(result, stale_exclusion(exclusion, config_path))
+local function stale_exclusion(exclusion, config_path, policy)
+  local rule = (exclusion.rule or "lint")
+  local message = stale_message(exclusion, policy)
+  return {kind = "stale-exclusion", path = config_path, line = 1, col = 1, severity = "error", rule = rule, form = (exclusion.form or exclusion.pattern or exclusion.code or "selector"), message = message}
+end
+local function append_stale_item(result, exclusion, findings, config_path, matcher, policy)
+  if not matching_exclusion_3f(exclusion, findings, matcher, 1) then
+    table.insert(result, stale_exclusion(exclusion, config_path, policy))
   else
   end
   return result
 end
-local function append_stale_step(exclusions, findings, config_path, index, result, recurse)
-  local exclusion = exclusions[index]
-  return recurse(exclusions, findings, config_path, (index + 1), append_stale_item(result, exclusion, findings, config_path))
+local function append_stale_step(exclusions, findings, config_path, matcher, policy, index, result, recurse)
+  local entry = exclusions[index]
+  return recurse(exclusions, findings, config_path, matcher, policy, (index + 1), append_stale_item(result, entry, findings, config_path, matcher, policy))
 end
-local function append_stale(exclusions, findings, config_path, index, result)
+local function append_stale(exclusions, findings, config_path, matcher, policy, index, result)
   if (index > #exclusions) then
     return result
   else
-    return append_stale_step(exclusions, findings, config_path, index, result, append_stale)
+    return append_stale_step(exclusions, findings, config_path, matcher, policy, index, result, append_stale)
   end
 end
-local function normalized_testing_form(finding)
-  return ((string.match(finding.form, " > top#[0-9]+$") and (finding.form .. " > testing#1")) or finding.form)
+local function annotate_finding(finding, source)
+  return core.assoc(finding, "source", source)
 end
-local function normalized_branch_form(finding)
-  local form = string.gsub(finding.form, " > (top#[0-9]+) > (then.*)$", " > %1 > if#1 > %2")
-  return form
+local function annotate_findings_step(findings, source, index, recurse)
+  local finding = annotate_finding(findings[index], source)
+  local result = core.assoc(findings, index, finding)
+  return recurse(result, source, (index + 1), recurse)
 end
-local function normalized_form(finding)
-  if (finding.rule == "one-is-per-testing") then
-    return normalized_testing_form(finding)
-  else
-    return normalized_branch_form(finding)
-  end
-end
-local function normalized_finding(finding)
-  return {kind = finding.kind, path = finding.path, line = finding.line, col = finding.col, ["end-line"] = finding["end-line"], ["end-col"] = finding["end-col"], severity = finding.severity, rule = finding.rule, form = normalized_form(finding), message = finding.message}
-end
-local function normalize_findings_step(findings, index, result, recurse)
-  local finding = findings[index]
-  table.insert(result, normalized_finding(finding))
-  return recurse(findings, (index + 1), result)
-end
-local function normalize_findings(findings, index, result)
+local function annotate_findings(findings, source, index, recurse)
   if (index > #findings) then
-    return result
+    return findings
   else
-    return normalize_findings_step(findings, index, result, normalize_findings)
+    return annotate_findings_step(findings, source, index, recurse)
   end
 end
 local function lint_file(file, policy)
-  local findings, error = lint.check(file.source, {path = file.path, rules = policy.rules, ["max-code-lines"] = policy["max-code-lines"], selection = file.selection})
+  local context = {path = file.path, rules = policy.rules, options = policy.options, ["spec-files"] = policy["spec-files"], ["max-code-lines"] = policy["max-code-lines"], selection = file.selection, matcher = policy.matcher, exclusions = policy.exclusions, ["defer-exclusions"] = true}
+  local findings, error = lint.check(file.source, context)
   if error then
     return nil, {message = error.message, line = error.line, col = error.col, path = file.path}
   else
-    return normalize_findings(findings, 1, {}), nil
+    return annotate_findings(findings, file.source, 1, annotate_findings), nil
   end
 end
 local function append_findings(result, findings)
@@ -182,8 +180,8 @@ local function append_stale_findings(source, stale)
 end
 local function diagnostics(findings, policy, config_path, scope_paths)
   local exclusions = scoped_exclusions(policy.exclusions, scope_paths, 1, {})
-  local filtered = keep_finding(findings, exclusions, 1, {})
-  local stale = append_stale(exclusions, findings, config_path, 1, {})
+  local filtered, _ = exclusion_matcher.apply(findings, exclusions, nil, policy.matcher)
+  local stale = append_stale(exclusions, findings, config_path, policy.matcher, policy, 1, {})
   local source = diagnostic_source(filtered, policy, stale, scope_paths)
   return output.sort(append_stale_findings(source, stale))
 end

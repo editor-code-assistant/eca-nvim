@@ -8,7 +8,7 @@ end
 local reader = require("fennel-extras.reader")
 local helpers = require("fennel-extras.indent.node")
 local bindings = require("fennel-extras.indent.bindings")
-local binding_forms = {let = true, ["when-let"] = true, ["if-let"] = true, ["with-open"] = true}
+local settings = require("fennel-extras.indent.settings")
 local function prefixed_3f(child)
   return (child and child.text and (child.kind == "prefix"))
 end
@@ -18,9 +18,9 @@ end
 local function binding_head(node)
   return bindings["meaningful-children"](node)[1]
 end
-local function supported_form_3f(node)
+local function supported_form_3f(node, alignment)
   local head = binding_head(node)
-  return ((node.kind == "list") and head and (head.kind == "symbol") and binding_forms[head.text])
+  return ((node.kind == "list") and head and (head.kind == "symbol") and settings["binding-form?"](alignment, head.text))
 end
 local function same_line_edit(name_start, value_end)
   if (name_start and value_end and (name_start.line == value_end.line)) then
@@ -75,36 +75,36 @@ end
 local function walk_text_child(state, child)
   return {edits = state.edits, previous = child}
 end
-local function walk_nested_child(recur, state, child, quoted)
+local function walk_nested_child(recur, state, child, quoted, alignment)
   local child_quoted = (quoted or quoted_child_3f(state.previous))
-  local nested = recur(child, child_quoted)
+  local nested = recur(child, child_quoted, alignment)
   local edits = append_edits(state.edits, nested)
   return {edits = edits, previous = nil}
 end
-local function walk_child(recur, state, child, quoted)
+local function walk_child(recur, state, child, quoted, alignment)
   if child.text then
     return walk_text_child(state, child)
   else
-    return walk_nested_child(recur, state, child, quoted)
+    return walk_nested_child(recur, state, child, quoted, alignment)
   end
 end
-local function walk_edits(node, quoted)
-  if (not quoted and supported_form_3f(node)) then
+local function walk_edits(node, quoted, alignment)
+  if (not quoted and supported_form_3f(node, alignment)) then
     return vector_edits(node)
   else
     return {}
   end
 end
-local function walk_state(recur, node, edits, quoted)
+local function walk_state(recur, node, edits, quoted, alignment)
   local state = {edits = edits, previous = nil}
   for _, child in ipairs((node.children or {})) do
-    state = walk_child(recur, state, child, quoted)
+    state = walk_child(recur, state, child, quoted, alignment)
   end
   return state
 end
-local function walk_node(node, quoted)
-  local edits = walk_edits(node, quoted)
-  local state = walk_state(walk_node, node, edits, quoted)
+local function walk_node(node, quoted, alignment)
+  local edits = walk_edits(node, quoted, alignment)
+  local state = walk_state(walk_node, node, edits, quoted, alignment)
   return state.edits
 end
 local function whitespace_3f(line, index)
@@ -165,18 +165,25 @@ local function apply_edits(source, edits)
   table.sort(edits, edit_before_3f)
   return table.concat(apply_edits_step(apply_edits_step, lines, edits), "\n")
 end
-local function split_success(source, tree)
-  local edits = walk_node(tree, false)
+local function split_tree(source, tree, alignment)
+  local edits = walk_node(tree, false, alignment)
   return apply_edits(source, edits), nil, edits
+end
+local function split_source(source, alignment)
+  local tree, error = reader.parse(source)
+  if error then
+    return nil, error, {}
+  else
+    return split_tree(source, tree, alignment)
+  end
 end
 local split
 do
-  local function split0(source)
-    local tree, error = reader.parse(source)
-    if error then
-      return nil, error, {}
+  local function split0(source, alignment)
+    if not alignment["split-bindings"] then
+      return source, nil, {}
     else
-      return split_success(source, tree)
+      return split_source(source, alignment)
     end
   end
   _2amodule_2a["split"] = split0

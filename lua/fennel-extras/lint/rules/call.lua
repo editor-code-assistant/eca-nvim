@@ -45,15 +45,26 @@ local function has_data_argument_3f(children)
   end
   return result
 end
-local function plain_call_3f(node)
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
+local function plain_call_3f(node, policy)
   local head = list_head(node)
-  return ((node.kind == "list") and head and not special_head_3f(head))
+  local ignore = registry["rule-options"](policy, "call-data-arg")["ignore-forms"]
+  return ((node.kind == "list") and head and not special_head_3f(head) and not contains_3f(ignore, head, 1))
 end
-local function offending_node_3f(node)
-  return (plain_call_3f(node) and has_data_argument_3f(meaningful_children(node)))
+local function offending_node_3f(node, policy)
+  return (plain_call_3f(node, policy) and has_data_argument_3f(meaningful_children(node)))
 end
-local function call_nodes(source)
-  return mutation["executable-nodes"](source, offending_node_3f)
+local function call_nodes(source, policy)
+  local function _3_(node)
+    return offending_node_3f(node, policy)
+  end
+  return mutation["executable-nodes"](source, _3_)
 end
 local function update_ordinal(ordinals, key, ordinal)
   ordinals[key] = ordinal
@@ -68,7 +79,7 @@ local function append_finding(findings, path, forms, policy, node, ordinals)
   return update_ordinal(ordinals, base.form, ordinal)
 end
 local function append_node_finding(findings, path, forms, policy, node, ordinals)
-  if (not spec_file_3f(path) and enabled_3f(policy, "call-data-arg")) then
+  if (not spec_file_3f(path, policy["spec-files"], policy.matcher) and enabled_3f(policy, "call-data-arg")) then
     return append_finding(findings, path, forms, policy, node, ordinals)
   else
     return ordinals
@@ -79,7 +90,7 @@ do
   local function findings0(findings1, path, forms, policy, source)
     do
       local ordinals = {}
-      for _, node in ipairs(call_nodes(source)) do
+      for _, node in ipairs(call_nodes(source, policy)) do
         ordinals = append_node_finding(findings1, path, forms, policy, node, ordinals)
       end
     end

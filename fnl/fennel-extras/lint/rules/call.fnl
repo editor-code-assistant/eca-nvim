@@ -51,21 +51,30 @@
   (accumulate [result false index child (ipairs children)]
     (or result (data-argument-step children index child))))
 
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
 (defn- plain-call?
-  [node]
-  (let [head (list-head node)]
+  [node policy]
+  (let [head   (list-head node)
+        ignore (. (registry.rule-options policy "call-data-arg") :ignore-forms)]
     (and (= node.kind :list)
          head
-         (not (special-head? head)))))
+         (not (special-head? head))
+         (not (contains? ignore head 1)))))
 
 (defn- offending-node?
-  [node]
-  (and (plain-call? node)
+  [node policy]
+  (and (plain-call? node policy)
        (has-data-argument? (meaningful-children node))))
 
 (defn- call-nodes
-  [source]
-  (mutation.executable-nodes source offending-node?))
+  [source policy]
+  (mutation.executable-nodes source (fn [node] (offending-node? node policy))))
 
 (defn- update-ordinal
   [ordinals key ordinal]
@@ -95,12 +104,13 @@
 
 (defn- append-node-finding
   [findings path forms policy node ordinals]
-  (if (and (not (spec-file? path)) (enabled? policy "call-data-arg"))
+  (if (and (not (spec-file? path policy.spec-files policy.matcher))
+           (enabled? policy "call-data-arg"))
     (append-finding findings path forms policy node ordinals)
     ordinals))
 
 (defn findings
   [findings path forms policy source]
-  (accumulate [ordinals {} _ node (ipairs (call-nodes source))]
+  (accumulate [ordinals {} _ node (ipairs (call-nodes source policy))]
     (append-node-finding findings path forms policy node ordinals))
   findings)

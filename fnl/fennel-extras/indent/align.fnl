@@ -3,43 +3,37 @@
 (module fennel-extras.indent.align)
 
 (local helpers (require :fennel-extras.indent.node))
+(local settings (require :fennel-extras.indent.settings))
 
 (defn- alignment-form-name?
-  [head]
+  [head alignment]
   (and head
        (= head.kind :symbol)
-       (or (= head.text "let")
-           (= head.text "when-let")
-           (= head.text "if-let")
-           (= head.text "with-open"))))
+       ((. settings "binding-form?") alignment head.text)))
 
 (defn- alignment-form?
-  [node parent]
+  [node parent alignment]
   (and parent
        (= node.kind :sequence)
        (= parent.kind :list)
-       (alignment-form-name? (. (helpers.nontrivia-children parent) 1))))
+       (alignment-form-name? (. (helpers.nontrivia-children parent) 1) alignment)))
 
 (defn- clause-form-name?
-  [head]
+  [head alignment]
   (and head
        (= head.kind :symbol)
-       (or (= head.text "case")
-           (= head.text "match")
-           (= head.text "case-try")
-           (= head.text "match-try")
-           (= head.text "if"))))
+       ((. settings "clause-form?") alignment head.text)))
 
 (defn- clause-form?
-  [node]
+  [node alignment]
   (and (= node.kind :list)
-       (clause-form-name? (. (helpers.nontrivia-children node) 1))))
+       (clause-form-name? (. (helpers.nontrivia-children node) 1) alignment)))
 
 (defn- alignment-node?
-  [node parent]
-  (or (= node.kind :table)
-      (alignment-form? node parent)
-      (clause-form? node)))
+  [node parent alignment]
+  (or (and alignment.maps (= node.kind :table))
+      (and alignment.bindings (alignment-form? node parent alignment))
+      (and alignment.clauses (clause-form? node alignment))))
 
 (defn- append-alignment-node
   [result node]
@@ -47,17 +41,17 @@
   result)
 
 (defn- alignment-node-result
-  [result node parent]
-  (if (alignment-node? node parent)
+  [result node parent alignment]
+  (if (alignment-node? node parent alignment)
     (append-alignment-node result node)
     result))
 
 (defn- collect-alignment-nodes
-  [node parent result]
-  (let [next-result (alignment-node-result result node parent)]
+  [node parent result alignment]
+  (let [next-result (alignment-node-result result node parent alignment)]
     (accumulate [state next-result _ child (ipairs (or node.children []))]
       (or (and child.text state)
-          (and child.children (collect-alignment-nodes child node state))
+          (and child.children (collect-alignment-nodes child node state alignment))
           state))))
 
 (defn- single-line-name?
@@ -186,8 +180,8 @@
       3)))
 
 (defn- clause-pair?
-  [node pair]
-  (or (not (clause-form? node))
+  [node pair alignment]
+  (or (not (clause-form? node alignment))
       (> pair.line node.open.line)))
 
 (defn- comment-on-line?
@@ -197,34 +191,34 @@
         (and child.text (= child.kind :comment) (= child.line line)))))
 
 (defn- usable-pair?
-  [node pair]
-  (and (clause-pair? node pair)
+  [node pair alignment]
+  (and (clause-pair? node pair alignment)
        (not (comment-on-line? node pair.line))))
 
 (defn- usable-pair-result
-  [node pair]
-  (when (usable-pair? node pair)
+  [node pair alignment]
+  (when (usable-pair? node pair alignment)
     pair))
 
 (defn- usable-pairs
-  [node pairs]
+  [node pairs alignment]
   (icollect [_ pair (ipairs pairs)]
-    (usable-pair-result node pair)))
+    (usable-pair-result node pair alignment)))
 
 (defn- single-line-node?
   [node]
   (and node.close (= node.open.line node.close.line)))
 
 (defn- node-plan
-  [node pairs]
-  (if (single-line-node? node)
+  [node pairs alignment]
+  (if (and alignment.collapse-padding (single-line-node? node))
     {:pairs pairs :collapse true}
     {:pairs pairs :width (alignment-width pairs)}))
 
 (defn- alignment-plan-result
-  [node pairs]
+  [node pairs alignment]
   (when (> (length pairs) 1)
-    (node-plan node pairs)))
+    (node-plan node pairs alignment)))
 
 (defn- usable-single-line-pair
   [node pair]
@@ -237,10 +231,10 @@
     (usable-single-line-pair node pair)))
 
 (defn- candidate-pairs
-  [node pairs]
+  [node pairs alignment]
   (if (single-line-node? node)
     (all-usable-pairs node pairs)
-    (usable-pairs node pairs)))
+    (usable-pairs node pairs alignment)))
 
 (defn- alignment-pairs
   [node pairs]
@@ -249,24 +243,24 @@
     (single-pairs pairs)))
 
 (defn- alignment-start
-  [node]
-  (if (clause-form? node)
+  [node alignment]
+  (if (clause-form? node alignment)
     (clause-start-index node)
     1))
 
 (defn- alignment-plan
-  [node]
+  [node alignment]
   (let [children (helpers.nontrivia-children node)
-        start    (alignment-start node)
+        start    (alignment-start node alignment)
         pairs    (pair-candidates children start [] node.kind)
         aligned  (alignment-pairs node pairs)
-        usable   (candidate-pairs node aligned)]
-    (alignment-plan-result node usable)))
+        usable   (candidate-pairs node aligned alignment)]
+    (alignment-plan-result node usable alignment)))
 
 (defn- alignment-plans
-  [nodes]
+  [nodes alignment]
   (icollect [_ node (ipairs nodes)]
-    (alignment-plan node)))
+    (alignment-plan node alignment)))
 
 (defn- edit-spaces
   [plan pair name-end-column]
@@ -338,6 +332,6 @@
       (apply-edits line (line-edits edits line-number)))))
 
 (defn apply
-  [output tree]
-  (let [nodes (collect-alignment-nodes tree nil [])]
-    (apply-alignment output (alignment-plans nodes))))
+  [output tree alignment]
+  (let [nodes (collect-alignment-nodes tree nil [] alignment)]
+    (apply-alignment output (alignment-plans nodes alignment))))

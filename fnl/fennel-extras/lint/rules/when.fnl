@@ -13,14 +13,25 @@
 (local enabled? registry.enabled?)
 (local rule-severity registry.rule-severity)
 
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
 (defn- if-without-else?
-  [node]
-  (let [children   (meaningful-children node)
-        else-child (. children 4)]
+  [node policy]
+  (let [children      (meaningful-children node)
+        else-child    (. children 4)
+        options       (registry.rule-options policy "if-without-else")
+        forms         options.if-forms
+        flag-nil-else options.flag-nil-else]
     (and (= node.kind :list)
-         (= (list-head node) "if")
+         (contains? forms (list-head node) 1)
          (or (= (length children) 3)
-             (and (= (length children) 4)
+             (and flag-nil-else
+                  (= (length children) 4)
                   (= else-child.kind :symbol)
                   (= else-child.text "nil"))))))
 
@@ -47,8 +58,12 @@
     (append-finding findings path forms policy node))
   findings)
 
+(defn- if-nodes
+  [source policy]
+  (mutation.executable-nodes source (fn [node] (if-without-else? node policy))))
+
 (defn findings
   [findings path forms policy source]
   (when (enabled? policy "if-without-else")
-    (append-node-findings findings path forms policy (mutation.executable-nodes source if-without-else?)))
+    (append-node-findings findings path forms policy (if-nodes source policy)))
   findings)

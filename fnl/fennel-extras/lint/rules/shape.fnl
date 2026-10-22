@@ -4,13 +4,12 @@
 
 (local core (require :eca.nfnl.core))
 (local ast (require :fennel-extras.lint.rules.ast))
+(local mutation (require :fennel-extras.lint.rules.mutation))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local leaf (require :fennel-extras.lint.rules.shape.leaf))
 (local branch (require :fennel-extras.lint.rules.shape.branch))
 (local meaningful-children ast.meaningful-children)
 (local list-head ast.list-head)
-(local quoted-child? ast.quoted-child?)
-(local root-forms ast.root-forms)
 (local form-for-node ast.form-for-node)
 (local function-info leaf.function-info)
 (local validate-function-body branch.validate-function-body)
@@ -19,10 +18,36 @@
 (local rule-severity registry.rule-severity)
 (local enabled? registry.enabled?)
 
-(defn function-violations
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
+(defn- configured-function-child
+  [index child]
+  (if (= index 1)
+    (core.assoc child :text "fn")
+    child))
+
+(defn- configured-function-children
   [node]
-  (let [info (function-info node)
-        body (or (and info info.body) [])]
+  (icollect [index child (ipairs node.children)]
+    (configured-function-child index child)))
+
+(defn- configured-function-node
+  [node policy]
+  (let [forms (. (registry.rule-options policy "function-shape") :function-forms)]
+    (if (contains? forms (list-head node) 1)
+      (core.assoc node :children (configured-function-children node))
+      node)))
+
+(defn function-violations
+  [node policy]
+  (let [target (configured-function-node node policy)
+        info   (function-info target)
+        body   (or (and info info.body) [])]
     (validate-function-body body [])))
 
 (defn- function-target
@@ -47,48 +72,25 @@
 
 (defn- add-function-findings-for-node
   [findings path form forms policy node]
-  (each [_ offending (ipairs (function-violations node))]
+  (each [_ offending (ipairs (function-violations node policy))]
     (add-function-finding findings path form forms policy offending)))
 
 (defn add-function-findings
   [findings path form forms policy node]
   (when (enabled? policy "function-shape")
     (add-function-findings-for-node findings path form forms policy node)))
-(defn- function-child?
-  [node index child]
-  (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
-       (not (quoted-child? node.children index))))
-
-(defn- collect-function-child
-  [node result walker index child]
-  (when (function-child? node index child)
-    (walker child result)))
-
-(defn- collect-function-children
-  [node result walker]
-  (each [index child (ipairs (or node.children []))]
-    (collect-function-child node result walker index child))
-  result)
-
-(defn- collect-function-nodes
-  [node result]
-  (when (and node
-             (= node.kind :list)
-             (or (= (list-head node) "fn") (= (list-head node) "lambda") (= (list-head node) "λ")))
-    (table.insert result node))
-  (when node
-    (collect-function-children node result collect-function-nodes))
-  result)
+(defn- configured-function?
+  [node policy]
+  (and (= node.kind :list)
+       (contains? (. (registry.rule-options policy "function-shape") :function-forms) (list-head node) 1)))
 
 (defn- synthetic-form
   [path node]
   {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form (.. path " > function-shape") :node node})
+
 (defn- function-nodes
-  [source]
-  (let [functions []]
-    (each [_ root (ipairs (root-forms source))]
-      (collect-function-nodes root functions))
-    functions))
+  [source policy]
+  (mutation.executable-nodes source (fn [node] (configured-function? node policy))))
 
 (defn- append-synthetic-node
   [all path forms policy node]
@@ -97,7 +99,7 @@
 
 (defn- append-synthetic-nodes
   [all path forms policy source]
-  (each [_ node (ipairs (function-nodes source))]
+  (each [_ node (ipairs (function-nodes source policy))]
     (append-synthetic-node all path forms policy node))
   all)
 

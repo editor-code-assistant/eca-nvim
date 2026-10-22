@@ -13,11 +13,18 @@
 (local enabled? registry.enabled?)
 (local rule-severity registry.rule-severity)
 
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
 (defn- defn-node?
-  [node]
-  (and (= node.kind :list)
-       (or (= (list-head node) "defn")
-           (= (list-head node) "defn-"))))
+  [node policy]
+  (let [heads (. (registry.rule-options policy "defn-args-newline") :forms)]
+    (and (= node.kind :list)
+         (contains? heads (list-head node) 1))))
 
 (defn- docstring?
   [children]
@@ -68,9 +75,13 @@
   [findings path forms policy node]
   (append-finding findings path forms policy node))
 
+(defn- defn-nodes
+  [source policy]
+  (mutation.executable-nodes source (fn [node] (defn-node? node policy))))
+
 (defn- append-node-findings
   [findings path forms policy source]
-  (each [_ node (ipairs (mutation.executable-nodes source defn-node?))]
+  (each [_ node (ipairs (defn-nodes source policy))]
     (append-node-finding findings path forms policy node))
   findings)
 

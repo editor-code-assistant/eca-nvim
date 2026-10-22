@@ -10,6 +10,9 @@ local reader = require("fennel-extras.reader")
 local parse = require("fennel-extras.config.parse")
 local lint_config = require("fennel-extras.config.lint")
 local lint_rules = require("fennel-extras.lint.rules")
+local lint_options = require("fennel-extras.lint.rules.options")
+local alignment = require("fennel-extras.indent.settings")
+local compatibility_policy = {["module-style"] = "error", ["spec-macro-import"] = "error", ["spec-no-module"] = "error", ["spec-direct-require"] = "error", ["one-is-per-testing"] = "error", ["if-branch-call"] = "warning", ["if-without-else"] = "warning", ["control-layout"] = "warning", ["unused-and-or"] = "warning", ["defn-args-newline"] = "warning", ["function-shape"] = "warning", ["no-mutation"] = "warning", ["multiline-layout"] = "warning", ["file-size"] = "warning", ["core-require"] = "error", ["binding-per-line"] = "warning", ["call-data-arg"] = "warning"}
 local parse_string
 do
   local function parse_string0(text)
@@ -106,6 +109,13 @@ end
 local function configuration_error_with_lint(failure, lint)
   return (failure or (lint and lint_config["lint-error"](lint)))
 end
+local function alignment_error(align_bindings, alignment_table)
+  if ((align_bindings ~= nil) and not boolean_3f(align_bindings)) then
+    return {message = "align-bindings must be a boolean"}
+  else
+    return (alignment_table and alignment.validate(alignment_table))
+  end
+end
 local function configuration_error(tbl)
   local width = tbl["indent-width"]
   local builtins = tbl.builtins
@@ -114,6 +124,7 @@ local function configuration_error(tbl)
   local skip_dotfiles = tbl["skip-dotfiles"]
   local follow_symlinks = tbl["follow-symlinks"]
   local align_bindings = tbl["align-bindings"]
+  local alignment_table = tbl.alignment
   local parser = tbl.parser
   local lint = tbl.lint
   local failure = nil
@@ -149,8 +160,8 @@ local function configuration_error(tbl)
     failure = {message = "follow-symlinks must be a boolean"}
   else
   end
-  if ((failure == nil) and (align_bindings ~= nil) and not boolean_3f(align_bindings)) then
-    failure = {message = "align-bindings must be a boolean"}
+  if (failure == nil) then
+    failure = alignment_error(align_bindings, alignment_table)
   else
   end
   if ((failure == nil) and (parser ~= nil) and (type(parser) ~= "string")) then
@@ -159,13 +170,50 @@ local function configuration_error(tbl)
   end
   return configuration_error_with_lint(failure, lint)
 end
+local function normalize_if_needed(tbl)
+  if (tbl["align-bindings"] or tbl.alignment) then
+    return alignment.normalize(tbl)
+  else
+    return tbl
+  end
+end
+local function path_error(tbl)
+  if (tbl.paths and not array_of_strings_3f(tbl.paths)) then
+    return {message = "paths must be an array of strings"}
+  else
+    return nil
+  end
+end
+local function exclude_error(tbl)
+  if (tbl.exclude and not array_of_strings_3f(tbl.exclude)) then
+    return {message = "exclude must be an array of strings"}
+  else
+    return nil
+  end
+end
+local function content_error(tbl)
+  return (path_error(tbl) or exclude_error(tbl))
+end
+local function validation_result(tbl, failure)
+  if failure then
+    return nil, failure
+  else
+    return normalize_if_needed(tbl)
+  end
+end
+local function validation_failure(tbl)
+  return (configuration_error(tbl) or content_error(tbl))
+end
+local function valid_table(tbl)
+  return validation_result(tbl, validation_failure(tbl))
+end
 local validate
 do
   local function validate0(tbl)
     if (type(tbl) ~= "table") then
       return nil, {message = "configuration must be a table"}
     else
-      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, ["align-bindings"] = true, parser = true, lint = true}
+      local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, ["align-bindings"] = true, alignment = true, parser = true, lint = true}
       local failure = nil
       for key, _ in pairs(tbl) do
         if not allowed[key] then
@@ -176,32 +224,66 @@ do
       if failure then
         return nil, failure
       else
-        local new_error = configuration_error(tbl)
-        if new_error then
-          return nil, new_error
-        else
-          if (tbl.paths and not array_of_strings_3f(tbl.paths)) then
-            return nil, {message = "paths must be an array of strings"}
-          else
-            if (tbl.exclude and not array_of_strings_3f(tbl.exclude)) then
-              return nil, {message = "exclude must be an array of strings"}
-            else
-              return tbl
-            end
-          end
-        end
+        return valid_table(tbl)
       end
     end
   end
   _2amodule_2a["validate"] = validate0
   validate = _2amodule_2a.validate
 end
+local function normalized_options(options, name, entry)
+  if entry.options then
+    return core.assoc(options, name, entry.options)
+  else
+    return options
+  end
+end
+local function normalized_table_entry(rules, options, name, entry)
+  return core.assoc(rules, name, entry.severity), normalized_options(options, name, entry)
+end
+local function normalized_value_entry(rules, options, name, entry)
+  return core.assoc(rules, name, entry), options
+end
+local function normalized_rule_entry(rules, options, name, entry)
+  if (type(entry) == "table") then
+    return normalized_table_entry(rules, options, name, entry)
+  else
+    return normalized_value_entry(rules, options, name, entry)
+  end
+end
+local function normalized_overrides_step(overrides, next_key, state, recurse)
+  local new_rules, new_options = normalized_rule_entry(state.rules, state.options, next_key, state.entry)
+  return recurse(overrides, next_key, new_rules, new_options)
+end
+local function normalized_rule_overrides(overrides, key, rules, options)
+  local next_key, next_entry = next(overrides, key)
+  if (next_key == nil) then
+    return rules, options
+  else
+    return normalized_overrides_step(overrides, next_key, {entry = next_entry, rules = rules, options = options}, normalized_rule_overrides)
+  end
+end
+local function lint_policy_result(rules, options, exclusions, max_code_lines, spec_files)
+  return {rules = rules, options = options, ["spec-files"] = spec_files, exclusions = exclusions, ["max-code-lines"] = max_code_lines}
+end
+local function lint_policy_defaults(overrides)
+  if (next(overrides, nil) == nil) then
+    return lint_rules.defaults()
+  else
+    return compatibility_policy
+  end
+end
 local function valid_lint_policy(cfg)
   local lint = cfg.lint
   local overrides = ((lint and lint.rules) or {})
-  local exclusions = ((lint and lint.exclusions) or {})
+  local general = ((lint and lint.exclusions) or {})
+  local exclusions = core.concat(general, lint_config.exclusions(overrides))
   local max_code_lines = ((lint and lint["max-code-lines"]) or 300)
-  return {rules = core.merge(lint_rules.defaults(), overrides), exclusions = exclusions, ["max-code-lines"] = max_code_lines}
+  local spec_files = ((lint and lint["spec-files"]) or lint_options["spec-files"]())
+  local defaults = lint_policy_defaults(overrides)
+  local rules, explicit_options = normalized_rule_overrides(overrides, nil, defaults, {})
+  local options = lint_options.normalized(explicit_options)
+  return lint_policy_result(rules, options, exclusions, max_code_lines, spec_files)
 end
 local lint_policy
 do
@@ -304,10 +386,10 @@ do
       local text = file:read("*a")
       file:close()
       local ok, parsed_or_error
-      local function _39_()
+      local function _45_()
         return parse_string(text)
       end
-      ok, parsed_or_error = pcall(_39_)
+      ok, parsed_or_error = pcall(_45_)
       if not ok then
         return nil, parsed_or_error
       else

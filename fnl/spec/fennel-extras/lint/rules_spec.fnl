@@ -26,34 +26,54 @@
         (sort-severities entries)))))
 
 (deftest defaults
-  (testing "all seventeen lint rules have the approved default severities"
-    (is (= [["binding-per-line" "warning"]
-            ["call-data-arg" "warning"]
-            ["control-layout" "warning"]
-            ["core-require" "error"]
-            ["defn-args-newline" "warning"]
-            ["file-size" "warning"]
-            ["function-shape" "warning"]
-            ["if-branch-call" "warning"]
-            ["if-without-else" "warning"]
-            ["module-style" "error"]
-            ["multiline-layout" "warning"]
-            ["no-mutation" "warning"]
-            ["one-is-per-testing" "error"]
-            ["spec-direct-require" "error"]
-            ["spec-macro-import" "error"]
-            ["spec-no-module" "error"]
-            ["unused-and-or" "warning"]]
+  (testing "all seventeen lint rules are off by default"
+    (is (= [["binding-per-line" "off"]
+            ["call-data-arg" "off"]
+            ["control-layout" "off"]
+            ["core-require" "off"]
+            ["defn-args-newline" "off"]
+            ["file-size" "off"]
+            ["function-shape" "off"]
+            ["if-branch-call" "off"]
+            ["if-without-else" "off"]
+            ["module-style" "off"]
+            ["multiline-layout" "off"]
+            ["no-mutation" "off"]
+            ["one-is-per-testing" "off"]
+            ["spec-direct-require" "off"]
+            ["spec-macro-import" "off"]
+            ["spec-no-module" "off"]
+            ["unused-and-or" "off"]]
            (let [entries (default-severities)]
              (if (. entries :module-missing)
                entries
                (sort-severities entries)))))))
 
+(defn- all-enabled-policy
+  []
+  {"module-style"        :error
+   "spec-macro-import"   :error
+   "spec-no-module"      :error
+   "spec-direct-require" :error
+   "one-is-per-testing"  :error
+   "if-branch-call"      :warning
+   "if-without-else"     :warning
+   "control-layout"      :warning
+   "defn-args-newline"   :warning
+   "multiline-layout"    :warning
+   "function-shape"      :warning
+   "no-mutation"         :warning
+   "file-size"           :warning
+   "core-require"        :error
+   "unused-and-or"       :warning
+   "binding-per-line"    :warning
+   "call-data-arg"       :warning})
+
 (defn- core-require-scenario
   []
   (let [source        "(local c (require :eca.nfnl.core))"
         path          "fnl/app.fnl"
-        policy        {}
+        policy        (all-enabled-policy)
         (forms error) (identity.forms source path)]
     (if error
       {:error error}

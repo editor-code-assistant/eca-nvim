@@ -110,7 +110,8 @@
       format
       (let [(ok value err) (pcall (fn [] (format.format-string source {:config config})))]
         {:value?      (and ok (not= nil value))
-         :has-message (and ok (= nil value) err (= :string (type (. err :message))))
+         :has-message (and err (= :table (type err)) (= :string (type (. err :message))))
+         :message     (and err (. err :message))
          :value
          value}))))
 
@@ -278,6 +279,22 @@
       (is (= {:value? false :has-message true}
              {:value?      (. result :value?)
               :has-message (. result :has-message)}))))
+  (testing "a boolean alignment value returns the documented validation error"
+    (let [result (format-summary "(x\ny)" {:alignment true})]
+      (is (= {:value?      false
+              :has-message true
+              :message     "alignment must be a table"}
+             {:value?      (. result :value?)
+              :has-message (. result :has-message)
+              :message     (. result :message)}))))
+  (testing "a string alignment value returns the documented validation error"
+    (let [result (format-summary "(x\ny)" {:alignment "yes"})]
+      (is (= {:value?      false
+              :has-message true
+              :message     "alignment must be a table"}
+             {:value?      (. result :value?)
+              :has-message (. result :has-message)
+              :message     (. result :message)}))))
   (testing "align-bindings formats a multiline map with trailing value whitespace"
     (is (= {:value?
             true
@@ -988,3 +1005,53 @@
           expected
           "(defn- parse-lint-args\n  [args]\n  (let [result              {:a 1}\n        state               (lint-state args 2 result)\n        (final-state error) (parse-lint-loop state)]\n    (parse-lint-result final-state error)))"]
       (is (= [expected once] [once twice])))))
+
+(deftest configurable-alignment
+  (testing "maps alignment aligns maps"
+    (is (= "{:a    1\n :long 2}"
+           (. (format-summary "{:a 1\n :long 2}" {:alignment {:maps true}}) :value))))
+  (testing "maps alignment does not align let bindings or split one-line lets"
+    (is (= "(let [a 1 b 2]\n  a)"
+           (. (format-summary "(let [a 1 b 2]\n  a)" {:alignment {:maps true}}) :value))))
+  (testing "split-bindings splits a let without aligning its names"
+    (is (= "(let [a 1\n      b 2]\n  a)"
+           (. (format-summary "(let [a 1 b 2]\n  a)" {:alignment {:split-bindings true}}) :value))))
+  (testing "bindings alignment aligns lets"
+    (is (= "(let [a         1\n      long-name 2]\n  a)"
+           (. (format-summary "(let [a 1\n      long-name 2]\n  a)" {:alignment {:bindings true}}) :value))))
+  (testing "bindings alignment does not align maps"
+    (is (= "{:a 1\n :long 2}"
+           (. (format-summary "{:a 1\n :long 2}" {:alignment {:bindings true}}) :value))))
+  (testing "clauses alignment aligns clause pairs"
+    (is (= "(case x\n  \"--all\"     (a)\n  \"--changed\" (b)\n  _           (c))"
+           (. (format-summary "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))" {:alignment {:clauses true}}) :value))))
+  (testing "collapse-padding collapses one-line map padding"
+    (is (= "{:a 1 :bb 2}"
+           (. (format-summary "{:a     1 :bb    2}" {:alignment {:collapse-padding true :maps true}}) :value))))
+  (testing "custom binding forms restrict splitting to the configured names"
+    (is (= "(when-let [a 1 b 2] a)"
+           (. (format-summary "(when-let [a 1 b 2] a)"
+                              {:alignment {:split-bindings true :binding-forms ["let"]}})
+              :value))))
+  (testing "custom binding forms can add a form for splitting"
+    (is (= "(my-let [a 1\n         b 2] a)"
+           (. (format-summary "(my-let [a 1 b 2] a)"
+                              {:alignment {:split-bindings true :binding-forms ["my-let"]}})
+              :value))))
+  (testing "custom clause forms enable alignment for the configured form"
+    (is (= "(my-case x\n  short  (a)\n  longer (b))"
+           (. (format-summary "(my-case x\n  short (a)\n  longer (b))"
+                              {:alignment {:clauses true :clause-forms ["my-case"]}})
+              :value))))
+  (testing "explicit split-bindings false overrides align-bindings shorthand"
+    (is (= "(let [a 1 b 2]\n  a)"
+           (. (format-summary "(let [a 1 b 2]\n  a)"
+                              {:align-bindings true
+                               :alignment      {:split-bindings false}})
+              :value))))
+  (testing "a configurable alignment combination is idempotent"
+    (let [config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true}}
+          source "(let [a 1 b 2]\n  a)\n{:a 1\n :long 2}"
+          once   (. (format-summary source config) :value)
+          twice  (. (format-summary once config) :value)]
+      (is (= once twice)))))

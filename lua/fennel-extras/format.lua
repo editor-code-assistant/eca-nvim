@@ -7,6 +7,7 @@ do
 end
 local indent = require("fennel-extras.indent")
 local reader = require("fennel-extras.reader")
+local settings = require("fennel-extras.indent.settings")
 local function split_lines(source)
   local lines = {}
   local start = 1
@@ -246,22 +247,31 @@ do
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
   ast_equal_3f = _2amodule_2a["ast-equal?"]
 end
+local function alignment_enabled_3f(alignment)
+  return (alignment.bindings or alignment.maps or alignment.clauses or alignment["split-bindings"] or alignment["collapse-padding"])
+end
 local format_string
 do
   local function format_string0(source, opts)
     local config = (opts.config or {})
     local parser = opts.parser
-    local out, error = indent.reindent(source, config)
-    if error then
-      return nil, error
+    local alignment_error = settings.validate(config.alignment)
+    if alignment_error then
+      return nil, alignment_error
     else
-      if not indent_only_3f(source, out, (config["align-bindings"] and true)) then
-        return nil, {message = "formatter changed more than indentation"}
+      local alignment = settings.resolve(config)
+      local out, error = indent.reindent(source, config)
+      if error then
+        return nil, error
       else
-        if (parser and not ast_equal_3f(parser, source, out)) then
-          return nil, {message = "formatter changed the parsed form"}
+        if not indent_only_3f(source, out, alignment_enabled_3f(alignment)) then
+          return nil, {message = "formatter changed more than indentation"}
         else
-          return out
+          if (parser and not ast_equal_3f(parser, source, out)) then
+            return nil, {message = "formatter changed the parsed form"}
+          else
+            return out
+          end
         end
       end
     end

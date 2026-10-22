@@ -19,7 +19,7 @@ local finding = registry.finding
 local module_finding
 do
   local function module_finding0(path, forms, policy, module_ok)
-    if (not spec_file_3f(path) and enabled_3f(policy, "module-style") and not module_ok) then
+    if (not spec_file_3f(path, policy["spec-files"], policy.matcher) and enabled_3f(policy, "module-style") and not module_ok) then
       return {{kind = "finding", path = path, line = 1, col = 1, ["end-line"] = 1, ["end-col"] = 1, severity = rule_severity(policy, "module-style"), rule = "module-style", form = (path .. " > file"), message = "file must use the module style", node = nil}}
     else
       return {}
@@ -48,11 +48,11 @@ end
 local function core_require_target(require_form, require_children)
   return ((list_head(require_form) == "require") and literal_text(require_children[2]))
 end
-local function canonical_core_require_3f(head, children, require_children)
-  return (((head == "local") and (#children == 3) and (symbol_text(children[2]) == "core") and (#require_children == 2)) or ((head == "require") and (#children == 2)))
+local function canonical_core_require_3f(head, children, require_children, binding)
+  return (((head == "local") and (#children == 3) and (symbol_text(children[2]) == binding) and (#require_children == 2)) or ((head == "require") and (#children == 2)))
 end
 local function maybe_add_core_require_finding(findings, path, form, head, children, node, policy, target, canonical)
-  if ((target == "eca.nfnl.core") and not canonical) then
+  if ((target == registry["rule-options"](policy, "core-require").module) and not canonical) then
     return add_core_finding(findings, path, form, head, children, node, policy)
   else
     return nil
@@ -72,7 +72,8 @@ do
     local require_form = core_require_form(head, children, node)
     local require_children = core_require_children(require_form)
     local target = core_require_target(require_form, require_children)
-    local canonical = canonical_core_require_3f(head, children, require_children)
+    local binding = registry["rule-options"](policy, "core-require").binding
+    local canonical = canonical_core_require_3f(head, children, require_children, binding)
     return maybe_add_core_require_finding(findings, path, form, head, children, node, policy, target, canonical)
   end
   _2amodule_2a["core-require-finding"] = core_require_finding0

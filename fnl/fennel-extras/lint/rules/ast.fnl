@@ -51,10 +51,31 @@
                 (string.sub node.text 2))
            node.text)))
 
+(defn literal-prefix-pattern?
+  [pattern]
+  (and (= (string.sub pattern 1 1) "^")
+       (= (string.find (string.sub pattern 2) "[%.%*%+%?%(%)|%$%[%]]") nil)))
+
+(defn- pattern-match?
+  [pattern path matcher]
+  (if matcher
+    (matcher pattern path)
+    (and (literal-prefix-pattern? pattern)
+         (= (string.sub path 1 (- (string.len pattern) 1))
+            (string.sub pattern 2)))))
+
+(defn- spec-file-match-step
+  [path spec-files matcher index]
+  (if (> index (length spec-files))
+    false
+    (or (pattern-match? (. spec-files index) path matcher)
+        (spec-file-match-step path spec-files matcher (+ index 1)))))
+
 (defn spec-file?
-  [path]
-  (and (= (string.sub path 1 9) "fnl/spec/")
-       true))
+  [path spec-files matcher]
+  (if (= spec-files nil)
+    (= (string.sub path 1 9) "fnl/spec/")
+    (spec-file-match-step path spec-files matcher 1)))
 
 (defn- newline-value
   [text index]
@@ -156,11 +177,16 @@
     (when (= (list-head node) "import-macros")
       (macro-import-data bindings target))))
 
+(defn- has-all-step
+  [names required index]
+  (if (> index (length required))
+    true
+    (and (. names (. required index))
+         (has-all-step names required (+ index 1)))))
+
 (defn has-all?
-  [names]
-  (and (. names "deftest")
-       (. names "testing")
-       (. names "is")))
+  [names required]
+  (has-all-step names required 1))
 
 (defn has-module-import?
   [names]
@@ -246,23 +272,23 @@
          (or (= previous.text "'") (= previous.text "`")))))
 
 (defn- count-is-child
-  [node child index count recurse]
+  [node child index count recurse testing-form assertion-form]
   (or (and child
            (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
            (not (quoted-child? node.children index))
-           (or (and (= (list-head child) "testing")
-                    (recurse node (+ index 1) count))
-               (and (= (list-head child) "is")
-                    (recurse node (+ index 1) (+ count 1)))
-               (recurse node (+ index 1) (+ count (recurse child 1 0)))))
-      (recurse node (+ index 1) count)))
+           (or (and (= (list-head child) testing-form)
+                    (recurse node (+ index 1) count testing-form assertion-form))
+               (and (= (list-head child) assertion-form)
+                    (recurse node (+ index 1) (+ count 1) testing-form assertion-form))
+               (recurse node (+ index 1) (+ count (recurse child 1 0 testing-form assertion-form)) testing-form assertion-form)))
+      (recurse node (+ index 1) count testing-form assertion-form)))
 
 (defn count-is
-  [node index count]
+  [node index count testing-form assertion-form]
   (let [child (. node.children index)]
     (if (> index (length node.children))
       count
-      (count-is-child node child index count count-is))))
+      (count-is-child node child index count count-is testing-form assertion-form))))
 (defn append-nodes
   [target nodes]
   (each [_ node (ipairs nodes)]

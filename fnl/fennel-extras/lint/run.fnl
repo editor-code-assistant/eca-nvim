@@ -2,8 +2,10 @@
 
 (module fennel-extras.lint.run)
 
+(local core (require :eca.nfnl.core))
 (local lint (require :fennel-extras.lint))
 (local output (require :fennel-extras.lint.output))
+(local exclusion-matcher (require :fennel-extras.lint.exclusion))
 
 (defn- exclusion-match?
   [exclusion finding]
@@ -35,74 +37,73 @@
     (keep-finding-step findings exclusions index result keep-finding)))
 
 (defn- matching-exclusion?
-  [exclusion findings index]
+  [exclusion findings matcher index]
   (if (> index (length findings))
     false
-    (or (exclusion-match? exclusion (. findings index))
-        (matching-exclusion? exclusion findings (+ index 1)))))
+    (or (exclusion-matcher.matches? exclusion (. findings index) nil matcher)
+        (matching-exclusion? exclusion findings matcher (+ index 1)))))
+
+(defn- stale-message
+  [exclusion policy]
+  (if (and exclusion.rule (= (. policy.rules exclusion.rule) "off"))
+    (.. "stale exclusion: rule " exclusion.rule " is not enabled")
+    (.. "stale exclusion: " (or exclusion.form exclusion.pattern exclusion.code "selector"))))
 
 (defn- stale-exclusion
-  [exclusion config-path]
-  {:kind "stale-exclusion" :path config-path :line 1 :col 1 :severity "error" :rule exclusion.rule :form exclusion.form :message (.. "stale exclusion: " exclusion.form)})
+  [exclusion config-path policy]
+  (let [rule    (or exclusion.rule "lint")
+        message (stale-message exclusion policy)]
+    {:kind "stale-exclusion" :path config-path :line 1 :col 1 :severity "error" :rule rule :form (or exclusion.form exclusion.pattern exclusion.code "selector") :message message}))
 
 (defn- append-stale-item
-  [result exclusion findings config-path]
-  (when (not (matching-exclusion? exclusion findings 1))
-    (table.insert result (stale-exclusion exclusion config-path)))
+  [result exclusion findings config-path matcher policy]
+  (when (not (matching-exclusion? exclusion findings matcher 1))
+    (table.insert result (stale-exclusion exclusion config-path policy)))
   result)
 
 (defn- append-stale-step
-  [exclusions findings config-path index result recurse]
-  (let [exclusion (. exclusions index)]
-    (recurse exclusions findings config-path (+ index 1) (append-stale-item result exclusion findings config-path))))
+  [exclusions findings config-path matcher policy index result recurse]
+  (let [entry (. exclusions index)]
+    (recurse exclusions findings config-path matcher policy (+ index 1) (append-stale-item result entry findings config-path matcher policy))))
 
 (defn- append-stale
-  [exclusions findings config-path index result]
+  [exclusions findings config-path matcher policy index result]
   (if (> index (length exclusions))
     result
-    (append-stale-step exclusions findings config-path index result append-stale)))
+    (append-stale-step exclusions findings config-path matcher policy index result append-stale)))
 
-(defn- normalized-testing-form
-  [finding]
-  (or (and (string.match finding.form " > top#[0-9]+$")
-           (.. finding.form " > testing#1"))
-      finding.form))
+(defn- annotate-finding
+  [finding source]
+  (core.assoc finding :source source))
 
-(defn- normalized-branch-form
-  [finding]
-  (let [form (string.gsub finding.form " > (top#[0-9]+) > (then.*)$" " > %1 > if#1 > %2")]
-    form))
+(defn- annotate-findings-step
+  [findings source index recurse]
+  (let [finding (annotate-finding (. findings index) source)
+        result  (core.assoc findings index finding)]
+    (recurse result source (+ index 1) recurse)))
 
-(defn- normalized-form
-  [finding]
-  (if (= finding.rule "one-is-per-testing")
-    (normalized-testing-form finding)
-    (normalized-branch-form finding)))
-
-(defn- normalized-finding
-  [finding]
-  {:kind finding.kind :path finding.path :line finding.line :col finding.col :end-line finding.end-line :end-col finding.end-col :severity finding.severity :rule finding.rule :form (normalized-form finding) :message finding.message})
-
-(defn- normalize-findings-step
-  [findings index result recurse]
-  (let [finding (. findings index)]
-    (table.insert result (normalized-finding finding))
-    (recurse findings (+ index 1) result)))
-
-(defn- normalize-findings
-  [findings index result]
+(defn- annotate-findings
+  [findings source index recurse]
   (if (> index (length findings))
-    result
-    (normalize-findings-step findings index result normalize-findings)))
+    findings
+    (annotate-findings-step findings source index recurse)))
 
 (defn- lint-file
   [file policy]
-  (let [(findings error) (lint.check file.source
-                                     {:path file.path :rules policy.rules :max-code-lines policy.max-code-lines :selection file.selection})]
+  (let [context          {:path             file.path
+                          :rules            policy.rules
+                          :options          policy.options
+                          :spec-files       policy.spec-files
+                          :max-code-lines   policy.max-code-lines
+                          :selection        file.selection
+                          :matcher          policy.matcher
+                          :exclusions       policy.exclusions
+                          :defer-exclusions true}
+        (findings error) (lint.check file.source context)]
     (if error
       (values nil
               {:message error.message :line error.line :col error.col :path file.path})
-      (values (normalize-findings findings 1 []) nil))))
+      (values (annotate-findings findings file.source 1 annotate-findings) nil))))
 
 (defn- append-findings
   [result findings]
@@ -184,10 +185,10 @@
 
 (defn- diagnostics
   [findings policy config-path scope-paths]
-  (let [exclusions (scoped-exclusions policy.exclusions scope-paths 1 [])
-        filtered   (keep-finding findings exclusions 1 [])
-        stale      (append-stale exclusions findings config-path 1 [])
-        source     (diagnostic-source filtered policy stale scope-paths)]
+  (let [exclusions   (scoped-exclusions policy.exclusions scope-paths 1 [])
+        (filtered _) (exclusion-matcher.apply findings exclusions nil policy.matcher)
+        stale        (append-stale exclusions findings config-path policy.matcher policy 1 [])
+        source       (diagnostic-source filtered policy stale scope-paths)]
     (output.sort (append-stale-findings source stale))))
 
 (defn- has-errors?

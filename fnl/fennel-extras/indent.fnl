@@ -8,6 +8,7 @@
 (local align (require :fennel-extras.indent.align))
 (local split (require :fennel-extras.indent.split))
 (local comments (require :fennel-extras.indent.comment))
+(local settings (require :fennel-extras.indent.settings))
 
 (defn- append-line
   [lines source start end]
@@ -126,13 +127,20 @@
   (if (and (= arg-index 0) (> first-token.line node.open.line))
     1
     arg-index))
+(defn- custom-rule
+  [config name]
+  (let [alignment (settings.resolve config)]
+    (when (or (and alignment.bindings ((. settings "binding-form?") alignment name))
+              (and alignment.clauses ((. settings "clause-form?") alignment name)))
+      [[:block 1]])))
+
 (defn- rule-indent
   [node first-token line-number config]
   (when (and node (= node.kind :list) (> line-number node.open.line))
     (let [children (helpers.nontrivia-children node)
           head     (. children 1)]
       (when (and head (= head.kind :symbol))
-        (let [rule      (rules.resolve config head.text)
+        (let [rule      (or (rules.resolve config head.text) (custom-rule config head.text))
               arg-index (argument-index node first-token)]
           (when (and rule arg-index)
             (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
@@ -263,50 +271,58 @@
           (values (.. (table.concat output "\n") (if final-newline "\n" "")) tree nil))))))
 
 (defn- alignment-source
-  [source tree]
+  [source tree alignment]
   (let [(lines final-newline) (split-lines source)
-        aligned               (align.apply lines tree)]
+        aligned               (align.apply lines tree alignment)]
     (.. (table.concat aligned "\n") (if final-newline "\n" ""))))
 
 (defn- alignment-pass
-  [source config]
+  [source config alignment]
   (let [(plain tree error) (reindent-once source config)]
     (if error
       (values nil error)
-      (let [aligned                 (alignment-source plain tree)
+      (let [aligned                 (alignment-source plain tree alignment)
             (result _ result-error) (reindent-once aligned config)]
         (values result result-error)))))
 
 (defn- fixed-point-result
-  [source config rounds result recurse]
+  [source config alignment rounds result recurse]
   (let [next-rounds (- rounds 1)]
     (if (or (= rounds 0) (= result source))
       result
-      (recurse result config next-rounds))))
+      (recurse result config alignment next-rounds))))
 
 (defn- alignment-fixed-point
-  [source config rounds]
-  (let [(result _ error) (alignment-pass source config)]
+  [source config alignment rounds]
+  (let [(result _ error) (alignment-pass source config alignment)]
     (if error
       (values nil error)
-      (fixed-point-result source config rounds result alignment-fixed-point))))
+      (fixed-point-result source config alignment rounds result alignment-fixed-point))))
 
 (defn- split-and-align
-  [source config]
-  (let [(prepared error edits) (split.split source)]
+  [source config alignment]
+  (let [(prepared error edits) (split.split source alignment)]
     (if error
       (values nil error)
-      (let [(result result-error) (alignment-fixed-point prepared config 3)]
+      (let [(result result-error) (alignment-fixed-point prepared config alignment 3)]
         (if result-error
           (values nil result-error)
           (values result nil))))))
 
 (defn reindent
   [source config]
-  (let [config-error (rules.validate config)]
-    (if config-error
-      (values nil config-error)
-      (if (and config (. config :align-bindings))
-        (split-and-align source config)
-        (let [(result _ error) (reindent-once source config)]
-          (values result error))))))
+  (let [alignment-error (settings.validate (and config (. config :alignment)))
+        config-error    (rules.validate config)]
+    (if alignment-error
+      (values nil alignment-error)
+      (if config-error
+        (values nil config-error)
+        (let [alignment (settings.resolve config)]
+          (if (or alignment.bindings
+                  alignment.maps
+                  alignment.clauses
+                  alignment.split-bindings
+                  alignment.collapse-padding)
+            (split-and-align source config alignment)
+            (let [(result _ error) (reindent-once source config)]
+              (values result error))))))))

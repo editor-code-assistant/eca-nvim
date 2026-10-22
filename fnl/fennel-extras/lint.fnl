@@ -2,22 +2,90 @@
 
 (module fennel-extras.lint)
 
+(local core (require :eca.nfnl.core))
 (local identity (require :fennel-extras.lint.identity))
+(local ast (require :fennel-extras.lint.rules.ast))
 (local rules (require :fennel-extras.lint.rules))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local selection (require :fennel-extras.lint.selection))
+(local exclusion-matcher (require :fennel-extras.lint.exclusion))
+(local rule-options (require :fennel-extras.lint.rules.options))
 
-(defn- exclusion-match?
-  [exclusion finding]
-  (and (= exclusion.rule finding.rule)
-       (= exclusion.form finding.form)))
+(local compatibility-policy {:module-style "error" :spec-macro-import "error" :spec-no-module "error" :spec-direct-require "error" :one-is-per-testing "error" :if-branch-call "warning" :if-without-else "warning" :control-layout "warning" :unused-and-or "warning" :defn-args-newline "warning" :function-shape "warning" :no-mutation "warning" :multiline-layout "warning" :file-size "warning" :core-require "error" :binding-per-line "warning" :call-data-arg "warning"})
+
+(defn- effective-policy
+  [policy]
+  (if (= (next policy nil) nil)
+    {}
+    (core.merge compatibility-policy policy)))
+
+(defn- normalized-policy-entry
+  [entry]
+  (if (= (type entry) :table)
+    entry.severity
+    entry))
+
+(defn- normalized-context-policy
+  [raw-policy]
+  (let [result {}]
+    (each [rule entry (pairs raw-policy)]
+      (tset result rule (normalized-policy-entry entry)))
+    result))
+
+(defn- context-policy
+  [context raw-policy]
+  (if context.matcher
+    (normalized-context-policy raw-policy)
+    (effective-policy raw-policy)))
+
+(defn- policy-for-context
+  [context]
+  (let [raw-policy (. context :rules)]
+    (if raw-policy
+      (context-policy context raw-policy)
+      {})))
+
+(defn- append-context-option
+  [result rule entry]
+  (if (and (= (type entry) :table) entry.options)
+    (core.assoc result rule entry.options)
+    result))
+
+(defn- context-options
+  [context]
+  (accumulate [result {} rule entry (pairs (or context.rules {}))]
+    (append-context-option result rule entry)))
+
+(defn- normalized-testing-form
+  [finding]
+  (or (and (string.match finding.form " > top#[0-9]+$")
+           (.. finding.form " > testing#1"))
+      finding.form))
+
+(defn- normalized-branch-form
+  [finding]
+  (let [form (string.gsub finding.form " > (top#[0-9]+) > (then.*)$" " > %1 > if#1 > %2")]
+    form))
+
+(defn- normalized-form
+  [finding]
+  (if (= finding.rule "one-is-per-testing")
+    (normalized-testing-form finding)
+    (normalized-branch-form finding)))
+
+(defn- normalize-finding
+  [finding]
+  (let [form (normalized-form finding)]
+    (if (= finding.form form)
+      finding
+      (core.assoc finding :form form))))
 
 (defn- excluded?
-  [exclusions finding index]
+  [exclusions finding source matcher index]
   (if (> index (length exclusions))
     false
-    (or (and (exclusion-match? (. exclusions index) finding) true)
-        (excluded? exclusions finding (+ index 1)))))
+    (or (exclusion-matcher.matches? (. exclusions index) finding source matcher)
+        (excluded? exclusions finding source matcher (+ index 1)))))
 
 (defn- branch-base
   [form suffix]
@@ -63,36 +131,116 @@
       (selected-scope? finding forms scope)))
 
 (defn- append-selected-finding
-  [result finding forms exclusions scope]
-  (when (and (selected? finding forms scope)
-             (not (excluded? exclusions finding 1)))
-    (table.insert result finding))
+  [result finding forms scope exclusions source matcher]
+  (let [normalized (normalize-finding finding)]
+    (when (and (selected? finding forms scope)
+               (not (excluded? exclusions normalized source matcher 1)))
+      (table.insert result normalized)))
   result)
 
 (defn- filter-findings-step
-  [findings forms exclusions scope index result recurse]
+  [findings forms scope exclusions source matcher index result recurse]
   (let [finding     (. findings index)
-        next-result (append-selected-finding result finding forms exclusions scope)]
-    (recurse findings forms exclusions scope (+ index 1) next-result)))
+        next-result (append-selected-finding result finding forms scope exclusions source matcher)]
+    (recurse findings forms scope exclusions source matcher (+ index 1) next-result)))
 
 (defn- filter-findings
-  [findings forms exclusions scope index result]
+  [findings forms scope exclusions source matcher index result]
   (if (> index (length findings))
     result
-    (filter-findings-step findings forms exclusions scope index result filter-findings)))
+    (filter-findings-step findings forms scope exclusions source matcher index result filter-findings)))
+
+(defn- filter-checked-findings
+  [findings forms scope exclusions source matcher defer]
+  (if defer
+    (filter-findings findings forms scope [] source matcher 1 [])
+    (filter-findings findings forms scope exclusions source matcher 1 [])))
+
+(defn- checked-findings-success
+  [forms path policy max-code-lines exclusions scope source matcher defer]
+  (let [findings (rules.check path forms policy source max-code-lines)]
+    (filter-checked-findings findings forms scope exclusions source matcher defer)))
 
 (defn- checked-findings
-  [forms error path policy max-code-lines exclusions scope source]
+  [forms error path policy max-code-lines exclusions scope source matcher defer]
   (if error
     (values nil error)
-    (filter-findings (rules.check path forms policy source max-code-lines) forms exclusions scope 1 [])))
+    (checked-findings-success forms path policy max-code-lines exclusions scope source matcher defer)))
+
+(defn- copy-context-exclusion
+  [rule value]
+  (let [copy {}]
+    (each [key item (pairs value)]
+      (tset copy key item))
+    (core.assoc copy :rule rule)))
+
+(defn- append-context-values
+  [result rule entries]
+  (each [_ value (ipairs entries)]
+    (table.insert result (copy-context-exclusion rule value)))
+  result)
+
+(defn- append-context-entry
+  [result rule entry]
+  (if (and (= (type entry) :table) entry.exclusions)
+    (append-context-values result rule entry.exclusions)
+    result))
+
+(defn- append-context-exclusions
+  [result raw-policy]
+  (each [rule entry (pairs raw-policy)]
+    (append-context-entry result rule entry))
+  result)
+
+(defn- context-exclusions
+  [context]
+  (let [result (core.concat [] (or context.exclusions []))]
+    (append-context-exclusions result (or context.rules {}))))
+
+(defn- regex-exclusion-error-entry
+  [entry matcher index]
+  (when (and (or entry.pattern entry.code) (= matcher nil))
+    {:message (.. "lint exclusion " index ": regex selectors require a matcher")}))
+
+(defn- regex-exclusion-error
+  [exclusions matcher index]
+  (let [entry (. exclusions index)]
+    (if (= entry nil)
+      nil
+      (or (regex-exclusion-error-entry entry matcher index)
+          (regex-exclusion-error exclusions matcher (+ index 1))))))
+
+(defn- regex-spec-files-error-entry
+  [spec-files matcher index]
+  (when (and (= matcher nil)
+             (not (ast.literal-prefix-pattern? (. spec-files index))))
+    {:message (.. "lint spec-files " index ": regex patterns require a matcher")}))
+
+(defn- regex-spec-files-error
+  [spec-files matcher index]
+  (if (> index (length spec-files))
+    nil
+    (or (regex-spec-files-error-entry spec-files matcher index)
+        (regex-spec-files-error spec-files matcher (+ index 1)))))
+
+(defn- policy-with-options
+  [base-policy context matcher spec-files]
+  (let [options (rule-options.normalized (or (. context :options) (context-options context)))]
+    (core.merge base-policy {:options options :spec-files spec-files :matcher matcher})))
 
 (defn check
   [source context]
-  (let [path           (or (. context :path) "")
-        policy         (or (. context :rules) {})
-        max-code-lines (or (. context :max-code-lines) 300)
-        exclusions     (or (. context :exclusions) [])
-        scope          (. context :selection)
-        (forms error)  (identity.forms source path)]
-    (checked-findings forms error path policy max-code-lines exclusions scope source)))
+  (let [path                (or (. context :path) "")
+        base-policy         (policy-for-context context)
+        matcher             (. context :matcher)
+        spec-files          (or (. context :spec-files) (rule-options.spec-files))
+        policy              (policy-with-options base-policy context matcher spec-files)
+        max-code-lines      (or (. context :max-code-lines) 300)
+        exclusions          (context-exclusions context)
+        scope               (. context :selection)
+        (forms parse-error) (identity.forms source path)
+        matcher-error       (or (regex-exclusion-error exclusions matcher 1)
+                                (regex-spec-files-error spec-files matcher 1))]
+    (if matcher-error
+      (_G.error matcher-error)
+      (checked-findings forms parse-error path policy max-code-lines exclusions scope source matcher context.defer-exclusions))))

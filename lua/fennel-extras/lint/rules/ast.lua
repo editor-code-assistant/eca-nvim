@@ -70,10 +70,36 @@ do
   _2amodule_2a["literal-text"] = literal_text0
   literal_text = _2amodule_2a["literal-text"]
 end
+local literal_prefix_pattern_3f
+do
+  local function literal_prefix_pattern_3f0(pattern)
+    return ((string.sub(pattern, 1, 1) == "^") and (string.find(string.sub(pattern, 2), "[%.%*%+%?%(%)|%$%[%]]") == nil))
+  end
+  _2amodule_2a["literal-prefix-pattern?"] = literal_prefix_pattern_3f0
+  literal_prefix_pattern_3f = _2amodule_2a["literal-prefix-pattern?"]
+end
+local function pattern_match_3f(pattern, path, matcher)
+  if matcher then
+    return matcher(pattern, path)
+  else
+    return (literal_prefix_pattern_3f(pattern) and (string.sub(path, 1, (string.len(pattern) - 1)) == string.sub(pattern, 2)))
+  end
+end
+local function spec_file_match_step(path, spec_files, matcher, index)
+  if (index > #spec_files) then
+    return false
+  else
+    return (pattern_match_3f(spec_files[index], path, matcher) or spec_file_match_step(path, spec_files, matcher, (index + 1)))
+  end
+end
 local spec_file_3f
 do
-  local function spec_file_3f0(path)
-    return ((string.sub(path, 1, 9) == "fnl/spec/") and true)
+  local function spec_file_3f0(path, spec_files, matcher)
+    if (spec_files == nil) then
+      return (string.sub(path, 1, 9) == "fnl/spec/")
+    else
+      return spec_file_match_step(path, spec_files, matcher, 1)
+    end
   end
   _2amodule_2a["spec-file?"] = spec_file_3f0
   spec_file_3f = _2amodule_2a["spec-file?"]
@@ -198,10 +224,17 @@ do
   _2amodule_2a["macro-import?"] = macro_import_3f0
   macro_import_3f = _2amodule_2a["macro-import?"]
 end
+local function has_all_step(names, required, index)
+  if (index > #required) then
+    return true
+  else
+    return (names[required[index]] and has_all_step(names, required, (index + 1)))
+  end
+end
 local has_all_3f
 do
-  local function has_all_3f0(names)
-    return (names.deftest and names.testing and names.is)
+  local function has_all_3f0(names, required)
+    return has_all_step(names, required, 1)
   end
   _2amodule_2a["has-all?"] = has_all_3f0
   has_all_3f = _2amodule_2a["has-all?"]
@@ -318,17 +351,17 @@ do
   _2amodule_2a["quoted-child?"] = quoted_child_3f0
   quoted_child_3f = _2amodule_2a["quoted-child?"]
 end
-local function count_is_child(node, child, index, count, recurse)
-  return ((child and ((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and not quoted_child_3f(node.children, index) and (((list_head(child) == "testing") and recurse(node, (index + 1), count)) or ((list_head(child) == "is") and recurse(node, (index + 1), (count + 1))) or recurse(node, (index + 1), (count + recurse(child, 1, 0))))) or recurse(node, (index + 1), count))
+local function count_is_child(node, child, index, count, recurse, testing_form, assertion_form)
+  return ((child and ((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and not quoted_child_3f(node.children, index) and (((list_head(child) == testing_form) and recurse(node, (index + 1), count, testing_form, assertion_form)) or ((list_head(child) == assertion_form) and recurse(node, (index + 1), (count + 1), testing_form, assertion_form)) or recurse(node, (index + 1), (count + recurse(child, 1, 0, testing_form, assertion_form)), testing_form, assertion_form))) or recurse(node, (index + 1), count, testing_form, assertion_form))
 end
 local count_is
 do
-  local function count_is0(node, index, count)
+  local function count_is0(node, index, count, testing_form, assertion_form)
     local child = node.children[index]
     if (index > #node.children) then
       return count
     else
-      return count_is_child(node, child, index, count, count_is0)
+      return count_is_child(node, child, index, count, count_is0, testing_form, assertion_form)
     end
   end
   _2amodule_2a["count-is"] = count_is0

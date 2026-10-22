@@ -46,6 +46,17 @@
          :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
          :returned-error (and ok value (= nil value) err)}))))
 
+(defn- alignment-error-summary
+  [alignment]
+  (let [indent (load-indent)]
+    (if (. indent :error)
+      indent
+      (let [(ok value err) (pcall (fn [] (indent.reindent "(x\ny)" {:alignment alignment})))]
+        {:ok?         ok
+         :result-nil? (= nil value)
+         :has-message (and ok (= nil value) err (= :table (type err)) (= :string (type (. err :message))))
+         :message     (and ok (= nil value) err (. err :message))}))))
+
 (deftest alignment-goldens
   (testing "aligns a call continuation to the first argument on the head line"
     (is (= "(foo a\n     b)"
@@ -157,7 +168,19 @@
     (is (= {:value? false :has-message true}
            (let [result (error-summary "(missing")]
              {:value?      (. result :value?)
-              :has-message (. result :has-message)})))))
+              :has-message (. result :has-message)}))))
+  (testing "a boolean alignment value returns the documented validation error"
+    (is (= {:ok?         true
+            :result-nil? true
+            :has-message true
+            :message     "alignment must be a table"}
+           (alignment-error-summary true))))
+  (testing "a string alignment value returns the documented validation error"
+    (is (= {:ok?         true
+            :result-nil? true
+            :has-message true
+            :message     "alignment must be a table"}
+           (alignment-error-summary "yes")))))
 
 (deftest hand-style-fixed-points
   (testing "footer-bar apply keeps the hand-written default if alignment"

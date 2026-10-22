@@ -58,18 +58,57 @@ local function trivia_3f(child)
     return false
   end
 end
+local function append_meaningful_child(result, child)
+  if not trivia_3f(child) then
+    return table.insert(result, child)
+  else
+    return nil
+  end
+end
 local function meaningful_children(children)
   local result = {}
   for _, child in ipairs(children) do
-    if not trivia_3f(child) then
-      table.insert(result, child)
-    else
-    end
+    append_meaningful_child(result, child)
   end
   return result
 end
 local function append_decoded_char(result, c)
   return table.insert(result, c)
+end
+local function normalize_escaped_delimiters_step(state)
+  local text = state.text
+  local index = state.index
+  local in_string = state["in-string"]
+  local result = state.result
+  if (index > string.len(text)) then
+    return result
+  else
+    local c = string.sub(text, index, index)
+    local next = string.sub(text, (index + 1), (index + 1))
+    if (not in_string and (c == "\\") and (next == "\"")) then
+      return normalize_escaped_delimiters_step({text = text, index = (index + 2), ["in-string"] = in_string, result = (result .. next)})
+    else
+      if (in_string and (c == "\\")) then
+        return normalize_escaped_delimiters_step({text = text, index = (index + 2), ["in-string"] = in_string, result = (result .. c .. next)})
+      else
+        local _9_
+        if (c == "\"") then
+          _9_ = not in_string
+        else
+          _9_ = in_string
+        end
+        return normalize_escaped_delimiters_step({text = text, index = (index + 1), ["in-string"] = _9_, result = (result .. c)})
+      end
+    end
+  end
+end
+local function normalize_escaped_delimiters(text)
+  local state = {text = text, index = 1, result = "", ["in-string"] = false}
+  return normalize_escaped_delimiters_step(state)
+end
+local function append_unsupported_escape(result, escaped)
+  table.insert(result, "\\")
+  return table.insert(result, escaped)
 end
 local function decode_string(token)
   local text = token.text
@@ -92,7 +131,7 @@ local function decode_string(token)
             if (escaped == "t") then
               table.insert(result, "\t")
             else
-              error(error_at("unsupported string escape", token), 0)
+              append_unsupported_escape(result, escaped)
             end
           end
         end
@@ -210,8 +249,8 @@ local parse_string
 do
   local function parse_string0(text)
     local ok, result
-    local function _32_()
-      local root, reader_error = reader0.parse(text)
+    local function _37_()
+      local root, reader_error = reader0.parse(normalize_escaped_delimiters(text))
       if reader_error then
         return {error = reader_error}
       else
@@ -232,7 +271,7 @@ do
         end
       end
     end
-    ok, result = pcall(_32_)
+    ok, result = pcall(_37_)
     if not ok then
       return nil, result
     else

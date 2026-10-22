@@ -37,31 +37,33 @@
   (registry.defaults))
 
 (defn- module-import-state
-  [state import-info]
-  (if (and import-info (= import-info.target "eca.nfnl.macros.aniseed"))
-    (has-module-import? import-info.names)
-    state.module-import))
+  [state import-info policy]
+  (let [target-module (. (registry.rule-options policy "module-style") :macro-module)]
+    (if (and import-info (= import-info.target target-module))
+      (has-module-import? import-info.names)
+      state.module-import)))
 
 (defn- spec-import-state
-  [state import-info]
-  (if (and import-info (= import-info.target "spec.eca.macros"))
-    (has-all? import-info.names)
-    state.spec-import))
+  [state import-info policy]
+  (let [target-module (. (registry.rule-options policy "spec-macro-import") :macro-module)]
+    (if (and import-info (= import-info.target target-module))
+      (has-all? import-info.names (. (registry.rule-options policy "spec-macro-import") :required-macros))
+      state.spec-import)))
 
 (defn- update-check-state
-  [state import-info head]
-  {:module-import (module-import-state state import-info) :module-form (or state.module-form (= head "module")) :spec-import (spec-import-state state import-info)})
+  [state import-info head policy]
+  {:module-import (module-import-state state import-info policy) :module-form (or state.module-form (= head "module")) :spec-import (spec-import-state state import-info policy)})
 
 (defn- check-state-step
-  [nodes index state recurse]
+  [nodes index state policy recurse]
   (let [node (. nodes index)]
-    (recurse nodes (+ index 1) (update-check-state state (macro-import? node) (list-head node)))))
+    (recurse nodes (+ index 1) (update-check-state state (macro-import? node) (list-head node) policy) policy)))
 
 (defn- check-state
-  [nodes index state]
+  [nodes index state policy]
   (if (> index (length nodes))
     state
-    (check-state-step nodes index state check-state)))
+    (check-state-step nodes index state policy check-state)))
 
 (defn- append-all
   [target items]
@@ -69,19 +71,30 @@
     (table.insert target value))
   target)
 
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
 (defn- evaluate-form
   [path form forms policy]
   (let [node     form.node
         head     (list-head node)
         findings []]
-    (when (and (spec-file? path) (= head "module") (enabled? policy "spec-no-module"))
+    (when (and (spec-file? path policy.spec-files policy.matcher)
+               (= head "module")
+               (enabled? policy "spec-no-module"))
       (table.insert findings
                     (finding path form (rule-severity policy "spec-no-module") "spec-no-module" "specs must not declare a module" node)))
-    (when (and (spec-file? path) (not (spec-rule.direct-require? path)) (require-node? node))
+    (when (and (spec-file? path policy.spec-files policy.matcher)
+               (require-node? node))
       (spec-rule.spec-direct-require-finding findings path form policy node))
     (when (= head "testing")
       (spec-rule.testing-finding findings path form policy node))
-    (when (and node (shape-leaf.function-head? head))
+    (when (and node
+               (contains? (. (registry.rule-options policy "function-shape") :function-forms) head 1))
       (shape-rule.add-function-findings findings path form forms policy node))
     (append-all findings (branch-rule.finding path form policy node))
     (when (and (or (= head "local") (= head "require"))
@@ -105,6 +118,23 @@
   [findings]
   (shape-rule.remove-contained-function-findings findings))
 
+(defn- append-applicable-finding
+  [result finding policy spec?]
+  (when (registry.applies-to? policy finding.rule spec?)
+    (table.insert result finding))
+  result)
+
+(defn- applicable-findings-step
+  [findings policy spec? index result recurse]
+  (let [next-result (append-applicable-finding result (. findings index) policy spec?)]
+    (recurse findings policy spec? (+ index 1) next-result)))
+
+(defn- applicable-findings
+  [findings policy spec? index result]
+  (if (> index (length findings))
+    result
+    (applicable-findings-step findings policy spec? index result applicable-findings)))
+
 (defn- check-result
   [path forms policy source max-code-lines state]
   (let [file-policy (core.assoc policy :max-code-lines max-code-lines)
@@ -125,5 +155,7 @@
 
 (defn check
   [path forms policy source max-code-lines]
-  (let [state (check-state (root-forms source) 1 {:module-import false :module-form false :spec-import false})]
-    (check-result path forms policy source (or max-code-lines 300) state)))
+  (let [state  (check-state (root-forms source) 1 {:module-import false :module-form false :spec-import false} policy)
+        result (check-result path forms policy source (or max-code-lines 300) state)
+        spec?  (spec-file? path policy.spec-files policy.matcher)]
+    (applicable-findings result policy spec? 1 [])))

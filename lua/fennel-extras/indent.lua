@@ -11,6 +11,7 @@ local helpers = require("fennel-extras.indent.node")
 local align = require("fennel-extras.indent.align")
 local split = require("fennel-extras.indent.split")
 local comments = require("fennel-extras.indent.comment")
+local settings = require("fennel-extras.indent.settings")
 local function append_line(lines, source, start, _end)
   table.insert(lines, string.sub(source, start, (_end - 1)))
   return (_end + 1)
@@ -156,12 +157,20 @@ local function block_argument_index(arg_index, first_token, node)
     return arg_index
   end
 end
+local function custom_rule(config, name)
+  local alignment = settings.resolve(config)
+  if ((alignment.bindings and settings["binding-form?"](alignment, name)) or (alignment.clauses and settings["clause-form?"](alignment, name))) then
+    return {{"block", 1}}
+  else
+    return nil
+  end
+end
 local function rule_indent(node, first_token, line_number, config)
   if (node and (node.kind == "list") and (line_number > node.open.line)) then
     local children = helpers["nontrivia-children"](node)
     local head = children[1]
     if (head and (head.kind == "symbol")) then
-      local rule = rules.resolve(config, head.text)
+      local rule = (rules.resolve(config, head.text) or custom_rule(config, head.text))
       local arg_index = argument_index(node, first_token)
       if (rule and arg_index) then
         return matching_rule_indent(rule, node, block_argument_index(arg_index, first_token, node), config)
@@ -193,13 +202,13 @@ local function default_indent_for(node, first_token, line_number)
       else
         if ((node.kind == "list") and (first_child.kind == "symbol")) then
           if (second_child and started_before_3f(second_child, line_number)) then
-            local _20_
+            local _21_
             if ((node.open.line == 2) and (node.open.col == 2) and (line_number == 3)) then
-              _20_ = 1
+              _21_ = 1
             else
-              _20_ = 0
+              _21_ = 0
             end
-            return (helpers["child-start"](second_child)["out-col"] + _20_)
+            return (helpers["child-start"](second_child)["out-col"] + _21_)
           else
             if started_before_3f(first_child, line_number) then
               return helpers["child-start"](first_child)["out-col"]
@@ -316,58 +325,58 @@ local function reindent_once(source, config)
       table.insert(output, process_line(line_number, line, nodes, tokens, config))
       line_number = (line_number + 1)
     end
-    local _37_
+    local _38_
     if final_newline then
-      _37_ = "\n"
+      _38_ = "\n"
     else
-      _37_ = ""
+      _38_ = ""
     end
-    return (table.concat(output, "\n") .. _37_), tree, nil
+    return (table.concat(output, "\n") .. _38_), tree, nil
   end
 end
-local function alignment_source(source, tree)
+local function alignment_source(source, tree, alignment)
   local lines, final_newline = split_lines(source)
-  local aligned = align.apply(lines, tree)
-  local _40_
+  local aligned = align.apply(lines, tree, alignment)
+  local _41_
   if final_newline then
-    _40_ = "\n"
+    _41_ = "\n"
   else
-    _40_ = ""
+    _41_ = ""
   end
-  return (table.concat(aligned, "\n") .. _40_)
+  return (table.concat(aligned, "\n") .. _41_)
 end
-local function alignment_pass(source, config)
+local function alignment_pass(source, config, alignment)
   local plain, tree, error = reindent_once(source, config)
   if error then
     return nil, error
   else
-    local aligned = alignment_source(plain, tree)
+    local aligned = alignment_source(plain, tree, alignment)
     local result, _, result_error = reindent_once(aligned, config)
     return result, result_error
   end
 end
-local function fixed_point_result(source, config, rounds, result, recurse)
+local function fixed_point_result(source, config, alignment, rounds, result, recurse)
   local next_rounds = (rounds - 1)
   if ((rounds == 0) or (result == source)) then
     return result
   else
-    return recurse(result, config, next_rounds)
+    return recurse(result, config, alignment, next_rounds)
   end
 end
-local function alignment_fixed_point(source, config, rounds)
-  local result, _, error = alignment_pass(source, config)
+local function alignment_fixed_point(source, config, alignment, rounds)
+  local result, _, error = alignment_pass(source, config, alignment)
   if error then
     return nil, error
   else
-    return fixed_point_result(source, config, rounds, result, alignment_fixed_point)
+    return fixed_point_result(source, config, alignment, rounds, result, alignment_fixed_point)
   end
 end
-local function split_and_align(source, config)
-  local prepared, error, edits = split.split(source)
+local function split_and_align(source, config, alignment)
+  local prepared, error, edits = split.split(source, alignment)
   if error then
     return nil, error
   else
-    local result, result_error = alignment_fixed_point(prepared, config, 3)
+    local result, result_error = alignment_fixed_point(prepared, config, alignment, 3)
     if result_error then
       return nil, result_error
     else
@@ -378,15 +387,21 @@ end
 local reindent
 do
   local function reindent0(source, config)
+    local alignment_error = settings.validate((config and config.alignment))
     local config_error = rules.validate(config)
-    if config_error then
-      return nil, config_error
+    if alignment_error then
+      return nil, alignment_error
     else
-      if (config and config["align-bindings"]) then
-        return split_and_align(source, config)
+      if config_error then
+        return nil, config_error
       else
-        local result, _, error = reindent_once(source, config)
-        return result, error
+        local alignment = settings.resolve(config)
+        if (alignment.bindings or alignment.maps or alignment.clauses or alignment["split-bindings"] or alignment["collapse-padding"]) then
+          return split_and_align(source, config, alignment)
+        else
+          local result, _, error = reindent_once(source, config)
+          return result, error
+        end
       end
     end
   end

@@ -12,14 +12,20 @@ local registry = require("fennel-extras.lint.rules.registry")
 local root_forms = ast["root-forms"]
 local previous_meaningful_index = ast["previous-meaningful-index"]
 local list_head = ast["list-head"]
-local spec_file_3f = ast["spec-file?"]
 local form_for_node = ast["form-for-node"]
 local nearest_form = ast["nearest-form"]
 local finding = registry.finding
 local enabled_3f = registry["enabled?"]
 local rule_severity = registry["rule-severity"]
-local function mutation_head_3f(head)
-  return ((head == "var") or (head == "set") or (head == "while"))
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
+local function mutation_head_3f(head, policy)
+  return contains_3f(registry["rule-options"](policy, "no-mutation").forms, head, 1)
 end
 local function mutation_mode_for_prefix(prefix, mode)
   return (((prefix == "'") and "quoted") or ((mode == "quoted") and "quoted") or ((prefix == "`") and (mode + 1)) or ((prefix == ",") and math.max(0, (mode - 1))) or mode)
@@ -71,11 +77,11 @@ do
   _2amodule_2a["executable-nodes"] = executable_nodes0
   executable_nodes = _2amodule_2a["executable-nodes"]
 end
-local function mutation_nodes(source)
-  local function _5_(node)
-    return ((node.kind == "list") and mutation_head_3f(list_head(node)))
+local function mutation_nodes(source, policy)
+  local function _6_(node)
+    return ((node.kind == "list") and mutation_head_3f(list_head(node), policy))
   end
-  return executable_nodes(source, _5_)
+  return executable_nodes(source, _6_)
 end
 local function mutation_form(path, node, base, ordinal)
   return {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (base.form .. " > no-mutation#" .. ordinal), node = node}
@@ -89,7 +95,7 @@ local function append_mutation_finding(findings, path, forms, policy, node, ordi
   return core.assoc(ordinals, base.form, ordinal)
 end
 local function add_mutation_finding(findings, path, forms, policy, node, ordinals)
-  if (not spec_file_3f(path) and enabled_3f(policy, "no-mutation")) then
+  if enabled_3f(policy, "no-mutation") then
     return append_mutation_finding(findings, path, forms, policy, node, ordinals)
   else
     return ordinals
@@ -100,7 +106,7 @@ do
   local function findings0(findings1, path, forms, policy, source)
     do
       local ordinals = {}
-      for _, node in ipairs(mutation_nodes(source)) do
+      for _, node in ipairs(mutation_nodes(source, policy)) do
         ordinals = add_mutation_finding(findings1, path, forms, policy, node, ordinals)
       end
     end

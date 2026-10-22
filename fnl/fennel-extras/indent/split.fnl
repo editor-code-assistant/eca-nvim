@@ -5,8 +5,7 @@
 (local reader (require :fennel-extras.reader))
 (local helpers (require :fennel-extras.indent.node))
 (local bindings (require :fennel-extras.indent.bindings))
-
-(local binding-forms {:let true :when-let true :if-let true :with-open true})
+(local settings (require :fennel-extras.indent.settings))
 
 (defn- prefixed?
   [child]
@@ -21,12 +20,12 @@
   (. (bindings.meaningful-children node) 1))
 
 (defn- supported-form?
-  [node]
+  [node alignment]
   (let [head (binding-head node)]
     (and (= node.kind :list)
          head
          (= head.kind :symbol)
-         (. binding-forms head.text))))
+         ((. settings "binding-form?") alignment head.text))))
 
 (defn- same-line-edit
   [name-start value-end]
@@ -78,37 +77,37 @@
   {:edits state.edits :previous child})
 
 (defn- walk-nested-child
-  [recur state child quoted]
+  [recur state child quoted alignment]
   (let [child-quoted (or quoted (quoted-child? state.previous))
-        nested       (recur child child-quoted)
+        nested       (recur child child-quoted alignment)
         edits        (append-edits state.edits nested)]
     {:edits edits :previous nil}))
 
 (defn- walk-child
-  [recur state child quoted]
+  [recur state child quoted alignment]
   (if child.text
     (walk-text-child state child)
-    (walk-nested-child recur state child quoted)))
+    (walk-nested-child recur state child quoted alignment)))
 
 (defn- walk-edits
-  [node quoted]
-  (if (and (not quoted) (supported-form? node))
+  [node quoted alignment]
+  (if (and (not quoted) (supported-form? node alignment))
     (vector-edits node)
     []))
 
 (defn- walk-state
-  [recur node edits quoted]
+  [recur node edits quoted alignment]
   (accumulate [state
                {:edits edits :previous nil}
                _
                child
                (ipairs (or node.children []))]
-    (walk-child recur state child quoted)))
+    (walk-child recur state child quoted alignment)))
 
 (defn- walk-node
-  [node quoted]
-  (let [edits (walk-edits node quoted)
-        state (walk-state walk-node node edits quoted)]
+  [node quoted alignment]
+  (let [edits (walk-edits node quoted alignment)
+        state (walk-state walk-node node edits quoted alignment)]
     state.edits))
 
 (defn- whitespace?
@@ -171,14 +170,20 @@
     (table.sort edits edit-before?)
     (table.concat (apply-edits-step apply-edits-step lines edits) "\n")))
 
-(defn- split-success
-  [source tree]
-  (let [edits (walk-node tree false)]
+(defn- split-tree
+  [source tree alignment]
+  (let [edits (walk-node tree false alignment)]
     (values (apply-edits source edits) nil edits)))
 
-(defn split
-  [source]
+(defn- split-source
+  [source alignment]
   (let [(tree error) (reader.parse source)]
     (if error
       (values nil error [])
-      (split-success source tree))))
+      (split-tree source tree alignment))))
+
+(defn split
+  [source alignment]
+  (if (not alignment.split-bindings)
+    (values source nil [])
+    (split-source source alignment)))

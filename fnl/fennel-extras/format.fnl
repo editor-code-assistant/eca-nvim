@@ -2,6 +2,7 @@
 (module fennel-extras.format)
 (local indent (require :fennel-extras.indent))
 (local reader (require :fennel-extras.reader))
+(local settings (require :fennel-extras.indent.settings))
 
 (defn- split-lines
   [source]
@@ -263,17 +264,29 @@
     (and ok
          result)))
 
+(defn- alignment-enabled?
+  [alignment]
+  (or alignment.bindings
+      alignment.maps
+      alignment.clauses
+      alignment.split-bindings
+      alignment.collapse-padding))
+
 (defn format-string
   [source opts]
-  (let [config      (or (. opts :config) {})
-        parser      (. opts :parser)
-        (out error) (indent.reindent source config)]
-    (if error
-      (values nil error)
-      (if (not (indent-only? source out (and (. config :align-bindings) true)))
-        (values nil {:message "formatter changed more than indentation"})
-        (if (and parser (not (ast-equal? parser source out)))
-          (values nil {:message "formatter changed the parsed form"})
-          out)))))
+  (let [config          (or (. opts :config) {})
+        parser          (. opts :parser)
+        alignment-error (settings.validate (. config :alignment))]
+    (if alignment-error
+      (values nil alignment-error)
+      (let [alignment   (settings.resolve config)
+            (out error) (indent.reindent source config)]
+        (if error
+          (values nil error)
+          (if (not (indent-only? source out (alignment-enabled? alignment)))
+            (values nil {:message "formatter changed more than indentation"})
+            (if (and parser (not (ast-equal? parser source out)))
+              (values nil {:message "formatter changed the parsed form"})
+              out)))))))
 
 nil

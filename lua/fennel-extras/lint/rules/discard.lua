@@ -19,7 +19,14 @@ local rule_severity = registry["rule-severity"]
 local function_heads = {defn = true, ["defn-"] = true, fn = true, lambda = true, ["\206\187"] = true}
 local binding_heads = {let = true, when = true, ["when-let"] = true, ["if-let"] = true, ["with-open"] = true}
 local discard_loop_heads = {each = true, ["for"] = true, ["while"] = true}
-local target_heads = {["and"] = true, ["or"] = true}
+local default_target_heads = {["and"] = true, ["or"] = true}
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
 local function function_body_offset(argument)
   if (argument and (argument.kind == "string")) then
     return 1
@@ -52,23 +59,33 @@ local function meaningful_index(node, target)
   end
   return result
 end
-local function discarded_child_3f(parent, child)
+local function target_node_3f(node, policy)
+  local heads = registry["rule-options"](policy, "unused-and-or").forms
+  return ((node.kind == "list") and contains_3f(heads, list_head(node), 1))
+end
+local function custom_target_root_3f(parent, child, policy)
+  return ((list_head(parent) == nil) and target_node_3f(child, policy) and not default_target_heads[list_head(child)])
+end
+local function discarded_child_3f(parent, child, policy)
   local head = list_head(parent)
   local children = meaningful_children(parent)
   local index = meaningful_index(parent, child)
   local start = body_start(head, children)
-  return ((start > 0) and (index >= start) and (discard_loop_heads[head] or (index < #children)))
-end
-local function target_node_3f(node)
-  return ((node.kind == "list") and target_heads[list_head(node)])
+  return (custom_target_root_3f(parent, child, policy) or ((start > 0) and (index >= start) and (discard_loop_heads[head] or (index < #children))))
 end
 local function add_target_key(result, node)
   result[(node.open.line .. ":" .. node.open.col)] = true
   return result
 end
-local function target_keys(source)
+local function target_nodes(source, policy)
+  local function _4_(node)
+    return target_node_3f(node, policy)
+  end
+  return mutation["executable-nodes"](source, _4_)
+end
+local function target_keys(source, policy)
   local result = {}
-  for _, node in ipairs(mutation["executable-nodes"](source, target_node_3f)) do
+  for _, node in ipairs(target_nodes(source, policy)) do
     result = add_target_key(result, node)
   end
   return result
@@ -88,7 +105,7 @@ local function append_finding(findings, path, forms, policy, node, ordinals)
 end
 local function visit_child(state, index, child)
   if executable_child_3f(child) then
-    return state.visit(state.findings, state.path, state.forms, state.policy, state.targets, child, discarded_child_3f(state.node, child), state.ordinals)
+    return state.visit(state.findings, state.path, state.forms, state.policy, state.targets, child, discarded_child_3f(state.node, child, state.policy), state.ordinals)
   else
     return state.ordinals
   end
@@ -117,7 +134,7 @@ local function append_findings(findings, path, forms, policy, source)
   local reader = require("fennel-extras.reader")
   local root = reader.parse(source)
   if root then
-    return visit_root(findings, path, forms, policy, target_keys(source), root)
+    return visit_root(findings, path, forms, policy, target_keys(source, policy), root)
   else
     return findings
   end

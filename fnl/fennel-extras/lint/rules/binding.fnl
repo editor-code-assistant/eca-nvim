@@ -42,17 +42,26 @@
   (and (= node.kind :sequence)
        (lines-valid? (bindings.pairs node))))
 
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
 (defn- offending-node?
-  [node]
+  [node policy]
   (let [children (ast.meaningful-children node)
-        binding  (. children 2)]
+        binding  (. children 2)
+        heads    (or (. (registry.rule-options policy "binding-per-line") :forms) [])]
     (and (= node.kind :list)
          (. binding-heads (list-head node))
+         (contains? heads (list-head node) 1)
          (not (pair-lines-valid? binding)))))
 
 (defn- binding-nodes
-  [source]
-  (mutation.executable-nodes source offending-node?))
+  [source policy]
+  (mutation.executable-nodes source (fn [node] (offending-node? node policy))))
 
 (defn- update-ordinal
   [ordinals key ordinal]
@@ -88,6 +97,6 @@
 
 (defn findings
   [findings path forms policy source]
-  (accumulate [ordinals {} _ node (ipairs (binding-nodes source))]
+  (accumulate [ordinals {} _ node (ipairs (binding-nodes source policy))]
     (append-node-finding findings path forms policy node ordinals))
   findings)

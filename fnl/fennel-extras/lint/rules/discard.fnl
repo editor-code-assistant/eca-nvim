@@ -17,7 +17,13 @@
 (local function-heads {:defn true :defn- true :fn true :lambda true :λ true})
 (local binding-heads {:let true :when true :when-let true :if-let true :with-open true})
 (local discard-loop-heads {:each true :for true :while true})
-(local target-heads {:and true :or true})
+(local default-target-heads {:and true :or true})
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
 
 (defn- function-body-offset
   [argument]
@@ -58,30 +64,42 @@
     (accumulate [result 0 index child (ipairs children)]
       (meaningful-index-step result index child target))))
 
+(defn- target-node?
+  [node policy]
+  (let [heads (. (registry.rule-options policy "unused-and-or") :forms)]
+    (and (= node.kind :list)
+         (contains? heads (list-head node) 1))))
+
+(defn- custom-target-root?
+  [parent child policy]
+  (and (= (list-head parent) nil)
+       (target-node? child policy)
+       (not (. default-target-heads (list-head child)))))
+
 (defn- discarded-child?
-  [parent child]
+  [parent child policy]
   (let [head     (list-head parent)
         children (meaningful-children parent)
         index    (meaningful-index parent child)
         start    (body-start head children)]
-    (and (> start 0)
-         (>= index start)
-         (or (. discard-loop-heads head)
-             (< index (length children))))))
-
-(defn- target-node?
-  [node]
-  (and (= node.kind :list)
-       (. target-heads (list-head node))))
+    (or (custom-target-root? parent child policy)
+        (and (> start 0)
+             (>= index start)
+             (or (. discard-loop-heads head)
+                 (< index (length children)))))))
 
 (defn- add-target-key
   [result node]
   (tset result (.. node.open.line ":" node.open.col) true)
   result)
 
+(defn- target-nodes
+  [source policy]
+  (mutation.executable-nodes source (fn [node] (target-node? node policy))))
+
 (defn- target-keys
-  [source]
-  (accumulate [result {} _ node (ipairs (mutation.executable-nodes source target-node?))]
+  [source policy]
+  (accumulate [result {} _ node (ipairs (target-nodes source policy))]
     (add-target-key result node)))
 
 (defn- executable-child?
@@ -104,7 +122,7 @@
 (defn- visit-child
   [state index child]
   (if (executable-child? child)
-    (state.visit state.findings state.path state.forms state.policy state.targets child (discarded-child? state.node child) state.ordinals)
+    (state.visit state.findings state.path state.forms state.policy state.targets child (discarded-child? state.node child state.policy) state.ordinals)
     state.ordinals))
 
 (defn- next-ordinals
@@ -131,7 +149,7 @@
   (let [reader (require :fennel-extras.reader)
         root   (reader.parse source)]
     (if root
-      (visit-root findings path forms policy (target-keys source) root)
+      (visit-root findings path forms policy (target-keys source policy) root)
       findings)))
 
 (defn findings

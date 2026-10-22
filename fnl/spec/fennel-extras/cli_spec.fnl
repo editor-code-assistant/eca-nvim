@@ -773,6 +773,12 @@
                 {"a.fnl" "(if x 1 2)\n"}
                 args))
 
+(defn- lint-opt-in-scenario
+  []
+  (lint-project "{}"
+                {"a.fnl" "(if x (do (foo) (bar)) nil)\n"}
+                ["lint" "--all"]))
+
 (defn- lint-discovery-scenario
   [mode]
   (let [config "{:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"] :lint {:rules {\"module-style\" :off}}}"
@@ -786,12 +792,12 @@
 (defn- lint-output-scenario
   [mode]
   (let [config (if (= mode :error)
-                 "{:lint {:rules {\"module-style\" :off}}}"
+                 "{:lint {:rules {\"module-style\" :off \"one-is-per-testing\" :error}}}"
                  (if (= mode :warning-error)
                    "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :error}}}"
                    (if (= mode :off)
                      "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :off}}}"
-                     "{:lint {:rules {\"module-style\" :off}}}")))
+                     "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :warning}}}")))
         source (if (= mode :error)
                  "(testing \"x\" (is 1) (is 2))\n"
                  "(if x (do (foo) (bar)) nil)\n")]
@@ -800,9 +806,54 @@
 (defn- lint-exclusion-scenario
   [mode]
   (let [config (if (= mode :stale)
-                 "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > missing\" :reason \"old intentional branch\"}]}}"
-                 "{:lint {:rules {\"module-style\" :off} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > top#1 > if#1 > then\" :reason \"intentional multi-step branch\"}]}}")]
+                 "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :warning} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > missing\" :reason \"old intentional branch\"}]}}"
+                 "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :warning} :exclusions [{:rule \"if-branch-call\" :form \"a.fnl > top#1 > if#1 > then\" :reason \"intentional multi-step branch\"}]}}")]
     (lint-project config {"a.fnl" "(if x (do (foo) (bar)) nil)\n"} ["lint" "--all"])))
+
+(defn- lint-normalized-testing-exclusion-scenario
+  []
+  (lint-project "{:lint {:rules {\"module-style\" :off \"one-is-per-testing\" :error} :exclusions [{:rule \"one-is-per-testing\" :form \"a.fnl > top#1 > testing#1\" :reason \"intentional test shape\"}]}}"
+                {"a.fnl" "(testing \"two\" (is true) (is true))\n"}
+                ["lint" "--all"]))
+
+(defn- lint-selector-exclusion-scenario
+  [mode]
+  (let [config (if (= mode :per-rule)
+                 "{:lint {:rules {\"module-style\" :off \"if-without-else\" {:severity :warning :exclusions [{:line 1}]}}}}"
+                 "{:lint {:rules {\"module-style\" :error \"if-without-else\" :warning} :exclusions [{:pattern \"a[.]fnl\" :line 1}]}}")]
+    (lint-project config {"a.fnl" "(if ok then)\n"} ["lint" "--all"])))
+
+(defn- lint-spec-files-scenario
+  []
+  (lint-project "{:lint {:spec-files [\"^fnl/spec/\" \"^tests/\"] :rules {\"module-style\" :off \"spec-macro-import\" :off \"spec-no-module\" :error}}}"
+                {"tests/a.fnl" "(module app)\n(var x 1)\n"}
+                ["lint" "--all"]))
+
+(defn- lint-invalid-regex-scenario
+  []
+  (lint-project "{:lint {:rules {\"module-style\" :off} :exclusions [{:pattern \"[\" :line 1}]}}"
+                {"a.fnl" "(if\n"}
+                ["lint" "--all"]))
+
+(defn- lint-invalid-spec-files-regex-scenario
+  []
+  (let [(ok result) (pcall (fn []
+                             (lint-project "{:lint {:spec-files [\"[\"] :rules {\"no-mutation\" :warning}}}"
+                                           {"a.fnl" "(var x 1)\n"}
+                                           ["lint" "--all"])))]
+    {:ok ok :result result}))
+
+(defn- lint-stale-pattern-scenario
+  []
+  (lint-project "{:lint {:rules {\"module-style\" :off \"if-without-else\" :warning} :exclusions [{:pattern \"a[.]fnl\" :line 2}]}}"
+                {"a.fnl" "(if ok then)\n"}
+                ["lint" "--all"]))
+
+(defn- lint-disabled-exclusion-scenario
+  []
+  (lint-project "{:lint {:rules {\"if-without-else\" :off} :exclusions [{:rule \"if-without-else\" :line 1}]}}"
+                {"a.fnl" "(if ok then)\n"}
+                ["lint" "--all"]))
 
 (defn- lint-error-scenario
   [mode]
@@ -813,6 +864,9 @@
     (lint-project config {"a.fnl" source} ["lint" "--all"])))
 
 (deftest lint-grammar
+  (testing "omitting lint rules produces no findings"
+    (let [result (lint-opt-in-scenario)]
+      (is (= {:code 0 :lines []} {:code (. result :code) :lines (. result :lines)}))))
   (testing "accepts lint all with text output"
     (is (= 0 (. (lint-grammar-scenario ["lint" "--all"]) :code))))
   (testing "accepts lint all with json output"
@@ -837,7 +891,12 @@
     (testing "uses configured paths exclusions extensions and omits its config file"
       (is (= [] (. (lint-discovery-scenario :default) :lines))))
     (testing "optional path arguments restrict lint all discovery"
-      (is (= [] (. (lint-discovery-scenario :explicit) :lines)))))
+      (is (= [] (. (lint-discovery-scenario :explicit) :lines))))
+    (testing "combines configured spec-file patterns in CLI lint"
+      (let [result (lint-spec-files-scenario)]
+        (is (and (= 1 (. result :code))
+                 (= 2 (length (. result :lines)))
+                 (string.match (or (. result :lines 1) "") "spec%-no%-module"))))))
 
   (deftest lint-output
     (testing "reports one error finding with text output and exit one"
@@ -865,7 +924,36 @@
     (testing "reports an unmatched exclusion as a stale error in all mode"
       (let [result (lint-exclusion-scenario :stale)]
         (is (and (= 1 (. result :code))
-                 (string.match (or (. result :lines 1) "") "^%.fnl%-extras%.fnl:1:1: error if%-branch%-call: stale exclusion: a%.fnl > missing$"))))))
+                 (string.match (or (. result :lines 1) "") "^%.fnl%-extras%.fnl:1:1: error if%-branch%-call: stale exclusion: a%.fnl > missing$")))))
+    (testing "suppresses normalized one-is-per-testing identity without stale output"
+      (let [result (lint-normalized-testing-exclusion-scenario)]
+        (is (= {:code 0 :lines []} {:code (. result :code) :lines (. result :lines)}))))
+    (testing "suppresses a per-rule exclusion end to end"
+      (is (= 0 (. (lint-selector-exclusion-scenario :per-rule) :code))))
+    (testing "suppresses a general exclusion end to end"
+      (is (= 0 (. (lint-selector-exclusion-scenario :general) :code))))
+    (testing "rejects an invalid regex before scanning source"
+      (let [result (lint-invalid-regex-scenario)]
+        (is (and (= 2 (. result :code))
+                 (string.match (or (. result :lines 1) "") "pattern")))))
+    (testing "rejects an invalid spec-files regex before scanning source"
+      (let [result    (lint-invalid-spec-files-regex-scenario)
+            cli       (. result :result)
+            cli-table (= (type cli) :table)
+            line      (or (and cli-table (. cli :lines 1)) "")]
+        (is (and (. result :ok)
+                 cli-table
+                 (= 2 (. cli :code))
+                 (string.match line "spec%-files")
+                 (string.match line "1")))))
+    (testing "reports a stale pattern exclusion"
+      (let [result (lint-stale-pattern-scenario)]
+        (is (and (= 1 (. result :code))
+                 (string.match (or (. result :lines 1) "") "stale exclusion")))))
+    (testing "reports a disabled-rule exclusion as stale"
+      (let [result (lint-disabled-exclusion-scenario)]
+        (is (and (= 1 (. result :code))
+                 (string.match (or (. result :lines 1) "") "not enabled"))))) )
 
   (deftest lint-errors-and-read-only
     (testing "returns exit two with a malformed lint configuration error"
