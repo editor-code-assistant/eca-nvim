@@ -10,10 +10,6 @@ local notify = autoload("eca.nfnl.notify")
 local config = autoload("eca.nfnl.config")
 local header = autoload("eca.nfnl.header")
 local M = define("eca.nfnl.compile")
-local function safe_target_3f(path)
-  local line = fs["read-first-line"](path)
-  return (not line or header["tagged?"](line))
-end
 M["macro-source?"] = function(_2_)
   local source = _2_.source
   local path = _2_.path
@@ -22,26 +18,35 @@ end
 local function valid_source_files(glob_fn, _3_)
   local root_dir = _3_["root-dir"]
   local cfg = _3_.cfg
+  local owner_3f = _3_["owner?"]
   local function _4_(_241)
+    return fs["join-path"]({root_dir, _241})
+  end
+  local function _5_(_241)
     return glob_fn(root_dir, _241)
   end
-  return core.mapcat(_4_, cfg({"source-file-patterns"}))
+  return core.filter(owner_3f, core.map(_4_, core.mapcat(_5_, cfg({"source-file-patterns"}))))
 end
-local function valid_source_file_3f(path, _5_)
-  local root_dir = _5_["root-dir"]
-  local cfg = _5_.cfg
-  local function _6_(_241)
+local function valid_source_file_3f(path, _6_)
+  local root_dir = _6_["root-dir"]
+  local cfg = _6_.cfg
+  local function _7_(_241)
     return fs["glob-matches?"](root_dir, _241, path)
   end
-  return core.some(_6_, cfg({"source-file-patterns"}))
+  return core.some(_7_, cfg({"source-file-patterns"}))
 end
-M["into-string"] = function(_7_)
-  local root_dir = _7_["root-dir"]
-  local path = _7_.path
-  local cfg = _7_.cfg
-  local source = _7_.source
-  local batch_3f = _7_["batch?"]
-  local opts = _7_
+local function nested_project_file_3f(path, _8_)
+  local root_dir = _8_["root-dir"]
+  local owner_3f = _8_["owner?"]
+  return not (owner_3f or config["owner-filter"](root_dir))(path)
+end
+M["into-string"] = function(_9_)
+  local root_dir = _9_["root-dir"]
+  local path = _9_.path
+  local cfg = _9_.cfg
+  local source = _9_.source
+  local batch_3f = _9_["batch?"]
+  local opts = _9_
   local macro_3f = M["macro-source?"](opts)
   if (macro_3f and batch_3f) then
     return {status = "macros-are-not-compiled", ["source-path"] = path}
@@ -52,6 +57,8 @@ M["into-string"] = function(_7_)
     return {status = "nfnl-config-is-not-compiled", ["source-path"] = path}
   elseif not valid_source_file_3f(path, opts) then
     return {status = "path-is-not-in-source-file-patterns", ["source-path"] = path}
+  elseif nested_project_file_3f(path, opts) then
+    return {status = "path-is-in-a-nested-nfnl-project", ["source-path"] = path}
   else
     local rel_file_name = path:sub((2 + root_dir:len()))
     local ok, res
@@ -65,13 +72,13 @@ M["into-string"] = function(_7_)
         notify.info("Successfully compiled: ", path)
       else
       end
-      local _9_
+      local _11_
       if cfg({"header-comment"}) then
-        _9_ = header["with-header"](rel_file_name, res)
+        _11_ = header["with-header"](rel_file_name, res)
       else
-        _9_ = res
+        _11_ = res
       end
-      return {status = "ok", ["source-path"] = path, result = (_9_ .. "\n")}
+      return {status = "ok", ["source-path"] = path, result = (_11_ .. "\n")}
     else
       if not batch_3f then
         notify.error(res)
@@ -81,25 +88,38 @@ M["into-string"] = function(_7_)
     end
   end
 end
-M["into-file"] = function(_14_)
-  local _root_dir = _14_["_root-dir"]
-  local cfg = _14_.cfg
-  local _source = _14_._source
-  local path = _14_.path
-  local batch_3f = _14_["batch?"]
-  local opts = _14_
+M["into-file"] = function(_16_)
+  local _root_dir = _16_["_root-dir"]
+  local cfg = _16_.cfg
+  local _source = _16_._source
+  local path = _16_.path
+  local batch_3f = _16_["batch?"]
+  local opts = _16_
   local fnl_path__3elua_path = cfg({"fnl-path->lua-path"})
   local destination_path = fnl_path__3elua_path(path)
-  local _let_15_ = M["into-string"](opts)
-  local status = _let_15_.status
-  local source_path = _let_15_["source-path"]
-  local result = _let_15_.result
-  local res = _let_15_
+  local _let_17_ = M["into-string"](opts)
+  local status = _let_17_.status
+  local source_path = _let_17_["source-path"]
+  local result = _let_17_.result
+  local res = _let_17_
+  local line, prefix
+  if (("ok" == status) and cfg({"header-comment"})) then
+    line, prefix = header.read(destination_path, cfg({"header-search-lines"}))
+  else
+    line, prefix = nil
+  end
   if ("ok" ~= status) then
     return res
-  elseif (safe_target_3f(destination_path) or not cfg({"header-comment"})) then
+  elseif (not line or header["tagged?"](line) or not cfg({"header-comment"})) then
     fs.mkdirp(fs.basename(destination_path))
-    core.spit(destination_path, result)
+    local function _19_()
+      if (prefix and cfg({"header-comment"})) then
+        return (prefix .. result)
+      else
+        return result
+      end
+    end
+    core.spit(destination_path, _19_())
     return {status = "ok", ["source-path"] = source_path, ["destination-path"] = destination_path}
   else
     if not batch_3f then
@@ -109,16 +129,13 @@ M["into-file"] = function(_14_)
     return {status = "destination-exists", ["source-path"] = path, ["destination-path"] = destination_path}
   end
 end
-M["all-files"] = function(_18_)
-  local root_dir = _18_["root-dir"]
-  local cfg = _18_.cfg
-  local opts = _18_
-  local function _19_(path)
-    return M["into-file"]({["root-dir"] = root_dir, path = path, cfg = cfg, source = core.slurp(path), ["batch?"] = true})
+M["all-files"] = function(_22_)
+  local root_dir = _22_["root-dir"]
+  local cfg = _22_.cfg
+  local owner_3f = config["owner-filter"](root_dir)
+  local function _23_(path)
+    return M["into-file"]({["root-dir"] = root_dir, path = path, cfg = cfg, ["owner?"] = owner_3f, source = core.slurp(path), ["batch?"] = true})
   end
-  local function _20_(_241)
-    return fs["join-path"]({root_dir, _241})
-  end
-  return core.map(_19_, core.map(_20_, valid_source_files(fs.relglob, opts)))
+  return core.map(_23_, valid_source_files(fs.relglob, {["root-dir"] = root_dir, cfg = cfg, ["owner?"] = owner_3f}))
 end
 return M
