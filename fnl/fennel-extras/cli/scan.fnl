@@ -74,7 +74,14 @@
 
 (defn- scan-target-entry
   [entry target]
-  {:directory entry.directory :prefix entry.prefix :name entry.name :type entry.type :path target :target target :rel entry.rel :error-prefix entry.error-prefix})
+  {:directory    entry.directory
+   :prefix       entry.prefix
+   :name         entry.name
+   :type         entry.type
+   :path         target
+   :target       target
+   :rel          entry.rel
+   :error-prefix entry.error-prefix})
 
 (defn- scan-target-stat-result
   [ctx acc entry target-stat]
@@ -110,10 +117,10 @@
 
 (defn- scan-entry-eligible
   [ctx acc entry]
-  (let [eligible (or (and (= entry.type "directory") (not (= entry.name ".git")))
-                     (= entry.type "file")
-                     (and (. ctx :follow-symlinks) (= entry.type "link")))]
-    (if eligible
+  (let [eligible? (or (and (= entry.type "directory") (not (= entry.name ".git")))
+                      (= entry.type "file")
+                      (and (. ctx :follow-symlinks) (= entry.type "link")))]
+    (if eligible?
       (scan-entry-target ctx acc entry)
       (values (scan-acc acc acc.result) nil))))
 
@@ -176,7 +183,11 @@
 
 (defn- followed-link-entry
   [entry]
-  {:directory entry.target :prefix entry.rel :path entry.target :rel entry.rel :error-prefix entry.error-prefix})
+  {:directory    entry.target
+   :prefix       entry.rel
+   :path         entry.target
+   :rel          entry.rel
+   :error-prefix entry.error-prefix})
 
 (defn- followed-link-directory
   [ctx acc entry target-stat]

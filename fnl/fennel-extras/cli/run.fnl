@@ -7,7 +7,7 @@
 (local format-config (require :fennel-extras.config.format))
 (local lint-run (require :fennel-extras.lint.run))
 (local scan (require :fennel-extras.cli.scan))
-(local arg_parser (require :fennel-extras.cli.args))
+(local arg-parser (require :fennel-extras.cli.args))
 (local fs (require :fennel-extras.cli.fs))
 (local git (require :fennel-extras.cli.git))
 (local format (require :fennel-extras.cli.format))
@@ -77,14 +77,18 @@
   (table.insert result {:path file.relative :source source})
   result)
 
+(defn- read-lint-item-success
+  [state file source]
+  (let [next-state {:files state.files :index (+ state.index 1) :result (append-lint-source state.result file source)}]
+    (values next-state nil)))
+
 (defn- read-lint-item-result
   [state]
   (let [file           (. state.files state.index)
         (source error) (read-lint-item file)]
     (if error
       (values nil {:path file.relative :error error})
-      (values {:files state.files :index (+ state.index 1) :result (append-lint-source state.result file source)}
-              nil))))
+      (read-lint-item-success state file source))))
 
 (defn- read-lint-step-result
   [state]
@@ -152,14 +156,13 @@
 
 (defn- compile-exclusion-patterns-step
   [exclusions index recurse]
-  (compile-exclusion-entry (. exclusions index))
-  (recurse exclusions (+ index 1) recurse))
+  (when (<= index (length exclusions))
+    (compile-exclusion-entry (. exclusions index))
+    (recurse exclusions (+ index 1) recurse)))
 
 (defn- compile-exclusion-patterns
   [exclusions index recurse]
-  (if (> index (length exclusions))
-    nil
-    (compile-exclusion-patterns-step exclusions index recurse)))
+  (compile-exclusion-patterns-step exclusions index recurse))
 
 (defn- compile-spec-file-pattern
   [spec-files index recurse]
@@ -170,8 +173,7 @@
 
 (defn- compile-spec-files-patterns-step
   [spec-files index recurse]
-  (if (> index (length spec-files))
-    nil
+  (when (<= index (length spec-files))
     (compile-spec-file-pattern spec-files index recurse)))
 
 (defn- compile-spec-files-patterns
@@ -201,13 +203,12 @@
 
 (defn- run-lint-discovery
   [context]
-  (let [inputs                       ((. arg_parser :lint-inputs) context.parsed context.cfg)
+  (let [inputs                       ((. arg-parser :lint-inputs) context.parsed context.cfg)
         extensions                   (. context.cfg :extensions)
         skip-dotfiles                (or (. context.cfg :skip-dotfiles) false)
         follow-symlinks              (or (. context.cfg :follow-symlinks) false)
-        (discovered discovery-error) (scan.sorted-files context.git-info.root
-                                                        inputs
-                                                        {:excludes (or (. context.cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks})
+        options                      {:excludes (or (. context.cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
+        (discovered discovery-error) (scan.sorted-files context.git-info.root inputs options)
         files                        (and discovered (format.without-config-file discovered context.config-path))]
     (if discovery-error
       (git.emit-git-error context.printer discovery-error)
@@ -229,13 +230,12 @@
 
 (defn- run-format-discovery
   [root parsed cfg config-path]
-  (let [inputs                       ((. arg_parser :lint-inputs) parsed cfg)
+  (let [inputs                       ((. arg-parser :lint-inputs) parsed cfg)
         extensions                   (. cfg :extensions)
         skip-dotfiles                (or (. cfg :skip-dotfiles) false)
         follow-symlinks              (or (. cfg :follow-symlinks) false)
-        (discovered discovery-error) (scan.sorted-files root
-                                                        inputs
-                                                        {:excludes (or (. cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks})]
+        options                      {:excludes (or (. cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
+        (discovered discovery-error) (scan.sorted-files root inputs options)]
     (values (and discovered (format.without-config-file discovered config-path)) discovery-error)))
 
 (defn- run-format-files-result
@@ -311,7 +311,7 @@
 
 (defn- parse-and-run
   [args printer root]
-  (let [(parsed parse-error) ((. arg_parser :parse-args) args)]
+  (let [(parsed parse-error) ((. arg-parser :parse-args) args)]
     (run-parsed-result args printer root parsed parse-error)))
 
 (defn run

@@ -123,8 +123,8 @@ local function scan_entry_rel(prefix, name)
   end
 end
 local function scan_entry_eligible(ctx, acc, entry)
-  local eligible = (((entry.type == "directory") and not (entry.name == ".git")) or (entry.type == "file") or (ctx["follow-symlinks"] and (entry.type == "link")))
-  if eligible then
+  local eligible_3f = (((entry.type == "directory") and not (entry.name == ".git")) or (entry.type == "file") or (ctx["follow-symlinks"] and (entry.type == "link")))
+  if eligible_3f then
     return scan_entry_target(ctx, acc, entry)
   else
     return scan_acc(acc, acc.result), nil

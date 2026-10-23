@@ -571,6 +571,11 @@
   (testing "rejects a non-table lint rules value"
     (is (= "lint rules must be a table"
            (validation-error-message "{:lint {:rules []}}"))))
+  (testing "rejects scalar lint rules values without crashing"
+    (is (= {:one "lint rules must be a table"
+            :two "lint rules must be a table"}
+           {:one (validation-error-message "{:lint {:rules 1}}")
+            :two (validation-error-message "{:lint {:rules \\\"x\\\"}}")})))
   (testing "rejects an unknown lint rule"
     (is (= "unknown lint rule: nope"
            (validation-error-message "{:lint {:rules {\"nope\" :error}}}"))))

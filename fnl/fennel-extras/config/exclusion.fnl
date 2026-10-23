@@ -67,8 +67,7 @@
 
 (defn- rule-list-error-step
   [rules index names]
-  (if (> index (length names))
-    nil
+  (when (<= index (length names))
     (rule-list-error-value rules index names (. names index))))
 
 (defn- rule-list-error
@@ -211,8 +210,7 @@
 
 (defn- duplicate-index-step
   [exclusions index entry prior]
-  (if (>= prior index)
-    nil
+  (when (< prior index)
     (duplicate-index-value exclusions index entry prior (. exclusions prior))))
 
 (defn- duplicate-index
@@ -239,8 +237,7 @@
 (defn- first-error
   [rules exclusions index]
   (let [entry (. exclusions index)]
-    (if (= entry nil)
-      nil
+    (when (not= entry nil)
       (or (entry-validation-error rules exclusions index entry)
           (first-error rules exclusions (+ index 1))))))
 

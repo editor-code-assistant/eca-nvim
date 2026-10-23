@@ -83,13 +83,17 @@ local function append_lint_source(result, file, source)
   table.insert(result, {path = file.relative, source = source})
   return result
 end
+local function read_lint_item_success(state, file, source)
+  local next_state = {files = state.files, index = (state.index + 1), result = append_lint_source(state.result, file, source)}
+  return next_state, nil
+end
 local function read_lint_item_result(state)
   local file = state.files[state.index]
   local source, error = read_lint_item(file)
   if error then
     return nil, {path = file.relative, error = error}
   else
-    return {files = state.files, index = (state.index + 1), result = append_lint_source(state.result, file, source)}, nil
+    return read_lint_item_success(state, file, source)
   end
 end
 local function read_lint_step_result(state)
@@ -167,15 +171,15 @@ local function compile_exclusion_entry(entry)
   end
 end
 local function compile_exclusion_patterns_step(exclusions, index, recurse)
-  compile_exclusion_entry(exclusions[index])
-  return recurse(exclusions, (index + 1), recurse)
+  if (index <= #exclusions) then
+    compile_exclusion_entry(exclusions[index])
+    return recurse(exclusions, (index + 1), recurse)
+  else
+    return nil
+  end
 end
 local function compile_exclusion_patterns(exclusions, index, recurse)
-  if (index > #exclusions) then
-    return nil
-  else
-    return compile_exclusion_patterns_step(exclusions, index, recurse)
-  end
+  return compile_exclusion_patterns_step(exclusions, index, recurse)
 end
 local function compile_spec_file_pattern(spec_files, index, recurse)
   local ok, compile_error = pcall(matcher["compile-pattern"], spec_files[index])
@@ -186,10 +190,10 @@ local function compile_spec_file_pattern(spec_files, index, recurse)
   end
 end
 local function compile_spec_files_patterns_step(spec_files, index, recurse)
-  if (index > #spec_files) then
-    return nil
-  else
+  if (index <= #spec_files) then
     return compile_spec_file_pattern(spec_files, index, recurse)
+  else
+    return nil
   end
 end
 local function compile_spec_files_patterns(spec_files, index, recurse)
@@ -224,7 +228,8 @@ local function run_lint_discovery(context)
   local extensions = context.cfg.extensions
   local skip_dotfiles = (context.cfg["skip-dotfiles"] or false)
   local follow_symlinks = (context.cfg["follow-symlinks"] or false)
-  local discovered, discovery_error = scan["sorted-files"](context["git-info"].root, inputs, {excludes = (context.cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks})
+  local options = {excludes = (context.cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
+  local discovered, discovery_error = scan["sorted-files"](context["git-info"].root, inputs, options)
   local files = (discovered and format["without-config-file"](discovered, context["config-path"]))
   if discovery_error then
     return git["emit-git-error"](context.printer, discovery_error)
@@ -253,7 +258,8 @@ local function run_format_discovery(root, parsed, cfg, config_path)
   local extensions = cfg.extensions
   local skip_dotfiles = (cfg["skip-dotfiles"] or false)
   local follow_symlinks = (cfg["follow-symlinks"] or false)
-  local discovered, discovery_error = scan["sorted-files"](root, inputs, {excludes = (cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks})
+  local options = {excludes = (cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
+  local discovered, discovery_error = scan["sorted-files"](root, inputs, options)
   return (discovered and format["without-config-file"](discovered, config_path)), discovery_error
 end
 local function run_format_files_result(context, files)

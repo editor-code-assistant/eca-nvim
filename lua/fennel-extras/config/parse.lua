@@ -23,37 +23,47 @@ local function plain_sequence_step(value, key, count, maximum)
     return ((type(next_key) == "number") and (next_key == math.floor(next_key)) and (next_key > 0) and (next_value ~= nil) and plain_sequence_step(value, next_key, (count + 1), math.max(maximum, next_key)))
   end
 end
+local function marked_with_3f(value, marker)
+  local metadata = getmetatable(value)
+  if metadata then
+    return (metadata[marker] == true)
+  else
+    return false
+  end
+end
+local function sequence_table_3f(value)
+  local metadata = getmetatable(value)
+  if metadata then
+    return marked_with_3f(value, sequence_marker)
+  else
+    return plain_sequence_step(value, nil, 0, 0)
+  end
+end
 local sequence_3f
 do
   local function sequence_3f0(value)
-    local and_2_ = (type(value) == "table")
-    if and_2_ then
-      local metadata = getmetatable(value)
-      and_2_ = ((metadata and metadata[sequence_marker]) or ((metadata == nil) and plain_sequence_step(value, nil, 0, 0)))
+    if (type(value) == "table") then
+      return sequence_table_3f(value)
+    else
+      return false
     end
-    return and_2_
   end
   _2amodule_2a["sequence?"] = sequence_3f0
   sequence_3f = _2amodule_2a["sequence?"]
 end
 local function parsed_table_3f(value)
-  local and_4_ = (type(value) == "table")
-  if and_4_ then
-    local metadata = getmetatable(value)
-    and_4_ = (metadata and metadata[table_marker])
+  if (type(value) == "table") then
+    return marked_with_3f(value, table_marker)
+  else
+    return false
   end
-  return and_4_
 end
 local function error_at(message, token)
   return {message = message, line = token.line, col = token.col}
 end
 local function trivia_3f(child)
-  if child then
-    if child.kind then
-      return ((child.kind == "whitespace") or (child.kind == "newline") or (child.kind == "comment") or (child.kind == "tab"))
-    else
-      return false
-    end
+  if (child and child.kind) then
+    return ((child.kind == "whitespace") or (child.kind == "newline") or (child.kind == "comment") or (child.kind == "tab"))
   else
     return false
   end
@@ -91,13 +101,13 @@ local function normalize_escaped_delimiters_step(state)
       if (in_string and (c == "\\")) then
         return normalize_escaped_delimiters_step({text = text, index = (index + 2), ["in-string"] = in_string, result = (result .. c .. next)})
       else
-        local _9_
+        local _8_
         if (c == "\"") then
-          _9_ = not in_string
+          _8_ = not in_string
         else
-          _9_ = in_string
+          _8_ = in_string
         end
-        return normalize_escaped_delimiters_step({text = text, index = (index + 1), ["in-string"] = _9_, result = (result .. c)})
+        return normalize_escaped_delimiters_step({text = text, index = (index + 1), ["in-string"] = _8_, result = (result .. c)})
       end
     end
   end
@@ -249,7 +259,7 @@ local parse_string
 do
   local function parse_string0(text)
     local ok, result
-    local function _37_()
+    local function _36_()
       local root, reader_error = reader0.parse(normalize_escaped_delimiters(text))
       if reader_error then
         return {error = reader_error}
@@ -271,7 +281,7 @@ do
         end
       end
     end
-    ok, result = pcall(_37_)
+    ok, result = pcall(_36_)
     if not ok then
       return nil, result
     else

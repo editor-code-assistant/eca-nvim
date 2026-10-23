@@ -59,9 +59,9 @@
 (defn- git-plan-changed-data
   [ctx]
   (let [(status-text status-code)       (git-call ctx.root ["diff" "--name-status" "-z" "--find-renames" "--find-copies" ctx.base "--"])
-        (untracked-text untracked-code) (git-call ctx.root ["ls-files" "--others" "--exclude-standard" "-z"])]
-    (git-plan-change-data ctx
-                          {:status-text status-text :status-code status-code :untracked-text untracked-text :untracked-code untracked-code})))
+        (untracked-text untracked-code) (git-call ctx.root ["ls-files" "--others" "--exclude-standard" "-z"])
+        status                          {:status-text status-text :status-code status-code :untracked-text untracked-text :untracked-code untracked-code}]
+    (git-plan-change-data ctx status)))
 
 (defn- git-plan-changed
   [ctx]

@@ -309,30 +309,27 @@ local function first_exclusion_error(exclusions, index)
     end
   end
 end
+local function lint_rules_error(rules)
+  if (rules and ((type(rules) ~= "table") or (sequence_3f(rules) and ((getmetatable(rules) ~= nil) or (#rules > 0))))) then
+    return {message = "lint rules must be a table"}
+  else
+    return nil
+  end
+end
+local function missing_spec_files_error(spec_files)
+  return ((spec_files == nil) and {message = "missing lint.spec-files"})
+end
+local function first_lint_rule_error_entry(rules)
+  return ((type(rules) == "table") and first_lint_rule_error(rules, nil))
+end
 local function lint_table_error(rules, exclusions, spec_files, unknown_key)
-  local or_39_ = unknown_lint_key_error(unknown_key)
-  if not or_39_ then
-    if (rules and ((type(rules) ~= "table") or (sequence_3f(rules) and ((getmetatable(rules) ~= nil) or (#rules > 0))))) then
-      or_39_ = {message = "lint rules must be a table"}
-    else
-      or_39_ = nil
-    end
-  end
-  if not or_39_ then
-    if rules then
-      or_39_ = first_lint_rule_error(rules, nil)
-    else
-      or_39_ = nil
-    end
-  end
-  if not or_39_ then
-    if (spec_files == nil) then
-      or_39_ = {message = "missing lint.spec-files"}
-    else
-      or_39_ = nil
-    end
-  end
-  return (or_39_ or options["spec-files-error"](spec_files) or exclusion.validate(lint_rules.defaults(), exclusions))
+  local unknown_error = unknown_lint_key_error(unknown_key)
+  local rules_error = lint_rules_error(rules)
+  local first_rule_error = first_lint_rule_error_entry(rules)
+  local missing_spec_error = missing_spec_files_error(spec_files)
+  local spec_files_error = options["spec-files-error"](spec_files)
+  local exclusions_error = exclusion.validate(lint_rules.defaults(), exclusions)
+  return (unknown_error or rules_error or first_rule_error or missing_spec_error or spec_files_error or exclusions_error)
 end
 local function append_exclusions(result, rule, entry)
   if ((type(entry) == "table") and entry.exclusions) then

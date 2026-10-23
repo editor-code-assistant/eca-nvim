@@ -290,20 +290,34 @@
         {:message (.. "lint exclusion " index " must be a table")}
         (first-exclusion-error-entry exclusions index exclusion first-exclusion-error)))))
 
+(defn- lint-rules-error
+  [rules]
+  (when (and rules (or (not= (type rules) :table) (and (sequence? rules) (or (not= (getmetatable rules) nil) (> (length rules) 0)))))
+    {:message "lint rules must be a table"}))
+
+(defn- missing-spec-files-error
+  [spec-files]
+  (and (= spec-files nil) {:message "missing lint.spec-files"}))
+
+(defn- first-lint-rule-error-entry
+  [rules]
+  (and (= (type rules) :table)
+       (first-lint-rule-error rules nil)))
+
 (defn- lint-table-error
   [rules exclusions spec-files unknown-key]
-  (or (unknown-lint-key-error unknown-key)
-      (when (and rules
-                 (or (not= (type rules) :table)
-                     (and (sequence? rules)
-                          (or (not= (getmetatable rules) nil)
-                              (> (length rules) 0)))))
-        {:message "lint rules must be a table"})
-      (when rules (first-lint-rule-error rules nil))
-      (when (= spec-files nil)
-        {:message "missing lint.spec-files"})
-      (options.spec-files-error spec-files)
-      (exclusion.validate (lint-rules.defaults) exclusions)))
+  (let [unknown-error      (unknown-lint-key-error unknown-key)
+        rules-error        (lint-rules-error rules)
+        first-rule-error   (first-lint-rule-error-entry rules)
+        missing-spec-error (missing-spec-files-error spec-files)
+        spec-files-error   (options.spec-files-error spec-files)
+        exclusions-error   (exclusion.validate (lint-rules.defaults) exclusions)]
+    (or unknown-error
+        rules-error
+        first-rule-error
+        missing-spec-error
+        spec-files-error
+        exclusions-error)))
 
 (defn- append-exclusions
   [result rule entry]

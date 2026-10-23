@@ -181,21 +181,29 @@
       failure)
     (error (.. prefix " must be a table of rules"))))
 
+(defn- validate-custom-type
+  [value name]
+  (when (and (not= value false)
+             (not= (type value) :table))
+    (error (.. name " must be a map or false"))))
+
+(defn- validate-custom-rules
+  [value prefix]
+  (when (= (type value) :table)
+    (validate-custom-map value prefix)))
+
 (defn- validate-custom-config
   [config]
-  (let [builtins  (. config :builtins)
-        fallbacks (. config :prefix-fallbacks)]
-    (if (and (not= builtins false)
-             (not= (type builtins) :table))
-      (error "builtins must be a map or false")
-      (if (and (= (type builtins) :table) (validate-custom-map builtins "builtins rule "))
-        (validate-custom-map builtins "builtins rule ")
-        (if (and (not= fallbacks false)
-                 (not= (type fallbacks) :table))
-          (error "prefix-fallbacks must be a map or false")
-          (when (and (= (type fallbacks) :table)
-                     (validate-custom-map fallbacks "prefix-fallbacks rule "))
-            (validate-custom-map fallbacks "prefix-fallbacks rule ")))))))
+  (let [builtins             (. config :builtins)
+        fallbacks            (. config :prefix-fallbacks)
+        builtins-type-error  (validate-custom-type builtins "builtins")
+        builtins-rule-error  (validate-custom-rules builtins "builtins rule ")
+        fallbacks-type-error (validate-custom-type fallbacks "prefix-fallbacks")
+        fallbacks-rule-error (validate-custom-rules fallbacks "prefix-fallbacks rule ")]
+    (or builtins-type-error
+        builtins-rule-error
+        fallbacks-type-error
+        fallbacks-rule-error)))
 
 (defn- validate-align-bindings
   [config]

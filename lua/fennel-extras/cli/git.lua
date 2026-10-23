@@ -76,7 +76,8 @@ end
 local function git_plan_changed_data(ctx)
   local status_text, status_code = git_call(ctx.root, {"diff", "--name-status", "-z", "--find-renames", "--find-copies", ctx.base, "--"})
   local untracked_text, untracked_code = git_call(ctx.root, {"ls-files", "--others", "--exclude-standard", "-z"})
-  return git_plan_change_data(ctx, {["status-text"] = status_text, ["status-code"] = status_code, ["untracked-text"] = untracked_text, ["untracked-code"] = untracked_code})
+  local status = {["status-text"] = status_text, ["status-code"] = status_code, ["untracked-text"] = untracked_text, ["untracked-code"] = untracked_code}
+  return git_plan_change_data(ctx, status)
 end
 local function git_plan_changed(ctx)
   local _, resolved_status = git_call(ctx.root, {"rev-parse", "--verify", (ctx.base .. "^{commit}")})

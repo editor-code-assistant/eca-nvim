@@ -45,10 +45,10 @@ local function rule_list_error_value(rules, index, names, name)
   end
 end
 local function rule_list_error_step(rules, index, names)
-  if (index > #names) then
-    return nil
-  else
+  if (index <= #names) then
     return rule_list_error_value(rules, index, names, names[index])
+  else
+    return nil
   end
 end
 local function rule_list_error(rules, index, names)
@@ -182,10 +182,10 @@ local function duplicate_index_value(exclusions, index, entry, prior, candidate)
   end
 end
 local function duplicate_index_step(exclusions, index, entry, prior)
-  if (prior >= index) then
-    return nil
-  else
+  if (prior < index) then
     return duplicate_index_value(exclusions, index, entry, prior, exclusions[prior])
+  else
+    return nil
   end
 end
 local function duplicate_index(exclusions, index, entry, prior)
@@ -211,10 +211,10 @@ local function entry_validation_error(rules, exclusions, index, entry)
 end
 local function first_error(rules, exclusions, index)
   local entry = exclusions[index]
-  if (entry == nil) then
-    return nil
-  else
+  if (entry ~= nil) then
     return (entry_validation_error(rules, exclusions, index, entry) or first_error(rules, exclusions, (index + 1)))
+  else
+    return nil
   end
 end
 local function validate_list(rules, exclusions)

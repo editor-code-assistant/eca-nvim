@@ -28,20 +28,31 @@
            (not= next-value nil)
            (plain-sequence-step value next-key (+ count 1) (math.max maximum next-key))))))
 
+(defn- marked-with?
+  [value marker]
+  (let [metadata (getmetatable value)]
+    (if metadata
+      (= (. metadata marker) true)
+      false)))
+
+(defn- sequence-table?
+  [value]
+  (let [metadata (getmetatable value)]
+    (if metadata
+      (marked-with? value sequence-marker)
+      (plain-sequence-step value nil 0 0))))
+
 (defn sequence?
   [value]
-  (and (= (type value) :table)
-       (let [metadata (getmetatable value)]
-         (or (and metadata (. metadata sequence-marker))
-             (and (= metadata nil)
-                  (plain-sequence-step value nil 0 0))))))
+  (if (= (type value) :table)
+    (sequence-table? value)
+    false))
 
 (defn- parsed-table?
   [value]
-  (and (= (type value) :table)
-       (let [metadata (getmetatable value)]
-         (and metadata
-              (. metadata table-marker)))))
+  (if (= (type value) :table)
+    (marked-with? value table-marker)
+    false))
 
 (defn- error-at
   [message token]
@@ -49,13 +60,11 @@
 
 (defn- trivia?
   [child]
-  (if child
-    (if child.kind
-      (or (= child.kind :whitespace)
-          (= child.kind :newline)
-          (= child.kind :comment)
-          (= child.kind :tab))
-      false)
+  (if (and child child.kind)
+    (or (= child.kind :whitespace)
+        (= child.kind :newline)
+        (= child.kind :comment)
+        (= child.kind :tab))
     false))
 
 (defn- append-meaningful-child

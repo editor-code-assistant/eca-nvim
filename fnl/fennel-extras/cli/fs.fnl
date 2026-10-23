@@ -3,6 +3,7 @@
 (module fennel-extras.cli.fs)
 
 (local table-copy (require :fennel-extras.cli.table))
+
 (defn- read-open-file
   [file]
   (let [text (file:read "*a")]

@@ -243,26 +243,28 @@ local function validate_custom_map(items, prefix)
     return error((prefix .. " must be a table of rules"))
   end
 end
+local function validate_custom_type(value, name)
+  if ((value ~= false) and (type(value) ~= "table")) then
+    return error((name .. " must be a map or false"))
+  else
+    return nil
+  end
+end
+local function validate_custom_rules(value, prefix)
+  if (type(value) == "table") then
+    return validate_custom_map(value, prefix)
+  else
+    return nil
+  end
+end
 local function validate_custom_config(config)
   local builtins = config.builtins
   local fallbacks = config["prefix-fallbacks"]
-  if ((builtins ~= false) and (type(builtins) ~= "table")) then
-    return error("builtins must be a map or false")
-  else
-    if ((type(builtins) == "table") and validate_custom_map(builtins, "builtins rule ")) then
-      return validate_custom_map(builtins, "builtins rule ")
-    else
-      if ((fallbacks ~= false) and (type(fallbacks) ~= "table")) then
-        return error("prefix-fallbacks must be a map or false")
-      else
-        if ((type(fallbacks) == "table") and validate_custom_map(fallbacks, "prefix-fallbacks rule ")) then
-          return validate_custom_map(fallbacks, "prefix-fallbacks rule ")
-        else
-          return nil
-        end
-      end
-    end
-  end
+  local builtins_type_error = validate_custom_type(builtins, "builtins")
+  local builtins_rule_error = validate_custom_rules(builtins, "builtins rule ")
+  local fallbacks_type_error = validate_custom_type(fallbacks, "prefix-fallbacks")
+  local fallbacks_rule_error = validate_custom_rules(fallbacks, "prefix-fallbacks rule ")
+  return (builtins_type_error or builtins_rule_error or fallbacks_type_error or fallbacks_rule_error)
 end
 local function validate_align_bindings(config)
   local align_bindings = config["align-bindings"]

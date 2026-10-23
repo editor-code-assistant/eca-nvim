@@ -1037,251 +1037,259 @@ local function _99_()
   require("plenary.busted").it("rejects a non-table lint rules value", _138_)
   local function _139_()
     local assert_5_auto = require("luassert")
+    local expected_6_auto = {one = "lint rules must be a table", two = "lint rules must be a table"}
+    local actual_7_auto = {one = validation_error_message("{:lint {:rules 1}}"), two = validation_error_message("{:lint {:rules \\\"x\\\"}}")}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("rejects scalar lint rules values without crashing", _139_)
+  local function _140_()
+    local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown lint rule: nope"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"nope\" :error}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an unknown lint rule", _139_)
-  local function _140_()
+  require("plenary.busted").it("rejects an unknown lint rule", _140_)
+  local function _141_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint rule if-branch-call must be error, warning, or off"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"if-branch-call\" :debug}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an invalid lint rule severity", _140_)
-  local function _141_()
+  require("plenary.busted").it("rejects an invalid lint rule severity", _141_)
+  local function _142_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusions must be a list"
     local actual_7_auto = validation_error_message("{:lint {:exclusions {}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-list lint exclusions value", _141_)
-  local function _142_()
+  require("plenary.busted").it("rejects a non-list lint exclusions value", _142_)
+  local function _143_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusions must be a list"
     local actual_7_auto = validation_error_message("{:lint {:exclusions {1 {:rule \"if-branch-call\" :form \"x\" :reason \"ok\"}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a numeric-keyed lint exclusions map", _142_)
-  local function _143_()
+  require("plenary.busted").it("rejects a numeric-keyed lint exclusions map", _143_)
+  local function _144_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusions must be a list"
     local actual_7_auto = validation_error_message("{:lint {:exclusions {1 {:rule \"if-branch-call\" :form \"x\" :reason \"ok\"} 2 {:rule \"if-branch-call\" :form \"y\" :reason \"ok\"}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a lint exclusions map with two numeric keys", _143_)
-  local function _144_()
+  require("plenary.busted").it("rejects a lint exclusions map with two numeric keys", _144_)
+  local function _145_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary(parse_value("{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"ok\"}]}}"))
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a non-empty lint exclusions list from parsed Fennel", _144_)
-  local function _145_()
+  require("plenary.busted").it("accepts a non-empty lint exclusions list from parsed Fennel", _145_)
+  local function _146_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary(parse_value("{:lint {:exclusions []}}"))
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts an empty lint exclusions list from parsed Fennel", _145_)
-  local function _146_()
+  require("plenary.busted").it("accepts an empty lint exclusions list from parsed Fennel", _146_)
+  local function _147_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusion 1 must be a table"
     local actual_7_auto = validation_error_message("{:lint {:exclusions [1]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-table lint exclusion", _146_)
-  local function _147_()
+  require("plenary.busted").it("rejects a non-table lint exclusion", _147_)
+  local function _148_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusion 1: unknown key fingerprint"
     local actual_7_auto = validation_error_message("{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"why\" :fingerprint \"old\"}]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an unknown lint exclusion key", _147_)
-  local function _148_()
+  require("plenary.busted").it("rejects an unknown lint exclusion key", _148_)
+  local function _149_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusion 1: rule must be a string"
     local actual_7_auto = validation_error_message("{:lint {:exclusions [{:rule 1 :form \"x\" :reason \"why\"}]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-string lint exclusion field", _148_)
-  local function _149_()
+  require("plenary.busted").it("rejects a non-string lint exclusion field", _149_)
+  local function _150_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusion 1: reason must not be blank"
     local actual_7_auto = validation_error_message("{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"\\t\"}]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a blank lint exclusion reason", _149_)
-  local function _150_()
+  require("plenary.busted").it("rejects a blank lint exclusion reason", _150_)
+  local function _151_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusion 1: unknown rule nope"
     local actual_7_auto = validation_error_message("{:lint {:exclusions [{:rule \"nope\" :form \"x\" :reason \"why\"}]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an unknown lint exclusion rule", _150_)
-  local function _151_()
+  require("plenary.busted").it("rejects an unknown lint exclusion rule", _151_)
+  local function _152_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint exclusion 2: duplicate of exclusion 1"
     local actual_7_auto = validation_error_message("{:lint {:exclusions [{:rule \"if-branch-call\" :form \"x\" :reason \"one\"} {:rule \"if-branch-call\" :form \"x\" :reason \"two\"}]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("rejects duplicate lint exclusions", _151_)
+  return require("plenary.busted").it("rejects duplicate lint exclusions", _152_)
 end
 require("plenary.busted").describe("lint-configuration", _99_)
-local function _152_()
+local function _153_()
   local assert_5_auto = require("luassert")
   local expected_6_auto = {["value?"] = true, ["has-message"] = false}
   local actual_7_auto = validate_summary({lint = {exclusions = {{rule = "if-branch-call", lines = {from = 1, to = 2}}, {rule = "if-branch-call", lines = {from = 3, to = 4}}}}})
   assert_5_auto.same(expected_6_auto, actual_7_auto)
   return true
 end
-require("plenary.busted").it("accepts duplicate rule exclusions when their line ranges differ", _152_)
-local function _153_()
+require("plenary.busted").it("accepts duplicate rule exclusions when their line ranges differ", _153_)
+local function _154_()
   local assert_5_auto = require("luassert")
   local expected_6_auto = {["value?"] = true, ["has-message"] = false}
   local actual_7_auto = validate_summary({lint = {exclusions = {{rules = {"if-branch-call", "module-style"}, line = 1}, {rules = {"if-branch-call", "no-mutation"}, line = 1}}}})
   assert_5_auto.same(expected_6_auto, actual_7_auto)
   return true
 end
-require("plenary.busted").it("accepts general exclusions when their rule lists differ", _153_)
-local function _154_()
-  local function _155_()
+require("plenary.busted").it("accepts general exclusions when their rule lists differ", _154_)
+local function _155_()
+  local function _156_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({lint = {["spec-files"] = {"^fnl/spec/"}, rules = {["if-without-else"] = {severity = "warning", options = {["applies-to"] = "all", ["if-forms"] = {"if"}, ["flag-nil-else"] = true}, exclusions = {{pattern = "^fnl/", line = 1}}}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts per-rule exclusions without a rule selector", _155_)
-  local function _156_()
+  require("plenary.busted").it("accepts per-rule exclusions without a rule selector", _156_)
+  local function _157_()
     local assert_12_auto = require("luassert")
     local expected_13_auto = nil
     local actual_14_auto = validation_error_message("{:lint {:rules {\"if-without-else\" {:severity :warning :exclusions [{:rule \"if-without-else\" :line 1}]}}}}")
     assert_12_auto.are_not.same(expected_13_auto, actual_14_auto)
     return true
   end
-  require("plenary.busted").it("rejects a rule selector inside a per-rule exclusion", _156_)
-  local function _157_()
+  require("plenary.busted").it("rejects a rule selector inside a per-rule exclusion", _157_)
+  local function _158_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({lint = {exclusions = {{rule = "if-without-else", line = 1}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a general exclusion with a rule selector", _157_)
-  local function _158_()
+  require("plenary.busted").it("accepts a general exclusion with a rule selector", _158_)
+  local function _159_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({lint = {exclusions = {{rules = {"if-without-else", "module-style"}, line = 1}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a general exclusion with multiple rule selectors", _158_)
-  local function _159_()
+  require("plenary.busted").it("accepts a general exclusion with multiple rule selectors", _159_)
+  local function _160_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({lint = {exclusions = {{line = 1}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a general exclusion without a rule selector", _159_)
-  local function _160_()
+  require("plenary.busted").it("accepts a general exclusion without a rule selector", _160_)
+  local function _161_()
     local assert_12_auto = require("luassert")
     local expected_13_auto = nil
     local actual_14_auto = validation_error_message("{:lint {:exclusions [{:rule \"if-without-else\" :rules [\"module-style\"] :line 1}]}}")
     assert_12_auto.are_not.same(expected_13_auto, actual_14_auto)
     return true
   end
-  require("plenary.busted").it("rejects both rule selector forms together", _160_)
-  local function _161_()
+  require("plenary.busted").it("rejects both rule selector forms together", _161_)
+  local function _162_()
     local assert_12_auto = require("luassert")
     local expected_13_auto = nil
     local actual_14_auto = validation_error_message("{:lint {:exclusions [{:wat true :line 1}]}}")
     assert_12_auto.are_not.same(expected_13_auto, actual_14_auto)
     return true
   end
-  require("plenary.busted").it("rejects an unknown exclusion key", _161_)
-  local function _162_()
+  require("plenary.busted").it("rejects an unknown exclusion key", _162_)
+  local function _163_()
     local assert_12_auto = require("luassert")
     local expected_13_auto = nil
     local actual_14_auto = validation_error_message("{:lint {:exclusions [{:rule \"if-without-else\"}]}}")
     assert_12_auto.are_not.same(expected_13_auto, actual_14_auto)
     return true
   end
-  require("plenary.busted").it("rejects an exclusion without a selector", _162_)
-  local function _163_()
+  require("plenary.busted").it("rejects an exclusion without a selector", _163_)
+  local function _164_()
     local assert_12_auto = require("luassert")
     local expected_13_auto = nil
     local actual_14_auto = validation_error_message("{:lint {:exclusions [{:line 1 :lines {:from 1 :to 2}}]}}")
     assert_12_auto.are_not.same(expected_13_auto, actual_14_auto)
     return true
   end
-  require("plenary.busted").it("rejects line and lines together", _163_)
-  local function _164_()
+  require("plenary.busted").it("rejects line and lines together", _164_)
+  local function _165_()
     local assert_12_auto = require("luassert")
     local expected_13_auto = nil
     local actual_14_auto = validation_error_message("{:lint {:exclusions [{:lines {:from 3 :to 2}}]}}")
     assert_12_auto.are_not.same(expected_13_auto, actual_14_auto)
     return true
   end
-  require("plenary.busted").it("rejects invalid line ranges", _164_)
-  local function _165_()
+  require("plenary.busted").it("rejects invalid line ranges", _165_)
+  local function _166_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({lint = {exclusions = {{line = 1}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts an omitted reason", _165_)
-  local function _166_()
+  require("plenary.busted").it("accepts an omitted reason", _166_)
+  local function _167_()
     local assert_12_auto = require("luassert")
     local expected_13_auto = nil
     local actual_14_auto = validation_error_message("{:lint {:exclusions [{:line 1 :reason \"  \"}]}}")
     assert_12_auto.are_not.same(expected_13_auto, actual_14_auto)
     return true
   end
-  require("plenary.busted").it("rejects a blank reason", _166_)
-  local function _167_()
+  require("plenary.busted").it("rejects a blank reason", _167_)
+  local function _168_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {lint = {exclusions = {{pattern = "\\d\\+", line = 1}}}}
     local actual_7_auto = parse_value("{:lint {:exclusions [{:pattern \\\"\\\\d\\\\+\\\" :line 1}]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("parses doubled backslashes in a regex selector", _167_)
+  return require("plenary.busted").it("parses doubled backslashes in a regex selector", _168_)
 end
-require("plenary.busted").describe("exclusion-shapes", _154_)
-local function _168_()
-  local function _169_()
+require("plenary.busted").describe("exclusion-shapes", _155_)
+local function _169_()
+  local function _170_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value-nil?"] = true, message = "unknown lint rule: true"}
     local actual_7_auto = lint_policy_summary({lint = {rules = {[true] = "error"}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("returns a validation error for a malformed lint rule key", _169_)
-  local function _170_()
+  require("plenary.busted").it("returns a validation error for a malformed lint rule key", _170_)
+  local function _171_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value-nil?"] = true, message = "lint exclusion 1: reason must not be blank"}
     local actual_7_auto = lint_policy_summary({lint = {exclusions = {{rule = "if-branch-call", form = "x", reason = ""}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("returns a validation error for a blank lint exclusion reason", _170_)
-  local function _171_()
+  require("plenary.busted").it("returns a validation error for a blank lint exclusion reason", _171_)
+  local function _172_()
     local config = load_config()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "missing lint.spec-files"
@@ -1290,17 +1298,17 @@ local function _168_()
       actual_7_auto = nil
     else
       local ok, value, err
-      local function _172_()
+      local function _173_()
         return config["lint-policy"]({lint = {}})
       end
-      ok, value, err = pcall(_172_)
+      ok, value, err = pcall(_173_)
       actual_7_auto = (ok and (nil == value) and err and err.message)
     end
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("lint policy reports missing spec-files instead of supplying a default", _171_)
-  local function _174_()
+  require("plenary.busted").it("lint policy reports missing spec-files instead of supplying a default", _172_)
+  local function _175_()
     local policy = lint_policy_value({lint = {["spec-files"] = {"^fnl/spec/"}, rules = {["file-size"] = {severity = "warning", options = {["applies-to"] = "source", ["max-code-lines"] = 10}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = 10
@@ -1308,9 +1316,9 @@ local function _168_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("normalizes a configured max-code-lines value", _174_)
-  local function _175_()
-    local function _176_()
+  require("plenary.busted").it("normalizes a configured max-code-lines value", _175_)
+  local function _176_()
+    local function _177_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {rules = {["file-size"] = "warning"}, options = {["file-size"] = {["applies-to"] = "source", ["max-code-lines"] = 25}}}
       local actual_7_auto
@@ -1325,53 +1333,53 @@ local function _168_()
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("a rule map accepts severity and options", _176_)
-    local function _178_()
+    require("plenary.busted").it("a rule map accepts severity and options", _177_)
+    local function _179_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = "lint rule file-size severity must be error, warning, or off"
       local actual_7_auto = validation_error_message("{:lint {:rules {\"file-size\" {:options {:max-code-lines 25}}}}}")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("a rule map without severity is a configuration error", _178_)
-    local function _179_()
+    require("plenary.busted").it("a rule map without severity is a configuration error", _179_)
+    local function _180_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = "lint rule file-size: unknown key extra"
       local actual_7_auto = validation_error_message("{:lint {:rules {\"file-size\" {:severity :warning :extra true}}}}")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("unknown rule map keys are configuration errors", _179_)
-    local function _180_()
+    require("plenary.busted").it("unknown rule map keys are configuration errors", _180_)
+    local function _181_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = "unknown option nope for lint rule file-size"
       local actual_7_auto = validation_error_message("{:lint {:rules {\"file-size\" {:severity :off :options {:nope 1}}}}}")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("unknown options are rejected even when the rule is off", _180_)
-    local function _181_()
+    require("plenary.busted").it("unknown options are rejected even when the rule is off", _181_)
+    local function _182_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = "unknown lint key: max-code-lines"
       local actual_7_auto = validation_error_message("{:lint {:max-code-lines 10 :rules {\"file-size\" {:severity :warning :options {:applies-to \"source\" :max-code-lines 20}}}}}")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("top-level max-code-lines is rejected", _181_)
-    local function _182_()
+    require("plenary.busted").it("top-level max-code-lines is rejected", _182_)
+    local function _183_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {["value?"] = true, ["has-message"] = false}
       local actual_7_auto = validate_summary(parse_value("{:lint {:spec-files [\"^fnl/spec/\"] :rules {\"file-size\" {:severity :warning :options {:applies-to \"source\" :max-code-lines 10}}}}}"))
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    return require("plenary.busted").it("nested max-code-lines is accepted", _182_)
+    return require("plenary.busted").it("nested max-code-lines is accepted", _183_)
   end
-  return require("plenary.busted").describe("lint-policy-opt-in", _175_)
+  return require("plenary.busted").describe("lint-policy-opt-in", _176_)
 end
-require("plenary.busted").describe("lint-policy", _168_)
-local function _183_()
-  local function _184_()
+require("plenary.busted").describe("lint-policy", _169_)
+local function _184_()
+  local function _185_()
     local config = load_config()
     local path = (vim.fn.getcwd() .. "/.fnl-extras.fnl")
     local assert_5_auto = require("luassert")
@@ -1381,10 +1389,10 @@ local function _183_()
       actual_7_auto = config
     else
       local ok, loaded
-      local function _185_()
+      local function _186_()
         return config.load(path)
       end
-      ok, loaded = pcall(_185_)
+      ok, loaded = pcall(_186_)
       if not ok then
         actual_7_auto = {["load-error"] = true}
       else
@@ -1395,67 +1403,67 @@ local function _183_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("repository config enables all seventeen rules with approved severities", _184_)
+  return require("plenary.busted").it("repository config enables all seventeen rules with approved severities", _185_)
 end
-require("plenary.busted").describe("repo-policy", _183_)
-local function _188_()
-  local function _189_()
+require("plenary.busted").describe("repo-policy", _184_)
+local function _189_()
+  local function _190_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "macro-module must be a string"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"module-style\" {:severity :warning :options {:macro-module 1}}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a string option with the wrong type", _189_)
-  local function _190_()
+  require("plenary.busted").it("rejects a string option with the wrong type", _190_)
+  local function _191_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "required-macros must be a list of strings"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"module-style\" {:severity :warning :options {:required-macros \"module\"}}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a list option with the wrong type", _190_)
-  local function _191_()
+  require("plenary.busted").it("rejects a list option with the wrong type", _191_)
+  local function _192_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "count must be a positive integer"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"one-is-per-testing\" {:severity :warning :options {:count 0}}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a positive integer option with the wrong type", _191_)
-  local function _192_()
+  require("plenary.busted").it("rejects a positive integer option with the wrong type", _192_)
+  local function _193_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "flag-nil-else must be a boolean"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"if-without-else\" {:severity :warning :options {:flag-nil-else \"yes\"}}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a boolean option with the wrong type", _192_)
-  local function _193_()
+  require("plenary.busted").it("rejects a boolean option with the wrong type", _193_)
+  local function _194_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown option nope for lint rule module-style"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"module-style\" {:severity :off :options {:nope true}}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an unknown option with the rule and option names", _193_)
-  local function _194_()
+  require("plenary.busted").it("rejects an unknown option with the rule and option names", _194_)
+  local function _195_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "applies-to must be source, spec, or all"
     local actual_7_auto = validation_error_message("{:lint {:rules {\"module-style\" {:severity :off :options {:applies-to :tests}}}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an invalid applies-to value", _194_)
-  local function _195_()
+  require("plenary.busted").it("rejects an invalid applies-to value", _195_)
+  local function _196_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "spec-files must be a list of strings"
     local actual_7_auto = validation_error_message("{:lint {:spec-files \"^test/\"}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects spec-files when it is not a list", _195_)
-  local function _196_()
+  require("plenary.busted").it("rejects spec-files when it is not a list", _196_)
+  local function _197_()
     local result = lint_policy_value({lint = {["spec-files"] = {"^fnl/spec/"}, rules = {["module-style"] = "warning"}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "missing lint.rules.module-style.options.applies-to"
@@ -1463,11 +1471,11 @@ local function _188_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("lint policy requires explicit rule options for enabled rules", _196_)
+  return require("plenary.busted").it("lint policy requires explicit rule options for enabled rules", _197_)
 end
-require("plenary.busted").describe("lint-rule-option-validation", _188_)
-local function _197_()
-  local function _198_()
+require("plenary.busted").describe("lint-rule-option-validation", _189_)
+local function _198_()
+  local function _199_()
     local source = "(when condition\n(foo)\n(bar))"
     local without_lint = {indents = {when = {{"block", 1}}}}
     local with_lint = {indents = {when = {{"block", 1}}}, lint = {rules = {["if-branch-call"] = "off"}}}
@@ -1479,11 +1487,11 @@ local function _197_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("lint configuration does not change formatter output", _198_)
+  return require("plenary.busted").it("lint configuration does not change formatter output", _199_)
 end
-require("plenary.busted").describe("formatter-isolation", _197_)
-local function _199_()
-  local function _200_()
+require("plenary.busted").describe("formatter-isolation", _198_)
+local function _200_()
+  local function _201_()
     local policy = lint_policy_value({lint = {["spec-files"] = {"^fnl/spec/"}, rules = {["if-without-else"] = {severity = "warning", options = {["applies-to"] = "all", ["if-forms"] = {"if"}, ["flag-nil-else"] = true}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["if"] = "warning", mutation = "off"}
@@ -1491,8 +1499,8 @@ local function _199_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("a listed rule does not inherit compatibility severities for unlisted rules", _200_)
-  local function _201_()
+  require("plenary.busted").it("a listed rule does not inherit compatibility severities for unlisted rules", _201_)
+  local function _202_()
     local policy = lint_policy_value({lint = {["spec-files"] = {"^fnl/spec/"}, rules = {["file-size"] = {severity = "warning", options = {["applies-to"] = "source", ["max-code-lines"] = 3}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = 3
@@ -1500,6 +1508,6 @@ local function _199_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("file-size keeps its nested max-code-lines option", _201_)
+  return require("plenary.busted").it("file-size keeps its nested max-code-lines option", _202_)
 end
-return require("plenary.busted").describe("lint-policy-regressions", _199_)
+return require("plenary.busted").describe("lint-policy-regressions", _200_)
