@@ -5,8 +5,6 @@
 (local core (require :eca.nfnl.core))
 (local parse (require :fennel-extras.config.parse))
 
-(local binding-defaults ["let" "when-let" "if-let" "with-open"])
-(local clause-defaults ["case" "match" "case-try" "match-try" "if"])
 (local toggle-keys ["bindings" "maps" "clauses" "split-bindings" "collapse-padding"])
 (local list-keys ["binding-forms" "clause-forms"])
 
@@ -94,23 +92,19 @@
     (validate-table value)))
 
 (defn- toggle-value
-  [alignment legacy key]
-  (if (not= (. alignment key) nil)
-    (. alignment key)
-    legacy))
+  [alignment key]
+  (= (. alignment key) true))
 
 (defn resolve
   [config]
-  (let [alignment (or (and config (. config :alignment)) {})
-        legacy    (and config (. config :align-bindings))
-        enabled   (= legacy true)]
-    {:bindings         (toggle-value alignment enabled "bindings")
-     :maps             (toggle-value alignment enabled "maps")
-     :clauses          (toggle-value alignment enabled "clauses")
-     :split-bindings   (toggle-value alignment enabled "split-bindings")
-     :collapse-padding (toggle-value alignment enabled "collapse-padding")
-     :binding-forms    (or (. alignment "binding-forms") binding-defaults)
-     :clause-forms     (or (. alignment "clause-forms") clause-defaults)}))
+  (let [alignment (or (and config (. config :alignment)) {})]
+    {:bindings         (toggle-value alignment "bindings")
+     :maps             (toggle-value alignment "maps")
+     :clauses          (toggle-value alignment "clauses")
+     :split-bindings   (toggle-value alignment "split-bindings")
+     :collapse-padding (toggle-value alignment "collapse-padding")
+     :binding-forms    (. alignment "binding-forms")
+     :clause-forms     (. alignment "clause-forms")}))
 
 (defn- add-binding-forms
   [alignment explicit]

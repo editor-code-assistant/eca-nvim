@@ -7,8 +7,6 @@ do
 end
 local core = require("eca.nfnl.core")
 local parse = require("fennel-extras.config.parse")
-local binding_defaults = {"let", "when-let", "if-let", "with-open"}
-local clause_defaults = {"case", "match", "case-try", "match-try", "if"}
 local toggle_keys = {"bindings", "maps", "clauses", "split-bindings", "collapse-padding"}
 local list_keys = {"binding-forms", "clause-forms"}
 local function boolean_3f(value)
@@ -105,20 +103,14 @@ do
   _2amodule_2a["validate"] = validate0
   validate = _2amodule_2a.validate
 end
-local function toggle_value(alignment, legacy, key)
-  if (alignment[key] ~= nil) then
-    return alignment[key]
-  else
-    return legacy
-  end
+local function toggle_value(alignment, key)
+  return (alignment[key] == true)
 end
 local resolve
 do
   local function resolve0(config)
     local alignment = ((config and config.alignment) or {})
-    local legacy = (config and config["align-bindings"])
-    local enabled = (legacy == true)
-    return {bindings = toggle_value(alignment, enabled, "bindings"), maps = toggle_value(alignment, enabled, "maps"), clauses = toggle_value(alignment, enabled, "clauses"), ["split-bindings"] = toggle_value(alignment, enabled, "split-bindings"), ["collapse-padding"] = toggle_value(alignment, enabled, "collapse-padding"), ["binding-forms"] = (alignment["binding-forms"] or binding_defaults), ["clause-forms"] = (alignment["clause-forms"] or clause_defaults)}
+    return {bindings = toggle_value(alignment, "bindings"), maps = toggle_value(alignment, "maps"), clauses = toggle_value(alignment, "clauses"), ["split-bindings"] = toggle_value(alignment, "split-bindings"), ["collapse-padding"] = toggle_value(alignment, "collapse-padding"), ["binding-forms"] = alignment["binding-forms"], ["clause-forms"] = alignment["clause-forms"]}
   end
   _2amodule_2a["resolve"] = resolve0
   resolve = _2amodule_2a.resolve

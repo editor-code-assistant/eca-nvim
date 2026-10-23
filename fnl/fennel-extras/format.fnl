@@ -3,6 +3,7 @@
 (local indent (require :fennel-extras.indent))
 (local reader (require :fennel-extras.reader))
 (local settings (require :fennel-extras.indent.settings))
+(local rules (require :fennel-extras.rules))
 
 (defn- split-lines
   [source]
@@ -272,21 +273,60 @@
       alignment.split-bindings
       alignment.collapse-padding))
 
+(defn- rules-config
+  [config]
+  {:indents          (. config :indents)
+   :format-as        (. config :format-as)
+   :indent-patterns  (. config :indent-patterns)
+   :indent-width     (. config :indent-width)
+   :builtins         (or (. config :builtins) false)
+   :prefix-fallbacks (or (. config :prefix-fallbacks) false)
+   :alignment        (. config :alignment)})
+
+(defn- indentation-output-error
+  [source alignment out]
+  (when (not (indent-only? source out (alignment-enabled? alignment)))
+    {:message "formatter changed more than indentation"}))
+
+(defn- parser-output-error
+  [source parser out]
+  (when (and parser (not (ast-equal? parser source out)))
+    {:message "formatter changed the parsed form"}))
+
+(defn- formatted-output-error
+  [source parser alignment out]
+  (or (indentation-output-error source alignment out)
+      (parser-output-error source parser out)))
+
+(defn- validated-output
+  [source parser alignment out]
+  (let [output-error (formatted-output-error source parser alignment out)]
+    (if output-error
+      (values nil output-error)
+      out)))
+
+(defn- format-string-error
+  [alignment-error rules-error]
+  (or alignment-error rules-error))
+
+(defn- format-string-valid
+  [source parser config]
+  (let [alignment   (settings.resolve config)
+        (out error) (indent.reindent source config)]
+    (if error
+      (values nil error)
+      (validated-output source parser alignment out))))
+
 (defn format-string
   [source opts]
-  (let [config          (or (. opts :config) {})
-        parser          (. opts :parser)
-        alignment-error (settings.validate (. config :alignment))]
-    (if alignment-error
-      (values nil alignment-error)
-      (let [alignment   (settings.resolve config)
-            (out error) (indent.reindent source config)]
-        (if error
-          (values nil error)
-          (if (not (indent-only? source out (alignment-enabled? alignment)))
-            (values nil {:message "formatter changed more than indentation"})
-            (if (and parser (not (ast-equal? parser source out)))
-              (values nil {:message "formatter changed the parsed form"})
-              out)))))))
+  (let [config           (or (. opts :config) {})
+        parser           (. opts :parser)
+        alignment-error  (settings.validate (. config :alignment))
+        rule-config      (rules-config config)
+        rules-error      (rules.validate rule-config)
+        validation-error (format-string-error alignment-error rules-error)]
+    (if validation-error
+      (values nil validation-error)
+      (format-string-valid source parser config))))
 
 nil

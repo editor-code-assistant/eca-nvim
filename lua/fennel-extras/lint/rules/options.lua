@@ -6,25 +6,32 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local rule_options = {["module-style"] = {["applies-to"] = "source", ["macro-module"] = "eca.nfnl.macros.aniseed", ["required-macros"] = {"module", "def", "defn", "defn-"}}, ["spec-macro-import"] = {["applies-to"] = "spec", ["macro-module"] = "spec.eca.macros", ["required-macros"] = {"deftest", "testing", "is"}, ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, ["spec-no-module"] = {["applies-to"] = "spec", ["module-form"] = "module"}, ["spec-direct-require"] = {["applies-to"] = "spec", ["forbidden-modules"] = {"plenary.busted", "luassert"}, ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, ["one-is-per-testing"] = {["applies-to"] = "all", ["testing-form"] = "testing", ["assertion-form"] = "is", count = 1}, ["if-branch-call"] = {["applies-to"] = "all", ["if-forms"] = {"if"}}, ["if-without-else"] = {["applies-to"] = "all", ["if-forms"] = {"if"}, ["flag-nil-else"] = true}, ["control-layout"] = {["applies-to"] = "all", ["control-forms"] = {"if", "when", "and", "or", "case", "match"}}, ["unused-and-or"] = {["applies-to"] = "all", forms = {"and", "or"}}, ["defn-args-newline"] = {["applies-to"] = "all", forms = {"defn", "defn-"}}, ["function-shape"] = {["applies-to"] = "all", ["function-forms"] = {"defn", "defn-", "fn", "lambda", "\206\187"}}, ["no-mutation"] = {["applies-to"] = "source", forms = {"var", "set", "while"}}, ["multiline-layout"] = {["applies-to"] = "all", ["clause-forms"] = {"case", "match", "case-try", "match-try"}, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}}, ["file-size"] = {["applies-to"] = "source", ["max-code-lines"] = 300}, ["core-require"] = {["applies-to"] = "all", module = "eca.nfnl.core", binding = "core"}, ["binding-per-line"] = {["applies-to"] = "all", forms = {"let", "when-let", "if-let", "with-open"}}, ["call-data-arg"] = {["applies-to"] = "source", ["ignore-forms"] = {}}}
+local option_names = {["module-style"] = {"applies-to", "macro-module", "required-macros"}, ["spec-macro-import"] = {"applies-to", "macro-module", "required-macros", "exempt-files"}, ["spec-no-module"] = {"applies-to", "module-form"}, ["spec-direct-require"] = {"applies-to", "forbidden-modules", "exempt-files"}, ["one-is-per-testing"] = {"applies-to", "testing-form", "assertion-form", "count"}, ["if-branch-call"] = {"applies-to", "if-forms"}, ["if-without-else"] = {"applies-to", "if-forms", "flag-nil-else"}, ["control-layout"] = {"applies-to", "control-forms"}, ["unused-and-or"] = {"applies-to", "forms"}, ["defn-args-newline"] = {"applies-to", "forms"}, ["function-shape"] = {"applies-to", "function-forms"}, ["no-mutation"] = {"applies-to", "forms"}, ["multiline-layout"] = {"applies-to", "clause-forms", "binding-forms"}, ["file-size"] = {"applies-to", "max-code-lines"}, ["core-require"] = {"applies-to", "module", "binding"}, ["binding-per-line"] = {"applies-to", "forms"}, ["call-data-arg"] = {"applies-to", "ignore-forms"}}
 local option_types = {["applies-to"] = "enum", ["macro-module"] = "string", ["required-macros"] = "strings", ["exempt-files"] = "strings", ["module-form"] = "string", ["forbidden-modules"] = "strings", ["testing-form"] = "string", ["assertion-form"] = "string", count = "positive-integer", ["if-forms"] = "strings", ["flag-nil-else"] = "boolean", ["control-forms"] = "strings", forms = "strings", ["function-forms"] = "strings", ["clause-forms"] = "strings", ["binding-forms"] = "strings", ["max-code-lines"] = "positive-integer", module = "string", binding = "string", ["ignore-forms"] = "strings"}
 local schema
 do
   local function schema0(rule)
-    local defaults = rule_options[rule]
-    local schema1 = {}
-    for key, _ in pairs(defaults) do
-      schema1[key] = (option_types[key] or "string")
+    local result = {}
+    for _, name in ipairs((option_names[rule] or {})) do
+      result[name] = option_types[name]
     end
-    return schema1
+    return result
   end
   _2amodule_2a["schema"] = schema0
   schema = _2amodule_2a.schema
 end
+local names
+do
+  local function names0(rule)
+    return option_names[rule]
+  end
+  _2amodule_2a["names"] = names0
+  names = _2amodule_2a.names
+end
 local defaults
 do
   local function defaults0()
-    return rule_options
+    return {}
   end
   _2amodule_2a["defaults"] = defaults0
   defaults = _2amodule_2a.defaults
@@ -70,48 +77,46 @@ local function option_type_message(kind, option)
     return (option .. message)
   end
 end
-local function known_option_error(schema0, options, key, value, kind, recurse)
+local function known_option_error(rule, options, key, value, kind, recurse)
   if not option_type_valid_3f(kind, value) then
     return {message = option_type_message(kind, key)}
   else
-    return recurse(schema0, options, key)
+    return recurse(rule, options, key)
   end
 end
-local function first_option_error_step(schema0, options, key, value, recurse)
-  local kind = schema0[key]
+local function first_option_error_step(rule, options, key, value, recurse)
+  local kind = schema(rule)[key]
   if (kind == nil) then
     return {unknown = true, message = ("unknown option " .. tostring(key))}
   else
-    return known_option_error(schema0, options, key, value, kind, recurse)
+    return known_option_error(rule, options, key, value, kind, recurse)
   end
 end
-local function first_option_error(schema0, options, key)
+local function first_option_error(rule, options, key)
   local next_key, next_value = next(options, key)
   if (next_key == nil) then
     return nil
   else
-    return first_option_error_step(schema0, options, next_key, next_value, first_option_error)
+    return first_option_error_step(rule, options, next_key, next_value, first_option_error)
   end
 end
 local function unknown_option_result(rule, error)
   return {message = (error.message .. " for lint rule " .. rule)}
 end
-local function option_error_known(rule, error)
+local function table_validation_result(rule, error)
   if error.unknown then
     return unknown_option_result(rule, error)
   else
     return error
   end
 end
-local function option_error_result(rule, error)
-  return (error and option_error_known(rule, error))
+local function table_validation_error(rule, options)
+  local error = first_option_error(rule, options, nil)
+  return (error and table_validation_result(rule, error))
 end
-local function validate_table(rule, options)
-  return option_error_result(rule, first_option_error(schema(rule), options, nil))
-end
-local function validate_value(rule, options)
+local function validate_present(rule, options)
   if (type(options) == "table") then
-    return validate_table(rule, options)
+    return table_validation_error(rule, options)
   else
     return {message = "options must be a table"}
   end
@@ -122,47 +127,24 @@ do
     if (options == nil) then
       return nil
     else
-      return validate_value(rule, options)
+      return validate_present(rule, options)
     end
   end
   _2amodule_2a["validate"] = validate0
   validate = _2amodule_2a.validate
 end
-local function merge_rule_options(result, name, overrides)
-  local merged = {}
-  for key, value in pairs(rule_options[name]) do
-    merged[key] = value
-  end
-  for key, value in pairs((overrides or {})) do
-    merged[key] = value
-  end
-  result[name] = merged
-  return result
-end
 local normalized
 do
   local function normalized0(overrides)
-    local result = {}
-    for name, _ in pairs(rule_options) do
-      merge_rule_options(result, name, (overrides or {})[name])
-    end
-    return result
+    return (overrides or {})
   end
   _2amodule_2a["normalized"] = normalized0
   normalized = _2amodule_2a.normalized
 end
-local spec_files
-do
-  local function spec_files0()
-    return {"^fnl/spec/"}
-  end
-  _2amodule_2a["spec-files"] = spec_files0
-  spec_files = _2amodule_2a["spec-files"]
-end
 local spec_files_error
 do
   local function spec_files_error0(value)
-    if ((value ~= nil) and not strings_3f(value)) then
+    if ((value ~= nil) and not parse["sequence?"](value)) then
       return {message = "spec-files must be a list of strings"}
     else
       return nil

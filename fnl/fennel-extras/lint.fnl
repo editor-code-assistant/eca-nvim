@@ -11,14 +11,6 @@
 (local exclusion-matcher (require :fennel-extras.lint.exclusion))
 (local rule-options (require :fennel-extras.lint.rules.options))
 
-(local compatibility-policy {:module-style "error" :spec-macro-import "error" :spec-no-module "error" :spec-direct-require "error" :one-is-per-testing "error" :if-branch-call "warning" :if-without-else "warning" :control-layout "warning" :unused-and-or "warning" :defn-args-newline "warning" :function-shape "warning" :no-mutation "warning" :multiline-layout "warning" :file-size "warning" :core-require "error" :binding-per-line "warning" :call-data-arg "warning"})
-
-(defn- effective-policy
-  [policy]
-  (if (= (next policy nil) nil)
-    {}
-    (core.merge compatibility-policy policy)))
-
 (defn- normalized-policy-entry
   [entry]
   (if (= (type entry) :table)
@@ -36,7 +28,7 @@
   [context raw-policy]
   (if context.matcher
     (normalized-context-policy raw-policy)
-    (effective-policy raw-policy)))
+    raw-policy))
 
 (defn- policy-for-context
   [context]
@@ -157,15 +149,15 @@
     (filter-findings findings forms scope exclusions source matcher 1 [])))
 
 (defn- checked-findings-success
-  [forms path policy max-code-lines exclusions scope source matcher defer]
-  (let [findings (rules.check path forms policy source max-code-lines)]
+  [forms path policy exclusions scope source matcher defer]
+  (let [findings (rules.check path forms policy source)]
     (filter-checked-findings findings forms scope exclusions source matcher defer)))
 
 (defn- checked-findings
-  [forms error path policy max-code-lines exclusions scope source matcher defer]
+  [forms error path policy exclusions scope source matcher defer]
   (if error
     (values nil error)
-    (checked-findings-success forms path policy max-code-lines exclusions scope source matcher defer)))
+    (checked-findings-success forms path policy exclusions scope source matcher defer)))
 
 (defn- copy-context-exclusion
   [rule value]
@@ -223,19 +215,75 @@
     (or (regex-spec-files-error-entry spec-files matcher index)
         (regex-spec-files-error spec-files matcher (+ index 1)))))
 
+(defn- missing-option-result
+  [option-values names index name recurse]
+  (if (or (= option-values nil)
+          (= (. option-values name) nil))
+    name
+    (recurse option-values names (+ index 1))))
+
+(defn- missing-option-step-result
+  [option-values names index name recurse]
+  (missing-option-result option-values names index name recurse))
+
+(defn- missing-option-step
+  [option-values names index]
+  (if (> index (length names))
+    nil
+    (missing-option-step-result option-values names index (. names index) missing-option-step)))
+
+(defn- policy-error-result
+  [rules options names index rule severity entry recurse]
+  (let [missing (and (not= severity "off")
+                     (missing-option-step entry (rule-options.names rule) 1))]
+    (if missing
+      {:message (.. "missing lint.rules." rule ".options." missing)}
+      (recurse rules options names (+ index 1)))))
+
+(defn- policy-error-step-result
+  [rules options names index rule severity entry recurse]
+  (policy-error-result rules options names index rule severity entry recurse))
+
+(defn- policy-error-step
+  [rules options names index]
+  (if (> index (length names))
+    nil
+    (policy-error-step-result rules
+                              options
+                              names
+                              index
+                              (. names index)
+                              (registry.rule-severity rules (. names index))
+                              (. options (. names index))
+                              policy-error-step)))
+
+(defn- policy-with-options-missing
+  [missing]
+  (when missing
+    (_G.error {:message (.. "missing lint." missing)})))
+
+(defn- policy-with-options-result
+  [base-policy options spec-files matcher missing]
+  (if (= (type missing) :table)
+    (_G.error missing)
+    (or (policy-with-options-missing missing)
+        (core.merge base-policy {:options options :spec-files spec-files :matcher matcher}))))
+
 (defn- policy-with-options
   [base-policy context matcher spec-files]
-  (let [options (rule-options.normalized (or (. context :options) (context-options context)))]
-    (core.merge base-policy {:options options :spec-files spec-files :matcher matcher})))
+  (let [raw-options (or (. context :options) (context-options context))
+        options     (rule-options.normalized raw-options)
+        missing     (or (and (= spec-files nil) "spec-files")
+                        (policy-error-step base-policy options (registry.rule-names) 1))]
+    (policy-with-options-result base-policy options spec-files matcher missing)))
 
 (defn check
   [source context]
   (let [path                (or (. context :path) "")
         base-policy         (policy-for-context context)
         matcher             (. context :matcher)
-        spec-files          (or (. context :spec-files) (rule-options.spec-files))
+        spec-files          (. context :spec-files)
         policy              (policy-with-options base-policy context matcher spec-files)
-        max-code-lines      (or (. context :max-code-lines) 300)
         exclusions          (context-exclusions context)
         scope               (. context :selection)
         (forms parse-error) (identity.forms source path)
@@ -243,4 +291,4 @@
                                 (regex-spec-files-error spec-files matcher 1))]
     (if matcher-error
       (_G.error matcher-error)
-      (checked-findings forms parse-error path policy max-code-lines exclusions scope source matcher context.defer-exclusions))))
+      (checked-findings forms parse-error path policy exclusions scope source matcher context.defer-exclusions))))

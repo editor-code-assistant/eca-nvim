@@ -4,24 +4,34 @@
 
 (local parse (require :fennel-extras.config.parse))
 
-(local rule-options
-       {"module-style"        {:applies-to "source" :macro-module "eca.nfnl.macros.aniseed" :required-macros ["module" "def" "defn" "defn-"]}
-        "spec-macro-import"   {:applies-to "spec" :macro-module "spec.eca.macros" :required-macros ["deftest" "testing" "is"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
-        "spec-no-module"      {:applies-to "spec" :module-form "module"}
-        "spec-direct-require" {:applies-to "spec" :forbidden-modules ["plenary.busted" "luassert"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
-        "one-is-per-testing"  {:applies-to "all" :testing-form "testing" :assertion-form "is" :count 1}
-        "if-branch-call"      {:applies-to "all" :if-forms ["if"]}
-        "if-without-else"     {:applies-to "all" :if-forms ["if"] :flag-nil-else true}
-        "control-layout"      {:applies-to "all" :control-forms ["if" "when" "and" "or" "case" "match"]}
-        "unused-and-or"       {:applies-to "all" :forms ["and" "or"]}
-        "defn-args-newline"   {:applies-to "all" :forms ["defn" "defn-"]}
-        "function-shape"      {:applies-to "all" :function-forms ["defn" "defn-" "fn" "lambda" "λ"]}
-        "no-mutation"         {:applies-to "source" :forms ["var" "set" "while"]}
-        "multiline-layout"    {:applies-to "all" :clause-forms ["case" "match" "case-try" "match-try"] :binding-forms ["let" "when-let" "if-let" "with-open"]}
-        "file-size"           {:applies-to "source" :max-code-lines 300}
-        "core-require"        {:applies-to "all" :module "eca.nfnl.core" :binding "core"}
-        "binding-per-line"    {:applies-to "all" :forms ["let" "when-let" "if-let" "with-open"]}
-        "call-data-arg"       {:applies-to "source" :ignore-forms []}})
+(local option-names
+       {"module-style"        ["applies-to"
+                               "macro-module"
+                               "required-macros"]
+        "spec-macro-import"   ["applies-to"
+                               "macro-module"
+                               "required-macros"
+                               "exempt-files"]
+        "spec-no-module"      ["applies-to" "module-form"]
+        "spec-direct-require" ["applies-to"
+                               "forbidden-modules"
+                               "exempt-files"]
+        "one-is-per-testing"  ["applies-to"
+                               "testing-form"
+                               "assertion-form"
+                               "count"]
+        "if-branch-call"      ["applies-to" "if-forms"]
+        "if-without-else"     ["applies-to" "if-forms" "flag-nil-else"]
+        "control-layout"      ["applies-to" "control-forms"]
+        "unused-and-or"       ["applies-to" "forms"]
+        "defn-args-newline"   ["applies-to" "forms"]
+        "function-shape"      ["applies-to" "function-forms"]
+        "no-mutation"         ["applies-to" "forms"]
+        "multiline-layout"    ["applies-to" "clause-forms" "binding-forms"]
+        "file-size"           ["applies-to" "max-code-lines"]
+        "core-require"        ["applies-to" "module" "binding"]
+        "binding-per-line"    ["applies-to" "forms"]
+        "call-data-arg"       ["applies-to" "ignore-forms"]})
 
 (local option-types
        {"applies-to"        :enum
@@ -47,15 +57,18 @@
 
 (defn schema
   [rule]
-  (let [defaults (. rule-options rule)
-        schema   {}]
-    (each [key _ (pairs defaults)]
-      (tset schema key (or (. option-types key) :string)))
-    schema))
+  (let [result {}]
+    (each [_ name (ipairs (or (. option-names rule) []))]
+      (tset result name (. option-types name)))
+    result))
+
+(defn names
+  [rule]
+  (. option-names rule))
 
 (defn defaults
   []
-  rule-options)
+  {})
 
 (defn- boolean?
   [value]
@@ -108,77 +121,58 @@
       (.. option message))))
 
 (defn- known-option-error
-  [schema options key value kind recurse]
+  [rule options key value kind recurse]
   (if (not (option-type-valid? kind value))
     {:message (option-type-message kind key)}
-    (recurse schema options key)))
+    (recurse rule options key)))
 
 (defn- first-option-error-step
-  [schema options key value recurse]
-  (let [kind (. schema key)]
+  [rule options key value recurse]
+  (let [kind (. (schema rule) key)]
     (if (= kind nil)
       {:unknown true :message (.. "unknown option " (tostring key))}
-      (known-option-error schema options key value kind recurse))))
+      (known-option-error rule options key value kind recurse))))
 
 (defn- first-option-error
-  [schema options key]
+  [rule options key]
   (let [(next-key next-value) (next options key)]
     (if (= next-key nil)
       nil
-      (first-option-error-step schema options next-key next-value first-option-error))))
+      (first-option-error-step rule options next-key next-value first-option-error))))
 
 (defn- unknown-option-result
   [rule error]
   {:message (.. error.message " for lint rule " rule)})
 
-(defn- option-error-known
+(defn- table-validation-result
   [rule error]
   (if error.unknown
     (unknown-option-result rule error)
     error))
 
-(defn- option-error-result
-  [rule error]
-  (and error (option-error-known rule error)))
-
-(defn- validate-table
+(defn- table-validation-error
   [rule options]
-  (option-error-result rule (first-option-error (schema rule) options nil)))
+  (let [error (first-option-error rule options nil)]
+    (and error
+         (table-validation-result rule error))))
 
-(defn- validate-value
+(defn- validate-present
   [rule options]
   (if (= (type options) :table)
-    (validate-table rule options)
+    (table-validation-error rule options)
     {:message "options must be a table"}))
 
 (defn validate
   [rule options]
   (if (= options nil)
     nil
-    (validate-value rule options)))
-
-(defn- merge-rule-options
-  [result name overrides]
-  (let [merged {}]
-    (each [key value (pairs (. rule-options name))]
-      (tset merged key value))
-    (each [key value (pairs (or overrides {}))]
-      (tset merged key value))
-    (tset result name merged)
-    result))
+    (validate-present rule options)))
 
 (defn normalized
   [overrides]
-  (let [result {}]
-    (each [name _ (pairs rule-options)]
-      (merge-rule-options result name (. (or overrides {}) name)))
-    result))
-
-(defn spec-files
-  []
-  ["^fnl/spec/"])
+  (or overrides {}))
 
 (defn spec-files-error
   [value]
-  (when (and (not= value nil) (not (strings? value)))
+  (when (and (not= value nil) (not (parse.sequence? value)))
     {:message "spec-files must be a list of strings"}))

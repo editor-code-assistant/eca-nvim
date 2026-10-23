@@ -7,6 +7,7 @@ do
 end
 local table_update = require("fennel-extras.cli.table")
 local config = require("fennel-extras.config")
+local format_config = require("fennel-extras.config.format")
 local lint_run = require("fennel-extras.lint.run")
 local scan = require("fennel-extras.cli.scan")
 local arg_parser = require("fennel-extras.cli.args")
@@ -14,9 +15,16 @@ local fs = require("fennel-extras.cli.fs")
 local git = require("fennel-extras.cli.git")
 local format = require("fennel-extras.cli.format")
 local matcher = require("fennel-extras.cli.matcher")
+local function default_print_line(line)
+  io.stdout:write(line, "\n")
+  return io.stdout:flush()
+end
 local function default_print(line)
-  io.write((string.gsub(line, "\n+$", "") .. "\n"))
-  return io.flush()
+  local text = string.gsub(line, "\n+$", "")
+  for part in string.gmatch(text, "[^\n]+") do
+    default_print_line(part)
+  end
+  return nil
 end
 local function config_default(cfg, key, default)
   local value = cfg[key]
@@ -44,14 +52,13 @@ local function load_parser(name)
     return nil
   end
 end
-local function config_load_error(printer, path, error)
-  printer((path .. ": " .. (error.message or tostring(error))))
-  return nil, true, nil
+local function config_load_error(path, error)
+  return nil, error, path
 end
-local function config_loaded(printer, path)
+local function config_loaded(_, path)
   local loaded, error = config.load(path)
   if error then
-    return config_load_error(printer, path, error)
+    return config_load_error(path, error)
   else
     return loaded, nil, path
   end
@@ -61,7 +68,7 @@ local function config_for(root, printer)
   if path then
     return config_loaded(printer, path)
   else
-    return {}, nil, nil
+    return nil, {message = "missing .fnl-extras.fnl"}, nil
   end
 end
 local function read_lint_item(file)
@@ -214,9 +221,9 @@ local function run_lint_policy(context, files)
 end
 local function run_lint_discovery(context)
   local inputs = arg_parser["lint-inputs"](context.parsed, context.cfg)
-  local extensions = (context.cfg.extensions or {".fnl", ".fnlm"})
-  local skip_dotfiles = config_default(context.cfg, "skip-dotfiles", true)
-  local follow_symlinks = config_default(context.cfg, "follow-symlinks", false)
+  local extensions = context.cfg.extensions
+  local skip_dotfiles = (context.cfg["skip-dotfiles"] or false)
+  local follow_symlinks = (context.cfg["follow-symlinks"] or false)
   local discovered, discovery_error = scan["sorted-files"](context["git-info"].root, inputs, {excludes = (context.cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks})
   local files = (discovered and format["without-config-file"](discovered, context["config-path"]))
   if discovery_error then
@@ -243,9 +250,9 @@ local function run_format_files(context, files)
 end
 local function run_format_discovery(root, parsed, cfg, config_path)
   local inputs = arg_parser["lint-inputs"](parsed, cfg)
-  local extensions = (cfg.extensions or {".fnl", ".fnlm"})
-  local skip_dotfiles = config_default(cfg, "skip-dotfiles", true)
-  local follow_symlinks = config_default(cfg, "follow-symlinks", false)
+  local extensions = cfg.extensions
+  local skip_dotfiles = (cfg["skip-dotfiles"] or false)
+  local follow_symlinks = (cfg["follow-symlinks"] or false)
   local discovered, discovery_error = scan["sorted-files"](root, inputs, {excludes = (cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks})
   return (discovered and format["without-config-file"](discovered, config_path)), discovery_error
 end
@@ -276,13 +283,57 @@ local function run_command_mode(context)
     return run_format(context)
   end
 end
+local function command_config_error(context)
+  local command = context.args[1]
+  local require_paths_3f = (#context.parsed.paths == 0)
+  if (command == "format") then
+    return format_config.validate(context.cfg, require_paths_3f, require_paths_3f, true)
+  else
+    return format_config["validate-scan"](context.cfg, require_paths_3f)
+  end
+end
+local function config_error_result(printer, config_path, config_error)
+  printer(format["error-line"](config_path, config_error))
+  return 2
+end
+local function command_config_error_result(printer, config_path, failure)
+  printer(format["error-line"](config_path, failure))
+  return 2
+end
+local function run_command_loaded(context, cfg, config_path)
+  local loaded = table_update.update(context, {cfg = cfg, ["config-path"] = config_path})
+  local failure = command_config_error(loaded)
+  if failure then
+    return command_config_error_result(context.printer, config_path, failure)
+  else
+    return run_command_mode(loaded)
+  end
+end
 local function run_command(context)
   local cfg, config_error, config_path = config_for(context.root, context.printer)
   if config_error then
-    return 2
+    return config_error_result(context.printer, config_path, config_error)
   else
-    return run_command_mode(table_update.update(context, {cfg = cfg, ["config-path"] = config_path}))
+    return run_command_loaded(context, cfg, config_path)
   end
+end
+local function missing_config_result(printer)
+  printer("config: missing .fnl-extras.fnl")
+  return 2
+end
+local function run_parsed(args, printer, root, parsed)
+  return run_command({root = root, args = args, parsed = parsed, printer = printer})
+end
+local function run_parsed_result(args, printer, root, parsed, parse_error)
+  if parse_error then
+    return git["emit-git-error"](printer, parse_error)
+  else
+    return run_parsed(args, printer, root, parsed)
+  end
+end
+local function parse_and_run(args, printer, root)
+  local parsed, parse_error = arg_parser["parse-args"](args)
+  return run_parsed_result(args, printer, root, parsed, parse_error)
 end
 local run
 do
@@ -290,11 +341,11 @@ do
     local opts0 = (opts or {})
     local printer = (opts0.print or default_print)
     local root = (opts0.cwd or scan.cwd())
-    local parsed, parse_error = arg_parser["parse-args"](args)
-    if parse_error then
-      return git["emit-git-error"](printer, parse_error)
+    local config_path = config.find(root)
+    if (config_path == nil) then
+      return missing_config_result(printer)
     else
-      return run_command({root = root, args = args, parsed = parsed, printer = printer})
+      return parse_and_run(args, printer, root)
     end
   end
   _2amodule_2a["run"] = run0

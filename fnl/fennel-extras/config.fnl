@@ -9,8 +9,7 @@
 (local lint-rules (require :fennel-extras.lint.rules))
 (local lint-options (require :fennel-extras.lint.rules.options))
 (local alignment (require :fennel-extras.indent.settings))
-
-(local compatibility-policy {:module-style "error" :spec-macro-import "error" :spec-no-module "error" :spec-direct-require "error" :one-is-per-testing "error" :if-branch-call "warning" :if-without-else "warning" :control-layout "warning" :unused-and-or "warning" :defn-args-newline "warning" :function-shape "warning" :no-mutation "warning" :multiline-layout "warning" :file-size "warning" :core-require "error" :binding-per-line "warning" :call-data-arg "warning"})
+(local format-config (require :fennel-extras.config.format))
 
 (defn parse-string
   [text]
@@ -101,47 +100,8 @@
 
 (defn- configuration-error
   [tbl]
-  (let [width           (. tbl :indent-width)
-        builtins        (. tbl :builtins)
-        fallbacks       (. tbl :prefix-fallbacks)
-        extensions      (. tbl :extensions)
-        skip-dotfiles   (. tbl :skip-dotfiles)
-        follow-symlinks (. tbl :follow-symlinks)
-        align-bindings  (. tbl :align-bindings)
-        alignment-table (. tbl :alignment)
-        parser          (. tbl :parser)
-        lint            (. tbl :lint)]
-    (var failure nil)
-    (when (and (= failure nil)
-               (not= width nil)
-               (not (and (integer? width) (> width 0))))
-      (set failure {:message "indent-width must be a positive integer"}))
-    (when (and (= failure nil)
-               (not= builtins nil)
-               (not (= builtins true))
-               (not (= builtins false))
-               (not= (type builtins) :table))
-      (set failure {:message "builtins must be true, false, or a table of rules"}))
-    (when (and (= failure nil) (= (type builtins) :table))
-      (set failure (rule-map-error builtins "builtins rule ")))
-    (when (and (= failure nil)
-               (not= fallbacks nil)
-               (not (= fallbacks false))
-               (not= (type fallbacks) :table))
-      (set failure {:message "prefix-fallbacks must be false or a table of rules"}))
-    (when (and (= failure nil) (= (type fallbacks) :table))
-      (set failure (rule-map-error fallbacks "prefix-fallbacks rule ")))
-    (when (and (= failure nil) (not= extensions nil) (not (extensions? extensions)))
-      (set failure {:message "extensions must be a non-empty list of strings starting with \".\""}))
-    (when (and (= failure nil) (not= skip-dotfiles nil) (not (boolean? skip-dotfiles)))
-      (set failure {:message "skip-dotfiles must be a boolean"}))
-    (when (and (= failure nil) (not= follow-symlinks nil) (not (boolean? follow-symlinks)))
-      (set failure {:message "follow-symlinks must be a boolean"}))
-    (when (= failure nil)
-      (set failure (alignment-error align-bindings alignment-table)))
-    (when (and (= failure nil) (not= parser nil) (not= (type parser) :string))
-      (set failure {:message "parser must be a string"}))
-    (configuration-error-with-lint failure lint)))
+  (or (format-config.validate tbl false false false)
+      (configuration-error-with-lint nil (. tbl :lint))))
 
 (defn- normalize-if-needed
   [tbl]
@@ -179,18 +139,29 @@
   [tbl]
   (validation-result tbl (validation-failure tbl)))
 
+(defn- unknown-config-key
+  [tbl]
+  (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true :indent-width true :builtins true :prefix-fallbacks true :extensions true :skip-dotfiles true :follow-symlinks true :alignment true :parser true :lint true}]
+    (accumulate [failure nil key _ (pairs tbl)]
+      (or (and (not (. allowed key))
+               {:message (.. "unknown configuration key: " key)})
+          failure))))
+
+(defn- validate-table-result
+  [tbl failure]
+  (if failure
+    (values nil failure)
+    (valid-table tbl)))
+
+(defn- validate-table
+  [tbl]
+  (validate-table-result tbl (unknown-config-key tbl)))
+
 (defn validate
   [tbl]
   (if (not= (type tbl) :table)
     (values nil {:message "configuration must be a table"})
-    (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true :indent-width true :builtins true :prefix-fallbacks true :extensions true :skip-dotfiles true :follow-symlinks true :align-bindings true :alignment true :parser true :lint true}]
-      (var failure nil)
-      (each [key _ (pairs tbl)]
-        (when (not (. allowed key))
-          (set failure {:message (.. "unknown configuration key: " key)})))
-      (if failure
-        (values nil failure)
-        (valid-table tbl)))))
+    (validate-table tbl)))
 
 (defn- normalized-options
   [options name entry]
@@ -226,14 +197,12 @@
       (normalized-overrides-step overrides next-key {:entry next-entry :rules rules :options options} normalized-rule-overrides))))
 
 (defn- lint-policy-result
-  [rules options exclusions max-code-lines spec-files]
-  {:rules rules :options options :spec-files spec-files :exclusions exclusions :max-code-lines max-code-lines})
+  [rules options exclusions spec-files]
+  {:rules rules :options options :spec-files spec-files :exclusions exclusions})
 
 (defn- lint-policy-defaults
-  [overrides]
-  (if (= (next overrides nil) nil)
-    (lint-rules.defaults)
-    compatibility-policy))
+  []
+  (lint-rules.defaults))
 
 (defn- valid-lint-policy
   [cfg]
@@ -241,19 +210,24 @@
         overrides                (or (and lint (. lint :rules)) {})
         general                  (or (and lint (. lint :exclusions)) [])
         exclusions               (core.concat general (lint-config.exclusions overrides))
-        max-code-lines           (or (and lint (. lint :max-code-lines)) 300)
-        spec-files               (or (and lint (. lint :spec-files)) (lint-options.spec-files))
-        defaults                 (lint-policy-defaults overrides)
+        spec-files               (. lint :spec-files)
+        defaults                 (lint-policy-defaults)
         (rules explicit-options) (normalized-rule-overrides overrides nil defaults {})
         options                  (lint-options.normalized explicit-options)]
-    (lint-policy-result rules options exclusions max-code-lines spec-files)))
+    (lint-policy-result rules options exclusions spec-files)))
+
+(defn- lint-policy-valid
+  [valid]
+  (if (= valid.lint nil)
+    (values nil {:message "missing lint.spec-files"})
+    (valid-lint-policy valid)))
 
 (defn lint-policy
   [cfg]
   (let [(valid error) (validate cfg)]
     (if error
       (values nil error)
-      (valid-lint-policy valid))))
+      (lint-policy-valid valid))))
 
 (defn- join-path
   [dir name]

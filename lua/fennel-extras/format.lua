@@ -8,6 +8,7 @@ end
 local indent = require("fennel-extras.indent")
 local reader = require("fennel-extras.reader")
 local settings = require("fennel-extras.indent.settings")
+local rules = require("fennel-extras.rules")
 local function split_lines(source)
   local lines = {}
   local start = 1
@@ -250,30 +251,59 @@ end
 local function alignment_enabled_3f(alignment)
   return (alignment.bindings or alignment.maps or alignment.clauses or alignment["split-bindings"] or alignment["collapse-padding"])
 end
+local function rules_config(config)
+  return {indents = config.indents, ["format-as"] = config["format-as"], ["indent-patterns"] = config["indent-patterns"], ["indent-width"] = config["indent-width"], builtins = (config.builtins or false), ["prefix-fallbacks"] = (config["prefix-fallbacks"] or false), alignment = config.alignment}
+end
+local function indentation_output_error(source, alignment, out)
+  if not indent_only_3f(source, out, alignment_enabled_3f(alignment)) then
+    return {message = "formatter changed more than indentation"}
+  else
+    return nil
+  end
+end
+local function parser_output_error(source, parser, out)
+  if (parser and not ast_equal_3f(parser, source, out)) then
+    return {message = "formatter changed the parsed form"}
+  else
+    return nil
+  end
+end
+local function formatted_output_error(source, parser, alignment, out)
+  return (indentation_output_error(source, alignment, out) or parser_output_error(source, parser, out))
+end
+local function validated_output(source, parser, alignment, out)
+  local output_error = formatted_output_error(source, parser, alignment, out)
+  if output_error then
+    return nil, output_error
+  else
+    return out
+  end
+end
+local function format_string_error(alignment_error, rules_error)
+  return (alignment_error or rules_error)
+end
+local function format_string_valid(source, parser, config)
+  local alignment = settings.resolve(config)
+  local out, error = indent.reindent(source, config)
+  if error then
+    return nil, error
+  else
+    return validated_output(source, parser, alignment, out)
+  end
+end
 local format_string
 do
   local function format_string0(source, opts)
     local config = (opts.config or {})
     local parser = opts.parser
     local alignment_error = settings.validate(config.alignment)
-    if alignment_error then
-      return nil, alignment_error
+    local rule_config = rules_config(config)
+    local rules_error = rules.validate(rule_config)
+    local validation_error = format_string_error(alignment_error, rules_error)
+    if validation_error then
+      return nil, validation_error
     else
-      local alignment = settings.resolve(config)
-      local out, error = indent.reindent(source, config)
-      if error then
-        return nil, error
-      else
-        if not indent_only_3f(source, out, alignment_enabled_3f(alignment)) then
-          return nil, {message = "formatter changed more than indentation"}
-        else
-          if (parser and not ast_equal_3f(parser, source, out)) then
-            return nil, {message = "formatter changed the parsed form"}
-          else
-            return out
-          end
-        end
-      end
+      return format_string_valid(source, parser, config)
     end
   end
   _2amodule_2a["format-string"] = format_string0

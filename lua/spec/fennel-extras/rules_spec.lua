@@ -7,21 +7,39 @@ local function load_indent()
     return {error = "module missing"}
   end
 end
+local explicit_indent_config = {["indent-width"] = 2, parser = "eca.nfnl.fennel", builtins = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["case-try"] = {{"block", 1}}, ["match-try"] = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}}, ["prefix-fallbacks"] = {def = {{"inner", 0}}, ["with-"] = {{"block", 1}}}, alignment = {["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "match", "case-try", "match-try", "if"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}}
+local function reindent_call_body(indent, source, config)
+  return indent.reindent(source, config)
+end
+local function reindent_call(indent, source, config)
+  local ok, result, err = pcall(reindent_call_body, indent, source, config)
+  return {ok = ok, value = result, error = err}
+end
+local function reindent_result(result)
+  if result.ok then
+    return {value = result.value, error = result.error}
+  else
+    return {["call-error"] = true, error = result.error}
+  end
+end
+local function explicit_indent_config_for(config)
+  if config then
+    return vim.tbl_deep_extend("force", explicit_indent_config, config)
+  else
+    return nil
+  end
+end
+local function reindent_with_config(indent, source, config)
+  local config0 = explicit_indent_config_for(config)
+  local result = reindent_call(indent, source, config0)
+  return reindent_result(result)
+end
 local function reindent_scenario(source, config)
   local indent = load_indent()
   if indent.error then
     return indent
   else
-    local ok, result, err
-    local function _2_()
-      return indent.reindent(source, config)
-    end
-    ok, result, err = pcall(_2_)
-    if ok then
-      return {value = result, error = err}
-    else
-      return {["call-error"] = true, error = err}
-    end
+    return reindent_with_config(indent, source, config)
   end
 end
 local function output_for(source, config)
@@ -92,7 +110,7 @@ local function _14_()
   local function _15_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(fn [x]\n  x)"
-    local actual_7_auto = output_for("(fn [x]\nx)", nil)
+    local actual_7_auto = output_for("(fn [x]\nx)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -100,7 +118,7 @@ local function _14_()
   local function _16_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1]\n  a)"
-    local actual_7_auto = output_for("(let [a 1]\na)", nil)
+    local actual_7_auto = output_for("(let [a 1]\na)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -108,7 +126,7 @@ local function _14_()
   local function _17_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(when x\n  y)"
-    local actual_7_auto = output_for("(when x\ny)", nil)
+    local actual_7_auto = output_for("(when x\ny)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -116,7 +134,7 @@ local function _14_()
   local function _18_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(do\n  a\n  b)"
-    local actual_7_auto = output_for("(do\na\nb)", nil)
+    local actual_7_auto = output_for("(do\na\nb)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -124,7 +142,7 @@ local function _14_()
   local function _19_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if c\n    a\n    b)"
-    local actual_7_auto = output_for("(if c\na\nb)", nil)
+    local actual_7_auto = output_for("(if c\na\nb)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -132,7 +150,7 @@ local function _14_()
   local function _20_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn- g\n  [x]\n  x)"
-    local actual_7_auto = output_for("(defn- g\n[x]\nx)", nil)
+    local actual_7_auto = output_for("(defn- g\n[x]\nx)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -140,7 +158,7 @@ local function _14_()
   local function _21_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(with-foo x\n  y)"
-    local actual_7_auto = output_for("(with-foo x\ny)", nil)
+    local actual_7_auto = output_for("(with-foo x\ny)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -148,7 +166,7 @@ local function _14_()
   local function _22_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(a.let x\n       y)"
-    local actual_7_auto = output_for("(a.let x\ny)", nil)
+    local actual_7_auto = output_for("(a.let x\ny)", {})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end

@@ -7,12 +7,15 @@ do
 end
 local rule_name_list = {"module-style", "spec-macro-import", "spec-no-module", "spec-direct-require", "one-is-per-testing", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "defn-args-newline", "function-shape", "no-mutation", "multiline-layout", "file-size", "core-require", "binding-per-line", "call-data-arg"}
 local options = require("fennel-extras.lint.rules.options")
-local defaults_map = {["module-style"] = "off", ["spec-macro-import"] = "off", ["spec-no-module"] = "off", ["spec-direct-require"] = "off", ["one-is-per-testing"] = "off", ["if-branch-call"] = "off", ["if-without-else"] = "off", ["control-layout"] = "off", ["unused-and-or"] = "off", ["defn-args-newline"] = "off", ["function-shape"] = "off", ["no-mutation"] = "off", ["multiline-layout"] = "off", ["file-size"] = "off", ["core-require"] = "off", ["binding-per-line"] = "off", ["call-data-arg"] = "off"}
 local rule_properties = {["module-style"] = {scope = "file"}, ["spec-macro-import"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
 local defaults
 do
   local function defaults0()
-    return defaults_map
+    local result = {}
+    for _, rule in ipairs(rule_name_list) do
+      result[rule] = "off"
+    end
+    return result
   end
   _2amodule_2a["defaults"] = defaults0
   defaults = _2amodule_2a.defaults
@@ -45,7 +48,7 @@ end
 local rule_options
 do
   local function rule_options0(policy, rule)
-    return ((policy and policy.options and policy.options[rule]) or options.defaults()[rule])
+    return (policy and policy.options and policy.options[rule])
   end
   _2amodule_2a["rule-options"] = rule_options0
   rule_options = _2amodule_2a["rule-options"]
@@ -70,8 +73,7 @@ end
 local rule_severity
 do
   local function rule_severity0(policy, rule)
-    local override = (policy and policy[rule])
-    return (override or defaults_map[rule])
+    return ((policy and policy[rule]) or "off")
   end
   _2amodule_2a["rule-severity"] = rule_severity0
   rule_severity = _2amodule_2a["rule-severity"]

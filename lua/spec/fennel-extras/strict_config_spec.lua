@@ -1,0 +1,250 @@
+-- [nfnl] fnl/spec/fennel-extras/strict_config_spec.fnl
+local function load_module(name)
+  local ok, result = pcall(require, name)
+  if ok then
+    return result
+  else
+    return {["module-missing"] = true}
+  end
+end
+local function error_result(ok, value, err)
+  return {ok = ok, value = value, message = (err and err.message)}
+end
+local function config_validation_error(config, value)
+  local ok, result, err = pcall(config.validate, value)
+  return error_result(ok, result, err)
+end
+local function config_error(value)
+  local config = load_module("fennel-extras.config")
+  if config["module-missing"] then
+    return config
+  else
+    return config_validation_error(config, value)
+  end
+end
+local function format_validation_error(format, config)
+  local ok, result, err = pcall(format["format-string"], "(x)", {config = config})
+  return error_result(ok, result, err)
+end
+local function format_error(config)
+  local format = load_module("fennel-extras.format")
+  if format["module-missing"] then
+    return format
+  else
+    return format_validation_error(format, config)
+  end
+end
+local function indent_validation_error(indent, config)
+  local ok, result, err = pcall(indent.reindent, "(x)", config)
+  return error_result(ok, result, err)
+end
+local function indent_error(config)
+  local indent = load_module("fennel-extras.indent")
+  if indent["module-missing"] then
+    return indent
+  else
+    return indent_validation_error(indent, config)
+  end
+end
+local function error_value(value)
+  if ("table" == type(value)) then
+    return value.message
+  else
+    return value
+  end
+end
+local function lint_error_message(ok, findings, err)
+  return ((ok and err and error_value(err)) or (not ok and error_value(findings)))
+end
+local function lint_check(lint, matcher, source, context)
+  local options = vim.tbl_extend("force", context, {matcher = matcher["vim-matcher"]()})
+  local ok, findings, err = pcall(lint.check, source, options)
+  return {ok = ok, findings = findings, message = lint_error_message(ok, findings, err)}
+end
+local function lint_error(source, context)
+  local lint = load_module("fennel-extras.lint")
+  local matcher = load_module("fennel-extras.cli.matcher")
+  if (lint["module-missing"] or matcher["module-missing"]) then
+    return {["module-missing"] = true}
+  else
+    return lint_check(lint, matcher, source, context)
+  end
+end
+local function missing_message_3f(result, path)
+  return ((result.ok and (nil == result.findings) and (("missing " .. path) == result.message)) or (not result.ok and (("missing " .. path) == result.message)))
+end
+local function complete_rule_3f(entry, rules, names, index, recurse)
+  return ((entry ~= nil) and (entry ~= "off") and (type(entry) == "table") and (entry.severity ~= nil) and (entry.options ~= nil) and (entry.options["applies-to"] ~= nil) and recurse(rules, names, (index + 1)))
+end
+local function complete_rules_3f(rules, names, index)
+  return ((index > #names) or complete_rule_3f(rules[names[index]], rules, names, index, complete_rules_3f))
+end
+local function _7_()
+  local function _8_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(format_error({}), "indent-width")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (format-error {}) \"indent-width\")")
+    return true
+  end
+  require("plenary.busted").it("format API reports missing indent-width", _8_)
+  local function _9_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(format_error({["indent-width"] = 2}), "builtins")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (format-error {:indent-width 2}) \"builtins\")")
+    return true
+  end
+  require("plenary.busted").it("format API reports missing builtins", _9_)
+  local function _10_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(format_error({["indent-width"] = 2, builtins = false}), "prefix-fallbacks")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (format-error {:builtins false :indent-width 2}) \"prefix-fallbacks\")")
+    return true
+  end
+  require("plenary.busted").it("format API reports missing prefix-fallbacks", _10_)
+  local function _11_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(format_error({["indent-width"] = 2, builtins = false, ["prefix-fallbacks"] = false}), "parser")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (format-error {:builtins false :indent-width 2 :prefix-fallbacks false}) \"parser\")")
+    return true
+  end
+  require("plenary.busted").it("format API reports missing parser", _11_)
+  local function _12_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(indent_error({}), "indent-width")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (indent-error {}) \"indent-width\")")
+    return true
+  end
+  require("plenary.busted").it("indent API reports missing indent-width", _12_)
+  local function _13_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(indent_error({["indent-width"] = 2}), "builtins")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (indent-error {:indent-width 2}) \"builtins\")")
+    return true
+  end
+  require("plenary.busted").it("indent API reports missing builtins", _13_)
+  local function _14_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(indent_error({["indent-width"] = 2, builtins = false}), "prefix-fallbacks")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (indent-error {:builtins false :indent-width 2}) \"prefix-fallbacks\")")
+    return true
+  end
+  require("plenary.busted").it("indent API reports missing prefix-fallbacks", _14_)
+  local function _15_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(indent_error({["indent-width"] = 2, builtins = false, ["prefix-fallbacks"] = false}), "parser")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (indent-error {:builtins false :indent-width 2 :prefix-fallbacks false}) \"parser\")")
+    return true
+  end
+  return require("plenary.busted").it("indent API reports missing parser", _15_)
+end
+require("plenary.busted").describe("strict-config-errors", _7_)
+local function _16_()
+  local function _17_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "unknown configuration key: align-bindings"
+    local actual_7_auto = config_error({["align-bindings"] = true}).message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-bindings is rejected as an unknown key", _17_)
+  local function _18_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "builtins must be a map or false"
+    local actual_7_auto = config_error({builtins = true}).message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("true builtins is rejected", _18_)
+  local function _19_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "prefix-fallbacks must be a map or false"
+    local actual_7_auto = config_error({["prefix-fallbacks"] = true}).message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("true prefix-fallbacks is rejected", _19_)
+  local function _20_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "unknown lint key: max-code-lines"
+    local actual_7_auto = config_error({lint = {["max-code-lines"] = 300}}).message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("top-level lint max-code-lines is rejected", _20_)
+  local function _21_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "missing alignment.binding-forms"
+    local actual_7_auto = config_error({alignment = {bindings = true}}).message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("binding forms are required when binding alignment is enabled", _21_)
+  local function _22_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "missing alignment.clause-forms"
+    local actual_7_auto = config_error({alignment = {clauses = true}}).message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("clause forms are required when clause alignment is enabled", _22_)
+  local function _23_()
+    local result = config_error({alignment = {["binding-forms"] = {"let"}, ["clause-forms"] = {"case"}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = result.ok
+    assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
+    return true
+  end
+  return require("plenary.busted").it("missing alignment switches are off", _23_)
+end
+require("plenary.busted").describe("strict-config-shape", _16_)
+local function _24_()
+  local function _25_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(lint_error("(module a)", {path = "fnl/a.fnl", rules = {}}), "lint.spec-files")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (lint-error \"(module a)\" {:path \"fnl/a.fnl\" :rules {}}) \"lint.spec-files\")")
+    return true
+  end
+  require("plenary.busted").it("lint API reports missing spec-files", _25_)
+  local function _26_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(lint_error("(module a)", {path = "fnl/a.fnl", ["spec-files"] = {"^fnl/spec/"}, rules = {["module-style"] = "warning"}}), "lint.rules.module-style.options.applies-to")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (lint-error \"(module a)\" {:path \"fnl/a.fnl\" :rules {:module-style \"warning\"} :spec-files [\"^fnl/spec/\"]}) \"lint.rules.module-style.options.applies-to\")")
+    return true
+  end
+  require("plenary.busted").it("an enabled rule reports missing applies-to", _26_)
+  local function _27_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto = missing_message_3f(lint_error("(module a)", {path = "fnl/a.fnl", ["spec-files"] = {"^fnl/spec/"}, rules = {["file-size"] = {severity = "warning", options = {["applies-to"] = "source"}}}}), "lint.rules.file-size.options.max-code-lines")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (lint-error \"(module a)\" {:path \"fnl/a.fnl\"\n :rules {:file-size {:options {:applies-to \"source\"} :severity \"warning\"}}\n :spec-files [\"^fnl/spec/\"]}) \"lint.rules.file-size.options.max-code-lines\")")
+    return true
+  end
+  require("plenary.busted").it("an enabled rule reports missing option values", _27_)
+  local function _28_()
+    local result = lint_error("(module a)", {path = "fnl/a.fnl", ["spec-files"] = {"^fnl/spec/"}, rules = {["file-size"] = "off"}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (result.ok and (0 == #result.findings))
+    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (= 0 (length (. result \"findings\"))))")
+    return true
+  end
+  return require("plenary.busted").it("an off rule does not require options", _28_)
+end
+require("plenary.busted").describe("strict-lint-options", _24_)
+local function _29_()
+  local function _30_()
+    local config = load_module("fennel-extras.config")
+    local loaded
+    if config["module-missing"] then
+      loaded = nil
+    else
+      loaded = config.load(".fnl-extras.fnl")
+    end
+    local rules = (loaded and loaded.lint and loaded.lint.rules)
+    local names = {"module-style", "spec-macro-import", "spec-no-module", "spec-direct-require", "one-is-per-testing", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "defn-args-newline", "function-shape", "no-mutation", "multiline-layout", "file-size", "core-require", "binding-per-line", "call-data-arg"}
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (loaded and loaded["indent-width"] and loaded.extensions and loaded.paths and loaded.builtins and loaded["prefix-fallbacks"] and loaded.parser and loaded.alignment and loaded.lint and loaded.lint["spec-files"] and complete_rules_3f(rules, names, 1))
+    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. loaded \"indent-width\") (. loaded \"extensions\") (. loaded \"paths\") (. loaded \"builtins\") (. loaded \"prefix-fallbacks\") (. loaded \"parser\") (. loaded \"alignment\") (. loaded \"lint\") (. (. loaded \"lint\") \"spec-files\") (complete-rules? rules names 1))")
+    return true
+  end
+  return require("plenary.busted").it("the repository config loads with complete format and lint settings", _30_)
+end
+return require("plenary.busted").describe("strict-config-property", _29_)

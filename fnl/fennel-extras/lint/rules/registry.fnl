@@ -5,13 +5,14 @@
 (local rule-name-list ["module-style" "spec-macro-import" "spec-no-module" "spec-direct-require" "one-is-per-testing" "if-branch-call" "if-without-else" "control-layout" "unused-and-or" "defn-args-newline" "function-shape" "no-mutation" "multiline-layout" "file-size" "core-require" "binding-per-line" "call-data-arg"])
 (local options (require :fennel-extras.lint.rules.options))
 
-(local defaults-map {:module-style "off" :spec-macro-import "off" :spec-no-module "off" :spec-direct-require "off" :one-is-per-testing "off" :if-branch-call "off" :if-without-else "off" :control-layout "off" :unused-and-or "off" :defn-args-newline "off" :function-shape "off" :no-mutation "off" :multiline-layout "off" :file-size "off" :core-require "off" :binding-per-line "off" :call-data-arg "off"})
-
 (local rule-properties {:module-style {:scope :file} :spec-macro-import {:scope :file} :file-size {:scope :file}})
 
 (defn defaults
   []
-  defaults-map)
+  (let [result {}]
+    (each [_ rule (ipairs rule-name-list)]
+      (tset result rule "off"))
+    result))
 
 (defn rule-names
   []
@@ -29,8 +30,7 @@
 
 (defn rule-options
   [policy rule]
-  (or (and policy policy.options (. policy.options rule))
-      (. (options.defaults) rule)))
+  (and policy policy.options (. policy.options rule)))
 
 (defn applies-to?
   [policy rule spec?]
@@ -45,9 +45,7 @@
 
 (defn rule-severity
   [policy rule]
-  (let [override (and policy (. policy rule))]
-    (or override
-        (. defaults-map rule))))
+  (or (and policy (. policy rule)) "off"))
 
 (defn enabled?
   [policy rule]

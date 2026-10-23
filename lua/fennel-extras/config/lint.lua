@@ -123,18 +123,42 @@ local function per_rule_exclusions_error(name, exclusions)
     return nil
   end
 end
+local function missing_option_step(name, option_values, names, index)
+  if (index > #names) then
+    return nil
+  else
+    return (((option_values[names[index]] == nil) and {message = ("missing lint.rules." .. name .. ".options." .. names[index])}) or missing_option_step(name, option_values, names, (index + 1)))
+  end
+end
+local function missing_rule_options_error(name, severity, option_values)
+  if ((severity ~= "off") and (option_values == nil)) then
+    return {message = ("missing lint.rules." .. name .. ".options." .. (options.names(name)[1] or "applies-to"))}
+  else
+    return nil
+  end
+end
 local function lint_rule_table_error(name, entry)
   local severity = entry.severity
-  local options0 = entry.options
+  local rule_options = entry.options
   local exclusions = entry.exclusions
   local unknown = first_rule_map_key(entry, nil)
-  return (lint_rule_unknown_key_error(name, unknown) or lint_rule_severity_option_error(name, severity, options0, unknown) or lint_rule_options_type_error(name, options0) or lint_rule_options_error(name, options0) or per_rule_exclusions_error(name, exclusions))
+  return (lint_rule_unknown_key_error(name, unknown) or lint_rule_severity_option_error(name, severity, rule_options, unknown) or lint_rule_options_type_error(name, rule_options) or lint_rule_options_error(name, rule_options) or missing_rule_options_error(name, severity, rule_options) or ((severity ~= "off") and rule_options and missing_option_step(name, rule_options, options.names(name), 1)) or per_rule_exclusions_error(name, exclusions))
+end
+local function lint_rule_missing_options_error(name)
+  return {message = ("missing lint.rules." .. name .. ".options.applies-to")}
+end
+local function lint_rule_invalid_entry_options_error(name, entry)
+  if (entry == "off") then
+    return nil
+  else
+    return lint_rule_missing_options_error(name)
+  end
 end
 local function lint_rule_invalid_entry_error(name, entry)
   if not lint_severity_3f(entry) then
     return {message = ("lint rule " .. name .. " must be error, warning, or off")}
   else
-    return nil
+    return lint_rule_invalid_entry_options_error(name, entry)
   end
 end
 local function lint_rule_entry_error(name, entry)
@@ -155,7 +179,7 @@ local function next_unknown_candidate(next_key, candidate)
   end
 end
 local function first_unknown_lint_key_step(lint, next_key, candidate, recurse)
-  if ((next_key == "rules") or (next_key == "exclusions") or (next_key == "max-code-lines") or (next_key == "spec-files")) then
+  if ((next_key == "rules") or (next_key == "exclusions") or (next_key == "spec-files")) then
     return recurse(lint, next_key, candidate)
   else
     return recurse(lint, next_key, next_unknown_candidate(next_key, candidate))
@@ -263,15 +287,15 @@ local function first_exclusion_error_entry(exclusions, index, exclusion0, next_e
   local form = exclusion0.form
   local reason = exclusion0.reason
   local duplicate = duplicate_exclusion_index(exclusions, 1, rule, form, index)
-  local or_32_ = exclusion_keys_error(exclusion0, index, unknown_key)
-  if not or_32_ then
+  local or_35_ = exclusion_keys_error(exclusion0, index, unknown_key)
+  if not or_35_ then
     if (type(rule) ~= "string") then
-      or_32_ = {message = ("lint exclusion " .. index .. ": rule must be a string")}
+      or_35_ = {message = ("lint exclusion " .. index .. ": rule must be a string")}
     else
-      or_32_ = exclusion_rule_error(exclusions, index, rule, form, reason, duplicate, next_error)
+      or_35_ = exclusion_rule_error(exclusions, index, rule, form, reason, duplicate, next_error)
     end
   end
-  return or_32_
+  return or_35_
 end
 local function first_exclusion_error(exclusions, index)
   local exclusion0 = exclusions[index]
@@ -285,42 +309,30 @@ local function first_exclusion_error(exclusions, index)
     end
   end
 end
-local function lint_max_code_lines_error(max_code_lines)
-  if ((max_code_lines ~= nil) and not ((type(max_code_lines) == "number") and (max_code_lines == math.floor(max_code_lines)) and (max_code_lines > 0))) then
-    return {message = "max-code-lines must be a positive integer"}
-  else
-    return nil
-  end
-end
-local function nested_max_code_lines(rules)
-  local entry = (rules and rules["file-size"])
-  return ((type(entry) == "table") and (entry.options and entry.options["max-code-lines"]))
-end
-local function lint_max_code_lines_conflict_error(rules, max_code_lines)
-  local nested = nested_max_code_lines(rules)
-  if (max_code_lines and nested and (max_code_lines ~= nested)) then
-    return {message = "lint max-code-lines conflicts with file-size option max-code-lines"}
-  else
-    return nil
-  end
-end
-local function lint_table_error(rules, exclusions, max_code_lines, spec_files, unknown_key)
-  local or_38_ = unknown_lint_key_error(unknown_key)
-  if not or_38_ then
+local function lint_table_error(rules, exclusions, spec_files, unknown_key)
+  local or_39_ = unknown_lint_key_error(unknown_key)
+  if not or_39_ then
     if (rules and ((type(rules) ~= "table") or (sequence_3f(rules) and ((getmetatable(rules) ~= nil) or (#rules > 0))))) then
-      or_38_ = {message = "lint rules must be a table"}
+      or_39_ = {message = "lint rules must be a table"}
     else
-      or_38_ = nil
+      or_39_ = nil
     end
   end
-  if not or_38_ then
+  if not or_39_ then
     if rules then
-      or_38_ = first_lint_rule_error(rules, nil)
+      or_39_ = first_lint_rule_error(rules, nil)
     else
-      or_38_ = nil
+      or_39_ = nil
     end
   end
-  return (or_38_ or lint_max_code_lines_error(max_code_lines) or lint_max_code_lines_conflict_error(rules, max_code_lines) or options["spec-files-error"](spec_files) or exclusion.validate(lint_rules.defaults(), exclusions))
+  if not or_39_ then
+    if (spec_files == nil) then
+      or_39_ = {message = "missing lint.spec-files"}
+    else
+      or_39_ = nil
+    end
+  end
+  return (or_39_ or options["spec-files-error"](spec_files) or exclusion.validate(lint_rules.defaults(), exclusions))
 end
 local function append_exclusions(result, rule, entry)
   if ((type(entry) == "table") and entry.exclusions) then
@@ -335,17 +347,26 @@ local function append_exclusions(result, rule, entry)
   end
   return result
 end
+local function collect_exclusions(rules, result)
+  for rule, entry in pairs(rules) do
+    append_exclusions(result, rule, entry)
+  end
+  return result
+end
 local exclusions
 do
   local function exclusions0(rules)
-    local result = {}
-    for rule, entry in pairs(rules) do
-      append_exclusions(result, rule, entry)
-    end
-    return result
+    return collect_exclusions(rules, {})
   end
   _2amodule_2a["exclusions"] = exclusions0
   exclusions = _2amodule_2a.exclusions
+end
+local function lint_error_table(lint)
+  local rules = lint.rules
+  local exclusions0 = lint.exclusions
+  local spec_files = lint["spec-files"]
+  local unknown_key = first_unknown_lint_key(lint, nil, nil)
+  return lint_table_error(rules, exclusions0, spec_files, unknown_key)
 end
 local lint_error
 do
@@ -353,12 +374,7 @@ do
     if (type(lint) ~= "table") then
       return {message = "lint must be a table"}
     else
-      local rules = lint.rules
-      local exclusions0 = lint.exclusions
-      local max_code_lines = lint["max-code-lines"]
-      local spec_files = lint["spec-files"]
-      local unknown_key = first_unknown_lint_key(lint, nil, nil)
-      return lint_table_error(rules, exclusions0, max_code_lines, spec_files, unknown_key)
+      return lint_error_table(lint)
     end
   end
   _2amodule_2a["lint-error"] = lint_error0

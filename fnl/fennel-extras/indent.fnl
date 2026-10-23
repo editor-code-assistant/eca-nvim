@@ -9,6 +9,7 @@
 (local split (require :fennel-extras.indent.split))
 (local comments (require :fennel-extras.indent.comment))
 (local settings (require :fennel-extras.indent.settings))
+(local format-config (require :fennel-extras.config.format))
 
 (defn- append-line
   [lines source start end]
@@ -312,7 +313,7 @@
 (defn reindent
   [source config]
   (let [alignment-error (settings.validate (and config (. config :alignment)))
-        config-error    (rules.validate config)]
+        config-error    (format-config.validate config false false true)]
     (if alignment-error
       (values nil alignment-error)
       (if config-error

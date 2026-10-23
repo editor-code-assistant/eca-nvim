@@ -117,22 +117,48 @@
           (when (per-rule-selector? exclusions 1)
             {:message (.. "lint rule " name " exclusions cannot select a rule")})))))
 
+(defn- missing-option-step
+  [name option-values names index]
+  (if (> index (length names))
+    nil
+    (or (and (= (. option-values (. names index)) nil)
+             {:message (.. "missing lint.rules." name ".options." (. names index))})
+        (missing-option-step name option-values names (+ index 1)))))
+
+(defn- missing-rule-options-error
+  [name severity option-values]
+  (when (and (not= severity "off") (= option-values nil))
+    {:message (.. "missing lint.rules." name ".options." (or (. (options.names name) 1) "applies-to"))}))
+
 (defn- lint-rule-table-error
   [name entry]
-  (let [severity   (. entry :severity)
-        options    (. entry :options)
-        exclusions (. entry :exclusions)
-        unknown    (first-rule-map-key entry nil)]
+  (let [severity     (. entry :severity)
+        rule-options (. entry :options)
+        exclusions   (. entry :exclusions)
+        unknown      (first-rule-map-key entry nil)]
     (or (lint-rule-unknown-key-error name unknown)
-        (lint-rule-severity-option-error name severity options unknown)
-        (lint-rule-options-type-error name options)
-        (lint-rule-options-error name options)
+        (lint-rule-severity-option-error name severity rule-options unknown)
+        (lint-rule-options-type-error name rule-options)
+        (lint-rule-options-error name rule-options)
+        (missing-rule-options-error name severity rule-options)
+        (and (not= severity "off") rule-options (missing-option-step name rule-options (options.names name) 1))
         (per-rule-exclusions-error name exclusions))))
+
+(defn- lint-rule-missing-options-error
+  [name]
+  {:message (.. "missing lint.rules." name ".options.applies-to")})
+
+(defn- lint-rule-invalid-entry-options-error
+  [name entry]
+  (if (= entry "off")
+    nil
+    (lint-rule-missing-options-error name)))
 
 (defn- lint-rule-invalid-entry-error
   [name entry]
-  (when (not (lint-severity? entry))
-    {:message (.. "lint rule " name " must be error, warning, or off")}))
+  (if (not (lint-severity? entry))
+    {:message (.. "lint rule " name " must be error, warning, or off")}
+    (lint-rule-invalid-entry-options-error name entry)))
 
 (defn- lint-rule-entry-error
   [name entry]
@@ -155,7 +181,6 @@
   [lint next-key candidate recurse]
   (if (or (= next-key :rules)
           (= next-key :exclusions)
-          (= next-key :max-code-lines)
           (= next-key :spec-files))
     (recurse lint next-key candidate)
     (recurse lint next-key (next-unknown-candidate next-key candidate))))
@@ -265,28 +290,8 @@
         {:message (.. "lint exclusion " index " must be a table")}
         (first-exclusion-error-entry exclusions index exclusion first-exclusion-error)))))
 
-(defn- lint-max-code-lines-error
-  [max-code-lines]
-  (when (and (not= max-code-lines nil)
-             (not (and (= (type max-code-lines) :number)
-                       (= max-code-lines (math.floor max-code-lines))
-                       (> max-code-lines 0))))
-    {:message "max-code-lines must be a positive integer"}))
-
-(defn- nested-max-code-lines
-  [rules]
-  (let [entry (and rules (. rules "file-size"))]
-    (and (= (type entry) :table)
-         (and entry.options (. entry.options :max-code-lines)))))
-
-(defn- lint-max-code-lines-conflict-error
-  [rules max-code-lines]
-  (let [nested (nested-max-code-lines rules)]
-    (when (and max-code-lines nested (not= max-code-lines nested))
-      {:message "lint max-code-lines conflicts with file-size option max-code-lines"})))
-
 (defn- lint-table-error
-  [rules exclusions max-code-lines spec-files unknown-key]
+  [rules exclusions spec-files unknown-key]
   (or (unknown-lint-key-error unknown-key)
       (when (and rules
                  (or (not= (type rules) :table)
@@ -295,8 +300,8 @@
                               (> (length rules) 0)))))
         {:message "lint rules must be a table"})
       (when rules (first-lint-rule-error rules nil))
-      (lint-max-code-lines-error max-code-lines)
-      (lint-max-code-lines-conflict-error rules max-code-lines)
+      (when (= spec-files nil)
+        {:message "missing lint.spec-files"})
       (options.spec-files-error spec-files)
       (exclusion.validate (lint-rules.defaults) exclusions)))
 
@@ -310,20 +315,26 @@
         (table.insert result (core.assoc copy :rule rule)))))
   result)
 
+(defn- collect-exclusions
+  [rules result]
+  (each [rule entry (pairs rules)]
+    (append-exclusions result rule entry))
+  result)
+
 (defn exclusions
   [rules]
-  (let [result []]
-    (each [rule entry (pairs rules)]
-      (append-exclusions result rule entry))
-    result))
+  (collect-exclusions rules []))
+
+(defn- lint-error-table
+  [lint]
+  (let [rules       (. lint :rules)
+        exclusions  (. lint :exclusions)
+        spec-files  (. lint :spec-files)
+        unknown-key (first-unknown-lint-key lint nil nil)]
+    (lint-table-error rules exclusions spec-files unknown-key)))
 
 (defn lint-error
   [lint]
   (if (not= (type lint) :table)
     {:message "lint must be a table"}
-    (let [rules          (. lint :rules)
-          exclusions     (. lint :exclusions)
-          max-code-lines (. lint :max-code-lines)
-          spec-files     (. lint :spec-files)
-          unknown-key    (first-unknown-lint-key lint nil nil)]
-      (lint-table-error rules exclusions max-code-lines spec-files unknown-key))))
+    (lint-error-table lint)))

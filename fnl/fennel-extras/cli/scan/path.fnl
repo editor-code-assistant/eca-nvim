@@ -62,11 +62,17 @@
   [path extension]
   (= (string.sub path (- (string.len extension))) extension))
 
-(defn fnl-file?
+(defn- extension-matches-any?
   [path extensions]
   (accumulate [result false _ extension (ipairs extensions)]
     (or result
         (extension-matches? path extension))))
+
+(defn fnl-file?
+  [path extensions]
+  (if (= extensions nil)
+    true
+    (extension-matches-any? path extensions)))
 
 (defn- clean-prefix
   [prefix]

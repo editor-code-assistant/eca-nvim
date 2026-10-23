@@ -24,7 +24,7 @@ local function file_size_finding_source(path, policy, source)
   local tokens = reader.tokenize(source)
   local count = code_line_count(tokens, 1, (newline_count(source, 1, 0) + 1), 0)
   local options = (policy.options and policy.options["file-size"])
-  local limit = (policy["max-code-lines"] or (options and options["max-code-lines"]) or 300)
+  local limit = ((options and options["max-code-lines"]) or 300)
   return file_size_finding_result(path, policy, count, limit)
 end
 local finding

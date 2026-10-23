@@ -58,7 +58,7 @@ local function _5_()
 end
 require("plenary.busted").describe("defaults", _5_)
 local function all_enabled_policy()
-  return {["module-style"] = "error", ["spec-macro-import"] = "error", ["spec-no-module"] = "error", ["spec-direct-require"] = "error", ["one-is-per-testing"] = "error", ["if-branch-call"] = "warning", ["if-without-else"] = "warning", ["control-layout"] = "warning", ["defn-args-newline"] = "warning", ["multiline-layout"] = "warning", ["function-shape"] = "warning", ["no-mutation"] = "warning", ["file-size"] = "warning", ["core-require"] = "error", ["unused-and-or"] = "warning", ["binding-per-line"] = "warning", ["call-data-arg"] = "warning"}
+  return {["core-require"] = "error", options = {["core-require"] = {["applies-to"] = "all", module = "eca.nfnl.core", binding = "core"}}}
 end
 local function core_require_scenario()
   local source = "(local c (require :eca.nfnl.core))"
@@ -138,4 +138,4 @@ local function _13_()
   end
   return require("plenary.busted").it("reports the core-require finding with its established identity", _15_)
 end
-return require("plenary.busted").describe("check", _13_)
+return require("plenary.busted").describe("lint-rules-check", _13_)

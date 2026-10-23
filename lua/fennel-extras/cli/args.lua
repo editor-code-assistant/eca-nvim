@@ -12,7 +12,7 @@ do
     if (#parsed.paths > 0) then
       return parsed.paths
     else
-      return (cfg.paths or {"."})
+      return cfg.paths
     end
   end
   _2amodule_2a["lint-inputs"] = lint_inputs0

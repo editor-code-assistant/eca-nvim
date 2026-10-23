@@ -87,14 +87,21 @@ end
 local function extension_matches_3f(path, extension)
   return (string.sub(path, ( - string.len(extension))) == extension)
 end
+local function extension_matches_any_3f(path, extensions)
+  local result = false
+  for _, extension in ipairs(extensions) do
+    result = (result or extension_matches_3f(path, extension))
+  end
+  return result
+end
 local fnl_file_3f
 do
   local function fnl_file_3f0(path, extensions)
-    local result = false
-    for _, extension in ipairs(extensions) do
-      result = (result or extension_matches_3f(path, extension))
+    if (extensions == nil) then
+      return true
+    else
+      return extension_matches_any_3f(path, extensions)
     end
-    return result
   end
   _2amodule_2a["fnl-file?"] = fnl_file_3f0
   fnl_file_3f = _2amodule_2a["fnl-file?"]

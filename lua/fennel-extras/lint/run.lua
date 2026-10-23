@@ -90,7 +90,7 @@ local function annotate_findings(findings, source, index, recurse)
   end
 end
 local function lint_file(file, policy)
-  local context = {path = file.path, rules = policy.rules, options = policy.options, ["spec-files"] = policy["spec-files"], ["max-code-lines"] = policy["max-code-lines"], selection = file.selection, matcher = policy.matcher, exclusions = policy.exclusions, ["defer-exclusions"] = true}
+  local context = {path = file.path, rules = policy.rules, options = policy.options, ["spec-files"] = policy["spec-files"], selection = file.selection, matcher = policy.matcher, exclusions = policy.exclusions, ["defer-exclusions"] = true}
   local findings, error = lint.check(file.source, context)
   if error then
     return nil, {message = error.message, line = error.line, col = error.col, path = file.path}

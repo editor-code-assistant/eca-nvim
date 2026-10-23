@@ -8,46 +8,141 @@
       result
       {:module-missing true})))
 
+(local all-severities
+       {"module-style"        :error
+        "spec-macro-import"   :error
+        "spec-no-module"      :error
+        "spec-direct-require" :error
+        "one-is-per-testing"  :error
+        "if-branch-call"      :warning
+        "if-without-else"     :warning
+        "control-layout"      :warning
+        "defn-args-newline"   :warning
+        "multiline-layout"    :warning
+        "function-shape"      :warning
+        "no-mutation"         :warning
+        "file-size"           :warning
+        "core-require"        :error
+        "unused-and-or"       :warning
+        "binding-per-line"    :warning
+        "call-data-arg"       :warning})
+
+(local matcher (require :fennel-extras.cli.matcher))
+
+(local all-options
+       {"module-style"        {:applies-to "source" :macro-module "eca.nfnl.macros.aniseed" :required-macros ["module" "def" "defn" "defn-"]}
+        "spec-macro-import"   {:applies-to "spec" :macro-module "spec.eca.macros" :required-macros ["deftest" "testing" "is"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+        "spec-no-module"      {:applies-to "spec" :module-form "module"}
+        "spec-direct-require" {:applies-to "spec" :forbidden-modules ["plenary.busted" "luassert"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+        "one-is-per-testing"  {:applies-to "all" :testing-form "testing" :assertion-form "is" :count 1}
+        "if-branch-call"      {:applies-to "all" :if-forms ["if"]}
+        "if-without-else"     {:applies-to "all" :if-forms ["if"] :flag-nil-else true}
+        "control-layout"      {:applies-to "all" :control-forms ["if" "when" "and" "or" "case" "match"]}
+        "defn-args-newline"   {:applies-to "all" :forms ["defn" "defn-"]}
+        "multiline-layout"    {:applies-to "all" :clause-forms ["case" "match" "case-try" "match-try"] :binding-forms ["let" "when-let" "if-let" "with-open"]}
+        "function-shape"      {:applies-to "all" :function-forms ["defn" "defn-" "fn" "lambda" "λ"]}
+        "no-mutation"         {:applies-to "source" :forms ["var" "set" "while"]}
+        "file-size"           {:applies-to "source" :max-code-lines 300}
+        "core-require"        {:applies-to "all" :module "eca.nfnl.core" :binding "core"}
+        "unused-and-or"       {:applies-to "all" :forms ["and" "or"]}
+        "binding-per-line"    {:applies-to "all" :forms ["let" "when-let" "if-let" "with-open"]}
+        "call-data-arg"       {:applies-to "source" :ignore-forms []}})
+
 (defn- all-enabled-policy
   []
-  {"module-style"        :error
-   "spec-macro-import"   :error
-   "spec-no-module"      :error
-   "spec-direct-require" :error
-   "one-is-per-testing"  :error
-   "if-branch-call"      :warning
-   "if-without-else"     :warning
-   "control-layout"      :warning
-   "defn-args-newline"   :warning
-   "multiline-layout"    :warning
-   "function-shape"      :warning
-   "no-mutation"         :warning
-   "file-size"           :warning
-   "core-require"        :error
-   "unused-and-or"       :warning
-   "binding-per-line"    :warning
-   "call-data-arg"       :warning})
+  (let [policy {}]
+    (each [rule severity (pairs all-severities)]
+      (tset policy rule {:severity severity :options (. all-options rule)}))
+    policy))
+
+(defn- compatibility-rule-value
+  [rule severity]
+  (or (and (= :table (type severity)) severity)
+      (and (= severity :off) :off)
+      {:severity severity :options (. all-options rule)}))
+
+(defn- compatibility-policy
+  [rules]
+  (let [policy (all-enabled-policy)]
+    (each [rule severity (pairs rules)]
+      (tset policy rule (compatibility-rule-value rule severity)))
+    policy))
 
 (defn- policy-size
   [policy]
-  (var count 0)
-  (each [_ _ (pairs policy)]
-    (set count (+ count 1)))
-  count)
+  (- (length (vim.tbl_keys policy))
+     (or (and (. policy :options) 1) 0)))
+
+(defn- check-source-success
+  [findings err]
+  (if findings
+    findings
+    {:value-nil? true
+     :message    (and err (. err :message))
+     :line       (and err (. err :line))
+     :col        (and err (. err :col))}))
+
+(defn- check-source-result
+  [ok findings err]
+  (if ok
+    (check-source-success findings err)
+    {:value-nil? true :message (and findings (. findings :message))}))
+
+(defn- check-source-call
+  [lint source ctx]
+  (pcall (fn [] (lint.check source ctx))))
+
+(defn- policy-for
+  [rules]
+  (or (and rules (compatibility-policy rules))
+      (all-enabled-policy)))
+
+(defn- lint-context
+  [path rules]
+  {:path       path
+   :spec-files ["^fnl/spec/"]
+   :rules      (policy-for rules)
+   :matcher    (matcher.vim-matcher)})
+
+(defn- check-source-loaded
+  [lint source path rules]
+  (let [(ok findings err) (check-source-call lint source (lint-context path rules))]
+    (check-source-result ok findings err)))
 
 (defn- check-source
   [source path rules]
   (let [lint (load-lint)]
     (if (. lint :module-missing)
       lint
-      (let [ctx            {:path path :rules (or rules (all-enabled-policy))}
-            (findings err) (lint.check source ctx)]
-        (if findings
-          findings
-          {:value-nil? true
-           :message    (and err (. err :message))
-           :line       (and err (. err :line))
-           :col        (and err (. err :col))})))))
+      (check-source-loaded lint source path rules))))
+
+(defn- no-findings-result
+  [err]
+  {:value-nil? true
+   :message    (and err (. err :message))})
+
+(defn- check-source-exact-call
+  [lint source path rules]
+  (let [context {:path path :spec-files ["^fnl/spec/"] :rules rules}]
+    (lint.check source context)))
+
+(defn- check-source-exact-result
+  [findings err]
+  (if findings
+    findings
+    (no-findings-result err)))
+
+(defn- check-source-exact-loaded
+  [lint source path rules]
+  (let [(findings err) (check-source-exact-call lint source path rules)]
+    (check-source-exact-result findings err)))
+
+(defn- check-source-exact
+  [source path rules]
+  (let [lint (load-lint)]
+    (if (. lint :module-missing)
+      lint
+      (check-source-exact-loaded lint source path rules))))
 
 (defn- load-matcher
   []
@@ -56,21 +151,32 @@
       result
       {:module-missing true})))
 
+(defn- matcher-context
+  [path rules exclusions]
+  (vim.tbl_extend "force" (lint-context path rules) {:exclusions exclusions}))
+
+(defn- check-source-with-matcher-call
+  [lint source path rules exclusions]
+  (lint.check source (matcher-context path rules exclusions)))
+
+(defn- check-source-with-matcher-result
+  [ok value err]
+  (if ok
+    value
+    {:value-nil? true :message (and err (. err :message))}))
+
+(defn- check-source-with-matcher-loaded
+  [lint source path rules exclusions]
+  (let [(ok value err) (pcall check-source-with-matcher-call lint source path rules exclusions)]
+    (check-source-with-matcher-result ok value err)))
+
 (defn- check-source-with-matcher
   [source path rules exclusions]
   (let [lint    (load-lint)
         matcher (load-matcher)]
     (if (or (. lint :module-missing) (. matcher :module-missing))
       {:module-missing true}
-      (let [(ok value err) (pcall (fn []
-                                    (let [ctx {:path       path
-                                               :rules      (or rules (all-enabled-policy))
-                                               :exclusions exclusions
-                                               :matcher    (matcher.vim-matcher)}]
-                                      (lint.check source ctx))))]
-        (if ok
-          value
-          {:value-nil? true :message (and err (. err :message))})))))
+      (check-source-with-matcher-loaded lint source path rules exclusions))))
 
 (defn- finding-summary
   [result]
@@ -128,25 +234,60 @@
         (table.insert paths path)))
     paths))
 
+(defn- count-finding
+  [counts finding]
+  (when (. counts (. finding :rule))
+    (tset counts (. finding :rule) (+ (. counts (. finding :rule)) 1))))
+
+(defn- count-findings
+  [counts findings]
+  (each [_ finding (ipairs findings)]
+    (count-finding counts finding)))
+
+(defn- record-cli-findings
+  [path findings cli-files]
+  (each [_ finding (ipairs findings)]
+    (table.insert cli-files [path (. finding :rule)])))
+
+(defn- record-lint-findings
+  [path findings lint-files]
+  (each [_ finding (ipairs findings)]
+    (table.insert lint-files [path (. finding :rule)])))
+
+(defn- record-lint-findings-if-applicable
+  [path findings lint-files]
+  (when (string.find path "^fnl/fennel%-extras/lint")
+    (record-lint-findings path findings lint-files)))
+
+(defn- record-findings
+  [path findings lint-files cli-files]
+  (if (string.find path "^fnl/fennel%-extras/cli")
+    (record-cli-findings path findings cli-files)
+    (record-lint-findings-if-applicable path findings lint-files)))
+
+(defn- record-read-failure
+  [path lint-files cli-files]
+  (if (string.find path "^fnl/fennel%-extras/cli")
+    (table.insert cli-files path)
+    (table.insert lint-files path)))
+
+(defn- collect-repo-success
+  [lint source path counts lint-files cli-files rules]
+  (let [findings (lint.check source (lint-context path rules))]
+    (count-findings counts findings)
+    (record-findings path findings lint-files cli-files)))
+
+(defn- collect-repo-path
+  [lint path counts lint-files cli-files rules]
+  (let [source (read-source path)]
+    (if (. source :error)
+      (record-read-failure path lint-files cli-files)
+      (collect-repo-success lint source path counts lint-files cli-files rules))))
+
 (defn- collect-repo-findings
   [lint counts lint-files cli-files rules]
   (each [_ path (ipairs (project-fennel-files))]
-    (let [source (read-source path)]
-      (if (. source :error)
-        (if (string.find path "^fnl/fennel%-extras/cli")
-          (table.insert cli-files path)
-          (table.insert lint-files path))
-        (let [context  {:path path :rules (or rules (all-enabled-policy))}
-              findings (lint.check source context)]
-          (each [_ finding (ipairs findings)]
-            (when (. counts (. finding :rule))
-              (tset counts (. finding :rule) (+ (. counts (. finding :rule)) 1))))
-          (if (string.find path "^fnl/fennel%-extras/cli")
-            (each [_ finding (ipairs findings)]
-              (table.insert cli-files [path (. finding :rule)]))
-            (when (string.find path "^fnl/fennel%-extras/lint")
-              (each [_ finding (ipairs findings)]
-                (table.insert lint-files [path (. finding :rule)]))))))))
+    (collect-repo-path lint path counts lint-files cli-files rules))
   {:counts counts :lint-files lint-files :cli-files cli-files})
 
 (defn- repo-scenario
@@ -657,7 +798,7 @@
            (function-findings "(defn run []
   (if x (if y a b) (if z c d)))")))))
 
-(deftest repo-properties
+(deftest lint-repo-properties
   (testing "project Fennel files have the approved rule counts"
     (is (= {"module-style"        24
             "spec-macro-import"   0
@@ -671,15 +812,36 @@
   (testing "cli implementation files are clean"
     (is (= [] (. (repo-scenario nil) :cli-files)))) )
 
+(defn- context-base
+  [ctx]
+  (or (and (. ctx :rules)
+           (vim.tbl_extend "force"
+                           ctx
+                           {:rules (compatibility-policy (. ctx :rules))}))
+      ctx))
+
+(defn- context-for-check
+  [ctx]
+  (vim.tbl_extend "force" {:spec-files ["^fnl/spec/"]} (context-base ctx)))
+
+(defn- check-context-result
+  [findings err]
+  (if findings
+    findings
+    {:value-nil? true :error err}))
+
+(defn- check-context-loaded
+  [lint source ctx]
+  (let [context        (vim.tbl_extend "force" (context-for-check ctx) {:matcher (matcher.vim-matcher)})
+        (findings err) (lint.check source context)]
+    (check-context-result findings err)))
+
 (defn- check-context
   [source ctx]
   (let [lint (load-lint)]
     (if (. lint :module-missing)
       lint
-      (let [(findings err) (lint.check source ctx)]
-        (if findings
-          findings
-          {:value-nil? true :error err})))))
+      (check-context-loaded lint source ctx))))
 
 (deftest opt-in-policy
   (testing "lint check reports no findings when rules are omitted"
@@ -1417,13 +1579,28 @@
   (string.rep "(local x 1)\n"
               count))
 
+(defn- file-size-policy
+  [policy max-code-lines]
+  (let [entry (. policy "file-size")]
+    (if (and entry
+             (not= entry :off)
+             max-code-lines)
+      (vim.tbl_extend "force"
+                      policy
+                      {:file-size (vim.tbl_extend "force"
+                                                  entry
+                                                  {:options (vim.tbl_extend "force"
+                                                                            entry.options
+                                                                            {:max-code-lines max-code-lines})})})
+      policy)))
+
 (defn- file-size-findings
   [source path rules max-code-lines exclusions]
-  (let [result (check-context source
-                              {:path           path
-                               :rules          rules
-                               :max-code-lines max-code-lines
-                               :exclusions     exclusions})]
+  (let [policy (file-size-policy (compatibility-policy rules) max-code-lines)
+        result (check-context source
+                              {:path       path
+                               :rules      policy
+                               :exclusions exclusions})]
     (if (or (. result :module-missing) (. result :value-nil?))
       result
       (icollect [_ finding (ipairs result)]
@@ -1442,7 +1619,7 @@
   (testing "counts lines inside a multiline string as code"
     (is (= 1 (length (file-size-findings "(local text [[first\nsecond]])" "fnl/app.fnl" {"module-style" :off} 1 nil)))))
   (testing "does not report a spec file"
-    (is (= 0 (length (file-size-findings (repeated-code 4) "fnl/spec/app_spec.fnl" nil 3 nil)))))
+    (is (= 0 (length (file-size-findings (repeated-code 4) "fnl/spec/app_spec.fnl" {} 3 nil)))))
   (testing "uses warning severity by default"
     (is (= "warning" (. (file-size-findings (repeated-code 4) "fnl/app.fnl" {"module-style" :off} 3 nil) 1 :severity))))
   (testing "uses error severity when configured"
@@ -1731,13 +1908,26 @@
                      (when (= (. finding :rule) "call-data-arg")
                        finding)))))))
 
+(defn- option-rule
+  [rule options]
+  {rule {:severity "warning"
+         :options  (vim.tbl_extend "force" (. all-options rule) options)}})
+
+(defn- option-findings-call
+  [lint source path rule options]
+  (let [context {:path       path
+                 :spec-files ["^fnl/spec/"]
+                 :rules      (option-rule rule options)
+                 :matcher    (matcher.vim-matcher)}]
+    (lint.check source context)))
+
 (defn- option-findings
   [source path rule options]
   (let [lint    (load-lint)
         matcher (load-matcher)]
     (if (or (. lint :module-missing) (. matcher :module-missing))
       {:module-missing true}
-      (lint.check source {:path path :rules {rule {:severity "warning" :options options}} :matcher (matcher.vim-matcher)}))))
+      (option-findings-call lint source path rule options))))
 
 (deftest configurable-rule-options
   (testing "module-style accepts a configured macro module"
@@ -1766,7 +1956,7 @@
                                     {:exempt-files ["^fnl/spec/app_spec[.]fnl$"]})))))
   (testing "spec-no-module accepts a configured module form"
     (is (= 0
-           (length (option-findings "(custom-module app)"
+           (length (option-findings "(module app)"
                                     "fnl/spec/app_spec.fnl"
                                     "spec-no-module"
                                     {:module-form "custom-module"})))))
@@ -1866,7 +2056,11 @@
           result  (lint.check "(var x 1)"
                               {:path       "test/x.fnl"
                                :spec-files ["^test/"]
-                               :rules      {"no-mutation" {:severity "warning" :options {}}}
+                               :rules      (compatibility-policy {"module-style"        :off
+                                                                  "spec-macro-import"   :off
+                                                                  "spec-no-module"      :off
+                                                                  "spec-direct-require" :off
+                                                                  "no-mutation"         :warning})
                                :matcher    (matcher.vim-matcher)})]
       (is (= 0 (length result)))))
   (testing "spec-files combines multiple patterns and keeps source rules scoped"
@@ -1875,8 +2069,9 @@
           result  (lint.check "(module app)\n(var x 1)"
                               {:path       "tests/a.fnl"
                                :spec-files ["^fnl/spec/" "^tests/"]
-                               :rules      {"spec-no-module" :error
-                                            "no-mutation"    :warning}
+                               :rules      (compatibility-policy {"spec-macro-import" :off
+                                                                  "spec-no-module"    :error
+                                                                  "no-mutation"       :warning})
                                :matcher    (matcher.vim-matcher)})]
       (is (= ["spec-no-module"]
              (icollect [_ finding (ipairs result)] (. finding :rule))))))
@@ -1886,7 +2081,8 @@
                                    (lint.check "(var x 1)"
                                                {:path       "fnl/spec/x.fnl"
                                                 :spec-files ["^fnl/spec/.*$"]
-                                                :rules      {"no-mutation" :warning}})))]
+                                                :rules      (compatibility-policy {"module-style" :off
+                                                                                   "no-mutation"  :warning})})))]
       (is (and (not (. lint :module-missing))
                (not ok)
                result
@@ -1896,42 +2092,42 @@
           result (lint.check "(var x 1)"
                              {:path       "fnl/spec/x.fnl"
                               :spec-files ["^fnl/spec/"]
-                              :rules      {"spec-macro-import"   :off
-                                           "spec-no-module"      :off
-                                           "spec-direct-require" :off
-                                           "no-mutation"         :warning}})]
+                              :rules      (compatibility-policy {"spec-macro-import"   :off
+                                                                 "spec-no-module"      :off
+                                                                 "spec-direct-require" :off
+                                                                 "no-mutation"         :warning})})]
       (is (and (not (. lint :module-missing))
                (= 0 (length result)))))))
 
 (deftest selector-exclusions
   (testing "matches an exclusion pattern against the repository-relative path"
     (is (= []
-           (finding-summary (check-source-with-matcher "(if ok then)" "fnl/legacy/a.fnl" {"if-without-else" :warning} [{:rule "if-without-else" :pattern "^fnl/legacy/"}])))))
+           (finding-summary (check-source-with-matcher "(if ok then)" "fnl/legacy/a.fnl" {"module-style" :off "if-without-else" :warning} [{:rule "if-without-else" :pattern "^fnl/legacy/"}])))))
   (testing "matches a single finding line"
     (is (= 1
            (length (check-source-with-matcher "(if one then)\n\n(if two then)"
                                               "fnl/app.fnl"
-                                              {"if-without-else" :warning}
+                                              {"module-style" :off "if-without-else" :warning}
                                               [{:rule "if-without-else" :line 1}])))))
   (testing "matches an intersecting line range"
     (is (= 1
            (length (check-source-with-matcher "(if one then)\n\n(if two then)"
                                               "fnl/app.fnl"
-                                              {"if-without-else" :warning}
+                                              {"module-style" :off "if-without-else" :warning}
                                               [{:rule "if-without-else" :lines {:from 1 :to 2}}])))))
   (testing "matches code in the finding form"
     (is (= []
-           (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {"if-without-else" :warning} [{:rule "if-without-else" :code "if"}])))))
+           (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {"module-style" :off "if-without-else" :warning} [{:rule "if-without-else" :code "if"}])))))
   (testing "matches code only against the selected finding source"
     (let [result (check-source-with-matcher "(var baz 1)\n(var foo 2)"
                                             "fnl/app.fnl"
-                                            {"no-mutation" :warning}
+                                            {"module-style" :off "no-mutation" :warning}
                                             [{:rule "no-mutation" :code "baz"}])]
       (is (= [["no-mutation" "fnl/app.fnl > top#2" "warning"]]
              (finding-identities result)))))
   (testing "combines path and line selectors with AND semantics"
     (is (= []
-           (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {"if-without-else" :warning} [{:rule "if-without-else" :pattern "app[.]fnl" :line 1}] )))))
+           (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {"module-style" :off "if-without-else" :warning} [{:rule "if-without-else" :pattern "app[.]fnl" :line 1}] )))))
   (testing "a general exclusion without a rule applies to every rule"
     (is (= []
            (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {"module-style" :error "if-without-else" :warning} [{:pattern "app[.]fnl" :line 1}])))))
@@ -1940,6 +2136,7 @@
                                             "fnl/app.fnl"
                                             {"module-style"    :error
                                              "if-without-else" {:severity   :warning
+                                                                :options    (. all-options "if-without-else")
                                                                 :exclusions [{:line 1}]}}
                                             nil)]
       (is (= ["module-style"]
@@ -1955,10 +2152,41 @@
           (ok result err) (pcall (fn []
                                    (lint.check "(if ok then)"
                                                {:path       "fnl/app.fnl"
-                                                :rules      {"if-without-else" :warning}
+                                                :rules      {"module-style" :off "if-without-else" :warning}
                                                 :exclusions [{:rule    "if-without-else"
                                                               :pattern "app[.]fnl"}]})))]
       (is (and (not (. lint :module-missing))
                (not ok)
                result
                (. result :message))))))
+
+(deftest shipped-bug-regressions
+  (testing "a listed rule leaves unlisted rules disabled"
+    (let [result (check-source-exact "(if ok then)\n(var x 1)"
+                                     "fnl/app.fnl"
+                                     {"module-style"    :off
+                                      "if-without-else" {:severity :warning
+                                                         :options  (. all-options "if-without-else")}})]
+      (is (= ["if-without-else"]
+             (icollect [_ finding (ipairs result)] (. finding :rule))))))
+  (testing "file-size honors a nested max-code-lines option"
+    (let [source "(module a)\n(local a 1)\n(local b 2)\n(local c 3)\n(local d 4)"
+          result (check-source source
+                               "fnl/app.fnl"
+                               {"module-style" :off
+                                "file-size"    {:severity :warning
+                                                :options  {:applies-to     "source"
+                                                           :max-code-lines 3}}})]
+      (is (= ["file-size"]
+             (icollect [_ finding (ipairs result)] (. finding :rule))))))
+  (testing "spec-no-module uses the configured module-form"
+    (let [namespace-result (option-findings "(namespace foo)"
+                                            "fnl/spec/app_spec.fnl"
+                                            "spec-no-module"
+                                            {:module-form "namespace"})
+          module-result    (option-findings "(module foo)"
+                                            "fnl/spec/app_spec.fnl"
+                                            "spec-no-module"
+                                            {:module-form "namespace"})]
+      (is (and (= 1 (length namespace-result))
+               (= 0 (length module-result)))))))

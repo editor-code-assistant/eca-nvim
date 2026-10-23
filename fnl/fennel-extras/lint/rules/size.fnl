@@ -32,9 +32,7 @@
   (let [tokens  (reader.tokenize source)
         count   (code-line-count tokens 1 (+ (newline-count source 1 0) 1) 0)
         options (and policy.options (. policy.options "file-size"))
-        limit   (or (. policy :max-code-lines)
-                    (and options (. options :max-code-lines))
-                    300)]
+        limit   (or (and options (. options :max-code-lines)) 300)]
     (file-size-finding-result path policy count limit)))
 
 (defn finding

@@ -12,6 +12,7 @@ local align = require("fennel-extras.indent.align")
 local split = require("fennel-extras.indent.split")
 local comments = require("fennel-extras.indent.comment")
 local settings = require("fennel-extras.indent.settings")
+local format_config = require("fennel-extras.config.format")
 local function append_line(lines, source, start, _end)
   table.insert(lines, string.sub(source, start, (_end - 1)))
   return (_end + 1)
@@ -388,7 +389,7 @@ local reindent
 do
   local function reindent0(source, config)
     local alignment_error = settings.validate((config and config.alignment))
-    local config_error = rules.validate(config)
+    local config_error = format_config.validate(config, false, false, true)
     if alignment_error then
       return nil, alignment_error
     else

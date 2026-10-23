@@ -364,6 +364,6 @@
             "fnl/anonymous.fnl > top#1 > sequence#1"]
            (form-ids "(fn [x] [x])" "fnl/anonymous.fnl")))))
 
-(deftest repo-properties
+(deftest identity-repo-properties
   (testing "identity form values are unique in every project Fennel source"
     (is (= [] (repo-duplicates)))))

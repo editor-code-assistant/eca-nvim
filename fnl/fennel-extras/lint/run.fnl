@@ -94,7 +94,6 @@
                           :rules            policy.rules
                           :options          policy.options
                           :spec-files       policy.spec-files
-                          :max-code-lines   policy.max-code-lines
                           :selection        file.selection
                           :matcher          policy.matcher
                           :exclusions       policy.exclusions

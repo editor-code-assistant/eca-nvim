@@ -4,12 +4,10 @@
 
 (local alignment (require :fennel-extras.indent.settings))
 
-(local built-in-rules
-       {:fn [[:inner 0]] :lambda [[:inner 0]] :macro [[:inner 0]] :let [[:block 1]] :when [[:block 1]] :when-let [[:block 1]] :if-let [[:block 1]] :each [[:block 1]] :for [[:block 1]] :icollect [[:block 1]] :collect [[:block 1]] :accumulate [[:block 1]] :case [[:block 1]] :match [[:block 1]] :case-try [[:block 1]] :match-try [[:block 1]] :while [[:block 1]] :with-open [[:block 1]] :do [[:block 0]]})
-
-(local prefix-rules {:def [[:inner 0]] :with- [[:block 1]]})
+(local built-in-rules {})
+(local prefix-rules {})
 (local allowed-keys
-       {:indents true :format-as true :indent-patterns true :indent-width true :builtins true :prefix-fallbacks true :align-bindings true :alignment true})
+       {:indents true :format-as true :indent-patterns true :indent-width true :builtins true :prefix-fallbacks true :alignment true})
 (var resolve-name nil)
 (var alias-rule nil)
 
@@ -93,18 +91,16 @@
 (defn- effective-builtins
   [config]
   (let [setting (. config :builtins)]
-    (if (= setting nil)
-      built-in-rules
-      (if (= setting true)
-        built-in-rules
-        (if (= setting false) {} setting)))))
+    (if (= setting false)
+      {}
+      setting)))
 
 (defn- effective-prefix-rules
   [config]
   (let [setting (. config :prefix-fallbacks)]
-    (if (= setting nil)
-      prefix-rules
-      (if (= setting false) {} setting))))
+    (if (= setting false)
+      {}
+      setting)))
 
 (defn- found-rule
   [rule]
@@ -189,17 +185,14 @@
   [config]
   (let [builtins  (. config :builtins)
         fallbacks (. config :prefix-fallbacks)]
-    (if (and (not= builtins nil)
-             (not (= builtins true))
-             (not (= builtins false))
+    (if (and (not= builtins false)
              (not= (type builtins) :table))
-      (error "builtins must be true, false, or a table of rules")
+      (error "builtins must be a map or false")
       (if (and (= (type builtins) :table) (validate-custom-map builtins "builtins rule "))
         (validate-custom-map builtins "builtins rule ")
-        (if (and (not= fallbacks nil)
-                 (not (= fallbacks false))
+        (if (and (not= fallbacks false)
                  (not= (type fallbacks) :table))
-          (error "prefix-fallbacks must be false or a table of rules")
+          (error "prefix-fallbacks must be a map or false")
           (when (and (= (type fallbacks) :table)
                      (validate-custom-map fallbacks "prefix-fallbacks rule "))
             (validate-custom-map fallbacks "prefix-fallbacks rule ")))))))

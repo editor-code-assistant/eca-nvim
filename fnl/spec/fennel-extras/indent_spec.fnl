@@ -8,15 +8,40 @@
       result
       {:error "module missing"})))
 
+(local explicit-indent-config
+       {:indent-width     2
+        :parser           "eca.nfnl.fennel"
+        :builtins         {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]]}
+        :prefix-fallbacks {"def" [[:inner 0]] "with-" [[:block 1]]}
+        :alignment        {:bindings         false
+                           :maps             false
+                           :clauses          false
+                           :split-bindings   false
+                           :collapse-padding false
+                           :binding-forms    ["let" "when-let" "if-let" "with-open"]
+                           :clause-forms     ["case" "match" "case-try" "match-try" "if"]}})
+
+(defn- reindent-call-body
+  [indent source]
+  (indent.reindent source explicit-indent-config))
+
+(defn- reindent-call
+  [indent source]
+  (let [(ok result err) (pcall reindent-call-body indent source)]
+    {:ok ok :value result :error err}))
+
+(defn- reindent-result
+  [result]
+  (if (. result :ok)
+    {:value (. result :value) :error (. result :error)}
+    {:call-error true :error (. result :error)}))
+
 (defn- reindent-scenario
   [source]
   (let [indent (load-indent)]
     (if (. indent :error)
       indent
-      (let [(ok result err) (pcall (fn [] (indent.reindent source)))]
-        (if ok
-          {:value result :error err}
-          {:call-error true :error err})))))
+      (reindent-result (reindent-call indent source)))))
 
 (defn- output-for
   [source]
@@ -36,26 +61,51 @@
       false
       (= once (output-for once)))))
 
+(defn- error-summary-result
+  [result]
+  {:value?         (and (. result :ok) (not= nil (. result :value)))
+   :has-message    (and (. result :ok)
+                        (= nil (. result :value))
+                        (not= nil (. result :error))
+                        (= :string (type (. (. result :error) :message))))
+   :returned-error (and (. result :ok)
+                        (. result :value)
+                        (= nil (. result :value))
+                        (. result :error))})
+
 (defn- error-summary
   [source]
   (let [indent (load-indent)]
     (if (. indent :error)
       indent
-      (let [(ok value err) (pcall (fn [] (indent.reindent source)))]
-        {:value?         (and ok (not= nil value))
-         :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
-         :returned-error (and ok value (= nil value) err)}))))
+      (error-summary-result (reindent-call indent source)))))
+
+(defn- alignment-error-call-body
+  [indent alignment]
+  (indent.reindent "(x\ny)"
+                   (vim.tbl_deep_extend "force" explicit-indent-config {:alignment alignment})))
+
+(defn- alignment-error-call
+  [indent alignment]
+  (let [(ok value err) (pcall alignment-error-call-body indent alignment)]
+    {:ok ok :value value :error err}))
+
+(defn- alignment-error-result
+  [result]
+  (let [ok    (. result :ok)
+        value (. result :value)
+        err   (. result :error)]
+    {:ok?         ok
+     :result-nil? (= nil value)
+     :has-message (and ok (= nil value) err (= :table (type err)) (= :string (type (. err :message))))
+     :message     (and ok (= nil value) err (. err :message))}))
 
 (defn- alignment-error-summary
   [alignment]
   (let [indent (load-indent)]
     (if (. indent :error)
       indent
-      (let [(ok value err) (pcall (fn [] (indent.reindent "(x\ny)" {:alignment alignment})))]
-        {:ok?         ok
-         :result-nil? (= nil value)
-         :has-message (and ok (= nil value) err (= :table (type err)) (= :string (type (. err :message))))
-         :message     (and ok (= nil value) err (. err :message))}))))
+      (alignment-error-result (alignment-error-call indent alignment)))))
 
 (deftest alignment-goldens
   (testing "aligns a call continuation to the first argument on the head line"
@@ -136,9 +186,16 @@
     (file:close)
     source))
 
+(defn- reindent-config
+  [config]
+  (if config
+    (vim.tbl_deep_extend "force" explicit-indent-config config)
+    explicit-indent-config))
+
 (defn- reindent-direct
   [source config]
-  (let [indent (load-indent)]
+  (let [indent (load-indent)
+        config (reindent-config config)]
     (indent.reindent source config)))
 
 (defn- repo-idempotence-failures

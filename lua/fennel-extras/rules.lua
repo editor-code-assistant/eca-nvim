@@ -6,9 +6,9 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.rules"]
 end
 local alignment = require("fennel-extras.indent.settings")
-local built_in_rules = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["case-try"] = {{"block", 1}}, ["match-try"] = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}}
-local prefix_rules = {def = {{"inner", 0}}, ["with-"] = {{"block", 1}}}
-local allowed_keys = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, ["align-bindings"] = true, alignment = true}
+local built_in_rules = {}
+local prefix_rules = {}
+local allowed_keys = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, alignment = true}
 local resolve_name = nil
 local alias_rule = nil
 local function error(message)
@@ -124,30 +124,18 @@ local function validate_patterns(patterns)
 end
 local function effective_builtins(config)
   local setting = config.builtins
-  if (setting == nil) then
-    return built_in_rules
+  if (setting == false) then
+    return {}
   else
-    if (setting == true) then
-      return built_in_rules
-    else
-      if (setting == false) then
-        return {}
-      else
-        return setting
-      end
-    end
+    return setting
   end
 end
 local function effective_prefix_rules(config)
   local setting = config["prefix-fallbacks"]
-  if (setting == nil) then
-    return prefix_rules
+  if (setting == false) then
+    return {}
   else
-    if (setting == false) then
-      return {}
-    else
-      return setting
-    end
+    return setting
   end
 end
 local function found_rule(rule)
@@ -179,7 +167,7 @@ local function resolve_prefix(prefixes, name)
   end
   return result, found
 end
-local function _26_(config, name, seen)
+local function _23_(config, name, seen)
   local indents = (config.indents or {})
   local aliases = (config["format-as"] or {})
   local patterns = (config["indent-patterns"] or {})
@@ -213,8 +201,8 @@ local function _26_(config, name, seen)
     end
   end
 end
-resolve_name = _26_
-local function _33_(config, name, seen)
+resolve_name = _23_
+local function _30_(config, name, seen)
   if seen[name] then
     return nil, error("format-as alias cycle")
   else
@@ -233,7 +221,7 @@ local function _33_(config, name, seen)
     end
   end
 end
-alias_rule = _33_
+alias_rule = _30_
 local function validate_custom_map(items, prefix)
   if (type(items) == "table") then
     local failure = nil
@@ -258,14 +246,14 @@ end
 local function validate_custom_config(config)
   local builtins = config.builtins
   local fallbacks = config["prefix-fallbacks"]
-  if ((builtins ~= nil) and not (builtins == true) and not (builtins == false) and (type(builtins) ~= "table")) then
-    return error("builtins must be true, false, or a table of rules")
+  if ((builtins ~= false) and (type(builtins) ~= "table")) then
+    return error("builtins must be a map or false")
   else
     if ((type(builtins) == "table") and validate_custom_map(builtins, "builtins rule ")) then
       return validate_custom_map(builtins, "builtins rule ")
     else
-      if ((fallbacks ~= nil) and not (fallbacks == false) and (type(fallbacks) ~= "table")) then
-        return error("prefix-fallbacks must be false or a table of rules")
+      if ((fallbacks ~= false) and (type(fallbacks) ~= "table")) then
+        return error("prefix-fallbacks must be a map or false")
       else
         if ((type(fallbacks) == "table") and validate_custom_map(fallbacks, "prefix-fallbacks rule ")) then
           return validate_custom_map(fallbacks, "prefix-fallbacks rule ")

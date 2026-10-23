@@ -13,14 +13,6 @@ local registry = require("fennel-extras.lint.rules.registry")
 local selection = require("fennel-extras.lint.selection")
 local exclusion_matcher = require("fennel-extras.lint.exclusion")
 local rule_options = require("fennel-extras.lint.rules.options")
-local compatibility_policy = {["module-style"] = "error", ["spec-macro-import"] = "error", ["spec-no-module"] = "error", ["spec-direct-require"] = "error", ["one-is-per-testing"] = "error", ["if-branch-call"] = "warning", ["if-without-else"] = "warning", ["control-layout"] = "warning", ["unused-and-or"] = "warning", ["defn-args-newline"] = "warning", ["function-shape"] = "warning", ["no-mutation"] = "warning", ["multiline-layout"] = "warning", ["file-size"] = "warning", ["core-require"] = "error", ["binding-per-line"] = "warning", ["call-data-arg"] = "warning"}
-local function effective_policy(policy)
-  if (next(policy, nil) == nil) then
-    return {}
-  else
-    return core.merge(compatibility_policy, policy)
-  end
-end
 local function normalized_policy_entry(entry)
   if (type(entry) == "table") then
     return entry.severity
@@ -39,7 +31,7 @@ local function context_policy(context, raw_policy)
   if context.matcher then
     return normalized_context_policy(raw_policy)
   else
-    return effective_policy(raw_policy)
+    return raw_policy
   end
 end
 local function policy_for_context(context)
@@ -159,15 +151,15 @@ local function filter_checked_findings(findings, forms, scope, exclusions, sourc
     return filter_findings(findings, forms, scope, exclusions, source, matcher, 1, {})
   end
 end
-local function checked_findings_success(forms, path, policy, max_code_lines, exclusions, scope, source, matcher, defer)
-  local findings = rules.check(path, forms, policy, source, max_code_lines)
+local function checked_findings_success(forms, path, policy, exclusions, scope, source, matcher, defer)
+  local findings = rules.check(path, forms, policy, source)
   return filter_checked_findings(findings, forms, scope, exclusions, source, matcher, defer)
 end
-local function checked_findings(forms, error, path, policy, max_code_lines, exclusions, scope, source, matcher, defer)
+local function checked_findings(forms, error, path, policy, exclusions, scope, source, matcher, defer)
   if error then
     return nil, error
   else
-    return checked_findings_success(forms, path, policy, max_code_lines, exclusions, scope, source, matcher, defer)
+    return checked_findings_success(forms, path, policy, exclusions, scope, source, matcher, defer)
   end
 end
 local function copy_context_exclusion(rule, value)
@@ -229,9 +221,60 @@ local function regex_spec_files_error(spec_files, matcher, index)
     return (regex_spec_files_error_entry(spec_files, matcher, index) or regex_spec_files_error(spec_files, matcher, (index + 1)))
   end
 end
+local function missing_option_result(option_values, names, index, name, recurse)
+  if ((option_values == nil) or (option_values[name] == nil)) then
+    return name
+  else
+    return recurse(option_values, names, (index + 1))
+  end
+end
+local function missing_option_step_result(option_values, names, index, name, recurse)
+  return missing_option_result(option_values, names, index, name, recurse)
+end
+local function missing_option_step(option_values, names, index)
+  if (index > #names) then
+    return nil
+  else
+    return missing_option_step_result(option_values, names, index, names[index], missing_option_step)
+  end
+end
+local function policy_error_result(rules0, options, names, index, rule, severity, entry, recurse)
+  local missing = ((severity ~= "off") and missing_option_step(entry, rule_options.names(rule), 1))
+  if missing then
+    return {message = ("missing lint.rules." .. rule .. ".options." .. missing)}
+  else
+    return recurse(rules0, options, names, (index + 1))
+  end
+end
+local function policy_error_step_result(rules0, options, names, index, rule, severity, entry, recurse)
+  return policy_error_result(rules0, options, names, index, rule, severity, entry, recurse)
+end
+local function policy_error_step(rules0, options, names, index)
+  if (index > #names) then
+    return nil
+  else
+    return policy_error_step_result(rules0, options, names, index, names[index], registry["rule-severity"](rules0, names[index]), options[names[index]], policy_error_step)
+  end
+end
+local function policy_with_options_missing(missing)
+  if missing then
+    return _G.error({message = ("missing lint." .. missing)})
+  else
+    return nil
+  end
+end
+local function policy_with_options_result(base_policy, options, spec_files, matcher, missing)
+  if (type(missing) == "table") then
+    return _G.error(missing)
+  else
+    return (policy_with_options_missing(missing) or core.merge(base_policy, {options = options, ["spec-files"] = spec_files, matcher = matcher}))
+  end
+end
 local function policy_with_options(base_policy, context, matcher, spec_files)
-  local options = rule_options.normalized((context.options or context_options(context)))
-  return core.merge(base_policy, {options = options, ["spec-files"] = spec_files, matcher = matcher})
+  local raw_options = (context.options or context_options(context))
+  local options = rule_options.normalized(raw_options)
+  local missing = (((spec_files == nil) and "spec-files") or policy_error_step(base_policy, options, registry["rule-names"](), 1))
+  return policy_with_options_result(base_policy, options, spec_files, matcher, missing)
 end
 local check
 do
@@ -239,9 +282,8 @@ do
     local path = (context.path or "")
     local base_policy = policy_for_context(context)
     local matcher = context.matcher
-    local spec_files = (context["spec-files"] or rule_options["spec-files"]())
+    local spec_files = context["spec-files"]
     local policy = policy_with_options(base_policy, context, matcher, spec_files)
-    local max_code_lines = (context["max-code-lines"] or 300)
     local exclusions = context_exclusions(context)
     local scope = context.selection
     local forms, parse_error = identity.forms(source, path)
@@ -249,7 +291,7 @@ do
     if matcher_error then
       return _G.error(matcher_error)
     else
-      return checked_findings(forms, parse_error, path, policy, max_code_lines, exclusions, scope, source, matcher, context["defer-exclusions"])
+      return checked_findings(forms, parse_error, path, policy, exclusions, scope, source, matcher, context["defer-exclusions"])
     end
   end
   _2amodule_2a["check"] = check0

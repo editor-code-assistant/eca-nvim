@@ -25,7 +25,7 @@ do
   error_line = _2amodule_2a["error-line"]
 end
 local function formatter_config(cfg)
-  return {indents = cfg.indents, ["format-as"] = cfg["format-as"], ["indent-patterns"] = cfg["indent-patterns"], ["indent-width"] = cfg["indent-width"], builtins = cfg.builtins, ["prefix-fallbacks"] = cfg["prefix-fallbacks"], ["align-bindings"] = cfg["align-bindings"]}
+  return {indents = cfg.indents, ["format-as"] = cfg["format-as"], ["indent-patterns"] = cfg["indent-patterns"], ["indent-width"] = cfg["indent-width"], builtins = cfg.builtins, ["prefix-fallbacks"] = cfg["prefix-fallbacks"], parser = cfg.parser, alignment = cfg.alignment}
 end
 local function normalized_path(path)
   if (string.sub(path, 1, 9) == "/private/") then

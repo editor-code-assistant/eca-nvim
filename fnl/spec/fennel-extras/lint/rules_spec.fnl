@@ -51,23 +51,10 @@
 
 (defn- all-enabled-policy
   []
-  {"module-style"        :error
-   "spec-macro-import"   :error
-   "spec-no-module"      :error
-   "spec-direct-require" :error
-   "one-is-per-testing"  :error
-   "if-branch-call"      :warning
-   "if-without-else"     :warning
-   "control-layout"      :warning
-   "defn-args-newline"   :warning
-   "multiline-layout"    :warning
-   "function-shape"      :warning
-   "no-mutation"         :warning
-   "file-size"           :warning
-   "core-require"        :error
-   "unused-and-or"       :warning
-   "binding-per-line"    :warning
-   "call-data-arg"       :warning})
+  {"core-require" "error"
+   :options       {"core-require" {:applies-to "all"
+                                   :module     "eca.nfnl.core"
+                                   :binding    "core"}}})
 
 (defn- core-require-scenario
   []
@@ -89,7 +76,7 @@
     (when (= finding.rule "core-require")
       [finding.rule finding.form finding.severity])))
 
-(deftest check
+(deftest lint-rules-check
   (testing "does not mutate identity forms"
     (let [scenario (core-require-scenario)]
       (is (= scenario.before scenario.after))))

@@ -4,6 +4,7 @@
 
 (local table-update (require :fennel-extras.cli.table))
 (local config (require :fennel-extras.config))
+(local format-config (require :fennel-extras.config.format))
 (local lint-run (require :fennel-extras.lint.run))
 (local scan (require :fennel-extras.cli.scan))
 (local arg_parser (require :fennel-extras.cli.args))
@@ -12,10 +13,16 @@
 (local format (require :fennel-extras.cli.format))
 (local matcher (require :fennel-extras.cli.matcher))
 
+(defn- default-print-line
+  [line]
+  (io.stdout:write line "\n")
+  (io.stdout:flush))
+
 (defn- default-print
   [line]
-  (io.write (.. (string.gsub line "\n+$" "") "\n"))
-  (io.flush))
+  (let [text (string.gsub line "\n+$" "")]
+    (each [part (string.gmatch text "[^\n]+")]
+      (default-print-line part))))
 
 (defn- config-default
   [cfg key default]
@@ -41,15 +48,14 @@
     (load-parser-result-call name)))
 
 (defn- config-load-error
-  [printer path error]
-  (printer (.. path ": " (or (. error :message) (tostring error))))
-  (values nil true nil))
+  [path error]
+  (values nil error path))
 
 (defn- config-loaded
-  [printer path]
+  [_ path]
   (let [(loaded error) (config.load path)]
     (if error
-      (config-load-error printer path error)
+      (config-load-error path error)
       (values loaded nil path))))
 
 (defn- config-for
@@ -57,7 +63,7 @@
   (let [path (config.find root)]
     (if path
       (config-loaded printer path)
-      (values {} nil nil))))
+      (values nil {:message "missing .fnl-extras.fnl"} nil))))
 
 (defn- read-lint-item
   [file]
@@ -196,9 +202,9 @@
 (defn- run-lint-discovery
   [context]
   (let [inputs                       ((. arg_parser :lint-inputs) context.parsed context.cfg)
-        extensions                   (or (. context.cfg :extensions) [".fnl" ".fnlm"])
-        skip-dotfiles                (config-default context.cfg :skip-dotfiles true)
-        follow-symlinks              (config-default context.cfg :follow-symlinks false)
+        extensions                   (. context.cfg :extensions)
+        skip-dotfiles                (or (. context.cfg :skip-dotfiles) false)
+        follow-symlinks              (or (. context.cfg :follow-symlinks) false)
         (discovered discovery-error) (scan.sorted-files context.git-info.root
                                                         inputs
                                                         {:excludes (or (. context.cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks})
@@ -224,9 +230,9 @@
 (defn- run-format-discovery
   [root parsed cfg config-path]
   (let [inputs                       ((. arg_parser :lint-inputs) parsed cfg)
-        extensions                   (or (. cfg :extensions) [".fnl" ".fnlm"])
-        skip-dotfiles                (config-default cfg :skip-dotfiles true)
-        follow-symlinks              (config-default cfg :follow-symlinks false)
+        extensions                   (. cfg :extensions)
+        skip-dotfiles                (or (. cfg :skip-dotfiles) false)
+        follow-symlinks              (or (. cfg :follow-symlinks) false)
         (discovered discovery-error) (scan.sorted-files root
                                                         inputs
                                                         {:excludes (or (. cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks})]
@@ -255,19 +261,65 @@
     "lint" (run-lint (table-update.update context {:require-git context.parsed.changed}))
     _      (run-format context)))
 
+(defn- command-config-error
+  [context]
+  (let [command        (. context.args 1)
+        require-paths? (= (length context.parsed.paths) 0)]
+    (if (= command "format")
+      (format-config.validate context.cfg require-paths? require-paths? true)
+      (format-config.validate-scan context.cfg require-paths?))))
+
+(defn- config-error-result
+  [printer config-path config-error]
+  (printer (format.error-line config-path config-error))
+  2)
+
+(defn- command-config-error-result
+  [printer config-path failure]
+  (printer (format.error-line config-path failure))
+  2)
+
+(defn- run-command-loaded
+  [context cfg config-path]
+  (let [loaded  (table-update.update context {:cfg cfg :config-path config-path})
+        failure (command-config-error loaded)]
+    (if failure
+      (command-config-error-result context.printer config-path failure)
+      (run-command-mode loaded))))
+
 (defn- run-command
   [context]
   (let [(cfg config-error config-path) (config-for context.root context.printer)]
     (if config-error
-      2
-      (run-command-mode (table-update.update context {:cfg cfg :config-path config-path})))))
+      (config-error-result context.printer config-path config-error)
+      (run-command-loaded context cfg config-path))))
+
+(defn- missing-config-result
+  [printer]
+  (printer "config: missing .fnl-extras.fnl")
+  2)
+
+(defn- run-parsed
+  [args printer root parsed]
+  (run-command {:root root :args args :parsed parsed :printer printer}))
+
+(defn- run-parsed-result
+  [args printer root parsed parse-error]
+  (if parse-error
+    (git.emit-git-error printer parse-error)
+    (run-parsed args printer root parsed)))
+
+(defn- parse-and-run
+  [args printer root]
+  (let [(parsed parse-error) ((. arg_parser :parse-args) args)]
+    (run-parsed-result args printer root parsed parse-error)))
 
 (defn run
   [args opts]
-  (let [opts                 (or opts {})
-        printer              (or (. opts :print) default-print)
-        root                 (or (. opts :cwd) (scan.cwd))
-        (parsed parse-error) ((. arg_parser :parse-args) args)]
-    (if parse-error
-      (git.emit-git-error printer parse-error)
-      (run-command {:root root :args args :parsed parsed :printer printer}))))
+  (let [opts        (or opts {})
+        printer     (or (. opts :print) default-print)
+        root        (or (. opts :cwd) (scan.cwd))
+        config-path (config.find root)]
+    (if (= config-path nil)
+      (missing-config-result printer)
+      (parse-and-run args printer root))))

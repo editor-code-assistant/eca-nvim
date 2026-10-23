@@ -484,4 +484,4 @@ local function _67_()
   end
   return require("plenary.busted").it("identity form values are unique in every project Fennel source", _68_)
 end
-return require("plenary.busted").describe("repo-properties", _67_)
+return require("plenary.busted").describe("identity-repo-properties", _67_)

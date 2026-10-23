@@ -15,6 +15,35 @@
       result
       {:error "parser module missing"})))
 
+(local full-builtins
+       {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]]})
+(local full-prefix-fallbacks {"def" [[:inner 0]] "with-" [[:block 1]]})
+(local full-alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]})
+(local aligned-format-config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]}})
+
+(defn- explicit-alignment
+  [config]
+  (or (and (not= nil (. config :align-bindings))
+           (vim.tbl_extend "force"
+                           full-alignment
+                           {:bindings         (. config :align-bindings)
+                            :maps             (. config :align-bindings)
+                            :clauses          (. config :align-bindings)
+                            :split-bindings   (. config :align-bindings)
+                            :collapse-padding (. config :align-bindings)}))
+      full-alignment))
+
+(defn- explicit-format-config
+  [config]
+  (and config
+       (vim.tbl_deep_extend "force"
+                            {:indent-width     2
+                             :builtins         full-builtins
+                             :prefix-fallbacks full-prefix-fallbacks
+                             :parser           false
+                             :alignment        (explicit-alignment config)}
+                            config)))
+
 (defn- verifier-scenario
   []
   (let [format (load-format)
@@ -103,31 +132,52 @@
                            true
                            (format.ast-equal? parser second-a second-b))}))
 
+(defn- format-call-body
+  [format source config]
+  (format.format-string source {:config (explicit-format-config config)}))
+
+(defn- format-call
+  [format source config]
+  (let [(ok value err) (pcall format-call-body format source config)]
+    {:ok ok :value value :error err}))
+
+(defn- format-call-summary
+  [result]
+  {:value?      (and (. result :ok) (not= nil (. result :value)))
+   :has-message (and (. result :error)
+                     (= :table (type (. result :error)))
+                     (= :string (type (. (. result :error) :message))))
+   :message     (and (. result :error) (. (. result :error) :message))
+   :value       (. result :value)})
+
 (defn- format-summary
   [source config]
   (let [format (load-format)]
     (if (. format :error)
       format
-      (let [(ok value err) (pcall (fn [] (format.format-string source {:config config})))]
-        {:value?      (and ok (not= nil value))
-         :has-message (and err (= :table (type err)) (= :string (type (. err :message))))
-         :message     (and err (. err :message))
-         :value
-         value}))))
+      (format-call-summary (format-call format source config)))))
+
+(defn- alignment-safety-result
+  [format source]
+  (let [result (format-call format source aligned-format-config)]
+    {:value? (and (. result :ok) (not= nil (. result :value)))
+     :value  (. result :value)
+     :error  (. result :error)}))
 
 (defn- alignment-safety-scenario
   []
-  (let [source
-        "(let [result {:code 0 \n:lines []}]\n  result)\n"
+  (let [source "(let [result {:code 0 \n:lines []}]\n  result)\n"
         format (load-format)]
     (if (. format :error)
       format
-      (let [(ok value err) (pcall (fn [] (format.format-string source {:config {:align-bindings true}})))]
-        {:value? (and ok (not= nil value))
-         :value
-         value
-         :error
-         err}))))
+      (alignment-safety-result format source))))
+
+(defn- odd-binding-result
+  [format source]
+  (let [result (format-call format source aligned-format-config)]
+    {:ok    (. result :ok)
+     :value (. result :value)
+     :error (. result :error)}))
 
 (defn- odd-binding-scenario
   []
@@ -135,10 +185,7 @@
         format (load-format)]
     (if (. format :error)
       format
-      (let [(ok value err) (pcall (fn [] (format.format-string source {:config {:align-bindings true}})))]
-        {:ok    ok
-         :value value
-         :error err}))))
+      (odd-binding-result format source))))
 
 (defn- file-paths
   []
@@ -164,19 +211,51 @@
       result
       {:error "read failed" :path path})))
 
+(defn- format-file-call
+  [format parser config source]
+  (pcall (fn [] (format.format-string source {:config (explicit-format-config config) :parser parser}))))
+
+(defn- record-format-success
+  [format parser config path source formatted idempotence-failures indent-failures ast-failures]
+  (when (or (not (format-file-call format parser config formatted))
+            (not= formatted (format.format-string formatted {:config (explicit-format-config config) :parser parser})))
+    (table.insert idempotence-failures path))
+  (when (not (format.indent-only? source formatted))
+    (table.insert indent-failures path))
+  (when (not (format.ast-equal? parser source formatted))
+    (table.insert ast-failures path)))
+
 (defn- format-file-scenario
   [format parser config path source format-failures idempotence-failures indent-failures ast-failures]
-  (let [(ok formatted err) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
+  (let [(ok formatted err) (format-file-call format parser config source)]
     (if (or (not ok) (= nil formatted) err)
       (table.insert format-failures path)
-      (let [_ (when (or (not (pcall (fn [] (format.format-string formatted {:config config :parser parser}))))
-                        (not= formatted (format.format-string formatted {:config config :parser parser})))
-                (table.insert idempotence-failures path))
-            _ (when (not (format.indent-only? source formatted))
-                (table.insert indent-failures path))
-            _ (when (not (format.ast-equal? parser source formatted))
-                (table.insert ast-failures path))]
-        nil))))
+      (record-format-success format parser config path source formatted idempotence-failures indent-failures ast-failures))))
+
+(defn- record-repo-read-failure
+  [path failures]
+  (each [_ failure-list (ipairs failures)]
+    (table.insert failure-list (.. "read failed: " path))))
+
+(defn- record-repo-path
+  [format parser config path format-failures idempotence-failures indent-failures ast-failures]
+  (let [source (read-source path)]
+    (if (. source :error)
+      (record-repo-read-failure path [format-failures idempotence-failures indent-failures ast-failures])
+      (format-file-scenario format parser config path source format-failures idempotence-failures indent-failures ast-failures))))
+
+(defn- record-fixed-point-result
+  [format parser config source path failures]
+  (let [(ok formatted) (format-file-call format parser config source)]
+    (when (or (not ok) (not= source formatted))
+      (table.insert failures path))))
+
+(defn- record-fixed-point-path
+  [format parser config path fixed-point-failures]
+  (let [source (read-source path)]
+    (if (or (. source :error) (. format :error))
+      (table.insert fixed-point-failures path)
+      (record-fixed-point-result format parser config source path fixed-point-failures))))
 
 (defn- repo-scenario
   []
@@ -191,28 +270,14 @@
         ast-failures         (if (. format :error) ["module missing"] [])
         fixed-point-failures []]
     (each [_ path (ipairs (file-paths))]
-      (let [source (read-source path)]
-        (if (. source :error)
-          (each [_ failures (ipairs [format-failures idempotence-failures indent-failures ast-failures])]
-            (table.insert failures (.. "read failed: " path)))
-          (format-file-scenario format parser config path source format-failures idempotence-failures indent-failures ast-failures))))
+      (record-repo-path format parser config path format-failures idempotence-failures indent-failures ast-failures))
     (each [_ path (ipairs ["fnl/eca/ui/widgets/footer-bar.fnl" "fnl/eca/ui/components/lualine.fnl"])]
-      (let [source (read-source path)]
-        (if (or (. source :error) (. format :error))
-          (table.insert fixed-point-failures path)
-          (let [(ok formatted) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
-            (when (or (not ok) (not= source formatted))
-              (table.insert fixed-point-failures path))))))
-    {:format
-     format-failures
-     :idempotence
-     idempotence-failures
-     :indent
-     indent-failures
-     :ast
-     ast-failures
-     :fixed-point
-     fixed-point-failures}))
+      (record-fixed-point-path format parser config path fixed-point-failures))
+    {:format      format-failures
+     :idempotence idempotence-failures
+     :indent      indent-failures
+     :ast         ast-failures
+     :fixed-point fixed-point-failures}))
 
 (deftest verifier
   (testing "indent-only accepts pure reindent"
@@ -304,17 +369,18 @@
              {:value? (. result :value?)
               :value  (. result :value)})))))
 
-(deftest repo-properties
-  (testing "format-string succeeds for every project Fennel source"
-    (is (= [] (. (repo-scenario) :format))))
-  (testing "format-string is idempotent for every project Fennel source"
-    (is (= [] (. (repo-scenario) :idempotence))))
-  (testing "formatted output passes indent-only verification for every project source"
-    (is (= [] (. (repo-scenario) :indent))))
-  (testing "formatted output preserves ASTs for every project source"
-    (is (= [] (. (repo-scenario) :ast))))
-  (testing "hand-styled files remain fixed points"
-    (is (= [] (. (repo-scenario) :fixed-point)))))
+(deftest format-repo-properties
+  (let [scenario (repo-scenario)]
+    (testing "format-string succeeds for every project Fennel source"
+      (is (= [] (. scenario :format))))
+    (testing "format-string is idempotent for every project Fennel source"
+      (is (= [] (. scenario :idempotence))))
+    (testing "formatted output passes indent-only verification for every project source"
+      (is (= [] (. scenario :indent))))
+    (testing "formatted output preserves ASTs for every project source"
+      (is (= [] (. scenario :ast))))
+    (testing "hand-styled files remain fixed points"
+      (is (= [] (. scenario :fixed-point))))))
 
 (deftest configuration-formatting
   (testing "indent width four changes block indentation"
@@ -323,14 +389,14 @@
   (testing "indent width four changes inner indentation"
     (is (= "(fn [x]\n    x)"
            (. (format-summary "(fn [x]\nx)" {:indent-width 4}) :value))))
-  (testing "the default indent width preserves today's output"
-    (is (= "(let [x 1]\n  x)"
-           (. (format-summary "(let [x 1]\nx)" {}) :value))))
+  (testing "missing indent width is a configuration error"
+    (is (= "missing indent-width"
+           (. (format-summary "(let [x 1]\nx)" nil) :message))))
   (testing "builtins false disables the let block rule"
     (is (= "(let [x 1]\n     x)"
            (. (format-summary "(let [x 1]\nx)" {:builtins false}) :value))))
-  (testing "a custom builtins table replaces the built-in table"
-    (is (= "(let [x 1]\n     x)"
+  (testing "the configured builtins table is used without a built-in table"
+    (is (= "(let [x 1]\n  x)"
            (. (format-summary "(let [x 1]\nx)"
                               {:builtins {"when" [[:block 1]]}})
               :value))))
@@ -349,8 +415,8 @@
                                :align-bindings
                                true})
               :value))))
-  (testing "a custom prefix fallback table replaces the defaults"
-    (is (= "(defn x\n      y)"
+  (testing "the configured prefix fallback table is used without defaults"
+    (is (= "(defn x\n  y)"
            (. (format-summary "(defn x\ny)"
                               {:prefix-fallbacks {"with-" [[:block 1]]}})
               :value))))
@@ -379,17 +445,31 @@
               :value (. result :value)
               :error (. result :error)})))))
 
+(defn- format-parser-call-body
+  [format parser source config]
+  (format.format-string source {:config (explicit-format-config config) :parser parser}))
+
+(defn- format-parser-call
+  [format parser source config]
+  (let [(ok value err) (pcall format-parser-call-body format parser source config)]
+    {:ok ok :value value :error err}))
+
+(defn- format-parser-summary
+  [result]
+  (let [ok    (. result :ok)
+        value (. result :value)
+        err   (. result :error)]
+    {:value?      (and ok (not= nil value))
+     :has-message (and ok (= nil value) err (= :string (type (. err :message))))
+     :value       value}))
+
 (defn- format-summary-with-parser
   [source config]
   (let [format (load-format)
         parser (load-parser)]
     (if (or (. format :error) (. parser :error))
       {:value? false :value nil}
-      (let [(ok value err) (pcall (fn [] (format.format-string source {:config config :parser parser})))]
-        {:value?      (and ok (not= nil value))
-         :has-message (and ok (= nil value) err (= :string (type (. err :message))))
-         :value
-         value}))))
+      (format-parser-summary (format-parser-call format parser source config)))))
 
 (defn- symbol-key-safety-scenario
   []
@@ -747,22 +827,29 @@
                               {:align-bindings true})
               :value))))
   (testing "aligns a destructuring vector name by its full source width"
-    (is (= "(let [[a b]     (g)\n      long-name 2]\n  a)"
-           (. (format-summary "(let [[a b] (g)\n      long-name 2]\n  a)"
-                              {:align-bindings true})
-              :value))))
+    (let [source "(let [[a b] (g)\n      long-name 2]\n  a)"
+          result (format-summary source {:align-bindings true})]
+      (is (= "(let [[a b]     (g)\n      long-name 2]\n  a)"
+             (. result :value)))))
   (testing "aligns an expression map key by its full source width"
     (is (= "{(foo a)  1\n :long-key 2}"
            (. (format-summary "{(foo a) 1\n :long-key 2}" {:align-bindings true}) :value))))
   (testing "ignores a multiline composite binding name while aligning single-line bindings"
-    (is (= "(let [{: x\n       : y} (f)\n      a  1\n      bb 2] x)"
-           (. (format-summary "(let [{: x\n       : y} (f)\n      a 1\n      bb 2] x)"
-                              {:align-bindings true})
-              :value))))
-  (testing "align-bindings absent preserves the existing output byte-for-byte"
+    (let [source "(let [{: x\n       : y} (f)\n      a 1\n      bb 2] x)"
+          result (format-summary source {:align-bindings true})]
+      (is (= "(let [{: x\n       : y} (f)\n      a  1\n      bb 2] x)"
+             (. result :value)))))
+  (testing "all alignment switches off preserve the existing output byte-for-byte"
     (let [source
           "(let [a 1\n      long-name 2]\n  a)"
-          result (format-summary source {})]
+          config {:alignment {:bindings         false
+                              :maps             false
+                              :clauses          false
+                              :split-bindings   false
+                              :collapse-padding false
+                              :binding-forms    ["let"]
+                              :clause-forms     ["case"]}}
+          result (format-summary source config)]
       (is (= source (. result :value))))))
 
 (deftest align-binding-clauses
