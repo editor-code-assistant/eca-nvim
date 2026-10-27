@@ -9,15 +9,13 @@
 (local symbol-text ast.symbol-text)
 (local list-head ast.list-head)
 (local literal-text ast.literal-text)
-(local spec-file? ast.spec-file?)
 (local enabled? registry.enabled?)
 (local rule-severity registry.rule-severity)
 (local finding registry.finding)
 
 (defn module-finding
   [path forms policy module-ok]
-  (if (and (not (spec-file? path policy.spec-files policy.matcher))
-           (enabled? policy "module-style")
+  (if (and (enabled? policy "module-style")
            (not module-ok))
     [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1 :severity (rule-severity policy "module-style") :rule "module-style" :form (.. path " > file") :message "file must use the module style" :node nil}]
     []))
@@ -52,8 +50,9 @@
       (and (= head "require") (= (length children) 2))))
 
 (defn- maybe-add-core-require-finding
-  [findings path form head children node policy target canonical]
-  (when (and (= target (. (registry.rule-options policy "core-require") :module))
+  [findings path form head children node policy target canonical options]
+  (when (and options
+             (= target (. options :module))
              (not canonical))
     (add-core-finding findings path form head children node policy)))
 
@@ -69,6 +68,7 @@
         require-form     (core-require-form head children node)
         require-children (core-require-children require-form)
         target           (core-require-target require-form require-children)
-        binding          (. (registry.rule-options policy "core-require") :binding)
+        options          (registry.rule-options policy "core-require")
+        binding          (and options (. options :binding))
         canonical        (canonical-core-require? head children require-children binding)]
-    (maybe-add-core-require-finding findings path form head children node policy target canonical)))
+    (maybe-add-core-require-finding findings path form head children node policy target canonical options)))

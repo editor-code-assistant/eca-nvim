@@ -25,8 +25,8 @@
   (let [children      (meaningful-children node)
         else-child    (. children 4)
         options       (registry.rule-options policy "if-without-else")
-        forms         options.if-forms
-        flag-nil-else options.flag-nil-else]
+        forms         options.forms
+        flag-nil-else options.nil-else]
     (and (= node.kind :list)
          (contains? forms (list-head node) 1)
          (or (= (length children) 3)

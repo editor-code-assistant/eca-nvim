@@ -181,38 +181,13 @@ end
 local function compile_exclusion_patterns(exclusions, index, recurse)
   return compile_exclusion_patterns_step(exclusions, index, recurse)
 end
-local function compile_spec_file_pattern(spec_files, index, recurse)
-  local ok, compile_error = pcall(matcher["compile-pattern"], spec_files[index])
-  if ok then
-    return recurse(spec_files, (index + 1), recurse)
-  else
-    return {index = index, error = compile_error}
-  end
-end
-local function compile_spec_files_patterns_step(spec_files, index, recurse)
-  if (index <= #spec_files) then
-    return compile_spec_file_pattern(spec_files, index, recurse)
-  else
-    return nil
-  end
-end
-local function compile_spec_files_patterns(spec_files, index, recurse)
-  return compile_spec_files_patterns_step(spec_files, index, recurse)
-end
-local function run_lint_policy_spec_files(context, files, policy)
-  local spec_error = compile_spec_files_patterns(policy["spec-files"], 1, compile_spec_files_patterns)
-  if spec_error then
-    return lint_policy_error(context.root, context["config-path"], context.printer, {message = ("invalid spec-files regex " .. spec_error.index .. ": " .. tostring(spec_error.error))})
-  else
-    return run_lint_files(context, table_update.update(policy, {matcher = matcher["vim-matcher"]()}), files)
-  end
-end
 local function run_lint_policy_success(context, files, policy)
-  local ok, compile_error = pcall(compile_exclusion_patterns, policy.exclusions, 1, compile_exclusion_patterns)
+  local exclusions = (policy.exclusions or {})
+  local ok, compile_error = pcall(compile_exclusion_patterns, exclusions, 1, compile_exclusion_patterns)
   if not ok then
     return lint_policy_error(context.root, context["config-path"], context.printer, {message = ("invalid exclusion pattern regex: " .. tostring(compile_error))})
   else
-    return run_lint_policy_spec_files(context, files, policy)
+    return run_lint_files(context, table_update.update(policy, {matcher = matcher["vim-matcher"]()}), files)
   end
 end
 local function run_lint_policy(context, files)
@@ -281,11 +256,11 @@ local function run_format(context)
   return run_format_result(context, files, discovery_error)
 end
 local function run_command_mode(context)
-  local case_27_ = context.args[1]
-  if (case_27_ == "lint") then
+  local case_24_ = context.args[1]
+  if (case_24_ == "lint") then
     return run_lint(table_update.update(context, {["require-git"] = context.parsed.changed}))
   else
-    local _ = case_27_
+    local _ = case_24_
     return run_format(context)
   end
 end

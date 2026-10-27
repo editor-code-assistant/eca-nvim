@@ -83,13 +83,31 @@ end
 local function line_selected_3f(exclusion, finding)
   return ((exclusion.line and (finding.line <= exclusion.line) and (exclusion.line <= finding["end-line"])) or (exclusion.lines and (finding.line <= exclusion.lines.to) and (exclusion.lines.from <= finding["end-line"])))
 end
+local function path_selected_3f(exclusion, finding, matcher)
+  local and_7_ = (not exclusion.pattern or matcher(exclusion.pattern, finding.path))
+  if and_7_ then
+    local or_8_ = not exclusion.path
+    if not or_8_ then
+      if matcher then
+        or_8_ = matcher(exclusion.path, finding.path)
+      else
+        or_8_ = (exclusion.path == finding.path)
+      end
+    end
+    and_7_ = or_8_
+  end
+  return and_7_
+end
+local function code_selected_3f(exclusion, finding, source, matcher)
+  return (not exclusion.code or (finding.node and matcher(exclusion.code, finding_source((source or finding.source), finding))))
+end
 local function selector_selected_3f(exclusion, finding, source, matcher)
-  return ((not exclusion.pattern or matcher(exclusion.pattern, finding.path)) and (not (exclusion.line or exclusion.lines) or line_selected_3f(exclusion, finding)) and (not exclusion.code or (finding.node and matcher(exclusion.code, finding_source((source or finding.source), finding)))) and (not exclusion.form or (exclusion.form == finding.form)))
+  return (path_selected_3f(exclusion, finding, matcher) and (not (exclusion.line or exclusion.lines) or line_selected_3f(exclusion, finding)) and code_selected_3f(exclusion, finding, source, matcher) and (not exclusion.form or (exclusion.form == finding.form)))
 end
 local matches_3f
 do
   local function matches_3f0(exclusion, finding, source, matcher)
-    return (rule_selected_3f(exclusion, finding.rule) and selector_selected_3f(exclusion, finding, source, matcher))
+    return (rule_selected_3f(exclusion, finding.rule) and ((exclusion.instance == nil) or (finding.instance == exclusion.instance)) and selector_selected_3f(exclusion, finding, source, matcher))
   end
   _2amodule_2a["matches?"] = matches_3f0
   matches_3f = _2amodule_2a["matches?"]

@@ -7,7 +7,6 @@
 (local meaningful-children ast.meaningful-children)
 (local literal-text ast.literal-text)
 (local list-head ast.list-head)
-(local spec-file? ast.spec-file?)
 (local count-is ast.count-is)
 (local rule-options registry.rule-options)
 (local enabled? registry.enabled?)
@@ -34,8 +33,7 @@
 
 (defn spec-import-finding
   [path forms policy valid]
-  (if (and (spec-file? path policy.spec-files policy.matcher)
-           (not (exempt-file? path policy "spec-macro-import"))
+  (if (and (not (exempt-file? path policy "spec-macro-import"))
            (enabled? policy "spec-macro-import")
            (not valid))
     [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1 :severity (rule-severity policy "spec-macro-import") :rule "spec-macro-import" :form (.. path " > spec") :message "specs must import deftest, testing, and is from spec.eca.macros" :node nil}]
@@ -48,9 +46,8 @@
   [findings path form policy node]
   (let [children (meaningful-children node)
         target   (literal-text (. children 2))
-        modules  (. (rule-options policy "spec-direct-require") :forbidden-modules)]
-    (when (and (spec-file? path policy.spec-files policy.matcher)
-               (not (exempt-file? path policy "spec-direct-require"))
+        modules  (. (rule-options policy "spec-direct-require") :modules)]
+    (when (and (not (exempt-file? path policy "spec-direct-require"))
                (enabled? policy "spec-direct-require")
                (contains? modules target 1))
       (table.insert findings
@@ -59,7 +56,7 @@
 (defn testing-finding
   [findings path form policy node]
   (let [options        (rule-options policy "one-is-per-testing")
-        count          (count-is node 1 0 options.testing-form options.assertion-form)
+        count          (count-is node 1 0 options.testing options.assertion)
         expected-count options.count]
     (when (and (not= count expected-count) (enabled? policy "one-is-per-testing"))
       (table.insert findings

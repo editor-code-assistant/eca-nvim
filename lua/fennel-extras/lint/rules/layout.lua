@@ -71,7 +71,7 @@ local function clause_units(head, children)
 end
 local function units_for_list(node, children, policy)
   local head = list_head(node)
-  local clause_forms = registry["rule-options"](policy, "multiline-layout")["clause-forms"]
+  local clause_forms = registry["rule-options"](policy, "multiline-layout").clauses
   return (((head == "if") and (#children >= 5) and pair_units(children, 2)) or (contains_3f(clause_forms, head, 1) and clause_units(head, children)) or ordinary_units(children))
 end
 local function units_for_node(node, policy)
@@ -98,7 +98,7 @@ local function offending_units_3f(node, policy)
 end
 local function binding_layout_3f(node, policy)
   local children = meaningful_children(node)
-  local binding_forms = registry["rule-options"](policy, "multiline-layout")["binding-forms"]
+  local binding_forms = registry["rule-options"](policy, "multiline-layout").bindings
   local and_6_ = contains_3f(binding_forms, list_head(node), 1)
   if and_6_ then
     local result = false
@@ -131,7 +131,7 @@ local function delayed_list_argument_3f(node, head)
   return ((node.kind == "list") and (head ~= "do") and argument and (node.close.line > node.open.line) and (child_line(argument) ~= node.open.line))
 end
 local function layout_body_result(node, head, policy)
-  local binding_forms = registry["rule-options"](policy, "multiline-layout")["binding-forms"]
+  local binding_forms = registry["rule-options"](policy, "multiline-layout").bindings
   if ((node.kind == "list") and contains_3f(binding_forms, head, 1)) then
     return binding_layout_3f(node, policy)
   else
@@ -140,7 +140,7 @@ local function layout_body_result(node, head, policy)
 end
 local function escaped_layout_3f(node, head, policy)
   local options = registry["rule-options"](policy, "multiline-layout")
-  return (escaped_newline_3f(node) and (contains_3f(options["clause-forms"], head, 1) or contains_3f(options["binding-forms"], head, 1)))
+  return (escaped_newline_3f(node) and (contains_3f(options.clauses, head, 1) or contains_3f(options.bindings, head, 1)))
 end
 local function layout_result(node, head, policy)
   return (escaped_layout_3f(node, head, policy) or delayed_list_argument_3f(node, head) or layout_body_result(node, head, policy))

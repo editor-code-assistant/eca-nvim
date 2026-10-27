@@ -5,55 +5,60 @@
 (local parse (require :fennel-extras.config.parse))
 
 (local option-names
-       {"module-style"        ["applies-to"
-                               "macro-module"
-                               "required-macros"]
-        "spec-macro-import"   ["applies-to"
-                               "macro-module"
-                               "required-macros"
-                               "exempt-files"]
-        "spec-no-module"      ["applies-to" "module-form"]
-        "spec-direct-require" ["applies-to"
-                               "forbidden-modules"
-                               "exempt-files"]
-        "one-is-per-testing"  ["applies-to"
-                               "testing-form"
-                               "assertion-form"
-                               "count"]
-        "if-branch-call"      ["applies-to" "if-forms"]
-        "if-without-else"     ["applies-to" "if-forms" "flag-nil-else"]
-        "control-layout"      ["applies-to" "control-forms"]
+       {"forbidden-form"      ["applies-to" "module"]
+        "module-style"        ["applies-to" "module" "forms"]
+        "spec-macro-import"   ["applies-to" "module" "forms" "exempt-files"]
+        "spec-no-module"      ["applies-to" "module"]
+        "spec-direct-require" ["applies-to" "modules" "exempt-files"]
+        "one-is-per-testing"  ["applies-to" "testing" "assertion" "count"]
+        "if-branch-call"      ["applies-to" "forms"]
+        "if-without-else"     ["applies-to" "forms" "nil-else"]
+        "control-layout"      ["applies-to" "forms"]
         "unused-and-or"       ["applies-to" "forms"]
         "defn-args-newline"   ["applies-to" "forms"]
-        "function-shape"      ["applies-to" "function-forms"]
+        "function-shape"      ["applies-to" "forms" "max-depth"]
         "no-mutation"         ["applies-to" "forms"]
-        "multiline-layout"    ["applies-to" "clause-forms" "binding-forms"]
+        "multiline-layout"    ["applies-to" "clauses" "bindings"]
         "file-size"           ["applies-to" "max-code-lines"]
         "core-require"        ["applies-to" "module" "binding"]
         "binding-per-line"    ["applies-to" "forms"]
-        "call-data-arg"       ["applies-to" "ignore-forms"]})
+        "call-data-arg"       ["applies-to" "forms"]})
+
+(local required-option-names
+       {"forbidden-form"      ["module"]
+        "module-style"        ["module" "forms"]
+        "spec-macro-import"   ["module" "forms" "exempt-files"]
+        "spec-no-module"      ["module"]
+        "spec-direct-require" ["modules" "exempt-files"]
+        "one-is-per-testing"  ["testing" "assertion" "count"]
+        "if-branch-call"      ["forms"]
+        "if-without-else"     ["forms"]
+        "control-layout"      ["forms"]
+        "unused-and-or"       ["forms"]
+        "defn-args-newline"   ["forms"]
+        "function-shape"      ["forms"]
+        "no-mutation"         ["forms"]
+        "multiline-layout"    ["clauses" "bindings"]
+        "file-size"           ["max-code-lines"]
+        "core-require"        ["module" "binding"]
+        "binding-per-line"    ["forms"]
+        "call-data-arg"       ["forms"]})
 
 (local option-types
-       {"applies-to"        :enum
-        "macro-module"      :string
-        "required-macros"   :strings
-        "exempt-files"      :strings
-        "module-form"       :string
-        "forbidden-modules" :strings
-        "testing-form"      :string
-        "assertion-form"    :string
-        "count"             :positive-integer
-        "if-forms"          :strings
-        "flag-nil-else"     :boolean
-        "control-forms"     :strings
-        "forms"             :strings
-        "function-forms"    :strings
-        "clause-forms"      :strings
-        "binding-forms"     :strings
-        "max-code-lines"    :positive-integer
-        "module"            :string
-        "binding"           :string
-        "ignore-forms"      :strings})
+       {"applies-to"     :enum
+        "module"         :string
+        "modules"        :strings
+        "forms"          :strings
+        "exempt-files"   :strings
+        "testing"        :string
+        "assertion"      :string
+        "count"          :positive-integer
+        "nil-else"       :boolean
+        "clauses"        :strings
+        "bindings"       :strings
+        "max-depth"      :positive-integer
+        "max-code-lines" :positive-integer
+        "binding"        :string})
 
 (defn schema
   [rule]
@@ -65,6 +70,10 @@
 (defn names
   [rule]
   (. option-names rule))
+
+(defn required-names
+  [rule]
+  (. required-option-names rule))
 
 (defn defaults
   []
@@ -120,25 +129,24 @@
       message
       (.. option message))))
 
-(defn- known-option-error
-  [rule options key value kind recurse]
-  (if (not (option-type-valid? kind value))
-    {:message (option-type-message kind key)}
-    (recurse rule options key)))
-
 (defn- first-option-error-step
-  [rule options key value recurse]
-  (let [kind (. (schema rule) key)]
-    (if (= kind nil)
-      {:unknown true :message (.. "unknown option " (tostring key))}
-      (known-option-error rule options key value kind recurse))))
+  [rule options keys index]
+  (let [key   (. keys index)
+        value (and key (. options key))
+        kind  (and key (. (schema rule) key))]
+    (if (= key nil)
+      nil
+      (or (and (= kind nil)
+               {:unknown true :message (.. "unknown option " (tostring key))})
+          (and (not (option-type-valid? kind value))
+               {:message (option-type-message kind key)})
+          (first-option-error-step rule options keys (+ index 1))))))
 
 (defn- first-option-error
-  [rule options key]
-  (let [(next-key next-value) (next options key)]
-    (if (= next-key nil)
-      nil
-      (first-option-error-step rule options next-key next-value first-option-error))))
+  [rule options]
+  (let [keys (vim.tbl_keys options)]
+    (table.sort keys)
+    (first-option-error-step rule options keys 1)))
 
 (defn- unknown-option-result
   [rule error]
@@ -152,7 +160,7 @@
 
 (defn- table-validation-error
   [rule options]
-  (let [error (first-option-error rule options nil)]
+  (let [error (first-option-error rule options)]
     (and error
          (table-validation-result rule error))))
 
@@ -171,8 +179,3 @@
 (defn normalized
   [overrides]
   (or overrides {}))
-
-(defn spec-files-error
-  [value]
-  (when (and (not= value nil) (not (parse.sequence? value)))
-    {:message "spec-files must be a list of strings"}))

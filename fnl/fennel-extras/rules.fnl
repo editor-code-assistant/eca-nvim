@@ -205,20 +205,9 @@
         fallbacks-type-error
         fallbacks-rule-error)))
 
-(defn- validate-align-bindings
-  [config]
-  (let [align-bindings (. config :align-bindings)]
-    (when (and (not= align-bindings nil) (not= (type align-bindings) :boolean))
-      (error "align-bindings must be a boolean"))))
-
 (defn- validate-alignment
   [config]
   (alignment.validate (. config :alignment)))
-
-(defn- validate-alignment-config
-  [config]
-  (or (validate-align-bindings config)
-      (validate-alignment config)))
 
 (defn- validate-config-table
   [config]
@@ -237,7 +226,7 @@
       (when (and (not= width nil) (not (and (integer? width) (> width 0))))
         (set failure (error "indent-width must be a positive integer")))))
   (when (= failure nil)
-    (set failure (validate-alignment-config config)))
+    (set failure (validate-alignment config)))
   (when (= failure nil)
     (set failure (validate-custom-config config)))
   (when (= failure nil)

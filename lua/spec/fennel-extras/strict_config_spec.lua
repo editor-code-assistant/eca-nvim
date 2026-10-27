@@ -74,7 +74,8 @@ local function missing_message_3f(result, path)
   return ((result.ok and (nil == result.findings) and (("missing " .. path) == result.message)) or (not result.ok and (("missing " .. path) == result.message)))
 end
 local function complete_rule_3f(entry, rules, names, index, recurse)
-  return ((entry ~= nil) and (entry ~= "off") and (type(entry) == "table") and (entry.severity ~= nil) and (entry.options ~= nil) and (entry.options["applies-to"] ~= nil) and recurse(rules, names, (index + 1)))
+  local instance = entry[1]
+  return ((type(entry) == "table") and (#entry > 0) and (type(instance) == "table") and (instance.severity ~= nil) and (instance.options ~= nil) and (instance["applies-to"] ~= nil) and recurse(rules, names, (index + 1)))
 end
 local function complete_rules_3f(rules, names, index)
   return ((index > #names) or complete_rule_3f(rules[names[index]], rules, names, index, complete_rules_3f))
@@ -199,38 +200,33 @@ end
 require("plenary.busted").describe("strict-config-shape", _16_)
 local function _24_()
   local function _25_()
-    local assert_28_auto = require("luassert")
-    local value_29_auto = missing_message_3f(lint_error("(module a)", {path = "fnl/a.fnl", rules = {}}), "lint.spec-files")
-    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (lint-error \"(module a)\" {:path \"fnl/a.fnl\" :rules {}}) \"lint.spec-files\")")
+    local result = lint_error("(module a)", {path = "fnl/a.fnl", rules = {["module-style"] = {{severity = "warning", options = {}, exclusions = {}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.module-style[1].applies-to must be a table"
+    local actual_7_auto = result.message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("lint API reports missing spec-files", _25_)
+  require("plenary.busted").it("an enabled rule reports the canonical applies-to path", _25_)
   local function _26_()
     local assert_28_auto = require("luassert")
-    local value_29_auto = missing_message_3f(lint_error("(module a)", {path = "fnl/a.fnl", ["spec-files"] = {"^fnl/spec/"}, rules = {["module-style"] = "warning"}}), "lint.rules.module-style.options.applies-to")
-    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (lint-error \"(module a)\" {:path \"fnl/a.fnl\" :rules {:module-style \"warning\"} :spec-files [\"^fnl/spec/\"]}) \"lint.rules.module-style.options.applies-to\")")
+    local value_29_auto = missing_message_3f(lint_error("(module a)", {path = "fnl/a.fnl", rules = {["file-size"] = {{severity = "warning", ["applies-to"] = {}, options = {}}}}}), "lint.rules.file-size[1].options.max-code-lines")
+    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (lint-error \"(module a)\" {:path \"fnl/a.fnl\"\n :rules {:file-size [{:applies-to {} :options {} :severity \"warning\"}]}}) \"lint.rules.file-size[1].options.max-code-lines\")")
     return true
   end
-  require("plenary.busted").it("an enabled rule reports missing applies-to", _26_)
+  require("plenary.busted").it("an enabled rule reports missing option values", _26_)
   local function _27_()
-    local assert_28_auto = require("luassert")
-    local value_29_auto = missing_message_3f(lint_error("(module a)", {path = "fnl/a.fnl", ["spec-files"] = {"^fnl/spec/"}, rules = {["file-size"] = {severity = "warning", options = {["applies-to"] = "source"}}}}), "lint.rules.file-size.options.max-code-lines")
-    assert_28_auto.is_truthy(value_29_auto, "(missing-message? (lint-error \"(module a)\" {:path \"fnl/a.fnl\"\n :rules {:file-size {:options {:applies-to \"source\"} :severity \"warning\"}}\n :spec-files [\"^fnl/spec/\"]}) \"lint.rules.file-size.options.max-code-lines\")")
-    return true
-  end
-  require("plenary.busted").it("an enabled rule reports missing option values", _27_)
-  local function _28_()
-    local result = lint_error("(module a)", {path = "fnl/a.fnl", ["spec-files"] = {"^fnl/spec/"}, rules = {["file-size"] = "off"}})
+    local result = lint_error("(module a)", {path = "fnl/a.fnl", rules = {["file-size"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and (0 == #result.findings))
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (= 0 (length (. result \"findings\"))))")
     return true
   end
-  return require("plenary.busted").it("an off rule does not require options", _28_)
+  return require("plenary.busted").it("an off rule still uses the canonical instance shape", _27_)
 end
 require("plenary.busted").describe("strict-lint-options", _24_)
-local function _29_()
-  local function _30_()
+local function _28_()
+  local function _29_()
     local config = load_module("fennel-extras.config")
     local loaded
     if config["module-missing"] then
@@ -241,10 +237,10 @@ local function _29_()
     local rules = (loaded and loaded.lint and loaded.lint.rules)
     local names = {"module-style", "spec-macro-import", "spec-no-module", "spec-direct-require", "one-is-per-testing", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "defn-args-newline", "function-shape", "no-mutation", "multiline-layout", "file-size", "core-require", "binding-per-line", "call-data-arg"}
     local assert_28_auto = require("luassert")
-    local value_29_auto = (loaded and loaded["indent-width"] and loaded.extensions and loaded.paths and loaded.builtins and loaded["prefix-fallbacks"] and loaded.parser and loaded.alignment and loaded.lint and loaded.lint["spec-files"] and complete_rules_3f(rules, names, 1))
-    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. loaded \"indent-width\") (. loaded \"extensions\") (. loaded \"paths\") (. loaded \"builtins\") (. loaded \"prefix-fallbacks\") (. loaded \"parser\") (. loaded \"alignment\") (. loaded \"lint\") (. (. loaded \"lint\") \"spec-files\") (complete-rules? rules names 1))")
+    local value_29_auto = (loaded and loaded["indent-width"] and loaded.extensions and loaded.paths and loaded.builtins and loaded["prefix-fallbacks"] and loaded.parser and loaded.alignment and loaded.lint and complete_rules_3f(rules, names, 1))
+    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. loaded \"indent-width\") (. loaded \"extensions\") (. loaded \"paths\") (. loaded \"builtins\") (. loaded \"prefix-fallbacks\") (. loaded \"parser\") (. loaded \"alignment\") (. loaded \"lint\") (complete-rules? rules names 1))")
     return true
   end
-  return require("plenary.busted").it("the repository config loads with complete format and lint settings", _30_)
+  return require("plenary.busted").it("the repository config loads with complete format and lint settings", _29_)
 end
-return require("plenary.busted").describe("strict-config-property", _29_)
+return require("plenary.busted").describe("strict-config-property", _28_)

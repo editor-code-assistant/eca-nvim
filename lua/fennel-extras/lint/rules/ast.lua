@@ -70,40 +70,6 @@ do
   _2amodule_2a["literal-text"] = literal_text0
   literal_text = _2amodule_2a["literal-text"]
 end
-local literal_prefix_pattern_3f
-do
-  local function literal_prefix_pattern_3f0(pattern)
-    return ((string.sub(pattern, 1, 1) == "^") and (string.find(string.sub(pattern, 2), "[%.%*%+%?%(%)|%$%[%]]") == nil))
-  end
-  _2amodule_2a["literal-prefix-pattern?"] = literal_prefix_pattern_3f0
-  literal_prefix_pattern_3f = _2amodule_2a["literal-prefix-pattern?"]
-end
-local function pattern_match_3f(pattern, path, matcher)
-  if matcher then
-    return matcher(pattern, path)
-  else
-    return (literal_prefix_pattern_3f(pattern) and (string.sub(path, 1, (string.len(pattern) - 1)) == string.sub(pattern, 2)))
-  end
-end
-local function spec_file_match_step(path, spec_files, matcher, index)
-  if (index > #spec_files) then
-    return false
-  else
-    return (pattern_match_3f(spec_files[index], path, matcher) or spec_file_match_step(path, spec_files, matcher, (index + 1)))
-  end
-end
-local spec_file_3f
-do
-  local function spec_file_3f0(path, spec_files, matcher)
-    if (spec_files == nil) then
-      return (string.sub(path, 1, 9) == "fnl/spec/")
-    else
-      return spec_file_match_step(path, spec_files, matcher, 1)
-    end
-  end
-  _2amodule_2a["spec-file?"] = spec_file_3f0
-  spec_file_3f = _2amodule_2a["spec-file?"]
-end
 local function newline_value(text, index)
   if (string.sub(text, index, index) == "\n") then
     return 1
@@ -130,16 +96,12 @@ local function string_token_on_line_value(token, line)
     return nil
   end
 end
-local function string_token_on_line_step(tokens, line, index)
-  local token = tokens[index]
-  if (index > #tokens) then
-    return false
-  else
-    return (string_token_on_line_value(token, line) or string_token_on_line_step(tokens, line, (index + 1)))
-  end
-end
 local function string_token_on_line_3f(tokens, line)
-  return string_token_on_line_step(tokens, line, 1)
+  local result = false
+  for _, token in ipairs(tokens) do
+    result = (result or string_token_on_line_value(token, line))
+  end
+  return result
 end
 local function first_token_on_line_value(token, line)
   if ((token.line == line) and not ((token.kind == "whitespace") or (token.kind == "newline"))) then
@@ -148,16 +110,12 @@ local function first_token_on_line_value(token, line)
     return nil
   end
 end
-local function first_token_on_line_step(tokens, line, index)
-  local token = tokens[index]
-  if (index > #tokens) then
-    return nil
-  else
-    return (first_token_on_line_value(token, line) or first_token_on_line_step(tokens, line, (index + 1)))
-  end
-end
 local function first_token_on_line(tokens, line)
-  return first_token_on_line_step(tokens, line, 1)
+  local result = nil
+  for _, token in ipairs(tokens) do
+    result = (result or first_token_on_line_value(token, line))
+  end
+  return result
 end
 local function code_line_3f(tokens, line)
   local token = first_token_on_line(tokens, line)

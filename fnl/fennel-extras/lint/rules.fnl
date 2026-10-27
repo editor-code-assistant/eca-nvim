@@ -2,10 +2,12 @@
 
 (module fennel-extras.lint.rules)
 
+(local core (require :eca.nfnl.core))
 (local ast (require :fennel-extras.lint.rules.ast))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local module-rule (require :fennel-extras.lint.rules.module))
 (local spec-rule (require :fennel-extras.lint.rules.spec))
+(local forbidden-rule (require :fennel-extras.lint.rules.forbidden))
 (local branch-rule (require :fennel-extras.lint.rules.branch))
 (local size-rule (require :fennel-extras.lint.rules.size))
 (local mutation-rule (require :fennel-extras.lint.rules.mutation))
@@ -24,7 +26,6 @@
 (local macro-import? ast.macro-import?)
 (local has-all? ast.has-all?)
 (local has-module-import? ast.has-module-import?)
-(local spec-file? ast.spec-file?)
 (local require-node? ast.require-node?)
 (local enabled? registry.enabled?)
 (local finding registry.finding)
@@ -36,7 +37,7 @@
 
 (defn- module-import-state-enabled
   [state import-info policy]
-  (let [target-module (. (registry.rule-options policy "module-style") :macro-module)]
+  (let [target-module (. (registry.rule-options policy "module-style") :module)]
     (if (and import-info (= import-info.target target-module))
       (has-module-import? import-info.names)
       state.module-import)))
@@ -50,8 +51,8 @@
 (defn- spec-import-state-enabled
   [state import-info policy]
   (let [options (registry.rule-options policy "spec-macro-import")]
-    (if (and import-info (= import-info.target options.macro-module))
-      (has-all? import-info.names options.required-macros)
+    (if (and import-info (= import-info.target options.module))
+      (has-all? import-info.names options.forms)
       state.spec-import)))
 
 (defn- spec-import-state
@@ -94,19 +95,19 @@
         head     (list-head node)
         findings []]
     (when (and (enabled? policy "spec-no-module")
-               (spec-file? path policy.spec-files policy.matcher)
-               (= head (. (registry.rule-options policy "spec-no-module") :module-form)))
+               (= head (. (registry.rule-options policy "spec-no-module") :module)))
       (table.insert findings
                     (finding path form (rule-severity policy "spec-no-module") "spec-no-module" "specs must not declare a module" node)))
     (when (and (enabled? policy "spec-direct-require")
-               (spec-file? path policy.spec-files policy.matcher)
                (require-node? node))
       (spec-rule.spec-direct-require-finding findings path form policy node))
     (when (and (= head "testing") (enabled? policy "one-is-per-testing"))
       (spec-rule.testing-finding findings path form policy node))
+    (when (enabled? policy "forbidden-form")
+      (forbidden-rule.findings findings path form policy node))
     (when (and (enabled? policy "function-shape")
                node
-               (contains? (. (registry.rule-options policy "function-shape") :function-forms) head 1))
+               (contains? (. (registry.rule-options policy "function-shape") :forms) head 1))
       (shape-rule.add-function-findings findings path form forms policy node))
     (when (enabled? policy "if-branch-call")
       (append-all findings (branch-rule.finding path form policy node)))
@@ -131,23 +132,6 @@
 (defn- remove-contained-function-findings
   [findings]
   (shape-rule.remove-contained-function-findings findings))
-
-(defn- append-applicable-finding
-  [result finding policy spec?]
-  (when (registry.applies-to? policy finding.rule spec?)
-    (table.insert result finding))
-  result)
-
-(defn- applicable-findings-step
-  [findings policy spec? index result recurse]
-  (let [next-result (append-applicable-finding result (. findings index) policy spec?)]
-    (recurse findings policy spec? (+ index 1) next-result)))
-
-(defn- applicable-findings
-  [findings policy spec? index result]
-  (if (> index (length findings))
-    result
-    (applicable-findings-step findings policy spec? index result applicable-findings)))
 
 (defn- append-file-size-findings
   [findings path policy source]
@@ -233,9 +217,22 @@
         findings (append-call-findings findings path forms policy source)]
     (remove-contained-function-findings findings)))
 
+(defn- check-instance
+  [path forms policy source instance]
+  (let [instance-policy (registry.evaluator-policy policy instance.rule instance.value)
+        state           (check-state (root-forms source) 1 {:module-import false :module-form false :spec-import false} instance-policy)
+        result          (check-result path forms instance-policy source state)]
+    (icollect [_ finding (ipairs result)]
+      (when (registry.instance-applies-to? instance.value finding policy.matcher)
+        (core.assoc finding :instance instance.index)))))
+
+(defn- append-instance-findings
+  [result path forms policy source instance]
+  (each [_ finding (ipairs (check-instance path forms policy source instance))]
+    (table.insert result finding))
+  result)
+
 (defn check
   [path forms policy source]
-  (let [state  (check-state (root-forms source) 1 {:module-import false :module-form false :spec-import false} policy)
-        result (check-result path forms policy source state)
-        spec?  (spec-file? path policy.spec-files policy.matcher)]
-    (applicable-findings result policy spec? 1 [])))
+  (accumulate [result [] _ instance (ipairs (registry.instances policy))]
+    (append-instance-findings result path forms policy source instance)))

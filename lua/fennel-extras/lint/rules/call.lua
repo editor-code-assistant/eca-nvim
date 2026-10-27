@@ -12,7 +12,6 @@ local registry = require("fennel-extras.lint.rules.registry")
 local meaningful_children = ast["meaningful-children"]
 local list_head = ast["list-head"]
 local quoted_child_3f = ast["quoted-child?"]
-local spec_file_3f = ast["spec-file?"]
 local form_for_node = ast["form-for-node"]
 local nearest_form = ast["nearest-form"]
 local finding = registry.finding
@@ -54,7 +53,7 @@ local function contains_3f(items, target, index)
 end
 local function plain_call_3f(node, policy)
   local head = list_head(node)
-  local ignore = registry["rule-options"](policy, "call-data-arg")["ignore-forms"]
+  local ignore = registry["rule-options"](policy, "call-data-arg").forms
   return ((node.kind == "list") and head and not special_head_3f(head) and not contains_3f(ignore, head, 1))
 end
 local function offending_node_3f(node, policy)
@@ -79,7 +78,7 @@ local function append_finding(findings, path, forms, policy, node, ordinals)
   return update_ordinal(ordinals, base.form, ordinal)
 end
 local function append_node_finding(findings, path, forms, policy, node, ordinals)
-  if (not spec_file_3f(path, policy["spec-files"], policy.matcher) and enabled_3f(policy, "call-data-arg")) then
+  if enabled_3f(policy, "call-data-arg") then
     return append_finding(findings, path, forms, policy, node, ordinals)
   else
     return ordinals

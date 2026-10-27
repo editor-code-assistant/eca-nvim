@@ -9,7 +9,6 @@
 (local meaningful-children ast.meaningful-children)
 (local list-head ast.list-head)
 (local quoted-child? ast.quoted-child?)
-(local spec-file? ast.spec-file?)
 (local form-for-node ast.form-for-node)
 (local nearest-form ast.nearest-form)
 (local finding registry.finding)
@@ -61,7 +60,7 @@
 (defn- plain-call?
   [node policy]
   (let [head   (list-head node)
-        ignore (. (registry.rule-options policy "call-data-arg") :ignore-forms)]
+        ignore (. (registry.rule-options policy "call-data-arg") :forms)]
     (and (= node.kind :list)
          head
          (not (special-head? head))
@@ -104,8 +103,7 @@
 
 (defn- append-node-finding
   [findings path forms policy node ordinals]
-  (if (and (not (spec-file? path policy.spec-files policy.matcher))
-           (enabled? policy "call-data-arg"))
+  (if (and (enabled? policy "call-data-arg"))
     (append-finding findings path forms policy node ordinals)
     ordinals))
 

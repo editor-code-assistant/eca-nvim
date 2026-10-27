@@ -38,7 +38,7 @@
 
 (defn- configured-function-node
   [node policy]
-  (let [forms (. (registry.rule-options policy "function-shape") :function-forms)]
+  (let [forms (. (registry.rule-options policy "function-shape") :forms)]
     (if (contains? forms (list-head node) 1)
       (core.assoc node :children (configured-function-children node))
       node)))
@@ -82,7 +82,7 @@
 (defn- configured-function?
   [node policy]
   (and (= node.kind :list)
-       (contains? (. (registry.rule-options policy "function-shape") :function-forms) (list-head node) 1)))
+       (contains? (. (registry.rule-options policy "function-shape") :forms) (list-head node) 1)))
 
 (defn- synthetic-form
   [path node]

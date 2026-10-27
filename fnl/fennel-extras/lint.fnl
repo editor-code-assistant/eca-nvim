@@ -9,44 +9,11 @@
 (local registry (require :fennel-extras.lint.rules.registry))
 (local selection (require :fennel-extras.lint.selection))
 (local exclusion-matcher (require :fennel-extras.lint.exclusion))
-(local rule-options (require :fennel-extras.lint.rules.options))
-
-(defn- normalized-policy-entry
-  [entry]
-  (if (= (type entry) :table)
-    entry.severity
-    entry))
-
-(defn- normalized-context-policy
-  [raw-policy]
-  (let [result {}]
-    (each [rule entry (pairs raw-policy)]
-      (tset result rule (normalized-policy-entry entry)))
-    result))
-
-(defn- context-policy
-  [context raw-policy]
-  (if context.matcher
-    (normalized-context-policy raw-policy)
-    raw-policy))
+(local config-lint (require :fennel-extras.config.lint))
 
 (defn- policy-for-context
   [context]
-  (let [raw-policy (. context :rules)]
-    (if raw-policy
-      (context-policy context raw-policy)
-      {})))
-
-(defn- append-context-option
-  [result rule entry]
-  (if (and (= (type entry) :table) entry.options)
-    (core.assoc result rule entry.options)
-    result))
-
-(defn- context-options
-  [context]
-  (accumulate [result {} rule entry (pairs (or context.rules {}))]
-    (append-context-option result rule entry)))
+  (or (. context :rules) {}))
 
 (defn- normalized-testing-form
   [finding]
@@ -160,34 +127,46 @@
     (checked-findings-success forms path policy exclusions scope source matcher defer)))
 
 (defn- copy-context-exclusion
-  [rule value]
+  [rule index value]
   (let [copy {}]
     (each [key item (pairs value)]
       (tset copy key item))
-    (core.assoc copy :rule rule)))
+    (core.assoc copy :rule rule :instance index)))
 
 (defn- append-context-values
-  [result rule entries]
+  [result rule index entries]
   (each [_ value (ipairs entries)]
-    (table.insert result (copy-context-exclusion rule value)))
+    (table.insert result (copy-context-exclusion rule index value)))
   result)
 
 (defn- append-context-entry
-  [result rule entry]
+  [result rule index entry]
   (if (and (= (type entry) :table) entry.exclusions)
-    (append-context-values result rule entry.exclusions)
+    (append-context-values result rule index entry.exclusions)
+    result))
+
+(defn- append-context-entries
+  [result rule entries]
+  (each [index entry (ipairs entries)]
+    (append-context-entry result rule index entry))
+  result)
+
+(defn- append-context-rule
+  [result rule entries]
+  (if (= (type entries) :table)
+    (append-context-entries result rule entries)
     result))
 
 (defn- append-context-exclusions
   [result raw-policy]
-  (each [rule entry (pairs raw-policy)]
-    (append-context-entry result rule entry))
+  (each [_ item (ipairs (registry.instances raw-policy))]
+    (each [_ exclusion (ipairs (or item.value.exclusions []))]
+      (table.insert result (copy-context-exclusion item.rule item.index exclusion))))
   result)
 
 (defn- context-exclusions
   [context]
-  (let [result (core.concat [] (or context.exclusions []))]
-    (append-context-exclusions result (or context.rules {}))))
+  (append-context-exclusions [] (or context.rules {})))
 
 (defn- regex-exclusion-error-entry
   [entry matcher index]
@@ -202,93 +181,41 @@
       (or (regex-exclusion-error-entry entry matcher index)
           (regex-exclusion-error exclusions matcher (+ index 1))))))
 
-(defn- regex-spec-files-error-entry
-  [spec-files matcher index]
-  (when (and (= matcher nil)
-             (not (ast.literal-prefix-pattern? (. spec-files index))))
-    {:message (.. "lint spec-files " index ": regex patterns require a matcher")}))
+(defn- context-policy
+  [context]
+  (core.merge (policy-for-context context)
+              {:matcher (. context :matcher)}))
 
-(defn- regex-spec-files-error
-  [spec-files matcher index]
-  (if (> index (length spec-files))
-    nil
-    (or (regex-spec-files-error-entry spec-files matcher index)
-        (regex-spec-files-error spec-files matcher (+ index 1)))))
+(defn- context-lint-value
+  [context]
+  {:rules (or (. context :rules) {})})
 
-(defn- missing-option-result
-  [option-values names index name recurse]
-  (if (or (= option-values nil)
-          (= (. option-values name) nil))
-    name
-    (recurse option-values names (+ index 1))))
+(defn- context-matcher-error
+  [context exclusions]
+  (regex-exclusion-error exclusions context.matcher 1))
 
-(defn- missing-option-step-result
-  [option-values names index name recurse]
-  (missing-option-result option-values names index name recurse))
+(defn- context-validation-error
+  [context]
+  (config-lint.lint-error (context-lint-value context)))
 
-(defn- missing-option-step
-  [option-values names index]
-  (if (> index (length names))
-    nil
-    (missing-option-step-result option-values names index (. names index) missing-option-step)))
+(defn- context-forms
+  [source path]
+  (identity.forms source path))
 
-(defn- policy-error-result
-  [rules options names index rule severity entry recurse]
-  (let [missing (and (not= severity "off")
-                     (missing-option-step entry (rule-options.names rule) 1))]
-    (if missing
-      {:message (.. "missing lint.rules." rule ".options." missing)}
-      (recurse rules options names (+ index 1)))))
-
-(defn- policy-error-step-result
-  [rules options names index rule severity entry recurse]
-  (policy-error-result rules options names index rule severity entry recurse))
-
-(defn- policy-error-step
-  [rules options names index]
-  (if (> index (length names))
-    nil
-    (policy-error-step-result rules
-                              options
-                              names
-                              index
-                              (. names index)
-                              (registry.rule-severity rules (. names index))
-                              (. options (. names index))
-                              policy-error-step)))
-
-(defn- policy-with-options-missing
-  [missing]
-  (when missing
-    (_G.error {:message (.. "missing lint." missing)})))
-
-(defn- policy-with-options-result
-  [base-policy options spec-files matcher missing]
-  (if (= (type missing) :table)
-    (_G.error missing)
-    (or (policy-with-options-missing missing)
-        (core.merge base-policy {:options options :spec-files spec-files :matcher matcher}))))
-
-(defn- policy-with-options
-  [base-policy context matcher spec-files]
-  (let [raw-options (or (. context :options) (context-options context))
-        options     (rule-options.normalized raw-options)
-        missing     (or (and (= spec-files nil) "spec-files")
-                        (policy-error-step base-policy options (registry.rule-names) 1))]
-    (policy-with-options-result base-policy options spec-files matcher missing)))
+(defn- checked-context
+  [forms parse-error path policy exclusions scope source context validation-error matcher-error]
+  (let [failure (or validation-error matcher-error)]
+    (if failure
+      (_G.error failure)
+      (checked-findings forms parse-error path policy exclusions scope source context.matcher context.defer-exclusions))))
 
 (defn check
   [source context]
   (let [path                (or (. context :path) "")
-        base-policy         (policy-for-context context)
-        matcher             (. context :matcher)
-        spec-files          (. context :spec-files)
-        policy              (policy-with-options base-policy context matcher spec-files)
+        policy              (context-policy context)
         exclusions          (context-exclusions context)
         scope               (. context :selection)
-        (forms parse-error) (identity.forms source path)
-        matcher-error       (or (regex-exclusion-error exclusions matcher 1)
-                                (regex-spec-files-error spec-files matcher 1))]
-    (if matcher-error
-      (_G.error matcher-error)
-      (checked-findings forms parse-error path policy exclusions scope source matcher context.defer-exclusions))))
+        validation-error    (context-validation-error context)
+        (forms parse-error) (context-forms source path)
+        matcher-error       (context-matcher-error context exclusions)]
+    (checked-context forms parse-error path policy exclusions scope source context validation-error matcher-error)))

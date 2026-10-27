@@ -197,6 +197,84 @@
                 (error (error-at "reader prefixes are not allowed" node) 0)
                 (error (error-at "unsupported form" node) 0)))))))))
 
+(defn- node-key
+  [node]
+  (and node (= node.kind :symbol) node.text))
+
+(defn- source-entry
+  [table-node key-text]
+  (let [children (meaningful-children table-node.children)]
+    (var index 1)
+    (var result nil)
+    (while (and (<= index (length children)) (= result nil))
+      (when (and (= (node-key (. children index)) key-text)
+                 (< index (length children)))
+        (set result (. children (+ index 1))))
+      (set index (+ index 2)))
+    result))
+
+(defn- source-keyword-node-error
+  [node path]
+  (when (or (not node)
+            (not= node.kind :symbol)
+            (not= (string.sub node.text 1 1) ":"))
+    {:message (.. path " must be a keyword")
+     :line    (and node node.line)
+     :col     (and node node.col)}))
+
+(defn- source-keyword-sequence-error
+  [node path]
+  (when (and node (= node.kind :sequence))
+    (let [children (meaningful-children node.children)]
+      (var failure nil)
+      (var index 1)
+      (while (and (<= index (length children)) (= failure nil))
+        (set failure (source-keyword-node-error (. children index) (.. path "[" index "]")))
+        (set index (+ index 1)))
+      failure)))
+
+(defn- source-rule-instance-error
+  [node path]
+  (when (and node (= node.kind :table))
+    (or (source-keyword-node-error (source-entry node ":severity") (.. path ".severity"))
+        (let [exclusions (source-entry node ":exclusions")]
+          (when (and exclusions (= exclusions.kind :sequence))
+            (let [children (meaningful-children exclusions.children)]
+              (var index 1)
+              (var failure nil)
+              (while (and (<= index (length children)) (= failure nil))
+                (let [exclusion (. children index)]
+                  (set failure (when (= exclusion.kind :table)
+                                 (or (source-entry exclusion ":path")
+                                     (source-entry exclusion ":reason")))))
+                (set index (+ index 1)))
+              (when failure
+                nil)))))))
+
+(defn- canonical-source-error
+  [root]
+  (let [top   (. (meaningful-children root.children) 1)
+        lint  (and top (= top.kind :table) (source-entry top ":lint"))
+        rules (and lint (= lint.kind :table) (source-entry lint ":rules"))]
+    (when (and rules (= rules.kind :table))
+      (let [children (meaningful-children rules.children)]
+        (var index 1)
+        (var failure nil)
+        (while (and (<= index (length children)) (= failure nil))
+          (let [rule      (. children index)
+                instances (. children (+ index 1))
+                rule-path (.. "lint.rules[" index "]")]
+            (set failure (source-keyword-node-error rule rule-path))
+            (when (and (= failure nil) instances (= instances.kind :sequence))
+              (let [instance-children (meaningful-children instances.children)]
+                (var instance-index 1)
+                (while (and (<= instance-index (length instance-children)) (= failure nil))
+                  (set failure (source-rule-instance-error (. instance-children instance-index)
+                                                           (.. rule-path "[" instance-index "]")))
+                  (set instance-index (+ instance-index 1))))))
+          (set index (+ index 2)))
+        failure))))
+
 (defn parse-string
   [text]
   (let [(ok result) (pcall (fn []
@@ -210,7 +288,10 @@
                                        {:error (error-at "expected exactly one top-level form" (. children 2))}
                                        (let [top (. children 1)]
                                          (if (= top.kind :table)
-                                           {:value (convert top)}
+                                           (let [source-error (canonical-source-error {:children [top]})]
+                                             (if source-error
+                                               {:error source-error}
+                                               {:value (convert top)}))
                                            {:error (error-at "top-level form must be a table" (or top.open top))})))))))))]
     (if (not ok)
       (values nil result)

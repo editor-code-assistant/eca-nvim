@@ -87,7 +87,7 @@
   [head policy]
   (or (. body-heads head)
       (and (not (. built-in-control-heads head))
-           (contains? (. (registry.rule-options policy "control-layout") :control-forms) head 1))))
+           (contains? (. (registry.rule-options policy "control-layout") :forms) head 1))))
 
 (defn- body-start
   [head children policy]
@@ -113,7 +113,7 @@
   (and (= (list-head parent) nil)
        (= child.kind :list)
        (not (. built-in-control-heads (list-head child)))
-       (contains? (. (registry.rule-options policy "control-layout") :control-forms) (list-head child) 1)))
+       (contains? (. (registry.rule-options policy "control-layout") :forms) (list-head child) 1)))
 
 (defn- statement-child?
   [parent child policy]
@@ -134,7 +134,7 @@
 
 (defn- control-form?
   [node statement? policy]
-  (let [heads (. (registry.rule-options policy "control-layout") :control-forms)]
+  (let [heads (. (registry.rule-options policy "control-layout") :forms)]
     (and statement?
          (= node.kind :list)
          (contains? heads (list-head node) 1))))

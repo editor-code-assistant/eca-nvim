@@ -6,9 +6,6 @@
 (local reader (require :fennel-extras.reader))
 (local parse (require :fennel-extras.config.parse))
 (local lint-config (require :fennel-extras.config.lint))
-(local lint-rules (require :fennel-extras.lint.rules))
-(local lint-options (require :fennel-extras.lint.rules.options))
-(local alignment (require :fennel-extras.indent.settings))
 (local format-config (require :fennel-extras.config.format))
 
 (defn parse-string
@@ -70,11 +67,6 @@
       failure)
     {:message (.. prefix ": invalid indentation rule")}))
 
-(defn- boolean?
-  [value]
-  (or (= value true)
-      (= value false)))
-
 (defn- extensions?
   [value]
   (if (and (= (type value) :table) (> (length value) 0))
@@ -92,22 +84,10 @@
   (or failure
       (and lint (lint-config.lint-error lint))))
 
-(defn- alignment-error
-  [align-bindings alignment-table]
-  (if (and (not= align-bindings nil) (not (boolean? align-bindings)))
-    {:message "align-bindings must be a boolean"}
-    (and alignment-table (alignment.validate alignment-table))))
-
 (defn- configuration-error
   [tbl]
   (or (format-config.validate tbl false false false)
       (configuration-error-with-lint nil (. tbl :lint))))
-
-(defn- normalize-if-needed
-  [tbl]
-  (if (or (. tbl :align-bindings) (. tbl :alignment))
-    (alignment.normalize tbl)
-    tbl))
 
 (defn- path-error
   [tbl]
@@ -128,7 +108,7 @@
   [tbl failure]
   (if failure
     (values nil failure)
-    (normalize-if-needed tbl)))
+    tbl))
 
 (defn- validation-failure
   [tbl]
@@ -142,10 +122,18 @@
 (defn- unknown-config-key
   [tbl]
   (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true :indent-width true :builtins true :prefix-fallbacks true :extensions true :skip-dotfiles true :follow-symlinks true :alignment true :parser true :lint true}]
-    (accumulate [failure nil key _ (pairs tbl)]
-      (or (and (not (. allowed key))
-               {:message (.. "unknown configuration key: " key)})
-          failure))))
+    (accumulate [candidate nil key _ (pairs tbl)]
+      (if (and (not (. allowed key))
+               (or (= candidate nil)
+                   (< (tostring key) (tostring candidate))))
+        key
+        candidate))))
+
+(defn- unknown-config-error
+  [tbl]
+  (let [key (unknown-config-key tbl)]
+    (when key
+      {:message (.. "unknown configuration key: " key)})))
 
 (defn- validate-table-result
   [tbl failure]
@@ -155,7 +143,7 @@
 
 (defn- validate-table
   [tbl]
-  (validate-table-result tbl (unknown-config-key tbl)))
+  (validate-table-result tbl (unknown-config-error tbl)))
 
 (defn validate
   [tbl]
@@ -163,63 +151,38 @@
     (values nil {:message "configuration must be a table"})
     (validate-table tbl)))
 
-(defn- normalized-options
-  [options name entry]
-  (if entry.options
-    (core.assoc options name entry.options)
-    options))
+(defn- append-canonical-instance-exclusions
+  [result rule index instance]
+  (each [_ exclusion (ipairs (or instance.exclusions []))]
+    (let [copy {}]
+      (each [key value (pairs exclusion)]
+        (tset copy key value))
+      (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index))))
+  result)
 
-(defn- normalized-table-entry
-  [rules options name entry]
-  (values (core.assoc rules name entry.severity)
-          (normalized-options options name entry)))
+(defn- append-canonical-rule-exclusions
+  [result rule instances]
+  (each [index instance (ipairs (or instances []))]
+    (append-canonical-instance-exclusions result rule index instance))
+  result)
 
-(defn- normalized-value-entry
-  [rules options name entry]
-  (values (core.assoc rules name entry) options))
-
-(defn- normalized-rule-entry
-  [rules options name entry]
-  (if (= (type entry) :table)
-    (normalized-table-entry rules options name entry)
-    (normalized-value-entry rules options name entry)))
-
-(defn- normalized-overrides-step
-  [overrides next-key state recurse]
-  (let [(new-rules new-options) (normalized-rule-entry state.rules state.options next-key state.entry)]
-    (recurse overrides next-key new-rules new-options)))
-
-(defn- normalized-rule-overrides
-  [overrides key rules options]
-  (let [(next-key next-entry) (next overrides key)]
-    (if (= next-key nil)
-      (values rules options)
-      (normalized-overrides-step overrides next-key {:entry next-entry :rules rules :options options} normalized-rule-overrides))))
-
-(defn- lint-policy-result
-  [rules options exclusions spec-files]
-  {:rules rules :options options :spec-files spec-files :exclusions exclusions})
-
-(defn- lint-policy-defaults
-  []
-  (lint-rules.defaults))
+(defn- canonical-exclusions
+  [rules]
+  (let [result []]
+    (each [rule instances (pairs rules)]
+      (append-canonical-rule-exclusions result rule instances))
+    result))
 
 (defn- valid-lint-policy
   [cfg]
-  (let [lint                     (. cfg :lint)
-        overrides                (or (and lint (. lint :rules)) {})
-        general                  (or (and lint (. lint :exclusions)) [])
-        exclusions               (core.concat general (lint-config.exclusions overrides))
-        spec-files               (. lint :spec-files)
-        defaults                 (lint-policy-defaults)
-        (rules explicit-options) (normalized-rule-overrides overrides nil defaults {})
-        options                  (lint-options.normalized explicit-options)]
-    (lint-policy-result rules options exclusions spec-files)))
+  (let [lint (. cfg :lint)]
+    {:rules      (. lint :rules)
+     :exclusions (canonical-exclusions (. lint :rules))}))
 
 (defn- lint-policy-valid
   [valid]
   (if (= valid.lint nil)
-    (values nil {:message "missing lint.spec-files"})
+    (values nil {:message "missing lint"})
     (valid-lint-policy valid)))
 
 (defn lint-policy

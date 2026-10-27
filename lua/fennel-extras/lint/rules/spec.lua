@@ -10,7 +10,6 @@ local registry = require("fennel-extras.lint.rules.registry")
 local meaningful_children = ast["meaningful-children"]
 local literal_text = ast["literal-text"]
 local list_head = ast["list-head"]
-local spec_file_3f = ast["spec-file?"]
 local count_is = ast["count-is"]
 local rule_options = registry["rule-options"]
 local enabled_3f = registry["enabled?"]
@@ -30,7 +29,7 @@ end
 local spec_import_finding
 do
   local function spec_import_finding0(path, forms, policy, valid)
-    if (spec_file_3f(path, policy["spec-files"], policy.matcher) and not exempt_file_3f(path, policy, "spec-macro-import") and enabled_3f(policy, "spec-macro-import") and not valid) then
+    if (not exempt_file_3f(path, policy, "spec-macro-import") and enabled_3f(policy, "spec-macro-import") and not valid) then
       return {{kind = "finding", path = path, line = 1, col = 1, ["end-line"] = 1, ["end-col"] = 1, severity = rule_severity(policy, "spec-macro-import"), rule = "spec-macro-import", form = (path .. " > spec"), message = "specs must import deftest, testing, and is from spec.eca.macros", node = nil}}
     else
       return {}
@@ -52,8 +51,8 @@ do
   local function spec_direct_require_finding0(findings, path, form, policy, node)
     local children = meaningful_children(node)
     local target = literal_text(children[2])
-    local modules = rule_options(policy, "spec-direct-require")["forbidden-modules"]
-    if (spec_file_3f(path, policy["spec-files"], policy.matcher) and not exempt_file_3f(path, policy, "spec-direct-require") and enabled_3f(policy, "spec-direct-require") and contains_3f(modules, target, 1)) then
+    local modules = rule_options(policy, "spec-direct-require").modules
+    if (not exempt_file_3f(path, policy, "spec-direct-require") and enabled_3f(policy, "spec-direct-require") and contains_3f(modules, target, 1)) then
       return table.insert(findings, finding(path, form, rule_severity(policy, "spec-direct-require"), "spec-direct-require", "specs must use the shared macro import", node))
     else
       return nil
@@ -66,7 +65,7 @@ local testing_finding
 do
   local function testing_finding0(findings, path, form, policy, node)
     local options = rule_options(policy, "one-is-per-testing")
-    local count = count_is(node, 1, 0, options["testing-form"], options["assertion-form"])
+    local count = count_is(node, 1, 0, options.testing, options.assertion)
     local expected_count = options.count
     if ((count ~= expected_count) and enabled_3f(policy, "one-is-per-testing")) then
       return table.insert(findings, finding(path, form, rule_severity(policy, "one-is-per-testing"), "one-is-per-testing", "each testing form must contain exactly one is", node))

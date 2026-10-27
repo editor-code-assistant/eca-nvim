@@ -164,35 +164,13 @@
   [exclusions index recurse]
   (compile-exclusion-patterns-step exclusions index recurse))
 
-(defn- compile-spec-file-pattern
-  [spec-files index recurse]
-  (let [(ok compile-error) (pcall matcher.compile-pattern (. spec-files index))]
-    (if ok
-      (recurse spec-files (+ index 1) recurse)
-      {:index index :error compile-error})))
-
-(defn- compile-spec-files-patterns-step
-  [spec-files index recurse]
-  (when (<= index (length spec-files))
-    (compile-spec-file-pattern spec-files index recurse)))
-
-(defn- compile-spec-files-patterns
-  [spec-files index recurse]
-  (compile-spec-files-patterns-step spec-files index recurse))
-
-(defn- run-lint-policy-spec-files
-  [context files policy]
-  (let [spec-error (compile-spec-files-patterns policy.spec-files 1 compile-spec-files-patterns)]
-    (if spec-error
-      (lint-policy-error context.root context.config-path context.printer {:message (.. "invalid spec-files regex " spec-error.index ": " (tostring spec-error.error))})
-      (run-lint-files context (table-update.update policy {:matcher (matcher.vim-matcher)}) files))))
-
 (defn- run-lint-policy-success
   [context files policy]
-  (let [(ok compile-error) (pcall compile-exclusion-patterns policy.exclusions 1 compile-exclusion-patterns)]
+  (let [exclusions         (or policy.exclusions [])
+        (ok compile-error) (pcall compile-exclusion-patterns exclusions 1 compile-exclusion-patterns)]
     (if (not ok)
       (lint-policy-error context.root context.config-path context.printer {:message (.. "invalid exclusion pattern regex: " (tostring compile-error))})
-      (run-lint-policy-spec-files context files policy))))
+      (run-lint-files context (table-update.update policy {:matcher (matcher.vim-matcher)}) files))))
 
 (defn- run-lint-policy
   [context files]

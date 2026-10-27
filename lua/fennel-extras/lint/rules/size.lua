@@ -10,7 +10,6 @@ local ast = require("fennel-extras.lint.rules.ast")
 local registry = require("fennel-extras.lint.rules.registry")
 local code_line_count = ast["code-line-count"]
 local newline_count = ast["newline-count"]
-local spec_file_3f = ast["spec-file?"]
 local enabled_3f = registry["enabled?"]
 local rule_severity = registry["rule-severity"]
 local function file_size_finding_result(path, policy, count, limit)
@@ -23,14 +22,13 @@ end
 local function file_size_finding_source(path, policy, source)
   local tokens = reader.tokenize(source)
   local count = code_line_count(tokens, 1, (newline_count(source, 1, 0) + 1), 0)
-  local options = (policy.options and policy.options["file-size"])
-  local limit = ((options and options["max-code-lines"]) or 300)
+  local limit = registry["rule-options"](policy, "file-size")["max-code-lines"]
   return file_size_finding_result(path, policy, count, limit)
 end
 local finding
 do
   local function finding0(path, policy, source)
-    if (not spec_file_3f(path, policy["spec-files"], policy.matcher) and enabled_3f(policy, "file-size")) then
+    if enabled_3f(policy, "file-size") then
       return file_size_finding_source(path, policy, source)
     else
       return {}

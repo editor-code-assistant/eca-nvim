@@ -87,13 +87,14 @@
 
 (defn- complete-rule?
   [entry rules names index recurse]
-  (and (not= entry nil)
-       (not= entry :off)
-       (= (type entry) :table)
-       (not= (. entry :severity) nil)
-       (not= (. entry :options) nil)
-       (not= (. (. entry :options) :applies-to) nil)
-       (recurse rules names (+ index 1))))
+  (let [instance (. entry 1)]
+    (and (= (type entry) :table)
+         (> (length entry) 0)
+         (= (type instance) :table)
+         (not= (. instance :severity) nil)
+         (not= (. instance :options) nil)
+         (not= (. instance :applies-to) nil)
+         (recurse rules names (+ index 1)))))
 
 (defn- complete-rules?
   [rules names index]
@@ -143,29 +144,28 @@
       (is (. result :ok)))))
 
 (deftest strict-lint-options
-  (testing "lint API reports missing spec-files"
-    (is (missing-message? (lint-error "(module a)"
-                                      {:path  "fnl/a.fnl"
-                                       :rules {}})
-                          "lint.spec-files")))
-  (testing "an enabled rule reports missing applies-to"
-    (is (missing-message? (lint-error "(module a)"
-                                      {:path       "fnl/a.fnl"
-                                       :spec-files ["^fnl/spec/"]
-                                       :rules      {"module-style" :warning}})
-                          "lint.rules.module-style.options.applies-to")))
+  (testing "an enabled rule reports the canonical applies-to path"
+    (let [result (lint-error "(module a)"
+                             {:path  "fnl/a.fnl"
+                              :rules {:module-style [{:severity   "warning"
+                                                      :options    {}
+                                                      :exclusions []}]}})]
+      (is (= "lint.rules.module-style[1].applies-to must be a table"
+             (. result :message)))))
   (testing "an enabled rule reports missing option values"
     (is (missing-message? (lint-error "(module a)"
-                                      {:path       "fnl/a.fnl"
-                                       :spec-files ["^fnl/spec/"]
-                                       :rules      {"file-size" {:severity :warning
-                                                                 :options  {:applies-to "source"}}}})
-                          "lint.rules.file-size.options.max-code-lines")))
-  (testing "an off rule does not require options"
+                                      {:path  "fnl/a.fnl"
+                                       :rules {:file-size [{:severity   "warning"
+                                                            :applies-to {}
+                                                            :options    {}}]}})
+                          "lint.rules.file-size[1].options.max-code-lines")))
+  (testing "an off rule still uses the canonical instance shape"
     (let [result (lint-error "(module a)"
-                             {:path       "fnl/a.fnl"
-                              :spec-files ["^fnl/spec/"]
-                              :rules      {"file-size" :off}})]
+                             {:path  "fnl/a.fnl"
+                              :rules {:file-size [{:severity   "off"
+                                                   :applies-to {}
+                                                   :options    {}
+                                                   :exclusions []}]}})]
       (is (and (. result :ok) (= 0 (length (. result :findings))))))))
 
 (deftest strict-config-property
@@ -201,5 +201,4 @@
                (. loaded :parser)
                (. loaded :alignment)
                (. loaded :lint)
-               (. (. loaded :lint) :spec-files)
                (complete-rules? rules names 1))))))

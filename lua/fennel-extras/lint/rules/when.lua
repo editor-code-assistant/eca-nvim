@@ -26,8 +26,8 @@ local function if_without_else_3f(node, policy)
   local children = meaningful_children(node)
   local else_child = children[4]
   local options = registry["rule-options"](policy, "if-without-else")
-  local forms = options["if-forms"]
-  local flag_nil_else = options["flag-nil-else"]
+  local forms = options.forms
+  local flag_nil_else = options["nil-else"]
   return ((node.kind == "list") and contains_3f(forms, list_head(node), 1) and ((#children == 3) or (flag_nil_else and (#children == 4) and (else_child.kind == "symbol") and (else_child.text == "nil"))))
 end
 local function finding_form(path, forms, node)

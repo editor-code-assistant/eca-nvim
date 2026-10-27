@@ -78,67 +78,83 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
              :collapse-padding true
              :binding-forms ["let" "when-let" "if-let" "with-open"]
              :clause-forms ["case" "match" "case-try" "match-try" "if"]}
- :lint {:spec-files ["^fnl/spec/"]
-        :rules {"binding-per-line" {:severity :warning
-                                     :options {:applies-to "all"
-                                               :forms ["let" "when-let" "if-let" "with-open"]}}
-                "call-data-arg" {:severity :warning
-                                  :options {:applies-to "source"
-                                            :ignore-forms []}}
-                "control-layout" {:severity :warning
-                                   :options {:applies-to "all"
-                                             :control-forms ["if" "when" "and" "or" "case" "match"]}}
-                "core-require" {:severity :error
-                                 :options {:applies-to "all"
-                                           :module "eca.nfnl.core"
-                                           :binding "core"}}
-                "defn-args-newline" {:severity :warning
-                                      :options {:applies-to "all"
-                                                :forms ["defn" "defn-"]}}
-                "file-size" {:severity :warning
-                              :options {:applies-to "source"
-                                        :max-code-lines 300}}
-                "function-shape" {:severity :warning
-                                   :options {:applies-to "all"
-                                             :function-forms ["defn" "defn-" "fn" "lambda" "λ"]}}
-                "if-branch-call" {:severity :warning
-                                   :options {:applies-to "all"
-                                             :if-forms ["if"]}}
-                "if-without-else" {:severity :warning
-                                    :options {:applies-to "all"
-                                              :if-forms ["if"]
-                                              :flag-nil-else true}}
-                "module-style" {:severity :error
-                                 :options {:applies-to "source"
-                                           :macro-module "eca.nfnl.macros.aniseed"
-                                           :required-macros ["module" "def" "defn" "defn-"]}}
-                "multiline-layout" {:severity :warning
-                                      :options {:applies-to "all"
-                                                :clause-forms ["case" "match" "case-try" "match-try"]
-                                                :binding-forms ["let" "when-let" "if-let" "with-open"]}}
-                "no-mutation" {:severity :warning
-                                :options {:applies-to "source"
-                                          :forms ["var" "set" "while"]}}
-                "one-is-per-testing" {:severity :error
-                                       :options {:applies-to "all"
-                                                 :testing-form "testing"
-                                                 :assertion-form "is"
-                                                 :count 1}}
-                "spec-direct-require" {:severity :error
-                                        :options {:applies-to "spec"
-                                                  :forbidden-modules ["plenary.busted" "luassert"]
-                                                  :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}}
-                "spec-macro-import" {:severity :error
-                                      :options {:applies-to "spec"
-                                                :macro-module "spec.eca.macros"
-                                                :required-macros ["deftest" "testing" "is"]
-                                                :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}}
-                "spec-no-module" {:severity :error
-                                   :options {:applies-to "spec"
-                                             :module-form "module"}}
-                "unused-and-or" {:severity :warning
-                                  :options {:applies-to "all"
-                                            :forms ["and" "or"]}}}}}
+ :lint             {                    :rules      {:binding-per-line    [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:forms ["let" "when-let" "if-let" "with-open"]}
+                                                        :exclusions []}]
+                                 :call-data-arg       [{:severity   :warning
+                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :options    {:forms []}
+                                                        :exclusions []}]
+                                 :control-layout      [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:forms ["if" "when" "and" "or" "case" "match"]}
+                                                        :exclusions []}]
+                                 :core-require        [{:severity   :error
+                                                        :applies-to {}}
+                                                        :options    {:module  "eca.nfnl.core"
+                                                                     :binding "core"}
+                                                        :exclusions []}]
+                                 :defn-args-newline   [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:forms ["defn" "defn-"]}
+                                                        :exclusions []}]
+                                 :file-size           [{:severity   :warning
+                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :options    {:max-code-lines 300}
+                                                        :exclusions []}]
+                                 :function-shape      [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                                                        :exclusions []}]
+                                 :if-branch-call      [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:forms ["if"]}
+                                                        :exclusions []}]
+                                 :if-without-else     [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:forms    ["if"]
+                                                                     :nil-else true}
+                                                        :exclusions []}]
+                                 :module-style        [{:severity   :error
+                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :options    {:module "eca.nfnl.macros.aniseed"
+                                                                     :forms  ["module" "def" "defn" "defn-"]}
+                                                        :exclusions []}]
+                                 :multiline-layout    [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                                                                     :bindings ["let" "when-let" "if-let" "with-open"]}
+                                                        :exclusions []}]
+                                 :no-mutation         [{:severity   :warning
+                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :options    {:forms ["var" "set" "while"]}
+                                                        :exclusions []}]
+                                 :one-is-per-testing  [{:severity   :error
+                                                        :applies-to {}}
+                                                        :options    {:testing   "testing"
+                                                                     :assertion "is"
+                                                                     :count     1}
+                                                        :exclusions []}]
+                                 :spec-direct-require [{:severity   :error
+                                                        :applies-to {:files ["^fnl/spec/"]}}
+                                                        :options    {:modules      ["plenary.busted" "luassert"]
+                                                                     :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+                                                        :exclusions []}]
+                                 :spec-macro-import   [{:severity   :error
+                                                        :applies-to {:files ["^fnl/spec/"]}}
+                                                        :options    {:module       "spec.eca.macros"
+                                                                     :forms        ["deftest" "testing" "is"]
+                                                                     :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+                                                        :exclusions []}]
+                                 :spec-no-module      [{:severity   :error
+                                                        :applies-to {:files ["^fnl/spec/"]}}
+                                                        :options    {:module "module"}
+                                                        :exclusions []}]
+                                 :unused-and-or       [{:severity   :warning
+                                                        :applies-to {}}
+                                                        :options    {:forms ["and" "or"]}
+                                                        :exclusions []}]}}}
 ```
 
 The formatter's indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > `:builtins` > `:prefix-fallbacks` > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one form name to another; and `:indent-patterns` contains `[lua-pattern rule-list]` entries. `:paths`, `:exclude`, `:extensions`, `:skip-dotfiles`, and `:follow-symlinks` control discovery. `:indent-width`, `:builtins`, `:prefix-fallbacks`, and `:parser` are required configuration values. Use `--parser` to override the configured parser.
@@ -161,71 +177,78 @@ The argument vector must start below the name, with a docstring allowed between 
 
 `make style` runs `scripts/fennel-extras lint` with no selection flag by default, checking all configured files without requiring Git. Set `STYLE_FLAGS=--changed` to check changed forms and files against `HEAD`, or `STYLE_FLAGS="--base <ref>"` to use another Git base. `--all` is an explicit alias for the no-selection mode; `--changed` and `--all` cannot be combined; `--all` and `--base` cannot be combined. Explicit paths restrict discovery in any mode. Add `--format json` for JSON Lines output.
 
-Lint rules are opt-in under `:lint :rules`. A rule can use a severity shorthand (`:warning`, `:error`, or `:off`) or a map with explicit `:severity`, `:options`, and optional `:exclusions`. Enabled rules require explicit option values, including `:applies-to`; disabled rules do not require options. The `:lint :spec-files` list is also required. There are no hidden lint defaults.
+Lint rules are configured under `:lint :rules`. The map is keyed by keyword identifiers such as `:file-size`; each value is a non-empty vector of rule instances. Every instance has the same four sibling keys: `:severity`, `:applies-to`, `:options`, and `:exclusions`. There is no severity shorthand. Enabled instances require their rule's typed options; disabled instances use `:severity :off` and still follow the instance shape. There are no hidden lint defaults.
 
-The seventeen rules are:
+The root `.fnl-extras.fnl` is the canonical configuration example. Its entries use the current shape:
+
+```fennel
+:lint {:rules {:binding-per-line [{:severity :warning
+                                   :applies-to {}
+                                   :options {:forms ["let" "when-let" "if-let" "with-open"]}
+                                   :exclusions []}]
+               :file-size [{:severity :warning
+                            :applies-to {:files ["^fnl/[^s]"]}
+                            :options {:max-code-lines 300}
+                            :exclusions []}]}}
+```
+
+`:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^fnl/spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields.
+
+The eighteen rules are:
 
 | Rule | Options |
 | --- | --- |
-| `module-style` | `:macro-module`, `:required-macros` |
-| `spec-macro-import` | `:macro-module`, `:required-macros`, `:exempt-files` |
-| `spec-no-module` | `:module-form` |
-| `spec-direct-require` | `:forbidden-modules`, `:exempt-files` |
-| `one-is-per-testing` | `:testing-form`, `:assertion-form`, `:count` |
-| `if-branch-call` | `:if-forms` |
-| `if-without-else` | `:if-forms`, `:flag-nil-else` |
-| `control-layout` | `:control-forms` |
+| `forbidden-form` | `:module` |
+| `module-style` | `:module`, `:forms` |
+| `spec-macro-import` | `:module`, `:forms`, `:exempt-files` |
+| `spec-no-module` | `:module` |
+| `spec-direct-require` | `:modules`, `:exempt-files` |
+| `one-is-per-testing` | `:testing`, `:assertion`, `:count` |
+| `if-branch-call` | `:forms` |
+| `if-without-else` | `:forms`, `:nil-else` |
+| `control-layout` | `:forms` |
 | `unused-and-or` | `:forms` |
 | `defn-args-newline` | `:forms` |
-| `function-shape` | `:function-forms` |
+| `function-shape` | `:forms`, `:max-depth` |
 | `no-mutation` | `:forms` |
-| `multiline-layout` | `:clause-forms`, `:binding-forms` |
+| `multiline-layout` | `:clauses`, `:bindings` |
 | `file-size` | `:max-code-lines` |
 | `core-require` | `:module`, `:binding` |
 | `binding-per-line` | `:forms` |
-| `call-data-arg` | `:ignore-forms` |
+| `call-data-arg` | `:forms` |
 
 #### Rule options
 
-Put options inside the rule entry. Values are required; for example:
-
-```fennel
-:rules {"file-size" {:severity :warning
-                      :options {:applies-to "source"
-                                :max-code-lines 300}}}
-```
-
-`:max-code-lines` is only the `file-size` rule option. Top-level `:lint :max-code-lines` is not accepted.
+Put each rule's direct, typed options inside its instance. Required values are explicit; for example, the `file-size` instance in `.fnl-extras.fnl` uses `:max-code-lines 300`. `:max-code-lines` is not a top-level `:lint` option, and options must not be wrapped in `:flags`.
 
 #### Exclusions
 
-Exclusions can be per-rule, inside that rule's entry, or general under `:lint :exclusions`. A general exclusion with no `:rule` or `:rules` selects all rules. `:rule` and `:rules` are mutually exclusive. Selectors combine with AND. An exclusion must match at least one finding; otherwise it is stale and the command fails in the applicable scope. An exclusion for a disabled rule is also an error.
+Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with a string `:path` and string `:reason`; the path is matched against the repository-relative path. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
 
 ```fennel
-:lint {:rules {"function-shape" {:severity :warning
-                                  :options {:applies-to "all"
-                                            :function-forms ["defn" "defn-" "fn" "lambda" "λ"]}
-                                  :exclusions [{:pattern "^fnl/legacy/"
-                                                :reason "migration in progress"}]}}
-       :exclusions [{:rule :file-size
-                     :pattern "^fnl/generated/"
-                     :reason "generated source"}]}
+:rules {:function-shape [{:severity :warning
+                          :applies-to {:files ["fnl/legacy/"]}
+                          :options {:forms ["defn" "defn-" "fn" "lambda" "λ"]
+                                    :max-depth 2}
+                          :exclusions [{:path "^fnl/legacy/"
+                                        :reason "migration in progress"}]}]}
 ```
 
-#### `:pattern` matching
+#### `:path` matching
 
-`:pattern` is a Vim regular expression searched against the repository-relative path; it is not full-string matching. `:code` uses the same Vim regex semantics against the flagged form's source and is not valid for file-level findings. In Fennel config strings, double backslashes, for example `"\\d\\+"` for Vim's digit-plus pattern.
+`:path` is a Vim regular expression searched against the repository-relative path; it is not full-string matching. `:code` uses the same Vim regex semantics against the flagged form's source and is not valid for file-level findings. In Fennel config strings, double backslashes, for example `"\\d\\+"` for Vim's digit-plus pattern.
 
 ```fennel
-{:pattern "^fnl/spec/"}
+{:path "^fnl/spec/"
+ :reason "spec path"}
 ```
 
-#### `:spec-files`
+#### File selectors
 
-`:lint :spec-files` is a required list of strings. Each entry is a Vim regular expression used to classify spec files.
+Use `:applies-to :files` for path-specific rules. A file selector is a Vim regular expression matched against the repository-relative path. There is no top-level `:lint :spec-files` setting.
 
 ```fennel
-:lint {:spec-files ["^fnl/spec/"]}
+:applies-to {:files ["^fnl/spec/"]}
 ```
 
 #### `:alignment`

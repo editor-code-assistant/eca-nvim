@@ -68,7 +68,7 @@ local function function_base(head)
   return (((head == "defn") and 4) or ((head == "defn-") and 4) or 3)
 end
 local function body_form_3f(head, policy)
-  return (body_heads[head] or (not built_in_control_heads[head] and contains_3f(registry["rule-options"](policy, "control-layout")["control-forms"], head, 1)))
+  return (body_heads[head] or (not built_in_control_heads[head] and contains_3f(registry["rule-options"](policy, "control-layout").forms, head, 1)))
 end
 local function body_start(head, children, policy)
   local argument = children[function_argument_index(head)]
@@ -82,7 +82,7 @@ local function last_body_child_3f(head, children, index, policy)
   return (body_child_3f(head, children, index, policy) and (index == #children))
 end
 local function custom_control_root_3f(parent, child, policy)
-  return ((list_head(parent) == nil) and (child.kind == "list") and not built_in_control_heads[list_head(child)] and contains_3f(registry["rule-options"](policy, "control-layout")["control-forms"], list_head(child), 1))
+  return ((list_head(parent) == nil) and (child.kind == "list") and not built_in_control_heads[list_head(child)] and contains_3f(registry["rule-options"](policy, "control-layout").forms, list_head(child), 1))
 end
 local function statement_child_3f(parent, child, policy)
   local head = list_head(parent)
@@ -94,7 +94,7 @@ local function executable_child_3f(child, mode)
   return (((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table")) and (mode ~= "quoted"))
 end
 local function control_form_3f(node, statement_3f, policy)
-  local heads = registry["rule-options"](policy, "control-layout")["control-forms"]
+  local heads = registry["rule-options"](policy, "control-layout").forms
   return (statement_3f and (node.kind == "list") and contains_3f(heads, list_head(node), 1))
 end
 local function append_control_finding(findings, path, forms, policy, node, ordinals)

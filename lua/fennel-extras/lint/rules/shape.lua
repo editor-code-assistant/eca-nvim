@@ -48,7 +48,7 @@ local function configured_function_children(node)
   return tbl_26_
 end
 local function configured_function_node(node, policy)
-  local forms = registry["rule-options"](policy, "function-shape")["function-forms"]
+  local forms = registry["rule-options"](policy, "function-shape").forms
   if contains_3f(forms, list_head(node), 1) then
     return core.assoc(node, "children", configured_function_children(node))
   else
@@ -97,7 +97,7 @@ do
   add_function_findings = _2amodule_2a["add-function-findings"]
 end
 local function configured_function_3f(node, policy)
-  return ((node.kind == "list") and contains_3f(registry["rule-options"](policy, "function-shape")["function-forms"], list_head(node), 1))
+  return ((node.kind == "list") and contains_3f(registry["rule-options"](policy, "function-shape").forms, list_head(node), 1))
 end
 local function synthetic_form(path, node)
   return {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (path .. " > function-shape"), node = node}

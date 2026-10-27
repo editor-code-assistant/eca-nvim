@@ -266,19 +266,8 @@ local function validate_custom_config(config)
   local fallbacks_rule_error = validate_custom_rules(fallbacks, "prefix-fallbacks rule ")
   return (builtins_type_error or builtins_rule_error or fallbacks_type_error or fallbacks_rule_error)
 end
-local function validate_align_bindings(config)
-  local align_bindings = config["align-bindings"]
-  if ((align_bindings ~= nil) and (type(align_bindings) ~= "boolean")) then
-    return error("align-bindings must be a boolean")
-  else
-    return nil
-  end
-end
 local function validate_alignment(config)
   return alignment.validate(config.alignment)
-end
-local function validate_alignment_config(config)
-  return (validate_align_bindings(config) or validate_alignment(config))
 end
 local function validate_config_table(config)
   local failure = nil
@@ -309,7 +298,7 @@ local function validate_config_table(config)
   else
   end
   if (failure == nil) then
-    failure = validate_alignment_config(config)
+    failure = validate_alignment(config)
   else
   end
   if (failure == nil) then

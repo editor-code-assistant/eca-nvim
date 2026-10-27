@@ -33,7 +33,7 @@
 
 (defn- conditional-form?
   [form policy index]
-  (let [forms (. (registry.rule-options policy "if-branch-call") :if-forms)
+  (let [forms (. (registry.rule-options policy "if-branch-call") :forms)
         name  (. forms index)]
     (or (and (= name "if") (default-conditional-form? form))
         (and (not= name "if") (named-conditional-form? form name))
@@ -52,7 +52,7 @@
 
 (defn finding
   [path form policy node]
-  (let [forms  (. (registry.rule-options policy "if-branch-call") :if-forms)
+  (let [forms  (. (registry.rule-options policy "if-branch-call") :forms)
         custom (and forms (not= (. forms 1) "if"))]
     (if (and (or (and (= (list-head node) "do")
                       (do-branch? node)

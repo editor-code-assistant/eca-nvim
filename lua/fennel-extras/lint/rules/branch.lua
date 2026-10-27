@@ -28,7 +28,7 @@ local function named_conditional_form_3f(form, name)
   return (string.match(form.form, (" > " .. name .. "[^ >]* > then$")) or string.match(form.form, (" > " .. name .. "[^ >]* > else$")) or string.match(form.form, (" > " .. name .. "[^ >]* > then#[0-9]+$")))
 end
 local function conditional_form_3f(form, policy, index)
-  local forms = registry["rule-options"](policy, "if-branch-call")["if-forms"]
+  local forms = registry["rule-options"](policy, "if-branch-call").forms
   local name = forms[index]
   return (((name == "if") and default_conditional_form_3f(form)) or ((name ~= "if") and named_conditional_form_3f(form, name)) or ((index < #forms) and conditional_form_3f(form, policy, (index + 1))))
 end
@@ -40,7 +40,7 @@ end
 local finding
 do
   local function finding0(path, form, policy, node)
-    local forms = registry["rule-options"](policy, "if-branch-call")["if-forms"]
+    local forms = registry["rule-options"](policy, "if-branch-call").forms
     local custom = (forms and (forms[1] ~= "if"))
     if ((((list_head(node) == "do") and do_branch_3f(node) and (custom or conditional_form_3f(form, policy, 1))) or custom_branch_3f(node, forms)) and enabled_3f(policy, "if-branch-call")) then
       return {make_finding(path, form, rule_severity(policy, "if-branch-call"), "if-branch-call", "if branch contains multiple expressions; move them to a named helper", node)}

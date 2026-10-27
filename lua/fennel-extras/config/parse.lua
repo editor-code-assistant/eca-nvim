@@ -255,11 +255,113 @@ local function convert(node)
     end
   end
 end
+local function node_key(node)
+  return (node and (node.kind == "symbol") and node.text)
+end
+local function source_entry(table_node, key_text)
+  local children = meaningful_children(table_node.children)
+  local index = 1
+  local result = nil
+  while ((index <= #children) and (result == nil)) do
+    if ((node_key(children[index]) == key_text) and (index < #children)) then
+      result = children[(index + 1)]
+    else
+    end
+    index = (index + 2)
+  end
+  return result
+end
+local function source_keyword_node_error(node, path)
+  if (not node or (node.kind ~= "symbol") or (string.sub(node.text, 1, 1) ~= ":")) then
+    return {message = (path .. " must be a keyword"), line = (node and node.line), col = (node and node.col)}
+  else
+    return nil
+  end
+end
+local function source_keyword_sequence_error(node, path)
+  if (node and (node.kind == "sequence")) then
+    local children = meaningful_children(node.children)
+    local failure = nil
+    local index = 1
+    while ((index <= #children) and (failure == nil)) do
+      failure = source_keyword_node_error(children[index], (path .. "[" .. index .. "]"))
+      index = (index + 1)
+    end
+    return failure
+  else
+    return nil
+  end
+end
+local function source_rule_instance_error(node, path)
+  if (node and (node.kind == "table")) then
+    local or_39_ = source_keyword_node_error(source_entry(node, ":severity"), (path .. ".severity"))
+    if not or_39_ then
+      local exclusions = source_entry(node, ":exclusions")
+      if (exclusions and (exclusions.kind == "sequence")) then
+        local children = meaningful_children(exclusions.children)
+        local index = 1
+        local failure = nil
+        while ((index <= #children) and (failure == nil)) do
+          do
+            local exclusion = children[index]
+            if (exclusion.kind == "table") then
+              failure = (source_entry(exclusion, ":path") or source_entry(exclusion, ":reason"))
+            else
+              failure = nil
+            end
+          end
+          index = (index + 1)
+        end
+        if failure then
+          or_39_ = nil
+        else
+          or_39_ = nil
+        end
+      else
+        or_39_ = nil
+      end
+    end
+    return or_39_
+  else
+    return nil
+  end
+end
+local function canonical_source_error(root)
+  local top = meaningful_children(root.children)[1]
+  local lint = (top and (top.kind == "table") and source_entry(top, ":lint"))
+  local rules = (lint and (lint.kind == "table") and source_entry(lint, ":rules"))
+  if (rules and (rules.kind == "table")) then
+    local children = meaningful_children(rules.children)
+    local index = 1
+    local failure = nil
+    while ((index <= #children) and (failure == nil)) do
+      do
+        local rule = children[index]
+        local instances = children[(index + 1)]
+        local rule_path = ("lint.rules[" .. index .. "]")
+        failure = source_keyword_node_error(rule, rule_path)
+        if ((failure == nil) and instances and (instances.kind == "sequence")) then
+          local instance_children = meaningful_children(instances.children)
+          local instance_index = 1
+          while ((instance_index <= #instance_children) and (failure == nil)) do
+            failure = source_rule_instance_error(instance_children[instance_index], (rule_path .. "[" .. instance_index .. "]"))
+            instance_index = (instance_index + 1)
+          end
+        else
+        end
+      end
+      index = (index + 2)
+    end
+    return failure
+  else
+    return nil
+  end
+end
 local parse_string
 do
   local function parse_string0(text)
     local ok, result
-    local function _36_()
+    local function _48_()
       local root, reader_error = reader0.parse(normalize_escaped_delimiters(text))
       if reader_error then
         return {error = reader_error}
@@ -273,7 +375,12 @@ do
           else
             local top = children[1]
             if (top.kind == "table") then
-              return {value = convert(top)}
+              local source_error = canonical_source_error({children = {top}})
+              if source_error then
+                return {error = source_error}
+              else
+                return {value = convert(top)}
+              end
             else
               return {error = error_at("top-level form must be a table", (top.open or top))}
             end
@@ -281,7 +388,7 @@ do
         end
       end
     end
-    ok, result = pcall(_36_)
+    ok, result = pcall(_48_)
     if not ok then
       return nil, result
     else

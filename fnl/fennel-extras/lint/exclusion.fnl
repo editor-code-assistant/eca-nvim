@@ -88,18 +88,32 @@
            (<= finding.line exclusion.lines.to)
            (<= exclusion.lines.from finding.end-line))))
 
+(defn- path-selected?
+  [exclusion finding matcher]
+  (and (or (not exclusion.pattern) (matcher exclusion.pattern finding.path))
+       (or (not exclusion.path)
+           (if matcher
+             (matcher exclusion.path finding.path)
+             (= exclusion.path finding.path)))))
+
+(defn- code-selected?
+  [exclusion finding source matcher]
+  (or (not exclusion.code)
+      (and finding.node
+           (matcher exclusion.code (finding-source (or source finding.source) finding)))))
+
 (defn- selector-selected?
   [exclusion finding source matcher]
-  (and (or (not exclusion.pattern) (matcher exclusion.pattern finding.path))
+  (and (path-selected? exclusion finding matcher)
        (or (not (or exclusion.line exclusion.lines)) (line-selected? exclusion finding))
-       (or (not exclusion.code)
-           (and finding.node
-                (matcher exclusion.code (finding-source (or source finding.source) finding))))
+       (code-selected? exclusion finding source matcher)
        (or (not exclusion.form) (= exclusion.form finding.form))))
 
 (defn matches?
   [exclusion finding source matcher]
   (and (rule-selected? exclusion finding.rule)
+       (or (= exclusion.instance nil)
+           (= finding.instance exclusion.instance))
        (selector-selected? exclusion finding source matcher)))
 
 (defn- mark-match

@@ -67,7 +67,7 @@
 (defn- units-for-list
   [node children policy]
   (let [head         (list-head node)
-        clause-forms (. (registry.rule-options policy "multiline-layout") :clause-forms)]
+        clause-forms (. (registry.rule-options policy "multiline-layout") :clauses)]
     (or (and (= head "if")
              (>= (length children) 5)
              (pair-units children 2))
@@ -107,7 +107,7 @@
 (defn- binding-layout?
   [node policy]
   (let [children      (meaningful-children node)
-        binding-forms (. (registry.rule-options policy "multiline-layout") :binding-forms)]
+        binding-forms (. (registry.rule-options policy "multiline-layout") :bindings)]
     (and (contains? binding-forms (list-head node) 1)
          (accumulate [result false _ child (ipairs children)]
            (or result
@@ -149,7 +149,7 @@
 
 (defn- layout-body-result
   [node head policy]
-  (let [binding-forms (. (registry.rule-options policy "multiline-layout") :binding-forms)]
+  (let [binding-forms (. (registry.rule-options policy "multiline-layout") :bindings)]
     (if (and (= node.kind :list) (contains? binding-forms head 1))
       (binding-layout? node policy)
       (offending-units? node policy))))
@@ -158,8 +158,8 @@
   [node head policy]
   (let [options (. (registry.rule-options policy "multiline-layout"))]
     (and (escaped-newline? node)
-         (or (contains? options.clause-forms head 1)
-             (contains? options.binding-forms head 1)))))
+         (or (contains? options.clauses head 1)
+             (contains? options.bindings head 1)))))
 
 (defn- layout-result
   [node head policy]

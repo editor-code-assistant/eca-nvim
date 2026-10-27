@@ -26,13 +26,14 @@
         (sort-severities entries)))))
 
 (deftest defaults
-  (testing "all seventeen lint rules are off by default"
+  (testing "all eighteen lint rules are off by default"
     (is (= [["binding-per-line" "off"]
             ["call-data-arg" "off"]
             ["control-layout" "off"]
             ["core-require" "off"]
             ["defn-args-newline" "off"]
             ["file-size" "off"]
+            ["forbidden-form" "off"]
             ["function-shape" "off"]
             ["if-branch-call" "off"]
             ["if-without-else" "off"]
@@ -51,10 +52,11 @@
 
 (defn- all-enabled-policy
   []
-  {"core-require" "error"
-   :options       {"core-require" {:applies-to "all"
-                                   :module     "eca.nfnl.core"
-                                   :binding    "core"}}})
+  {:core-require [{:severity   "error"
+                   :applies-to {}
+                   :options    {:module  "eca.nfnl.core"
+                                :binding "core"}
+                   :exclusions []}]})
 
 (defn- core-require-scenario
   []
@@ -75,6 +77,49 @@
   (icollect [_ finding (ipairs scenario.findings)]
     (when (= finding.rule "core-require")
       [finding.rule finding.form finding.severity])))
+
+(defn- forbidden-form-scenario
+  []
+  (let [source        "(require :plenary.busted)\n(local value 1)"
+        path          "fnl/spec/one.fnl"
+        policy        {:forbidden-form [{:severity   "warning"
+                                         :applies-to {:files ["fnl/spec/one.fnl"]
+                                                      :forms ["require"]}
+                                         :options    {:module "plenary.busted"}
+                                         :exclusions []}]}
+        (forms error) (identity.forms source path)]
+    (if error
+      {:error error}
+      (let [rules (load-rules)]
+        {:findings (rules.check path forms policy source)}))))
+
+(defn- forbidden-form-identities
+  [scenario]
+  (icollect [_ finding (ipairs scenario.findings)]
+    [finding.rule finding.form finding.severity]))
+
+(deftest forbidden-form
+  (testing "reports the selected form head with the generic rule identity"
+    (is (= [["forbidden-form" "fnl/spec/one.fnl > top#1" "warning"]]
+           (forbidden-form-identities (forbidden-form-scenario)))))
+  (testing "filters require, import, and module targets by canonical modules"
+    (let [source        "(require :plenary.busted)\\n(import :plenary.busted)\\n(module plenary.busted)\\n(require :luassert)"
+          path          "fnl/spec/one.fnl"
+          policy        {:forbidden-form [{:severity   "warning"
+                                           :applies-to {:files   ["fnl/spec/one.fnl"]
+                                                        :forms   ["require" "import" "module"]
+                                                        :modules ["plenary.busted"]}
+                                           :options    {}
+                                           :exclusions []}]}
+          (forms error) (identity.forms source path)
+          rules         (load-rules)]
+      (is (= [["forbidden-form" "fnl/spec/one.fnl > top#1" "warning"]
+              ["forbidden-form" "fnl/spec/one.fnl > top#2" "warning"]
+              ["forbidden-form" "fnl/spec/one.fnl > module:plenary.busted" "warning"]]
+             (forbidden-form-identities
+              {:findings (if error
+                           []
+                           (rules.check path forms policy source))}))))))
 
 (deftest lint-rules-check
   (testing "does not mutate identity forms"

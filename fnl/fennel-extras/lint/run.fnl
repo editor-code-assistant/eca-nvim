@@ -45,15 +45,18 @@
 
 (defn- stale-message
   [exclusion policy]
-  (if (and exclusion.rule (= (. policy.rules exclusion.rule) "off"))
-    (.. "stale exclusion: rule " exclusion.rule " is not enabled")
-    (.. "stale exclusion: " (or exclusion.form exclusion.pattern exclusion.code "selector"))))
+  (let [instances (and exclusion.rule (. policy.rules exclusion.rule))
+        instance  (and instances exclusion.instance (. instances exclusion.instance))]
+    (if (or (and instance (= instance.severity "off"))
+            (and (= instance nil) (= instances nil)))
+      (.. "stale exclusion: rule " exclusion.rule " is not enabled")
+      (.. "stale exclusion: " (or exclusion.path exclusion.form exclusion.pattern exclusion.code "selector")))))
 
 (defn- stale-exclusion
   [exclusion config-path policy]
   (let [rule    (or exclusion.rule "lint")
         message (stale-message exclusion policy)]
-    {:kind "stale-exclusion" :path config-path :line 1 :col 1 :severity "error" :rule rule :form (or exclusion.form exclusion.pattern exclusion.code "selector") :message message}))
+    {:kind "stale-exclusion" :path config-path :line 1 :col 1 :severity "error" :rule rule :form (or exclusion.path exclusion.form exclusion.pattern exclusion.code "selector") :message message}))
 
 (defn- append-stale-item
   [result exclusion findings config-path matcher policy]
@@ -92,11 +95,8 @@
   [file policy]
   (let [context          {:path             file.path
                           :rules            policy.rules
-                          :options          policy.options
-                          :spec-files       policy.spec-files
                           :selection        file.selection
                           :matcher          policy.matcher
-                          :exclusions       policy.exclusions
                           :defer-exclusions true}
         (findings error) (lint.check file.source context)]
     (if error
@@ -125,8 +125,7 @@
 
 (defn- exclusion-path
   [exclusion]
-  (or (string.match exclusion.form "^(.-) > ")
-      exclusion.form))
+  exclusion.path)
 
 (defn- path-in-scope?
   [paths path index]

@@ -12,49 +12,9 @@ local rules = require("fennel-extras.lint.rules")
 local registry = require("fennel-extras.lint.rules.registry")
 local selection = require("fennel-extras.lint.selection")
 local exclusion_matcher = require("fennel-extras.lint.exclusion")
-local rule_options = require("fennel-extras.lint.rules.options")
-local function normalized_policy_entry(entry)
-  if (type(entry) == "table") then
-    return entry.severity
-  else
-    return entry
-  end
-end
-local function normalized_context_policy(raw_policy)
-  local result = {}
-  for rule, entry in pairs(raw_policy) do
-    result[rule] = normalized_policy_entry(entry)
-  end
-  return result
-end
-local function context_policy(context, raw_policy)
-  if context.matcher then
-    return normalized_context_policy(raw_policy)
-  else
-    return raw_policy
-  end
-end
+local config_lint = require("fennel-extras.config.lint")
 local function policy_for_context(context)
-  local raw_policy = context.rules
-  if raw_policy then
-    return context_policy(context, raw_policy)
-  else
-    return {}
-  end
-end
-local function append_context_option(result, rule, entry)
-  if ((type(entry) == "table") and entry.options) then
-    return core.assoc(result, rule, entry.options)
-  else
-    return result
-  end
-end
-local function context_options(context)
-  local result = {}
-  for rule, entry in pairs((context.rules or {})) do
-    result = append_context_option(result, rule, entry)
-  end
-  return result
+  return (context.rules or {})
 end
 local function normalized_testing_form(finding)
   return ((string.match(finding.form, " > top#[0-9]+$") and (finding.form .. " > testing#1")) or finding.form)
@@ -162,35 +122,49 @@ local function checked_findings(forms, error, path, policy, exclusions, scope, s
     return checked_findings_success(forms, path, policy, exclusions, scope, source, matcher, defer)
   end
 end
-local function copy_context_exclusion(rule, value)
+local function copy_context_exclusion(rule, index, value)
   local copy = {}
   for key, item in pairs(value) do
     copy[key] = item
   end
-  return core.assoc(copy, "rule", rule)
+  return core.assoc(copy, "rule", rule, "instance", index)
 end
-local function append_context_values(result, rule, entries)
+local function append_context_values(result, rule, index, entries)
   for _, value in ipairs(entries) do
-    table.insert(result, copy_context_exclusion(rule, value))
+    table.insert(result, copy_context_exclusion(rule, index, value))
   end
   return result
 end
-local function append_context_entry(result, rule, entry)
+local function append_context_entry(result, rule, index, entry)
   if ((type(entry) == "table") and entry.exclusions) then
-    return append_context_values(result, rule, entry.exclusions)
+    return append_context_values(result, rule, index, entry.exclusions)
+  else
+    return result
+  end
+end
+local function append_context_entries(result, rule, entries)
+  for index, entry in ipairs(entries) do
+    append_context_entry(result, rule, index, entry)
+  end
+  return result
+end
+local function append_context_rule(result, rule, entries)
+  if (type(entries) == "table") then
+    return append_context_entries(result, rule, entries)
   else
     return result
   end
 end
 local function append_context_exclusions(result, raw_policy)
-  for rule, entry in pairs(raw_policy) do
-    append_context_entry(result, rule, entry)
+  for _, item in ipairs(registry.instances(raw_policy)) do
+    for _0, exclusion in ipairs((item.value.exclusions or {})) do
+      table.insert(result, copy_context_exclusion(item.rule, item.index, exclusion))
+    end
   end
   return result
 end
 local function context_exclusions(context)
-  local result = core.concat({}, (context.exclusions or {}))
-  return append_context_exclusions(result, (context.rules or {}))
+  return append_context_exclusions({}, (context.rules or {}))
 end
 local function regex_exclusion_error_entry(entry, matcher, index)
   if ((entry.pattern or entry.code) and (matcher == nil)) then
@@ -207,92 +181,40 @@ local function regex_exclusion_error(exclusions, matcher, index)
     return (regex_exclusion_error_entry(entry, matcher, index) or regex_exclusion_error(exclusions, matcher, (index + 1)))
   end
 end
-local function regex_spec_files_error_entry(spec_files, matcher, index)
-  if ((matcher == nil) and not ast["literal-prefix-pattern?"](spec_files[index])) then
-    return {message = ("lint spec-files " .. index .. ": regex patterns require a matcher")}
+local function context_policy(context)
+  return core.merge(policy_for_context(context), {matcher = context.matcher})
+end
+local function context_lint_value(context)
+  return {rules = (context.rules or {})}
+end
+local function context_matcher_error(context, exclusions)
+  return regex_exclusion_error(exclusions, context.matcher, 1)
+end
+local function context_validation_error(context)
+  return config_lint["lint-error"](context_lint_value(context))
+end
+local function context_forms(source, path)
+  return identity.forms(source, path)
+end
+local function checked_context(forms, parse_error, path, policy, exclusions, scope, source, context, validation_error, matcher_error)
+  local failure = (validation_error or matcher_error)
+  if failure then
+    return _G.error(failure)
   else
-    return nil
+    return checked_findings(forms, parse_error, path, policy, exclusions, scope, source, context.matcher, context["defer-exclusions"])
   end
-end
-local function regex_spec_files_error(spec_files, matcher, index)
-  if (index > #spec_files) then
-    return nil
-  else
-    return (regex_spec_files_error_entry(spec_files, matcher, index) or regex_spec_files_error(spec_files, matcher, (index + 1)))
-  end
-end
-local function missing_option_result(option_values, names, index, name, recurse)
-  if ((option_values == nil) or (option_values[name] == nil)) then
-    return name
-  else
-    return recurse(option_values, names, (index + 1))
-  end
-end
-local function missing_option_step_result(option_values, names, index, name, recurse)
-  return missing_option_result(option_values, names, index, name, recurse)
-end
-local function missing_option_step(option_values, names, index)
-  if (index > #names) then
-    return nil
-  else
-    return missing_option_step_result(option_values, names, index, names[index], missing_option_step)
-  end
-end
-local function policy_error_result(rules0, options, names, index, rule, severity, entry, recurse)
-  local missing = ((severity ~= "off") and missing_option_step(entry, rule_options.names(rule), 1))
-  if missing then
-    return {message = ("missing lint.rules." .. rule .. ".options." .. missing)}
-  else
-    return recurse(rules0, options, names, (index + 1))
-  end
-end
-local function policy_error_step_result(rules0, options, names, index, rule, severity, entry, recurse)
-  return policy_error_result(rules0, options, names, index, rule, severity, entry, recurse)
-end
-local function policy_error_step(rules0, options, names, index)
-  if (index > #names) then
-    return nil
-  else
-    return policy_error_step_result(rules0, options, names, index, names[index], registry["rule-severity"](rules0, names[index]), options[names[index]], policy_error_step)
-  end
-end
-local function policy_with_options_missing(missing)
-  if missing then
-    return _G.error({message = ("missing lint." .. missing)})
-  else
-    return nil
-  end
-end
-local function policy_with_options_result(base_policy, options, spec_files, matcher, missing)
-  if (type(missing) == "table") then
-    return _G.error(missing)
-  else
-    return (policy_with_options_missing(missing) or core.merge(base_policy, {options = options, ["spec-files"] = spec_files, matcher = matcher}))
-  end
-end
-local function policy_with_options(base_policy, context, matcher, spec_files)
-  local raw_options = (context.options or context_options(context))
-  local options = rule_options.normalized(raw_options)
-  local missing = (((spec_files == nil) and "spec-files") or policy_error_step(base_policy, options, registry["rule-names"](), 1))
-  return policy_with_options_result(base_policy, options, spec_files, matcher, missing)
 end
 local check
 do
   local function check0(source, context)
     local path = (context.path or "")
-    local base_policy = policy_for_context(context)
-    local matcher = context.matcher
-    local spec_files = context["spec-files"]
-    local policy = policy_with_options(base_policy, context, matcher, spec_files)
+    local policy = context_policy(context)
     local exclusions = context_exclusions(context)
     local scope = context.selection
-    local forms, parse_error = identity.forms(source, path)
-    local matcher_error = (regex_exclusion_error(exclusions, matcher, 1) or regex_spec_files_error(spec_files, matcher, 1))
-    if matcher_error then
-      return _G.error(matcher_error)
-    else
-      return checked_findings(forms, parse_error, path, policy, exclusions, scope, source, matcher, context["defer-exclusions"])
-    end
+    local validation_error = context_validation_error(context)
+    local forms, parse_error = context_forms(source, path)
+    local matcher_error = context_matcher_error(context, exclusions)
+    return checked_context(forms, parse_error, path, policy, exclusions, scope, source, context, validation_error, matcher_error)
   end
   _2amodule_2a["check"] = check0
   check = _2amodule_2a.check

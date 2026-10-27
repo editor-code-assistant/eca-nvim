@@ -6,8 +6,9 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local option_names = {["module-style"] = {"applies-to", "macro-module", "required-macros"}, ["spec-macro-import"] = {"applies-to", "macro-module", "required-macros", "exempt-files"}, ["spec-no-module"] = {"applies-to", "module-form"}, ["spec-direct-require"] = {"applies-to", "forbidden-modules", "exempt-files"}, ["one-is-per-testing"] = {"applies-to", "testing-form", "assertion-form", "count"}, ["if-branch-call"] = {"applies-to", "if-forms"}, ["if-without-else"] = {"applies-to", "if-forms", "flag-nil-else"}, ["control-layout"] = {"applies-to", "control-forms"}, ["unused-and-or"] = {"applies-to", "forms"}, ["defn-args-newline"] = {"applies-to", "forms"}, ["function-shape"] = {"applies-to", "function-forms"}, ["no-mutation"] = {"applies-to", "forms"}, ["multiline-layout"] = {"applies-to", "clause-forms", "binding-forms"}, ["file-size"] = {"applies-to", "max-code-lines"}, ["core-require"] = {"applies-to", "module", "binding"}, ["binding-per-line"] = {"applies-to", "forms"}, ["call-data-arg"] = {"applies-to", "ignore-forms"}}
-local option_types = {["applies-to"] = "enum", ["macro-module"] = "string", ["required-macros"] = "strings", ["exempt-files"] = "strings", ["module-form"] = "string", ["forbidden-modules"] = "strings", ["testing-form"] = "string", ["assertion-form"] = "string", count = "positive-integer", ["if-forms"] = "strings", ["flag-nil-else"] = "boolean", ["control-forms"] = "strings", forms = "strings", ["function-forms"] = "strings", ["clause-forms"] = "strings", ["binding-forms"] = "strings", ["max-code-lines"] = "positive-integer", module = "string", binding = "string", ["ignore-forms"] = "strings"}
+local option_names = {["forbidden-form"] = {"applies-to", "module"}, ["module-style"] = {"applies-to", "module", "forms"}, ["spec-macro-import"] = {"applies-to", "module", "forms", "exempt-files"}, ["spec-no-module"] = {"applies-to", "module"}, ["spec-direct-require"] = {"applies-to", "modules", "exempt-files"}, ["one-is-per-testing"] = {"applies-to", "testing", "assertion", "count"}, ["if-branch-call"] = {"applies-to", "forms"}, ["if-without-else"] = {"applies-to", "forms", "nil-else"}, ["control-layout"] = {"applies-to", "forms"}, ["unused-and-or"] = {"applies-to", "forms"}, ["defn-args-newline"] = {"applies-to", "forms"}, ["function-shape"] = {"applies-to", "forms", "max-depth"}, ["no-mutation"] = {"applies-to", "forms"}, ["multiline-layout"] = {"applies-to", "clauses", "bindings"}, ["file-size"] = {"applies-to", "max-code-lines"}, ["core-require"] = {"applies-to", "module", "binding"}, ["binding-per-line"] = {"applies-to", "forms"}, ["call-data-arg"] = {"applies-to", "forms"}}
+local required_option_names = {["forbidden-form"] = {"module"}, ["module-style"] = {"module", "forms"}, ["spec-macro-import"] = {"module", "forms", "exempt-files"}, ["spec-no-module"] = {"module"}, ["spec-direct-require"] = {"modules", "exempt-files"}, ["one-is-per-testing"] = {"testing", "assertion", "count"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["defn-args-newline"] = {"forms"}, ["function-shape"] = {"forms"}, ["no-mutation"] = {"forms"}, ["multiline-layout"] = {"clauses", "bindings"}, ["file-size"] = {"max-code-lines"}, ["core-require"] = {"module", "binding"}, ["binding-per-line"] = {"forms"}, ["call-data-arg"] = {"forms"}}
+local option_types = {["applies-to"] = "enum", module = "string", modules = "strings", forms = "strings", ["exempt-files"] = "strings", testing = "string", assertion = "string", count = "positive-integer", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
 local schema
 do
   local function schema0(rule)
@@ -27,6 +28,14 @@ do
   end
   _2amodule_2a["names"] = names0
   names = _2amodule_2a.names
+end
+local required_names
+do
+  local function required_names0(rule)
+    return required_option_names[rule]
+  end
+  _2amodule_2a["required-names"] = required_names0
+  required_names = _2amodule_2a["required-names"]
 end
 local defaults
 do
@@ -77,28 +86,20 @@ local function option_type_message(kind, option)
     return (option .. message)
   end
 end
-local function known_option_error(rule, options, key, value, kind, recurse)
-  if not option_type_valid_3f(kind, value) then
-    return {message = option_type_message(kind, key)}
-  else
-    return recurse(rule, options, key)
-  end
-end
-local function first_option_error_step(rule, options, key, value, recurse)
-  local kind = schema(rule)[key]
-  if (kind == nil) then
-    return {unknown = true, message = ("unknown option " .. tostring(key))}
-  else
-    return known_option_error(rule, options, key, value, kind, recurse)
-  end
-end
-local function first_option_error(rule, options, key)
-  local next_key, next_value = next(options, key)
-  if (next_key == nil) then
+local function first_option_error_step(rule, options, keys, index)
+  local key = keys[index]
+  local value = (key and options[key])
+  local kind = (key and schema(rule)[key])
+  if (key == nil) then
     return nil
   else
-    return first_option_error_step(rule, options, next_key, next_value, first_option_error)
+    return (((kind == nil) and {unknown = true, message = ("unknown option " .. tostring(key))}) or (not option_type_valid_3f(kind, value) and {message = option_type_message(kind, key)}) or first_option_error_step(rule, options, keys, (index + 1)))
   end
+end
+local function first_option_error(rule, options)
+  local keys = vim.tbl_keys(options)
+  table.sort(keys)
+  return first_option_error_step(rule, options, keys, 1)
 end
 local function unknown_option_result(rule, error)
   return {message = (error.message .. " for lint rule " .. rule)}
@@ -111,7 +112,7 @@ local function table_validation_result(rule, error)
   end
 end
 local function table_validation_error(rule, options)
-  local error = first_option_error(rule, options, nil)
+  local error = first_option_error(rule, options)
   return (error and table_validation_result(rule, error))
 end
 local function validate_present(rule, options)
@@ -140,17 +141,5 @@ do
   end
   _2amodule_2a["normalized"] = normalized0
   normalized = _2amodule_2a.normalized
-end
-local spec_files_error
-do
-  local function spec_files_error0(value)
-    if ((value ~= nil) and not parse["sequence?"](value)) then
-      return {message = "spec-files must be a list of strings"}
-    else
-      return nil
-    end
-  end
-  _2amodule_2a["spec-files-error"] = spec_files_error0
-  spec_files_error = _2amodule_2a["spec-files-error"]
 end
 return nil

@@ -45,16 +45,18 @@ local function matching_exclusion_3f(exclusion, findings, matcher, index)
   end
 end
 local function stale_message(exclusion, policy)
-  if (exclusion.rule and (policy.rules[exclusion.rule] == "off")) then
+  local instances = (exclusion.rule and policy.rules[exclusion.rule])
+  local instance = (instances and exclusion.instance and instances[exclusion.instance])
+  if ((instance and (instance.severity == "off")) or ((instance == nil) and (instances == nil))) then
     return ("stale exclusion: rule " .. exclusion.rule .. " is not enabled")
   else
-    return ("stale exclusion: " .. (exclusion.form or exclusion.pattern or exclusion.code or "selector"))
+    return ("stale exclusion: " .. (exclusion.path or exclusion.form or exclusion.pattern or exclusion.code or "selector"))
   end
 end
 local function stale_exclusion(exclusion, config_path, policy)
   local rule = (exclusion.rule or "lint")
   local message = stale_message(exclusion, policy)
-  return {kind = "stale-exclusion", path = config_path, line = 1, col = 1, severity = "error", rule = rule, form = (exclusion.form or exclusion.pattern or exclusion.code or "selector"), message = message}
+  return {kind = "stale-exclusion", path = config_path, line = 1, col = 1, severity = "error", rule = rule, form = (exclusion.path or exclusion.form or exclusion.pattern or exclusion.code or "selector"), message = message}
 end
 local function append_stale_item(result, exclusion, findings, config_path, matcher, policy)
   if not matching_exclusion_3f(exclusion, findings, matcher, 1) then
@@ -90,7 +92,7 @@ local function annotate_findings(findings, source, index, recurse)
   end
 end
 local function lint_file(file, policy)
-  local context = {path = file.path, rules = policy.rules, options = policy.options, ["spec-files"] = policy["spec-files"], selection = file.selection, matcher = policy.matcher, exclusions = policy.exclusions, ["defer-exclusions"] = true}
+  local context = {path = file.path, rules = policy.rules, selection = file.selection, matcher = policy.matcher, ["defer-exclusions"] = true}
   local findings, error = lint.check(file.source, context)
   if error then
     return nil, {message = error.message, line = error.line, col = error.col, path = file.path}
@@ -120,7 +122,7 @@ local function lint_files_at(files, policy, index, result)
   end
 end
 local function exclusion_path(exclusion)
-  return (string.match(exclusion.form, "^(.-) > ") or exclusion.form)
+  return exclusion.path
 end
 local function path_in_scope_3f(paths, path, index)
   if (index > #paths) then

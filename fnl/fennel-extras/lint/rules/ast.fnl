@@ -51,32 +51,6 @@
                 (string.sub node.text 2))
            node.text)))
 
-(defn literal-prefix-pattern?
-  [pattern]
-  (and (= (string.sub pattern 1 1) "^")
-       (= (string.find (string.sub pattern 2) "[%.%*%+%?%(%)|%$%[%]]") nil)))
-
-(defn- pattern-match?
-  [pattern path matcher]
-  (if matcher
-    (matcher pattern path)
-    (and (literal-prefix-pattern? pattern)
-         (= (string.sub path 1 (- (string.len pattern) 1))
-            (string.sub pattern 2)))))
-
-(defn- spec-file-match-step
-  [path spec-files matcher index]
-  (if (> index (length spec-files))
-    false
-    (or (pattern-match? (. spec-files index) path matcher)
-        (spec-file-match-step path spec-files matcher (+ index 1)))))
-
-(defn spec-file?
-  [path spec-files matcher]
-  (if (= spec-files nil)
-    (= (string.sub path 1 9) "fnl/spec/")
-    (spec-file-match-step path spec-files matcher 1)))
-
 (defn- newline-value
   [text index]
   (if (= (string.sub text index index) "\n")
@@ -96,17 +70,10 @@
              (<= line (+ token.line (newline-count token.text 1 0))))
     token))
 
-(defn- string-token-on-line-step
-  [tokens line index]
-  (let [token (. tokens index)]
-    (if (> index (length tokens))
-      false
-      (or (string-token-on-line-value token line)
-          (string-token-on-line-step tokens line (+ index 1))))))
-
 (defn- string-token-on-line?
   [tokens line]
-  (string-token-on-line-step tokens line 1))
+  (accumulate [result false _ token (ipairs tokens)]
+    (or result (string-token-on-line-value token line))))
 
 (defn- first-token-on-line-value
   [token line]
@@ -114,17 +81,10 @@
              (not (or (= token.kind :whitespace) (= token.kind :newline))))
     token))
 
-(defn- first-token-on-line-step
-  [tokens line index]
-  (let [token (. tokens index)]
-    (if (> index (length tokens))
-      nil
-      (or (first-token-on-line-value token line)
-          (first-token-on-line-step tokens line (+ index 1))))))
-
 (defn- first-token-on-line
   [tokens line]
-  (first-token-on-line-step tokens line 1))
+  (accumulate [result nil _ token (ipairs tokens)]
+    (or result (first-token-on-line-value token line))))
 
 (defn- code-line?
   [tokens line]
