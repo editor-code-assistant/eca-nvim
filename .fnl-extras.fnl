@@ -51,82 +51,82 @@
                      :options    {:before 1}}]}
  :lint
  {:rules
-  {:forbidden-form [{:severity   :off
-     :applies-to {}
-     :options    {:module "require"}
-     :exclusions []}]
+  {:forbidden-form   [{:severity   :off
+                       :applies-to {}
+                       :options    {:module "require"}
+                       :exclusions []}]
    :binding-per-line [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["let" "when-let" "if-let" "with-open"]}
-     :exclusions []}]
-   :call-data-arg [{:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:forms []}
-     :exclusions []}]
-   :control-layout [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["if" "when" "and" "or" "case" "match"]}
-     :exclusions []}]
-   :direct-require [{:severity   :error
-     :applies-to {}
-     :options    {:mode    :require
-                  :module  "eca.nfnl.core"
-                  :binding "core"}
-     :exclusions []}
-    {:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:mode         :forbid
-                  :modules      ["plenary.busted" "luassert"]
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}]
-   :file-size [{:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:max-code-lines 300}
-     :exclusions []}]
-   :function-shape [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-     :exclusions []}]
-   :if-branch-call [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["if"]}
-     :exclusions []}]
-   :if-without-else [{:severity   :warning
-     :applies-to {}
-     :options    {:forms    ["if"]
-                  :nil-else true}
-     :exclusions []}]
-   :module-style [{:severity   :error
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:module "eca.nfnl.macros.aniseed"
-                  :forms  ["module" "def" "defn" "defn-"]}
-     :exclusions []}]
+                       :applies-to {}
+                       :options    {:forms ["let" "when-let" "if-let" "with-open"]}
+                       :exclusions []}]
+   :call-data-arg    [{:severity   :warning
+                       :applies-to {:files ["^fennel-extras/"]}
+                       :options    {:forms []}
+                       :exclusions []}]
+   :control-layout   [{:severity   :warning
+                       :applies-to {}
+                       :options    {:forms ["if" "when" "and" "or" "case" "match"]}
+                       :exclusions []}]
+   :direct-require   [{:severity   :error
+                       :applies-to {}
+                       :options    {:mode    :require
+                                    :module  "eca.nfnl.core"
+                                    :binding "core"}
+                       :exclusions []}
+                      {:severity   :error
+                       :applies-to {:files ["^spec/"]}
+                       :options    {:mode         :forbid
+                                    :modules      ["plenary.busted" "luassert"]
+                                    :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+                       :exclusions []}]
+   :file-size        [{:severity   :warning
+                       :applies-to {:files ["^fennel-extras/"]}
+                       :options    {:max-code-lines 300}
+                       :exclusions []}]
+   :function-shape   [{:severity   :warning
+                       :applies-to {}
+                       :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                       :exclusions []}]
+   :if-branch-call   [{:severity   :warning
+                       :applies-to {}
+                       :options    {:forms ["if"]}
+                       :exclusions []}]
+   :if-without-else  [{:severity   :warning
+                       :applies-to {}
+                       :options    {:forms    ["if"]
+                                    :nil-else true}
+                       :exclusions []}]
+   :module-style     [{:severity   :error
+                       :applies-to {:files ["^fennel-extras/"]}
+                       :options    {:module "eca.nfnl.macros.aniseed"
+                                    :forms  ["module" "def" "defn" "defn-"]}
+                       :exclusions []}]
    :multiline-layout [{:severity   :warning
-     :applies-to {}
-     :options    {:clauses  ["case" "match" "case-try" "match-try"]
-                  :bindings ["let" "when-let" "if-let" "with-open"]}
-     :exclusions []}]
-   :no-mutation [{:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:forms ["var" "set" "while"]}
-     :exclusions []}]
+                       :applies-to {}
+                       :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                                    :bindings ["let" "when-let" "if-let" "with-open"]}
+                       :exclusions []}]
+   :no-mutation      [{:severity   :warning
+                       :applies-to {:files ["^fennel-extras/"]}
+                       :options    {:forms ["var" "set" "while"]}
+                       :exclusions []}]
    :form-child-count [{:severity   :error
-     :applies-to {:files ["^spec/"]
-                  :forms ["testing"]}
-     :options    {:children ["is"]
-                  :max-count 1}
-     :exclusions []}]
-   :macro-import [{:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:module       "spec.eca.macros"
-                  :forms        ["deftest" "testing" "is"]
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}]
-   :no-module [{:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:module "module"}
-     :exclusions []}]
-   :unused-and-or [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["and" "or"]}
-     :exclusions []}]}}}
+                       :applies-to {:files ["^spec/"]
+                                    :forms ["testing"]}
+                       :options    {:children  ["is"]
+                                    :max-count 1}
+                       :exclusions []}]
+   :macro-import     [{:severity   :error
+                       :applies-to {:files ["^spec/"]}
+                       :options    {:module       "spec.eca.macros"
+                                    :forms        ["deftest" "testing" "is"]
+                                    :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+                       :exclusions []}]
+   :no-module        [{:severity   :error
+                       :applies-to {:files ["^spec/"]}
+                       :options    {:module "module"}
+                       :exclusions []}]
+   :unused-and-or    [{:severity   :warning
+                       :applies-to {}
+                       :options    {:forms ["and" "or"]}
+                       :exclusions []}]}}}
