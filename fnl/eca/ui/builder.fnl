@@ -255,6 +255,7 @@
           (with-internal-edit (fn []
                                 (widgets.messages.abort-streaming msg-state.streaming-id)
                                 (render-prompt-area)))))
+
       (when on-stop (on-stop)))
 
     (fn is-on-stop-line? []
@@ -284,11 +285,13 @@
                                       (widgets.prompt.clear)
                                       (widgets.steering.set-items state.steering-queue)
                                       (render-prompt-area)))
+
                 (focus-prompt))
               ;; Normal: submit immediately
               (when (and text (not= "" text))
                 (widgets.prompt.add-to-history text)
                 (with-internal-edit (fn [] (widgets.prompt.clear)))
+
                 (focus-prompt)
                 (when on-submit (on-submit text))))))))
 
@@ -330,6 +333,7 @@
                                                                   (set state.stop-line
                                                                        (+ state.stop-line
                                                                           1)))))}))
+
         (when state.welcome
           (widgets.messages.set-welcome {:lines      [state.welcome ""]
                                          :highlights [{:line-idx  0
@@ -357,6 +361,7 @@
                                          {:prompt-start-line (or s.prompt-start-line
                                                                  0)
                                           :loading?          s.loading?}))
+
                                      focus-prompt))
         ;; Re-render on window resize so separator adjusts to new width
         (nvim.nvim_create_autocmd :WinResized
@@ -364,6 +369,7 @@
                                                (when (is-open?)
                                                  (with-internal-edit (fn []
                                                                        (render-prompt-area)))
+
                                                  (focus-prompt)))})))
 
     (fn toggle []
@@ -384,6 +390,7 @@
                               ;; For streaming, this runs after the empty lines are inserted
                               ;; but before the timer starts writing chars, so it's safe.
                               (render-prompt-area)))
+
         (focus-prompt)))
 
     (fn update-message [id content]
@@ -466,6 +473,7 @@
         (with-internal-edit (fn []
                               (widgets.context.add ctx)
                               (render-prompt-area)))
+
         (focus-prompt)))
 
     (fn remove-context [name]
@@ -480,6 +488,7 @@
         (widgets.prompt.set-loading bool)
         ;; Re-render to add/remove the stop line
         (with-internal-edit (fn [] (render-prompt-area)))
+
         (focus-prompt)
         ;; When loading finishes, check for queued steering messages
         (when (and (not bool) (> (length state.steering-queue) 0))
@@ -488,6 +497,7 @@
             (with-internal-edit (fn []
                                   (widgets.steering.clear)
                                   (render-prompt-area)))
+
             ;; Submit all queued messages as one combined message
             (when on-submit (on-submit combined))))))
 

@@ -15,6 +15,7 @@
   (let [lines []
         cli   (require :fennel-extras.cli)]
     {:code  (cli.run args {:cwd root :print (fn [line] (table.insert lines line))})
+
      :lines lines}))
 
 (defn- validation
@@ -52,10 +53,12 @@
         :lint      {:rules {}}})
 
 (deftest workspace-root-contract
+
   (testing "root configuration is grouped under workspace, format, and lint"
     (let [result (validation workspace-config)]
       (is (and (. result :ok)
                (. result :value)))))
+
   (testing "workspace owns path and scan settings"
     (let [result (validation workspace-config)
           value  (. result :value)]
@@ -65,23 +68,27 @@
                (vim.deep_equal [".fnl" ".fnlm"] (. value :workspace :extensions))
                (= false (. value :workspace :dotfiles))
                (= false (. value :workspace :symlinks))))))
+
   (testing "old root-level path and scan settings are rejected"
     (each [_ key (ipairs [:paths :exclude :dotfiles :symlinks])]
       (let [result (validation (legacy-config key))]
         (is (and (not (. result :ok))
                  (= (.. "unknown configuration key: " key)
                     (error-message result)))))))
+
   (testing "root-level scan aliases are rejected"
     (each [_ key (ipairs [:skip-dotfiles :follow-symlinks])]
       (let [result (validation (legacy-config key))]
         (is (and (not (. result :ok))
                  (= (.. "unknown configuration key: " key)
                     (error-message result)))))))
+
   (testing "root-level extensions remain accepted for format compatibility"
     (let [result (validation (legacy-config :extensions))]
       (is (. result :ok)))))
 
 (deftest workspace-relative-rule-files
+
   (testing "a workspace path makes rule file patterns workspace-relative"
     (let [root   (vim.fn.tempname)
           config (.. root "/.fnl-extras.fnl")
@@ -96,6 +103,7 @@
       (is (= 0 (. result :code))))))
 
 (deftest workspace-public-contract-rejections
+
   (testing "contexts is not a public applies-to selector"
     (let [value  {:lint {:rules {:no-mutation [{:severity   "warning"
                                                 :applies-to {:contexts ["source"]}
@@ -105,6 +113,7 @@
       (is (and (not (. result :ok))
                (= "unknown applies-to key: contexts"
                   (error-message result))))))
+
   (testing "spec-files is not a public lint setting"
     (let [result (validation {:lint {:spec-files ["^spec/"] :rules {}}})]
       (is (and (not (. result :ok))

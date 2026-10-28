@@ -123,6 +123,7 @@
                   (fn []
                     (when (chat.is-open?)
                       (chat.update-message reply-id content-at-send)))
+
                   delay)))
              (vim.defer_fn
               (fn []
@@ -130,7 +131,9 @@
                   (chat.finish-streaming reply-id)
                   (chat.set-loading false)
                   (chat.set-status nil)))
+
               (+ delay 100))))
+
          300)))))
 
 (fn self.default-on-stop []

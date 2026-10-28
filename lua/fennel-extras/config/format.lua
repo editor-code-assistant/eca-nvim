@@ -118,6 +118,17 @@ local function validate_alignment(config)
   local value = config.alignment
   return (alignment.validate(value) or (value and (missing_binding_forms(value) or missing_clause_forms(value))))
 end
+local function newline_instance_3f(value)
+  return ((type(value) == "table") and (type(value["applies-to"]) == "table") and ((value["applies-to"].forms == nil) or array_of_strings_3f(value["applies-to"].forms)) and (type(value.options) == "table") and ((value.options.after == nil) or (integer_3f(value.options.after) and (value.options.after >= 0))) and ((value.options.before == nil) or (integer_3f(value.options.before) and (value.options.before >= 0))))
+end
+local function validate_newline(config)
+  local value = config.newline
+  if ((value ~= nil) and not ((type(value) == "table") and every_ipairs_3f(newline_instance_3f, value, 1))) then
+    return {message = "newline must be a list of instances"}
+  else
+    return nil
+  end
+end
 local function validate_extensions(config)
   return (((config.extensions == nil) and missing("extensions")) or ((config.extensions ~= nil) and not extensions_3f(config.extensions) and {message = "extensions must be a non-empty list of strings starting with \".\""}))
 end
@@ -133,7 +144,7 @@ do
   validate_scan = _2amodule_2a["validate-scan"]
 end
 local function validate_table(config, require_paths_3f, require_scan_3f, strict_3f)
-  return ((strict_3f and required(config, "indent-width", "indent-width")) or (strict_3f and required(config, "builtins", "builtins")) or (strict_3f and required(config, "prefix-fallbacks", "prefix-fallbacks")) or (strict_3f and required(config, "parser", "parser")) or (require_scan_3f and required(config, "extensions", "extensions")) or (require_paths_3f and required(config, "paths", "paths")) or validate_builtins(config) or validate_prefix_fallbacks(config) or validate_values(config, require_scan_3f, strict_3f) or validate_alignment(config))
+  return ((strict_3f and required(config, "indent-width", "indent-width")) or (strict_3f and required(config, "builtins", "builtins")) or (strict_3f and required(config, "prefix-fallbacks", "prefix-fallbacks")) or (strict_3f and required(config, "parser", "parser")) or (require_scan_3f and required(config, "extensions", "extensions")) or (require_paths_3f and required(config, "paths", "paths")) or validate_builtins(config) or validate_prefix_fallbacks(config) or validate_values(config, require_scan_3f, strict_3f) or validate_alignment(config) or validate_newline(config))
 end
 local validate
 do

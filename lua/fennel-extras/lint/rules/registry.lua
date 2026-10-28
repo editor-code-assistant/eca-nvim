@@ -5,11 +5,11 @@ do
   pkg_1_auto.loaded["fennel-extras.lint.rules.registry"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
-local rule_name_list = {"forbidden-form", "module-style", "spec-macro-import", "spec-no-module", "spec-direct-require", "one-is-per-testing", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "defn-args-newline", "function-shape", "no-mutation", "multiline-layout", "file-size", "core-require", "binding-per-line", "call-data-arg"}
+local rule_name_list = {"forbidden-form", "module-style", "macro-import", "no-module", "direct-require", "form-child-count", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "function-shape", "no-mutation", "multiline-layout", "file-size", "binding-per-line", "call-data-arg"}
 local core = require("eca.nfnl.core")
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
-local rule_properties = {["module-style"] = {scope = "file"}, ["spec-macro-import"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
+local rule_properties = {["module-style"] = {scope = "file"}, ["macro-import"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
 local defaults
 do
   local function defaults0()
@@ -86,11 +86,15 @@ do
   evaluator_policy = _2amodule_2a["evaluator-policy"]
 end
 local function matches_3f(matcher, pattern, value)
-  if matcher then
-    return matcher(pattern, value)
-  else
-    return (pattern == value)
+  local and_1_ = pattern and value
+  if and_1_ then
+    if matcher then
+      and_1_ = matcher(pattern, value)
+    else
+      and_1_ = (pattern == value)
+    end
   end
+  return and_1_
 end
 local function any_match_3f(items, matcher, value)
   local result = false

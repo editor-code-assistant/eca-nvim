@@ -20,6 +20,7 @@
     false
     (or (= (. items index) target)
         (contains? items target (+ index 1)))))
+
 (local function-heads {:defn true :defn- true :fn true :lambda true :λ true})
 (local binding-heads {:let true :when-let true :if-let true :with-open true})
 

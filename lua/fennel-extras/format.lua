@@ -24,6 +24,121 @@ end
 local function leading_spaces(line)
   return string.len(string.match(line, "^ *"))
 end
+local function newline_rules(config)
+  return (config.newline or {})
+end
+local function form_selected_3f(forms, head)
+  local or_1_ = (forms == nil)
+  if not or_1_ then
+    local result = false
+    for _, value in ipairs(forms) do
+      result = (result or (value == head))
+    end
+    or_1_ = result
+  end
+  return or_1_
+end
+local function form_spans(source)
+  local tokens, error = reader.tokenize(source)
+  local stack = {}
+  local result = {}
+  if not error then
+    for index, token in ipairs(tokens) do
+      if (token.kind == "open") then
+        table.insert(stack, {start = token.line, head = nil})
+      else
+        if (token.kind == "symbol") then
+          local top = stack[#stack]
+          if (top and (top.head == nil)) then
+            top.head = token.text
+          else
+          end
+        else
+          if (token.kind == "close") then
+            local top = table.remove(stack)
+            if (top and top.head) then
+              table.insert(result, {head = top.head, start = top.start, ["end"] = token.line})
+            else
+            end
+          else
+          end
+        end
+      end
+    end
+  else
+  end
+  local function _8_(left, right)
+    return (left.start > right.start)
+  end
+  table.sort(result, _8_)
+  return result
+end
+local function max_break(breaks, index, count)
+  if (count > (breaks[index] or 0)) then
+    breaks[index] = count
+    return nil
+  else
+    return nil
+  end
+end
+local function blank_run_after(lines, index)
+  local next_index = (index + 1)
+  if (lines[next_index] and (lines[next_index] == "")) then
+    return (1 + blank_run_after(lines, next_index))
+  else
+    return 0
+  end
+end
+local function preceding_break_index(lines, index)
+  if ((index > 0) and (lines[index] == "")) then
+    return preceding_break_index(lines, (index - 1))
+  else
+    return index
+  end
+end
+local function apply_newline_rules(source, config)
+  local lines = split_lines(source)
+  local spans = form_spans(source)
+  local breaks = {}
+  for _, rule in ipairs(newline_rules(config)) do
+    local forms = rule["applies-to"].forms
+    local before = (rule.options.before or 0)
+    local after = (rule.options.after or 0)
+    for _0, span in ipairs(spans) do
+      if form_selected_3f(forms, span.head) then
+        max_break(breaks, preceding_break_index(lines, (span.start - 1)), before)
+        if (span["end"] < #lines) then
+          max_break(breaks, span["end"], after)
+        else
+        end
+      else
+      end
+    end
+  end
+  local output = {}
+  local limit
+  if ((#lines > 1) and (lines[#lines] == "")) then
+    limit = (1 + preceding_break_index(lines, (#lines - 1)))
+  else
+    limit = preceding_break_index(lines, #lines)
+  end
+  for index, line in ipairs(lines) do
+    if (index <= limit) then
+      table.insert(output, line)
+      local count = (breaks[index] or 0)
+      local existing = blank_run_after(lines, index)
+      local needed = (count - existing)
+      if (needed > 0) then
+        for _ = 1, needed do
+          table.insert(output, "")
+        end
+      else
+      end
+    else
+    end
+  end
+  return table.concat(output, "\n")
+end
 local function spaces_only_3f(line)
   return (line == string.rep(" ", string.len(line)))
 end
@@ -63,17 +178,18 @@ local function token_text_equal_3f(left, right)
     return non_whitespace_token_equal_3f(left, right)
   end
 end
-local function token_sequence_step(left, right, index, next)
-  local token = left[index]
-  local other = right[index]
-  return (token_kind_equal_3f(token, other) and token_text_equal_3f(token, other) and next(left, right, (index + 1)))
-end
 local function token_sequences_equal_3f(left, right, index)
-  if (index > #left) then
-    return true
-  else
-    return token_sequence_step(left, right, index, token_sequences_equal_3f)
+  local and_19_ = (#left == #right)
+  if and_19_ then
+    local result = true
+    for offset in ipairs(left) do
+      local token = left[offset]
+      local other = right[offset]
+      result = (result and token_kind_equal_3f(token, other) and token_text_equal_3f(token, other))
+    end
+    and_19_ = result
   end
+  return and_19_
 end
 local function binding_whitespace_equal_3f(left, right)
   local left_body = string.gsub(left, "^ *", "")
@@ -233,7 +349,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _16_()
+    local function _32_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -242,7 +358,7 @@ do
         return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_16_)
+    ok, result = pcall(_32_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
@@ -254,8 +370,8 @@ end
 local function rules_config(config)
   return {indents = config.indents, ["format-as"] = config["format-as"], ["indent-patterns"] = config["indent-patterns"], ["indent-width"] = config["indent-width"], builtins = (config.builtins or false), ["prefix-fallbacks"] = (config["prefix-fallbacks"] or false), alignment = config.alignment}
 end
-local function indentation_output_error(source, alignment, out)
-  if not indent_only_3f(source, out, alignment_enabled_3f(alignment)) then
+local function indentation_output_error(source, alignment, out, config)
+  if not (indent_only_3f(source, out, alignment_enabled_3f(alignment)) or config.newline) then
     return {message = "formatter changed more than indentation"}
   else
     return nil
@@ -268,11 +384,11 @@ local function parser_output_error(source, parser, out)
     return nil
   end
 end
-local function formatted_output_error(source, parser, alignment, out)
-  return (indentation_output_error(source, alignment, out) or parser_output_error(source, parser, out))
+local function formatted_output_error(source, parser, alignment, out, config)
+  return (indentation_output_error(source, alignment, out, config) or parser_output_error(source, parser, out))
 end
-local function validated_output(source, parser, alignment, out)
-  local output_error = formatted_output_error(source, parser, alignment, out)
+local function validated_output(source, parser, alignment, out, config)
+  local output_error = formatted_output_error(source, parser, alignment, out, config)
   if output_error then
     return nil, output_error
   else
@@ -288,7 +404,8 @@ local function format_string_valid(source, parser, config)
   if error then
     return nil, error
   else
-    return validated_output(source, parser, alignment, out)
+    local output = apply_newline_rules(out, config)
+    return validated_output(source, parser, alignment, output, config)
   end
 end
 local format_string

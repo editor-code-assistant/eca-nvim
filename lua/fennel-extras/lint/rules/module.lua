@@ -37,46 +37,46 @@ end
 local function add_core_finding(findings, path, form, head, children, node, policy)
   do
     local finding_form = core_finding_form(path, form, head, children)
-    table.insert(findings, finding(path, finding_form, rule_severity(policy, "core-require"), "core-require", "bind eca.nfnl.core as core", node))
+    table.insert(findings, finding(path, finding_form, rule_severity(policy, "direct-require"), "direct-require", "bind eca.nfnl.core as core", node))
   end
   return nil
 end
-local function core_require_form(head, children, node)
+local function direct_require_form(head, children, node)
   return (((head == "local") and children[3]) or node)
 end
-local function core_require_target(require_form, require_children)
+local function direct_require_target(require_form, require_children)
   return ((list_head(require_form) == "require") and literal_text(require_children[2]))
 end
-local function canonical_core_require_3f(head, children, require_children, binding)
+local function canonical_direct_require_3f(head, children, require_children, binding)
   return (((head == "local") and (#children == 3) and (symbol_text(children[2]) == binding) and (#require_children == 2)) or ((head == "require") and (#children == 2)))
 end
-local function maybe_add_core_require_finding(findings, path, form, head, children, node, policy, target, canonical, options)
-  if (options and (target == options.module) and not canonical) then
+local function maybe_add_direct_require_finding(findings, path, form, head, children, node, policy, target, canonical, options)
+  if (options and (options.mode == "require") and (target == options.module) and not canonical) then
     return add_core_finding(findings, path, form, head, children, node, policy)
   else
     return nil
   end
 end
-local function core_require_children(require_form)
+local function direct_require_children(require_form)
   if require_form then
     return meaningful_children(require_form)
   else
     return {}
   end
 end
-local core_require_finding
+local direct_require_finding
 do
-  local function core_require_finding0(findings, path, form, head, node, policy)
+  local function direct_require_finding0(findings, path, form, head, node, policy)
     local children = meaningful_children(node)
-    local require_form = core_require_form(head, children, node)
-    local require_children = core_require_children(require_form)
-    local target = core_require_target(require_form, require_children)
-    local options = registry["rule-options"](policy, "core-require")
+    local require_form = direct_require_form(head, children, node)
+    local require_children = direct_require_children(require_form)
+    local target = direct_require_target(require_form, require_children)
+    local options = registry["rule-options"](policy, "direct-require")
     local binding = (options and options.binding)
-    local canonical = canonical_core_require_3f(head, children, require_children, binding)
-    return maybe_add_core_require_finding(findings, path, form, head, children, node, policy, target, canonical, options)
+    local canonical = canonical_direct_require_3f(head, children, require_children, binding)
+    return maybe_add_direct_require_finding(findings, path, form, head, children, node, policy, target, canonical, options)
   end
-  _2amodule_2a["core-require-finding"] = core_require_finding0
-  core_require_finding = _2amodule_2a["core-require-finding"]
+  _2amodule_2a["direct-require-finding"] = direct_require_finding0
+  direct_require_finding = _2amodule_2a["direct-require-finding"]
 end
 return nil

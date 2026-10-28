@@ -18,6 +18,8 @@
              (set valid false)))
          valid)))
 
+
+
 (defn- sorted-unknown-key
   [value allowed]
   (accumulate [candidate nil key _ (pairs value)]
@@ -27,6 +29,8 @@
       key
       candidate)))
 
+
+
 (defn- canonical-map-keys-error
   [value path allowed]
   (when (= (type value) :table)
@@ -34,12 +38,16 @@
       (when key
         {:message (.. path "." (tostring key) ": unknown key")}))))
 
+
+
 (defn- canonical-contract-key-error
   [value allowed prefix]
   (when (= (type value) :table)
     (let [key (sorted-unknown-key value allowed)]
       (when key
         {:message (.. prefix (tostring key))}))))
+
+
 
 (defn- canonical-applies-to-error
   [value path]
@@ -52,6 +60,8 @@
         {:message (.. path ".forms must be a list of strings")})
       (when (and value.modules (not (canonical-sequence-of-strings? value.modules)))
         {:message (.. path ".modules must be a list of strings")})))
+
+
 
 (defn- canonical-exclusions-error
   [value path]
@@ -71,12 +81,16 @@
                     (set failure {:message (.. path "[" index "] requires string path and reason")})))))))
         failure)))
 
+
+
 (defn- canonical-options-error
   [name option-values path]
   (when (= (type option-values) :table)
     (let [error (options.validate name option-values)]
       (when error
         {:message (.. path ": " error.message)}))))
+
+
 
 (defn- canonical-missing-option-step
   [name index option-values names option-index]
@@ -87,10 +101,19 @@
                {:message (.. "missing lint.rules." name "[" index "].options." option-name)})
           (canonical-missing-option-step name index option-values names (+ option-index 1))))))
 
+
+
 (defn- canonical-missing-option-error
   [name index instance]
   (when (not= instance.severity "off")
-    (canonical-missing-option-step name index instance.options (registry.required-option-names name) 1)))
+    (if (= name "direct-require")
+      (or (canonical-missing-option-step name index instance.options ["mode"] 1)
+          (if (= instance.options.mode "require")
+            (canonical-missing-option-step name index instance.options ["module" "binding"] 1)
+            (canonical-missing-option-step name index instance.options ["modules" "exempt-files"] 1)))
+      (canonical-missing-option-step name index instance.options (registry.required-option-names name) 1))))
+
+
 
 (defn- canonical-instance-error
   [name index instance]
@@ -107,12 +130,16 @@
         (canonical-missing-option-error name index instance)
         (canonical-exclusions-error instance.exclusions (.. path ".exclusions")))))
 
+
+
 (defn- canonical-rule-error-step
   [rules key candidate]
   (if (or (= candidate nil)
           (< (tostring key) (tostring candidate)))
     key
     candidate))
+
+
 
 (defn- canonical-rules-error
   [rules]
@@ -135,12 +162,16 @@
                         (set failure (canonical-instance-error name index instance))))
                     failure)))))))))
 
+
+
 (defn- canonical-lint-error
   [lint]
   (or (when (not= (type lint) :table)
         {:message "lint must be a table"})
       (canonical-contract-key-error lint {:rules true} "unknown lint key: ")
       (canonical-rules-error lint.rules)))
+
+
 
 (defn lint-error
   [lint]

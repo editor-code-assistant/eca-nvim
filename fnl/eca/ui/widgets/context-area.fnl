@@ -72,7 +72,9 @@
                                      {:end_col hl.col-end :hl_group hl.hl-group})))))
 
   (fn clear [] (set state.items []))
+
   (fn get-state [] state)
+
   (fn get-end-line [] state.end-line)
 
   {: render : render-highlights : add : remove : clear : has-items? : get-state : get-end-line})

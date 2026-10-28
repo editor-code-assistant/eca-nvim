@@ -6,6 +6,7 @@
 
 (fn create [buf-id ?opts]
   (local wrap-write (or (?. ?opts :wrap-write) (fn [f] (f))))
+
   ;; Called when streaming inserts a new line (so prompt can adjust)
   (local on-line-inserted (or (?. ?opts :on-line-inserted) (fn [] nil)))
 
@@ -66,6 +67,7 @@
                    (nvim.nvim_buf_set_lines buf-id next-line next-line false [""])
                    (set state.end-line (+ state.end-line 1))
                    (on-line-inserted))))
+
               (set state.streaming-line (+ state.streaming-line 1))
               (set state.streaming-col 0))
             ;; Regular char: append at current position
@@ -91,6 +93,7 @@
                     (.. state.streaming-displayed char))))
            (set state.streaming-queue
                 (string.sub state.streaming-queue (+ take 1)))))))
+
     ;; Continue or stop
     (if (> (length state.streaming-queue) 0)
       (set state.streaming-timer
@@ -152,6 +155,7 @@
            (set state.streaming-line state.end-line)
            (set state.streaming-col 0)
            (set state.end-line (+ state.end-line 2))))
+
         (start-streaming-timer))
       ;; Non-streaming: render immediately
       (if (= 1 (length state.messages))
@@ -218,6 +222,7 @@
     (render))
 
   (fn get-state [] state)
+
   (fn get-end-line [] state.end-line)
 
   {: render : append-message : update-message : finish-streaming : abort-streaming

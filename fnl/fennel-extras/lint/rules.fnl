@@ -11,7 +11,6 @@
 (local branch-rule (require :fennel-extras.lint.rules.branch))
 (local size-rule (require :fennel-extras.lint.rules.size))
 (local mutation-rule (require :fennel-extras.lint.rules.mutation))
-(local defn-rule (require :fennel-extras.lint.rules.defn))
 (local layout-rule (require :fennel-extras.lint.rules.layout))
 (local control-rule (require :fennel-extras.lint.rules.control))
 (local discard-rule (require :fennel-extras.lint.rules.discard))
@@ -35,6 +34,8 @@
   []
   (registry.defaults))
 
+
+
 (defn- module-import-state-enabled
   [state import-info policy]
   (let [target-module (. (registry.rule-options policy "module-style") :module)]
@@ -42,33 +43,45 @@
       (has-module-import? import-info.names)
       state.module-import)))
 
+
+
 (defn- module-import-state
   [state import-info policy]
   (if (enabled? policy "module-style")
     (module-import-state-enabled state import-info policy)
     state.module-import))
 
+
+
 (defn- spec-import-state-enabled
   [state import-info policy]
-  (let [options (registry.rule-options policy "spec-macro-import")]
+  (let [options (registry.rule-options policy "macro-import")]
     (if (and import-info (= import-info.target options.module))
       (has-all? import-info.names options.forms)
       state.spec-import)))
 
+
+
 (defn- spec-import-state
   [state import-info policy]
-  (if (enabled? policy "spec-macro-import")
+  (if (enabled? policy "macro-import")
     (spec-import-state-enabled state import-info policy)
     state.spec-import))
+
+
 
 (defn- update-check-state
   [state import-info head policy]
   {:module-import (module-import-state state import-info policy) :module-form (or state.module-form (= head "module")) :spec-import (spec-import-state state import-info policy)})
 
+
+
 (defn- check-state-step
   [nodes index state policy recurse]
   (let [node (. nodes index)]
     (recurse nodes (+ index 1) (update-check-state state (macro-import? node) (list-head node) policy) policy)))
+
+
 
 (defn- check-state
   [nodes index state policy]
@@ -76,11 +89,15 @@
     state
     (check-state-step nodes index state policy check-state)))
 
+
+
 (defn- append-all
   [target items]
   (each [_ value (ipairs (or items []))]
     (table.insert target value))
   target)
+
+
 
 (defn- contains?
   [items target index]
@@ -89,20 +106,22 @@
     (or (= (. items index) target)
         (contains? items target (+ index 1)))))
 
+
+
 (defn- evaluate-form
   [path form forms policy]
   (let [node     form.node
         head     (list-head node)
         findings []]
-    (when (and (enabled? policy "spec-no-module")
-               (= head (. (registry.rule-options policy "spec-no-module") :module)))
+    (when (and (enabled? policy "no-module")
+               (= head (. (registry.rule-options policy "no-module") :module)))
       (table.insert findings
-                    (finding path form (rule-severity policy "spec-no-module") "spec-no-module" "specs must not declare a module" node)))
-    (when (and (enabled? policy "spec-direct-require")
+                    (finding path form (rule-severity policy "no-module") "no-module" "specs must not declare a module" node)))
+    (when (and (enabled? policy "direct-require")
                (require-node? node))
-      (spec-rule.spec-direct-require-finding findings path form policy node))
-    (when (and (= head "testing") (enabled? policy "one-is-per-testing"))
-      (spec-rule.testing-finding findings path form policy node))
+      (spec-rule.direct-require-finding findings path form policy node))
+    (when (enabled? policy "form-child-count")
+      (spec-rule.form-child-count-finding findings path form policy node))
     (when (enabled? policy "forbidden-form")
       (forbidden-rule.findings findings path form policy node))
     (when (and (enabled? policy "function-shape")
@@ -113,31 +132,41 @@
       (append-all findings (branch-rule.finding path form policy node)))
     (when (and (or (= head "local") (= head "require"))
                node
-               (enabled? policy "core-require"))
-      (module-rule.core-require-finding findings path form head node policy))
+               (enabled? policy "direct-require"))
+      (module-rule.direct-require-finding findings path form head node policy))
     findings))
+
+
 
 (defn- append-form-findings
   [all path forms policy spec-import]
-  (when (enabled? policy "spec-macro-import")
+  (when (enabled? policy "macro-import")
     (append-all all (spec-rule.spec-import-finding path forms policy spec-import)))
   (each [_ form (ipairs forms)]
     (append-all all (evaluate-form path form forms policy)))
   all)
 
+
+
 (defn- append-synthetic-findings
   [all path forms policy source]
   (shape-rule.synthetic-findings all path forms policy source))
 
+
+
 (defn- remove-contained-function-findings
   [findings]
   (shape-rule.remove-contained-function-findings findings))
+
+
 
 (defn- append-file-size-findings
   [findings path policy source]
   (if (enabled? policy "file-size")
     (size-rule.finding path policy source)
     findings))
+
+
 
 (defn- append-module-findings
   [findings path forms policy state]
@@ -146,11 +175,15 @@
                 (module-rule.module-finding path forms policy (and state.module-import state.module-form)))
     findings))
 
+
+
 (defn- append-shape-findings
   [findings path forms policy source]
   (if (enabled? policy "function-shape")
     (append-synthetic-findings findings path forms policy source)
     findings))
+
+
 
 (defn- append-when-findings
   [findings path forms policy source]
@@ -158,11 +191,7 @@
     (when-rule.findings findings path forms policy source)
     findings))
 
-(defn- append-defn-findings
-  [findings path forms policy source]
-  (if (enabled? policy "defn-args-newline")
-    (defn-rule.findings findings path forms policy source)
-    findings))
+
 
 (defn- append-layout-findings
   [findings path forms policy source]
@@ -171,11 +200,15 @@
     (layout-rule.findings findings path forms policy source)
     findings))
 
+
+
 (defn- append-control-findings
   [findings path forms policy source]
   (if (enabled? policy "control-layout")
     (control-rule.findings findings path forms policy source)
     findings))
+
+
 
 (defn- append-discard-findings
   [findings path forms policy source]
@@ -183,11 +216,15 @@
     (discard-rule.findings findings path forms policy source)
     findings))
 
+
+
 (defn- append-mutation-findings
   [findings path forms policy source]
   (if (enabled? policy "no-mutation")
     (mutation-rule.findings findings path forms policy source)
     findings))
+
+
 
 (defn- append-binding-findings
   [findings path forms policy source]
@@ -195,11 +232,15 @@
     (binding-rule.findings findings path forms policy source)
     findings))
 
+
+
 (defn- append-call-findings
   [findings path forms policy source]
   (if (enabled? policy "call-data-arg")
     (call-rule.findings findings path forms policy source)
     findings))
+
+
 
 (defn- check-result
   [path forms policy source state]
@@ -208,7 +249,6 @@
         findings (append-form-findings findings path forms policy state.spec-import)
         findings (append-shape-findings findings path forms policy source)
         findings (append-when-findings findings path forms policy source)
-        findings (append-defn-findings findings path forms policy source)
         findings (append-layout-findings findings path forms policy source)
         findings (append-control-findings findings path forms policy source)
         findings (append-discard-findings findings path forms policy source)
@@ -216,6 +256,8 @@
         findings (append-binding-findings findings path forms policy source)
         findings (append-call-findings findings path forms policy source)]
     (remove-contained-function-findings findings)))
+
+
 
 (defn- check-instance
   [path forms policy source instance]
@@ -226,11 +268,15 @@
       (when (registry.instance-applies-to? instance.value finding policy.matcher)
         (core.assoc finding :instance instance.index)))))
 
+
+
 (defn- append-instance-findings
   [result path forms policy source instance]
   (each [_ finding (ipairs (check-instance path forms policy source instance))]
     (table.insert result finding))
   result)
+
+
 
 (defn check
   [path forms policy source]

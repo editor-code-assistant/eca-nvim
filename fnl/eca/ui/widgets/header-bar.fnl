@@ -18,6 +18,7 @@
     (render))
 
   (fn get-state [] items)
+
   (fn line-count [] 1)
 
   {: render : update : get-state : line-count})

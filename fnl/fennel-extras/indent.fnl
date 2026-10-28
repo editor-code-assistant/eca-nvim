@@ -15,6 +15,7 @@
   [lines source start end]
   (table.insert lines (string.sub source start (- end 1)))
   (+ end 1))
+
 (defn- split-lines
   [source]
   (let [lines []]
@@ -123,11 +124,13 @@
           (when (and (= kind :block) (>= arg-index value))
             (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
   result)
+
 (defn- block-argument-index
   [arg-index first-token node]
   (if (and (= arg-index 0) (> first-token.line node.open.line))
     1
     arg-index))
+
 (defn- custom-rule
   [config name]
   (let [alignment (settings.resolve config)]
@@ -234,6 +237,7 @@
   [line-number line tokens]
   (assign-output-columns tokens line-number line 0 false)
   line)
+
 (defn- process-line
   [line-number line nodes tokens config]
   (let [string-line? (string-on-line? tokens line-number)

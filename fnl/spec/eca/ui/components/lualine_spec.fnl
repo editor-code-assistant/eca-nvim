@@ -20,6 +20,7 @@
 (defn- installed-plugin-scenario
   []
   (let [lualine-mock {:setup (fn [])}]
+
     (with-lualine-plugin lualine-mock
       (fn [] {:expected lualine-mock
               :actual   (lualine.plugin)}))))
@@ -35,8 +36,10 @@
   (let [plugin {:get_config (fn []
                               {:options    {:theme :gruvbox}
                                :extensions [{:filetypes [:other]}]})
+
                 :setup      (fn [cfg]
                               (set captured cfg))}]
+
     (with-lualine-plugin plugin
       (fn []
         (lualine.setup [{:value "~/dev/eca-nvim"}
@@ -45,13 +48,16 @@
         captured))))
 
 (deftest plugin
+
   (testing "returns the lualine module when the plugin is installed"
     (let [{: expected : actual} (installed-plugin-scenario)]
       (is (identical? expected actual))))
+
   (testing "returns nil when the plugin is missing"
     (is (nil? (missing-plugin-scenario)))))
 
 (deftest setup
+
   (testing "registers the eca-chat extension without touching other config"
     (let [captured (setup-scenario)]
       (is (= {:extensions [{:filetypes [:other]}

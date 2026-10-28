@@ -35,6 +35,7 @@
 (defn- close-string
   [j]
   (values true (+ j 1)))
+
 (defn- scan-string
   [source i]
   (let [n (string.len source)]
@@ -103,6 +104,7 @@
 (defn- advance-line
   [line col]
   (values (+ line 1) 1))
+
 (defn- advance-position
   [text line col]
   (var j 1)
@@ -172,6 +174,7 @@
   (let [top (. stack (length stack))]
     (set top.node.close tok)
     (table.remove stack)))
+
 (defn tokenize
   [source]
   (let [tokens []

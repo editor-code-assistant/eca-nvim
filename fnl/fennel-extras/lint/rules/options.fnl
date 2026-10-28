@@ -5,54 +5,50 @@
 (local parse (require :fennel-extras.config.parse))
 
 (local option-names
-       {"forbidden-form"      ["module"]
-        "module-style"        ["module" "forms"]
-        "spec-macro-import"   ["module" "forms" "exempt-files"]
-        "spec-no-module"      ["module"]
-        "spec-direct-require" ["modules" "exempt-files"]
-        "one-is-per-testing"  ["testing" "assertion" "count"]
-        "if-branch-call"      ["forms"]
-        "if-without-else"     ["forms" "nil-else"]
-        "control-layout"      ["forms"]
-        "unused-and-or"       ["forms"]
-        "defn-args-newline"   ["forms"]
-        "function-shape"      ["forms" "max-depth"]
-        "no-mutation"         ["forms"]
-        "multiline-layout"    ["clauses" "bindings"]
-        "file-size"           ["max-code-lines"]
-        "core-require"        ["module" "binding"]
-        "binding-per-line"    ["forms"]
-        "call-data-arg"       ["forms"]})
+       {"forbidden-form"   ["module"]
+        "module-style"     ["module" "forms"]
+        "macro-import"     ["module" "forms" "exempt-files"]
+        "no-module"        ["module"]
+        "direct-require"   ["mode" "modules" "exempt-files" "module" "binding"]
+        "form-child-count" ["children" "max-count"]
+        "if-branch-call"   ["forms"]
+        "if-without-else"  ["forms" "nil-else"]
+        "control-layout"   ["forms"]
+        "unused-and-or"    ["forms"]
+        "function-shape"   ["forms" "max-depth"]
+        "no-mutation"      ["forms"]
+        "multiline-layout" ["clauses" "bindings"]
+        "file-size"        ["max-code-lines"]
+        "binding-per-line" ["forms"]
+        "call-data-arg"    ["forms"]})
 
 (local required-option-names
-       {"forbidden-form"      ["module"]
-        "module-style"        ["module" "forms"]
-        "spec-macro-import"   ["module" "forms" "exempt-files"]
-        "spec-no-module"      ["module"]
-        "spec-direct-require" ["modules" "exempt-files"]
-        "one-is-per-testing"  ["testing" "assertion" "count"]
-        "if-branch-call"      ["forms"]
-        "if-without-else"     ["forms"]
-        "control-layout"      ["forms"]
-        "unused-and-or"       ["forms"]
-        "defn-args-newline"   ["forms"]
-        "function-shape"      ["forms"]
-        "no-mutation"         ["forms"]
-        "multiline-layout"    ["clauses" "bindings"]
-        "file-size"           ["max-code-lines"]
-        "core-require"        ["module" "binding"]
-        "binding-per-line"    ["forms"]
-        "call-data-arg"       ["forms"]})
+       {"forbidden-form"   ["module"]
+        "module-style"     ["module" "forms"]
+        "macro-import"     ["module" "forms" "exempt-files"]
+        "no-module"        ["module"]
+        "direct-require"   ["mode"]
+        "form-child-count" ["children" "max-count"]
+        "if-branch-call"   ["forms"]
+        "if-without-else"  ["forms"]
+        "control-layout"   ["forms"]
+        "unused-and-or"    ["forms"]
+        "function-shape"   ["forms"]
+        "no-mutation"      ["forms"]
+        "multiline-layout" ["clauses" "bindings"]
+        "file-size"        ["max-code-lines"]
+        "binding-per-line" ["forms"]
+        "call-data-arg"    ["forms"]})
 
 (local option-types
        {
         "module"         :string
+        "mode"           :string
         "modules"        :strings
         "forms"          :strings
         "exempt-files"   :strings
-        "testing"        :string
-        "assertion"      :string
-        "count"          :positive-integer
+        "children"       :strings
+        "max-count"      :positive-integer
         "nil-else"       :boolean
         "clauses"        :strings
         "bindings"       :strings
@@ -67,27 +63,39 @@
       (tset result name (. option-types name)))
     result))
 
+
+
 (defn names
   [rule]
   (. option-names rule))
+
+
 
 (defn required-names
   [rule]
   (. required-option-names rule))
 
+
+
 (defn defaults
   []
   {})
 
+
+
 (defn- boolean?
   [value]
   (or (= value true) (= value false)))
+
+
 
 (defn- positive-integer?
   [value]
   (and (= (type value) :number)
        (= value (math.floor value))
        (> value 0)))
+
+
 
 (defn- strings-step
   [value index]
@@ -96,13 +104,19 @@
     (and (= (type (. value index)) :string)
          (strings-step value (+ index 1)))))
 
+
+
 (defn- strings?
   [value]
   (and (parse.sequence? value)
        (strings-step value 1)))
 
+
+
 (local validators
        {:string           (fn [value] (= (type value) :string))
+
+
         :strings          strings?
         :positive-integer positive-integer?
         :boolean          boolean?})
@@ -120,10 +134,14 @@
       (validator value)
       true)))
 
+
+
 (defn- option-type-message
   [kind option]
   (let [message (. type-messages kind)]
     (.. option message)))
+
+
 
 (defn- first-option-error-step
   [rule options keys index]
@@ -138,15 +156,21 @@
                {:message (option-type-message kind key)})
           (first-option-error-step rule options keys (+ index 1))))))
 
+
+
 (defn- first-option-error
   [rule options]
   (let [keys (vim.tbl_keys options)]
     (table.sort keys)
     (first-option-error-step rule options keys 1)))
 
+
+
 (defn- unknown-option-result
   [rule error]
   {:message (.. error.message " for lint rule " rule)})
+
+
 
 (defn- table-validation-result
   [rule error]
@@ -154,11 +178,15 @@
     (unknown-option-result rule error)
     error))
 
+
+
 (defn- table-validation-error
   [rule options]
   (let [error (first-option-error rule options)]
     (and error
          (table-validation-result rule error))))
+
+
 
 (defn- validate-present
   [rule options]
@@ -166,11 +194,15 @@
     (table-validation-error rule options)
     {:message "options must be a table"}))
 
+
+
 (defn validate
   [rule options]
   (if (= options nil)
     nil
     (validate-present rule options)))
+
+
 
 (defn normalized
   [overrides]

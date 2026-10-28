@@ -26,7 +26,7 @@ do
 end
 local function formatter_config(cfg)
   local format = cfg.format
-  return {indents = format.indents, ["format-as"] = format["format-as"], ["indent-patterns"] = format["indent-patterns"], ["indent-width"] = format["indent-width"], builtins = format.builtins, ["prefix-fallbacks"] = format["prefix-fallbacks"], parser = format.parser, alignment = format.alignment}
+  return {indents = format.indents, ["format-as"] = format["format-as"], ["indent-patterns"] = format["indent-patterns"], ["indent-width"] = format["indent-width"], builtins = format.builtins, ["prefix-fallbacks"] = format["prefix-fallbacks"], parser = format.parser, alignment = format.alignment, newline = format.newline}
 end
 local function normalized_path(path)
   if (string.sub(path, 1, 9) == "/private/") then

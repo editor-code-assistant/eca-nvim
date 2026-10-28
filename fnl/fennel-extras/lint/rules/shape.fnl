@@ -79,6 +79,7 @@
   [findings path form forms policy node]
   (when (enabled? policy "function-shape")
     (add-function-findings-for-node findings path form forms policy node)))
+
 (defn- configured-function?
   [node policy]
   (and (= node.kind :list)
@@ -106,6 +107,7 @@
 (defn- append-synthetic-findings
   [all path forms policy source]
   (append-synthetic-nodes all path forms policy source))
+
 (defn- position-before-or-equal?
   [left right]
   (or (< left.line right.line)

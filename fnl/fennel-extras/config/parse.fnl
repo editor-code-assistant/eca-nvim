@@ -293,6 +293,7 @@
                                                {:error source-error}
                                                {:value (convert top)}))
                                            {:error (error-at "top-level form must be a table" (or top.open top))})))))))))]
+
     (if (not ok)
       (values nil result)
       (if result.error

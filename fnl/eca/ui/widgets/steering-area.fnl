@@ -74,6 +74,7 @@
     (set state.items []))
 
   (fn get-state [] state)
+
   (fn get-end-line [] state.end-line)
 
   {: render : render-highlights : set-items : has-items?

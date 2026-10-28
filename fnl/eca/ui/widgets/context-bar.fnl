@@ -51,6 +51,7 @@
            (when (not= item.text text) item))))
 
   (fn clear [] (set state.items []))
+
   (fn get-state [] state)
 
   {: render : add : remove : clear : get-state})

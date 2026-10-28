@@ -263,6 +263,7 @@
 (defn- sorted-files-success
   [result]
   (table.sort result (fn [a b] (< a.relative b.relative)))
+
   (values result nil))
 
 (defn- sorted-files-result

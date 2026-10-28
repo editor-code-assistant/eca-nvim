@@ -33,128 +33,151 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
 The formatter uses an **explicit configuration contract**. There are no hidden defaults: omitted switches are off, and required values must be present. The repository's real configuration is the main example:
 
 ```fennel
-{:workspace {:paths ["fnl"]
-             :exclude ["fnl/eca/nfnl"]
-             :extensions [".fnl" ".fnlm"]
-             :dotfiles false
-             :symlinks false}
- :format {:indent-width 2
- ;; Explicit indentation rules for formatter operation.
- :builtins {"fn" [[:inner 0]]
-            "lambda" [[:inner 0]]
-            "macro" [[:inner 0]]
-            "let" [[:block 1]]
-            "when" [[:block 1]]
-            "when-let" [[:block 1]]
-            "if-let" [[:block 1]]
-            "each" [[:block 1]]
-            "for" [[:block 1]]
-            "icollect" [[:block 1]]
-            "collect" [[:block 1]]
-            "accumulate" [[:block 1]]
-            "case" [[:block 1]]
-            "match" [[:block 1]]
-            "case-try" [[:block 1]]
-            "match-try" [[:block 1]]
-            "while" [[:block 1]]
-            "with-open" [[:block 1]]
-            "do" [[:block 0]]}
- ;; Explicit prefix fallbacks.
- :prefix-fallbacks {"def" [[:inner 0]]
-                    "with-" [[:block 1]]}
- ;; Parser used for AST-preserving formatter checks.
- :parser "eca.nfnl.fennel"
- :indents {"deftest" [[:block 1]]
-            "testing" [[:block 1]]
-            "if" [[:block 1]]}
- :format-as {}
- :indent-patterns []
- ;; All formatter alignment modes are explicit.
- :alignment {:bindings true
-             :maps true
-             :clauses true
-             :split-bindings true
-             :collapse-padding true
-             :binding-forms ["let" "when-let" "if-let" "with-open"]
-             :clause-forms ["case" "match" "case-try" "match-try" "if"]}
- }
- :lint             {                    :rules      {:binding-per-line    [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:forms ["let" "when-let" "if-let" "with-open"]}
-                                                        :exclusions []}]
-                                 :call-data-arg       [{:severity   :warning
-                                                        :applies-to {:files ["^fennel-extras/"]}}
-                                                        :options    {:forms []}
-                                                        :exclusions []}]
-                                 :control-layout      [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:forms ["if" "when" "and" "or" "case" "match"]}
-                                                        :exclusions []}]
-                                 :core-require        [{:severity   :error
-                                                        :applies-to {}}
-                                                        :options    {:module  "eca.nfnl.core"
-                                                                     :binding "core"}
-                                                        :exclusions []}]
-                                 :defn-args-newline   [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:forms ["defn" "defn-"]}
-                                                        :exclusions []}]
-                                 :file-size           [{:severity   :warning
-                                                        :applies-to {:files ["^fennel-extras/"]}}
-                                                        :options    {:max-code-lines 300}
-                                                        :exclusions []}]
-                                 :function-shape      [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-                                                        :exclusions []}]
-                                 :if-branch-call      [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:forms ["if"]}
-                                                        :exclusions []}]
-                                 :if-without-else     [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:forms    ["if"]
-                                                                     :nil-else true}
-                                                        :exclusions []}]
-                                 :module-style        [{:severity   :error
-                                                        :applies-to {:files ["^fennel-extras/"]}}
-                                                        :options    {:module "eca.nfnl.macros.aniseed"
-                                                                     :forms  ["module" "def" "defn" "defn-"]}
-                                                        :exclusions []}]
-                                 :multiline-layout    [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:clauses  ["case" "match" "case-try" "match-try"]
-                                                                     :bindings ["let" "when-let" "if-let" "with-open"]}
-                                                        :exclusions []}]
-                                 :no-mutation         [{:severity   :warning
-                                                        :applies-to {:files ["^fennel-extras/"]}}
-                                                        :options    {:forms ["var" "set" "while"]}
-                                                        :exclusions []}]
-                                 :one-is-per-testing  [{:severity   :error
-                                                        :applies-to {}}
-                                                        :options    {:testing   "testing"
-                                                                     :assertion "is"
-                                                                     :count     1}
-                                                        :exclusions []}]
-                                 :spec-direct-require [{:severity   :error
-                                                        :applies-to {:files ["^spec/"]}}
-                                                        :options    {:modules      ["plenary.busted" "luassert"]
-                                                                     :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                                                        :exclusions []}]
-                                 :spec-macro-import   [{:severity   :error
-                                                        :applies-to {:files ["^spec/"]}}
-                                                        :options    {:module       "spec.eca.macros"
-                                                                     :forms        ["deftest" "testing" "is"]
-                                                                     :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                                                        :exclusions []}]
-                                 :spec-no-module      [{:severity   :error
-                                                        :applies-to {:files ["^spec/"]}}
-                                                        :options    {:module "module"}
-                                                        :exclusions []}]
-                                 :unused-and-or       [{:severity   :warning
-                                                        :applies-to {}}
-                                                        :options    {:forms ["and" "or"]}
-                                                        :exclusions []}]}}}
+{:workspace
+ {:paths            ["fnl"]
+  :exclude          ["fnl/eca/nfnl"]
+  :extensions       [".fnl" ".fnlm"]
+  :dotfiles         false
+  :symlinks         false}
+ :format
+ {:indent-width     2
+  ;; Explicit indentation rules for formatter operation.
+  :builtins         {"fn"         [[:inner 0]]
+                     "lambda"     [[:inner 0]]
+                     "macro"      [[:inner 0]]
+                     "let"        [[:block 1]]
+                     "when"       [[:block 1]]
+                     "when-let"   [[:block 1]]
+                     "if-let"     [[:block 1]]
+                     "each"       [[:block 1]]
+                     "for"        [[:block 1]]
+                     "icollect"   [[:block 1]]
+                     "collect"    [[:block 1]]
+                     "accumulate" [[:block 1]]
+                     "case"       [[:block 1]]
+                     "match"      [[:block 1]]
+                     "case-try"   [[:block 1]]
+                     "match-try"  [[:block 1]]
+                     "while"      [[:block 1]]
+                     "with-open"  [[:block 1]]
+                     "do"         [[:block 0]]}
+  ;; Explicit prefix fallbacks.
+  :prefix-fallbacks {"def"   [[:inner 0]]
+                     "with-" [[:block 1]]}
+  ;; Parser used for AST-preserving formatter checks.
+  :parser           "eca.nfnl.fennel"
+  ;; Files discovered by scan.
+  :indents          {"deftest" [[:block 1]]
+                     "testing" [[:block 1]]
+                     "if"      [[:block 1]]}
+  :format-as        {}
+  :indent-patterns  []
+  ;; All formatter alignment modes are explicit.
+  :alignment        {:bindings         true
+                     :maps             true
+                     :clauses          true
+                     :split-bindings   true
+                     :collapse-padding true
+                     :binding-forms    ["let" "when-let" "if-let" "with-open"]
+                     :clause-forms     ["case" "match" "case-try" "match-try" "if"]}}
+ :lint
+ {:rules
+  {:forbidden-form
+   [{:severity   :off
+     :applies-to {}
+     :options    {:module "require"}
+     :exclusions []}]
+   :binding-per-line
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["let" "when-let" "if-let" "with-open"]}
+     :exclusions []}]
+   :call-data-arg
+   [{:severity   :warning
+     :applies-to {:files ["^fennel-extras/"]}
+     :options    {:forms []}
+     :exclusions []}]
+   :control-layout
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["if" "when" "and" "or" "case" "match"]}
+     :exclusions []}]
+   :direct-require
+   [{:severity   :error
+     :applies-to {}
+     :options    {:mode    :require
+                  :module  "eca.nfnl.core"
+                  :binding "core"}
+     :exclusions []}]
+   :file-size
+   [{:severity   :warning
+     :applies-to {:files ["^fennel-extras/"]}
+     :options    {:max-code-lines 300}
+     :exclusions []}]
+   :function-shape
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+     :exclusions []}]
+   :if-branch-call
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["if"]}
+     :exclusions []}]
+   :if-without-else
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms    ["if"]
+                  :nil-else true}
+     :exclusions []}]
+   :module-style
+   [{:severity   :error
+     :applies-to {:files ["^fennel-extras/"]}
+     :options    {:module "eca.nfnl.macros.aniseed"
+                  :forms  ["module" "def" "defn" "defn-"]}
+     :exclusions []}]
+   :multiline-layout
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                  :bindings ["let" "when-let" "if-let" "with-open"]}
+     :exclusions []}]
+   :no-mutation
+   [{:severity   :warning
+     :applies-to {:files ["^fennel-extras/"]}
+     :options    {:forms ["var" "set" "while"]}
+     :exclusions []}]
+   :form-child-count
+   [{:severity   :error
+     :applies-to {:files ["^spec/"]
+                  :forms ["testing"]}
+     :options    {:children ["is"]
+                  :max-count 1}
+     :exclusions []}]
+   :direct-require
+   [{:severity   :error
+     :applies-to {:files ["^spec/"]}
+     :options    {:mode         :forbid
+                  :modules      ["plenary.busted" "luassert"]
+                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+     :exclusions []}]
+   :macro-import
+   [{:severity   :error
+     :applies-to {:files ["^spec/"]}
+     :options    {:module       "spec.eca.macros"
+                  :forms        ["deftest" "testing" "is"]
+                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+     :exclusions []}]
+   :no-module
+   [{:severity   :error
+     :applies-to {:files ["^spec/"]}
+     :options    {:module "module"}
+     :exclusions []}]
+   :unused-and-or
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["and" "or"]}
+     :exclusions []}]}}}
 ```
 
 The configuration has three root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, and `:symlinks`. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > `:builtins` > `:prefix-fallbacks` > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one form name to another; and `:indent-patterns` contains `[lua-pattern rule-list]` entries. `:indent-width`, `:builtins`, `:prefix-fallbacks`, and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
@@ -194,26 +217,24 @@ The root `.fnl-extras.fnl` is the canonical configuration example. Its entries u
 
 `:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields.
 
-The eighteen rules are:
+The sixteen rules are:
 
 | Rule | Options |
 | --- | --- |
 | `forbidden-form` | `:module` |
 | `module-style` | `:module`, `:forms` |
-| `spec-macro-import` | `:module`, `:forms`, `:exempt-files` |
-| `spec-no-module` | `:module` |
-| `spec-direct-require` | `:modules`, `:exempt-files` |
-| `one-is-per-testing` | `:testing`, `:assertion`, `:count` |
+| `macro-import` | `:module`, `:forms`, `:exempt-files` |
+| `no-module` | `:module` |
+| `direct-require` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding` for `:require` |
+| `form-child-count` | `:children`, `:max-count` |
 | `if-branch-call` | `:forms` |
 | `if-without-else` | `:forms`, `:nil-else` |
 | `control-layout` | `:forms` |
 | `unused-and-or` | `:forms` |
-| `defn-args-newline` | `:forms` |
 | `function-shape` | `:forms`, `:max-depth` |
 | `no-mutation` | `:forms` |
 | `multiline-layout` | `:clauses`, `:bindings` |
 | `file-size` | `:max-code-lines` |
-| `core-require` | `:module`, `:binding` |
 | `binding-per-line` | `:forms` |
 | `call-data-arg` | `:forms` |
 
@@ -266,6 +287,17 @@ Use `:applies-to :files` for path-specific rules. A file selector is a Vim regul
 ```
 
 The boolean switches are `:bindings`, `:maps`, `:clauses`, `:split-bindings`, and `:collapse-padding`. `:binding-forms` and `:clause-forms` are required when their corresponding alignment modes are enabled. `:align-bindings` is not part of the configuration contract.
+
+#### `:newline`
+
+`:newline` is a list of formatter instances. Each instance has `:applies-to`, optionally selecting `:forms`, and `:options` with non-negative integer `:before` and/or `:after` counts. Omitted counts are zero. Newline rules add blank lines without changing tokens or parsed forms.
+
+```fennel
+:newline [{:applies-to {:forms ["defn" "defn-"]}
+           :options {:after 1}}
+          {:applies-to {:forms ["testing"]}
+           :options {:before 1}}]
+```
 
 `module-style` is a convert-on-touch rule. `--all` reports remaining legacy files.
 

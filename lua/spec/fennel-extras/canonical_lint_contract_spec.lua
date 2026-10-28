@@ -12,7 +12,7 @@ local function error_message(result)
     return error
   end
 end
-local canonical_rule = {lint = {rules = {["spec-direct-require"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {modules = {"plenary.busted"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}}
+local canonical_rule = {lint = {rules = {["direct-require"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {mode = "forbid", modules = {"plenary.busted"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}}
 local function _2_()
   local function _3_()
     local result = validation(canonical_rule)
@@ -23,7 +23,7 @@ local function _2_()
   end
   require("plenary.busted").it("rule instances with files, forms, and modules validate", _3_)
   local function _4_()
-    local result = validation({lint = {rules = {["spec-direct-require"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {modules = {"plenary.busted"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["direct-require"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {modules = {"plenary.busted"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and (nil == result.value) and ("unknown applies-to key: contexts" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= nil (. result \"value\")) (= \"unknown applies-to key: contexts\" (error-message result)))")
@@ -45,10 +45,29 @@ local function _5_()
     local result = validation(canonical_rule)
     local value = result.value
     local assert_28_auto = require("luassert")
-    local value_29_auto = (result.ok and value and (nil == value.lint["spec-files"]) and vim.deep_equal({"^spec/"}, value.lint.rules["spec-direct-require"][1]["applies-to"].files))
-    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") value (= nil (. value \"lint\" \"spec-files\")) (vim.deep_equal [\"^spec/\"] (. value \"lint\" \"rules\" \"spec-direct-require\" 1 \"applies-to\" \"files\")))")
+    local value_29_auto = (result.ok and value and (nil == value.lint["spec-files"]) and vim.deep_equal({"^spec/"}, value.lint.rules["direct-require"][1]["applies-to"].files))
+    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") value (= nil (. value \"lint\" \"spec-files\")) (vim.deep_equal [\"^spec/\"] (. value \"lint\" \"rules\" \"direct-require\" 1 \"applies-to\" \"files\")))")
     return true
   end
   return require("plenary.busted").it("spec-only behavior uses explicit file regexes", _7_)
 end
-return require("plenary.busted").describe("canonical-spec-file-contract", _5_)
+require("plenary.busted").describe("canonical-spec-file-contract", _5_)
+local function _8_()
+  local function _9_()
+    local result = validation({lint = {rules = {["no-module"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}}, options = {module = "module"}, exclusions = {}}}, ["macro-import"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}}, options = {module = "spec.eca.macros", forms = {"deftest", "testing", "is"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}, ["direct-require"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}}, options = {mode = "forbid", modules = {"plenary.busted", "luassert"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}, {severity = "error", ["applies-to"] = {}, options = {mode = "require", module = "eca.nfnl.core", binding = "core"}, exclusions = {}}}, ["form-child-count"] = {{severity = "error", ["applies-to"] = {forms = {"testing"}}, options = {children = {"is"}, ["max-count"] = 1}, exclusions = {}}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (result.ok and result.value)
+    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
+    return true
+  end
+  require("plenary.busted").it("generic spec rules and form-child-count validate", _9_)
+  local function _10_()
+    local result = validation({lint = {rules = {["direct-require"] = {{severity = "error", ["applies-to"] = {}, options = {mode = "require", module = "eca.nfnl.core", binding = "core"}, exclusions = {}}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (result.ok and ("require" == result.value.lint.rules["direct-require"][1].options.mode) and ("core" == result.value.lint.rules["direct-require"][1].options.binding))
+    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (= \"require\" (. result \"value\" \"lint\" \"rules\" \"direct-require\" 1 \"options\" \"mode\")) (= \"core\" (. result \"value\" \"lint\" \"rules\" \"direct-require\" 1 \"options\" \"binding\")))")
+    return true
+  end
+  return require("plenary.busted").it("the direct-require core instance preserves mode and binding", _10_)
+end
+return require("plenary.busted").describe("generic-rule-contract", _8_)

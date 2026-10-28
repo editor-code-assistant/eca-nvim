@@ -10,10 +10,16 @@
       result
       {:module-missing true})))
 
+
+
 (defn- sort-severities
   [entries]
   (table.sort entries (fn [a b] (< (. a 1) (. b 1))))
+
+
   entries)
+
+
 
 (defn- default-severities
   []
@@ -25,25 +31,28 @@
                        [rule severity])]
         (sort-severities entries)))))
 
+
+
 (deftest defaults
-  (testing "all eighteen lint rules are off by default"
+
+
+
+  (testing "all sixteen lint rules are off by default"
     (is (= [["binding-per-line" "off"]
             ["call-data-arg" "off"]
             ["control-layout" "off"]
-            ["core-require" "off"]
-            ["defn-args-newline" "off"]
+            ["direct-require" "off"]
             ["file-size" "off"]
             ["forbidden-form" "off"]
+            ["form-child-count" "off"]
             ["function-shape" "off"]
             ["if-branch-call" "off"]
             ["if-without-else" "off"]
+            ["macro-import" "off"]
             ["module-style" "off"]
             ["multiline-layout" "off"]
+            ["no-module" "off"]
             ["no-mutation" "off"]
-            ["one-is-per-testing" "off"]
-            ["spec-direct-require" "off"]
-            ["spec-macro-import" "off"]
-            ["spec-no-module" "off"]
             ["unused-and-or" "off"]]
            (let [entries (default-severities)]
              (if (. entries :module-missing)
@@ -52,13 +61,16 @@
 
 (defn- all-enabled-policy
   []
-  {:core-require [{:severity   "error"
-                   :applies-to {}
-                   :options    {:module  "eca.nfnl.core"
-                                :binding "core"}
-                   :exclusions []}]})
+  {:direct-require [{:severity   "error"
+                     :applies-to {}
+                     :options    {:mode    "require"
+                                  :module  "eca.nfnl.core"
+                                  :binding "core"}
+                     :exclusions []}]})
 
-(defn- core-require-scenario
+
+
+(defn- direct-require-scenario
   []
   (let [source        "(local c (require :eca.nfnl.core))"
         path          "fnl/app.fnl"
@@ -72,11 +84,15 @@
             after    (icollect [_ form (ipairs forms)] form.form)]
         {:before before :after after :findings findings}))))
 
-(defn- core-require-identities
+
+
+(defn- direct-require-identities
   [scenario]
   (icollect [_ finding (ipairs scenario.findings)]
-    (when (= finding.rule "core-require")
+    (when (= finding.rule "direct-require")
       [finding.rule finding.form finding.severity])))
+
+
 
 (defn- forbidden-form-scenario
   []
@@ -93,22 +109,32 @@
       (let [rules (load-rules)]
         {:findings (rules.check path forms policy source)}))))
 
+
+
 (defn- forbidden-form-identities
   [scenario]
   (icollect [_ finding (ipairs scenario.findings)]
     [finding.rule finding.form finding.severity]))
 
+
+
 (deftest forbidden-form
+
+
+
   (testing "reports the selected form head with the generic rule identity"
     (is (= [["forbidden-form" "fnl/spec/one.fnl > top#1" "warning"]]
            (forbidden-form-identities (forbidden-form-scenario)))))
+
+
+
   (testing "filters require, import, and module targets by canonical modules"
     (let [source        "(require :plenary.busted)\\n(import :plenary.busted)\\n(module plenary.busted)\\n(require :luassert)"
           path          "fnl/spec/one.fnl"
           policy        {:forbidden-form [{:severity   "warning"
-                                           :applies-to {:files   ["fnl/spec/one.fnl"]
-                                                        :forms   ["require" "import" "module"]
-                                                        :modules ["plenary.busted"]}
+                                           :applies-to {:files ["fnl/spec/one.fnl"]
+                                                        :forms ["require" "import" "module"]
+                                                        :mode "forbid" :mode "forbid" :modules ["plenary.busted"]}
                                            :options    {}
                                            :exclusions []}]}
           (forms error) (identity.forms source path)
@@ -122,9 +148,15 @@
                            (rules.check path forms policy source))}))))))
 
 (deftest lint-rules-check
+
+
+
   (testing "does not mutate identity forms"
-    (let [scenario (core-require-scenario)]
+    (let [scenario (direct-require-scenario)]
       (is (= scenario.before scenario.after))))
-  (testing "reports the core-require finding with its established identity"
-    (is (= [["core-require" "fnl/app.fnl > local:c" "error"]]
-           (core-require-identities (core-require-scenario))))))
+
+
+
+  (testing "reports the direct-require finding with its established identity"
+    (is (= [["direct-require" "fnl/app.fnl > local:c" "error"]]
+           (direct-require-identities (direct-require-scenario))))))

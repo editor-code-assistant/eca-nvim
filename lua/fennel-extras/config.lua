@@ -270,7 +270,7 @@ local function unknown_config_error(tbl)
   end
 end
 local function format_fragment_key_3f(key)
-  return ((key == "indent-width") or (key == "builtins") or (key == "prefix-fallbacks") or (key == "parser") or (key == "indents") or (key == "format-as") or (key == "indent-patterns") or (key == "alignment") or (key == "extensions"))
+  return ((key == "indent-width") or (key == "builtins") or (key == "prefix-fallbacks") or (key == "parser") or (key == "indents") or (key == "format-as") or (key == "indent-patterns") or (key == "alignment") or (key == "newline") or (key == "extensions"))
 end
 local function unknown_format_fragment_key(tbl)
   local candidate = nil

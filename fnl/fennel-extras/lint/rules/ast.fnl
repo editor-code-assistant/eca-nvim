@@ -249,11 +249,13 @@
     (if (> index (length node.children))
       count
       (count-is-child node child index count count-is testing-form assertion-form))))
+
 (defn append-nodes
   [target nodes]
   (each [_ node (ipairs nodes)]
     (table.insert target node))
   target)
+
 (defn- skip-first-form-step
   [index value]
   (when (> index 1)
@@ -277,6 +279,7 @@
   (if (> (length forms) 0)
     (form-for-node-step forms node fallback form-for-node)
     fallback))
+
 (defn- position-before-or-at?
   [line col other-line other-col]
   (or (< line other-line)

@@ -24,7 +24,7 @@ local function normalized_branch_form(finding)
   return form
 end
 local function normalized_form(finding)
-  if (finding.rule == "one-is-per-testing") then
+  if (finding.rule == "form-child-count") then
     return normalized_testing_form(finding)
   else
     return normalized_branch_form(finding)

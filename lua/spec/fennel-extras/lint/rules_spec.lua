@@ -41,7 +41,7 @@ end
 local function _5_()
   local function _6_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {{"binding-per-line", "off"}, {"call-data-arg", "off"}, {"control-layout", "off"}, {"core-require", "off"}, {"defn-args-newline", "off"}, {"file-size", "off"}, {"forbidden-form", "off"}, {"function-shape", "off"}, {"if-branch-call", "off"}, {"if-without-else", "off"}, {"module-style", "off"}, {"multiline-layout", "off"}, {"no-mutation", "off"}, {"one-is-per-testing", "off"}, {"spec-direct-require", "off"}, {"spec-macro-import", "off"}, {"spec-no-module", "off"}, {"unused-and-or", "off"}}
+    local expected_6_auto = {{"binding-per-line", "off"}, {"call-data-arg", "off"}, {"control-layout", "off"}, {"direct-require", "off"}, {"file-size", "off"}, {"forbidden-form", "off"}, {"form-child-count", "off"}, {"function-shape", "off"}, {"if-branch-call", "off"}, {"if-without-else", "off"}, {"macro-import", "off"}, {"module-style", "off"}, {"multiline-layout", "off"}, {"no-module", "off"}, {"no-mutation", "off"}, {"unused-and-or", "off"}}
     local actual_7_auto
     do
       local entries = default_severities()
@@ -54,13 +54,13 @@ local function _5_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("all eighteen lint rules are off by default", _6_)
+  return require("plenary.busted").it("all sixteen lint rules are off by default", _6_)
 end
 require("plenary.busted").describe("defaults", _5_)
 local function all_enabled_policy()
-  return {["core-require"] = {{severity = "error", ["applies-to"] = {}, options = {module = "eca.nfnl.core", binding = "core"}, exclusions = {}}}}
+  return {["direct-require"] = {{severity = "error", ["applies-to"] = {}, options = {mode = "require", module = "eca.nfnl.core", binding = "core"}, exclusions = {}}}}
 end
-local function core_require_scenario()
+local function direct_require_scenario()
   local source = "(local c (require :eca.nfnl.core))"
   local path = "fnl/app.fnl"
   local policy = all_enabled_policy()
@@ -101,12 +101,12 @@ local function core_require_scenario()
     return {before = before, after = after, findings = findings}
   end
 end
-local function core_require_identities(scenario)
+local function direct_require_identities(scenario)
   local tbl_26_ = {}
   local i_27_ = 0
   for _, finding in ipairs(scenario.findings) do
     local val_28_
-    if (finding.rule == "core-require") then
+    if (finding.rule == "direct-require") then
       val_28_ = {finding.rule, finding.form, finding.severity}
     else
       val_28_ = nil
@@ -156,7 +156,7 @@ local function _15_()
   local function _17_()
     local source = "(require :plenary.busted)\\n(import :plenary.busted)\\n(module plenary.busted)\\n(require :luassert)"
     local path = "fnl/spec/one.fnl"
-    local policy = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {files = {"fnl/spec/one.fnl"}, forms = {"require", "import", "module"}, modules = {"plenary.busted"}}, options = {}, exclusions = {}}}}
+    local policy = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {files = {"fnl/spec/one.fnl"}, forms = {"require", "import", "module"}, mode = "forbid", modules = {"plenary.busted"}}, options = {}, exclusions = {}}}}
     local forms, error = identity.forms(source, path)
     local rules = load_rules()
     local assert_5_auto = require("luassert")
@@ -177,7 +177,7 @@ end
 require("plenary.busted").describe("forbidden-form", _15_)
 local function _20_()
   local function _21_()
-    local scenario = core_require_scenario()
+    local scenario = direct_require_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = scenario.before
     local actual_7_auto = scenario.after
@@ -187,11 +187,11 @@ local function _20_()
   require("plenary.busted").it("does not mutate identity forms", _21_)
   local function _22_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {{"core-require", "fnl/app.fnl > local:c", "error"}}
-    local actual_7_auto = core_require_identities(core_require_scenario())
+    local expected_6_auto = {{"direct-require", "fnl/app.fnl > local:c", "error"}}
+    local actual_7_auto = direct_require_identities(direct_require_scenario())
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("reports the core-require finding with its established identity", _22_)
+  return require("plenary.busted").it("reports the direct-require finding with its established identity", _22_)
 end
 return require("plenary.busted").describe("lint-rules-check", _20_)

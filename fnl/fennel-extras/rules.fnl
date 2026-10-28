@@ -42,6 +42,7 @@
     (when (= failure nil)
       (set failure (validate-rule rule))))
   failure)
+
 (defn- validate-rule-list
   [value]
   (if (= (type value) :table)
@@ -60,6 +61,7 @@
           (when (not= (type value) :string)
             (set failure (error "format-as targets must be strings")))))))
   failure)
+
 (defn- validate-map
   [items rules?]
   (if (= items nil)
@@ -80,6 +82,7 @@
             (set failure (validate-rule-list (. entry 2)))))
         (set failure (error "invalid indentation pattern")))))
   failure)
+
 (defn- validate-patterns
   [patterns]
   (if (= patterns nil)
@@ -130,6 +133,7 @@
         (set result new-result)
         (set found new-found))))
   (values result found))
+
 (set resolve-name
      (fn [config name seen]
        (let [indents  (or (. config :indents) {})
@@ -240,6 +244,7 @@
       (when (and (= failure nil) (. (or (. config :format-as) {}) name))
         (set failure (error "name has both indent and format-as rule")))))
   failure)
+
 (defn validate
   [config]
   (if (= config nil)

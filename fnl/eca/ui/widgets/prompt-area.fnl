@@ -152,6 +152,7 @@
               (animate-dots)
               (set state.status-timer
                    (vim.defer_fn tick 400))))
+
           (set state.status-timer (vim.defer_fn tick 400))))
       (do
         (set state.status-text nil)

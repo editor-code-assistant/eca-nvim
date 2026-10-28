@@ -8,6 +8,8 @@
   (let [(ok result error) (pcall config.validate value)]
     {:ok (and ok result) :value result :error error}))
 
+
+
 (defn- error-message
   [result]
   (let [error (. result :error)]
@@ -15,19 +17,30 @@
       (. error :message)
       error)))
 
+
+
 (deftest canonical-rule-shape
+
+
+
   (testing "rules use keyword keys and non-empty vectors of instances"
     (let [result (validation {:lint {:rules {:if-without-else [{:severity   "warning"
                                                                 :applies-to {}
                                                                 :options    {:forms ["if"] :nil-else true}
                                                                 :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
+
+
+
   (testing "a top-level spec-files key is rejected"
     (let [result (validation {:lint {:spec-files ["^spec/"] :rules {}}})]
       (is (and (not (. result :ok))
                (= "unknown lint key: spec-files" (error-message result)))))))
 
 (deftest canonical-applies-to
+
+
+
   (testing "files, forms, and modules are accepted"
     (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
                                                                :applies-to {:files   ["^fnl/"]
@@ -36,6 +49,9 @@
                                                                :options    {:module "require"}
                                                                :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
+
+
+
   (testing "contexts is rejected"
     (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
                                                                :applies-to {:contexts ["all"]}

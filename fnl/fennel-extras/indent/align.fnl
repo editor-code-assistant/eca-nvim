@@ -322,6 +322,7 @@
 (defn- apply-edits
   [line edits]
   (table.sort edits (fn [left right] (> left.start right.start)))
+
   (accumulate [result line _ edit (ipairs edits)]
     (apply-edit result edit)))
 

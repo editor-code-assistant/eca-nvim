@@ -20,6 +20,7 @@
          (and node
               (= node.kind :symbol)
               (= node.text text))))
+
 (local function-head? leaf.function-head?)
 
 (defn- explicit-if?

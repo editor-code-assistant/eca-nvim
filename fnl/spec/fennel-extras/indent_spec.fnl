@@ -108,44 +108,57 @@
       (alignment-error-result (alignment-error-call indent alignment)))))
 
 (deftest alignment-goldens
+
   (testing "aligns a call continuation to the first argument on the head line"
     (is (= "(foo a\n     b)"
            (output-for "(foo a\n b)"))))
+
   (testing "aligns a head-only call continuation to the head symbol"
     (is (= "(foo\n b)"
            (output-for "(foo\nb)"))))
+
   (testing "aligns a comment and closer to their opener"
     (is (= "(x\n ;; c\n)"
            (output-for "(x\n  ;; c\n)"))))
+
   (testing "aligns a no-final-newline continuation"
     (is (= "(a\n b)"
            (output-for "(a\nb)"))))
+
   (testing "preserves a one-character final line without a final newline"
     (is (= "a\nb"
            (output-for "a\nb"))))
+
   (testing "aligns nested call continuations from each call's own head"
     (is (= "(foo\n (bar x\n       y))"
            (output-for "(foo\n (bar x\n y))"))))
+
   (testing "aligns sequences to their first element"
     (is (= "[a\n b]"
            (output-for "[a\nb]"))))
+
   (testing "aligns tables to their first element"
     (is (= "{:a\n b}"
            (output-for "{:a\nb}"))))
+
   (testing "aligns a non-symbol head to its first element"
     (is (= "((f) x\n y)"
            (output-for "((f) x\n  y)"))))
+
   (testing "aligns a closer on its own line to its matching opener"
     (is (= "(foo a\n     b\n)"
            (output-for "(foo a\n b\n  )"))))
+
   (testing "indents a comment line like code at that position"
     (is (= "(foo\n ;; comment\n bar)"
            (output-for "(foo\n;; comment\nbar)"))))
+
   (testing "starts each top-level form at column zero"
     (is (= "(foo)\n(bar)"
            (output-for "(foo)\n  (bar)")))))
 
 (deftest preservation
+
   (testing "preserves newline counts for final-line regression inputs"
     (is (and (= (newline-count "(x\n  ;; c\n)")
                 (newline-count (output-for "(x\n  ;; c\n)")))
@@ -153,15 +166,19 @@
                 (newline-count (output-for "(a\nb)")))
              (= (newline-count "a\nb")
                 (newline-count (output-for "a\nb"))))))
+
   (testing "keeps leading spaces inside multi-line strings unchanged"
     (is (= "(foo \"one\n  two\"\n     bar)"
            (output-for "(foo \"one\n  two\"\nbar)"))))
+
   (testing "turns whitespace-only lines into empty lines"
     (is (= "(foo\n\n bar)"
            (output-for "(foo\n   \nbar)"))))
+
   (testing "keeps trailing spaces after code"
     (is (= "(foo a\n     b   )"
            (output-for "(foo a\n b   )"))))
+
   (testing "counts Unicode codepoints for continuation columns"
     (is (= "(λ a\n   b)"
            (output-for "(λ a\nb)")))))
@@ -213,25 +230,32 @@
     failures))
 
 (deftest idempotence-and-errors
+
   (testing "alignment golden is idempotent"
     (is (idempotent? "(foo a\n b)")))
+
   (testing "preservation golden is idempotent"
     (is (idempotent? "(foo \"one\n  two\"\nbar)")))
+
   (testing "nested golden is idempotent"
     (is (idempotent? "(foo\n (bar x\n y))")))
+
   (testing "one direct reindent pass is idempotent for every project source"
     (is (= [] (repo-idempotence-failures))))
+
   (testing "unbalanced input returns a structured reader error"
     (is (= {:value? false :has-message true}
            (let [result (error-summary "(missing")]
              {:value?      (. result :value?)
               :has-message (. result :has-message)}))))
+
   (testing "a boolean alignment value returns the documented validation error"
     (is (= {:ok?         true
             :result-nil? true
             :has-message true
             :message     "alignment must be a table"}
            (alignment-error-summary true))))
+
   (testing "a string alignment value returns the documented validation error"
     (is (= {:ok?         true
             :result-nil? true
@@ -240,9 +264,11 @@
            (alignment-error-summary "yes")))))
 
 (deftest hand-style-fixed-points
+
   (testing "footer-bar apply keeps the hand-written default if alignment"
     (is (= "(defn- apply\n  [items]\n  (if (lualine.plugin)\n      (lualine.setup items)\n      (set-native-statusline items)))"
            (reindent-direct "(defn- apply\n  [items]\n  (if (lualine.plugin)\n      (lualine.setup items)\n      (set-native-statusline items)))" nil))))
+
   (testing "lualine text keeps the hand-written let binding alignment"
     (is (= "(defn- text\n  [item]\n  (let [title (core.get item :title nil)\n        value (core.get item :value nil)\n        title-str (if title (core.str \"%#EcaHeaderKey#\" title \":\") \"\")\n        value-str (if value (core.str \"%#EcaHeaderValue#\" value) \"\")]\n    (core.str title-str value-str)))"
            (reindent-direct "(defn- text\n  [item]\n  (let [title (core.get item :title nil)\n        value (core.get item :value nil)\n        title-str (if title (core.str \"%#EcaHeaderKey#\" title \":\") \"\")\n        value-str (if value (core.str \"%#EcaHeaderValue#\" value) \"\")]\n    (core.str title-str value-str)))" nil)))))
