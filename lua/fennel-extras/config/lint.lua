@@ -143,11 +143,15 @@ local function canonical_missing_option_step(name, index, option_values, names, 
 end
 local function canonical_missing_option_error(name, index, instance)
   if (instance.severity ~= "off") then
-    if (name == "direct-require") then
+    if (name == "module-import") then
       local or_26_ = canonical_missing_option_step(name, index, instance.options, {"mode"}, 1)
       if not or_26_ then
         if (instance.options.mode == "require") then
-          or_26_ = canonical_missing_option_step(name, index, instance.options, {"module", "binding"}, 1)
+          if instance.options.forms then
+            or_26_ = canonical_missing_option_step(name, index, instance.options, {"module"}, 1)
+          else
+            or_26_ = canonical_missing_option_step(name, index, instance.options, {"module", "binding"}, 1)
+          end
         else
           or_26_ = canonical_missing_option_step(name, index, instance.options, {"modules", "exempt-files"}, 1)
         end
@@ -162,29 +166,29 @@ local function canonical_missing_option_error(name, index, instance)
 end
 local function canonical_instance_error(name, index, instance)
   local path = ("lint.rules." .. name .. "[" .. index .. "]")
-  local _30_
+  local _31_
   if (type(instance) ~= "table") then
-    _30_ = {message = (path .. " must be a table")}
+    _31_ = {message = (path .. " must be a table")}
   else
-    _30_ = nil
+    _31_ = nil
   end
-  local or_32_ = _30_ or canonical_map_keys_error(instance, path, {severity = true, ["applies-to"] = true, options = true, exclusions = true})
-  if not or_32_ then
+  local or_33_ = _31_ or canonical_map_keys_error(instance, path, {severity = true, ["applies-to"] = true, options = true, exclusions = true})
+  if not or_33_ then
     if not ((instance.severity == "error") or (instance.severity == "warning") or (instance.severity == "off")) then
-      or_32_ = {message = (path .. ".severity must be error, warning, or off")}
+      or_33_ = {message = (path .. ".severity must be error, warning, or off")}
     else
-      or_32_ = nil
+      or_33_ = nil
     end
   end
-  or_32_ = or_32_ or canonical_applies_to_error(instance["applies-to"], (path .. ".applies-to"))
-  if not or_32_ then
+  or_33_ = or_33_ or canonical_applies_to_error(instance["applies-to"], (path .. ".applies-to"))
+  if not or_33_ then
     if (type(instance.options) ~= "table") then
-      or_32_ = {message = (path .. ".options must be a table")}
+      or_33_ = {message = (path .. ".options must be a table")}
     else
-      or_32_ = nil
+      or_33_ = nil
     end
   end
-  return (or_32_ or canonical_options_error(name, instance.options, (path .. ".options")) or canonical_missing_option_error(name, index, instance) or canonical_exclusions_error(instance.exclusions, (path .. ".exclusions")))
+  return (or_33_ or canonical_options_error(name, instance.options, (path .. ".options")) or canonical_missing_option_error(name, index, instance) or canonical_exclusions_error(instance.exclusions, (path .. ".exclusions")))
 end
 local function canonical_rule_error_step(rules, key, candidate)
   if ((candidate == nil) or (tostring(key) < tostring(candidate))) then
@@ -194,14 +198,14 @@ local function canonical_rule_error_step(rules, key, candidate)
   end
 end
 local function canonical_rules_error(rules)
-  local _36_
+  local _37_
   if (type(rules) ~= "table") then
-    _36_ = {message = "lint.rules must be a table"}
+    _37_ = {message = "lint.rules must be a table"}
   else
-    _36_ = nil
+    _37_ = nil
   end
-  local or_38_ = _36_
-  if not or_38_ then
+  local or_39_ = _37_
+  if not or_39_ then
     local name
     do
       local candidate = nil
@@ -213,13 +217,13 @@ local function canonical_rules_error(rules)
     if name then
       local instances = rules[name]
       if (type(name) ~= "string") then
-        or_38_ = {message = ("lint.rules." .. tostring(name) .. ": rule key must be a keyword")}
+        or_39_ = {message = ("lint.rules." .. tostring(name) .. ": rule key must be a keyword")}
       else
         if (registry.defaults()[name] == nil) then
-          or_38_ = {message = ("unknown lint rule: " .. name)}
+          or_39_ = {message = ("unknown lint rule: " .. name)}
         else
           if not (sequence_3f(instances) and (#instances > 0)) then
-            or_38_ = {message = ("lint.rules." .. name .. " must be a non-empty vector")}
+            or_39_ = {message = ("lint.rules." .. name .. " must be a non-empty vector")}
           else
             local failure = nil
             for index, instance in ipairs(instances) do
@@ -228,24 +232,24 @@ local function canonical_rules_error(rules)
               else
               end
             end
-            or_38_ = failure
+            or_39_ = failure
           end
         end
       end
     else
-      or_38_ = nil
+      or_39_ = nil
     end
   end
-  return or_38_
+  return or_39_
 end
 local function canonical_lint_error(lint)
-  local _47_
+  local _48_
   if (type(lint) ~= "table") then
-    _47_ = {message = "lint must be a table"}
+    _48_ = {message = "lint must be a table"}
   else
-    _47_ = nil
+    _48_ = nil
   end
-  return (_47_ or canonical_contract_key_error(lint, {rules = true}, "unknown lint key: ") or canonical_rules_error(lint.rules))
+  return (_48_ or canonical_contract_key_error(lint, {rules = true}, "unknown lint key: ") or canonical_rules_error(lint.rules))
 end
 local lint_error
 do

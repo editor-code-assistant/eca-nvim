@@ -7,7 +7,7 @@ do
 end
 local core = require("eca.nfnl.core")
 local ast = require("fennel-extras.lint.rules.ast")
-local mutation = require("fennel-extras.lint.rules.mutation")
+local traverse = require("fennel-extras.lint.rules.traverse")
 local registry = require("fennel-extras.lint.rules.registry")
 local leaf = require("fennel-extras.lint.rules.shape.leaf")
 local branch = require("fennel-extras.lint.rules.shape.branch")
@@ -106,7 +106,7 @@ local function function_nodes(source, policy)
   local function _7_(node)
     return configured_function_3f(node, policy)
   end
-  return mutation["executable-nodes"](source, _7_)
+  return traverse["executable-nodes"](source, _7_)
 end
 local function append_synthetic_node(all, path, forms, policy, node)
   return (not form_for_node(forms, node, nil) and add_function_findings(all, path, synthetic_form(path, node), forms, policy, node))

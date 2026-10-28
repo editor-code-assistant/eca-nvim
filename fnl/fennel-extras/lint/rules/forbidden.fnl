@@ -12,6 +12,13 @@
 (local enabled? registry.enabled?)
 (local rule-severity registry.rule-severity)
 
+(defn- contains?
+  [items target index]
+  (if (> index (length items))
+    false
+    (or (= (. items index) target)
+        (contains? items target (+ index 1)))))
+
 (defn- module-target
   [node]
   (let [head     (list-head node)
@@ -26,9 +33,22 @@
       (core.assoc node :text target)
       node)))
 
+(defn- form-forbidden?
+  [node options]
+  (let [head   (list-head node)
+        target (module-target node)]
+    (and (or (= options.module nil)
+             (= target options.module))
+         (or (= options.forms nil)
+             (contains? options.forms head 1)))))
+
 (defn findings
   [result path form policy node]
-  (when (and (enabled? policy "forbidden-form") node (= node.kind :list) (list-head node))
+  (when (and (enabled? policy "forbidden-form")
+             node
+             (= node.kind :list)
+             (list-head node)
+             (form-forbidden? node (registry.rule-options policy "forbidden-form")))
     (table.insert result
                   (finding path
                            form

@@ -5,39 +5,33 @@
 (local parse (require :fennel-extras.config.parse))
 
 (local option-names
-       {"forbidden-form"   ["module"]
+       {"forbidden-form"   ["module" "forms"]
+        "required-form"    ["forms"]
         "module-style"     ["module" "forms"]
-        "macro-import"     ["module" "forms" "exempt-files"]
-        "no-module"        ["module"]
-        "direct-require"   ["mode" "modules" "exempt-files" "module" "binding"]
+        "module-import"    ["mode" "modules" "exempt-files" "module" "binding" "forms"]
         "form-child-count" ["children" "max-count"]
         "if-branch-call"   ["forms"]
         "if-without-else"  ["forms" "nil-else"]
         "control-layout"   ["forms"]
         "unused-and-or"    ["forms"]
         "function-shape"   ["forms" "max-depth"]
-        "no-mutation"      ["forms"]
         "multiline-layout" ["clauses" "bindings"]
         "file-size"        ["max-code-lines"]
-        "binding-per-line" ["forms"]
         "call-data-arg"    ["forms"]})
 
 (local required-option-names
-       {"forbidden-form"   ["module"]
+       {"forbidden-form"   []
+        "required-form"    ["forms"]
         "module-style"     ["module" "forms"]
-        "macro-import"     ["module" "forms" "exempt-files"]
-        "no-module"        ["module"]
-        "direct-require"   ["mode"]
+        "module-import"    ["mode"]
         "form-child-count" ["children" "max-count"]
         "if-branch-call"   ["forms"]
         "if-without-else"  ["forms"]
         "control-layout"   ["forms"]
         "unused-and-or"    ["forms"]
         "function-shape"   ["forms"]
-        "no-mutation"      ["forms"]
         "multiline-layout" ["clauses" "bindings"]
         "file-size"        ["max-code-lines"]
-        "binding-per-line" ["forms"]
         "call-data-arg"    ["forms"]})
 
 (local option-types

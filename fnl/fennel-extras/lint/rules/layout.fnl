@@ -4,7 +4,7 @@
 
 (local core (require :eca.nfnl.core))
 (local ast (require :fennel-extras.lint.rules.ast))
-(local mutation (require :fennel-extras.lint.rules.mutation))
+(local traverse (require :fennel-extras.lint.rules.traverse))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local meaningful-children ast.meaningful-children)
 (local list-head ast.list-head)
@@ -200,7 +200,7 @@
 
 (defn- layout-nodes
   [source policy]
-  (mutation.executable-nodes source (fn [node] (layout-node? node policy))))
+  (traverse.executable-nodes source (fn [node] (layout-node? node policy))))
 
 (defn- append-layout-findings
   [findings path forms policy source]

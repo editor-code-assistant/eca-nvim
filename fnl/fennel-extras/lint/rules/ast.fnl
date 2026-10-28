@@ -124,18 +124,18 @@
     (meaningful-children bindings)
     []))
 
-(defn- macro-import-data
+(defn- import-macros-data
   [bindings target]
   (let [binding-children (macro-binding-children bindings)]
     {:target target :names (collect-macro-names binding-children 1 {})}))
 
-(defn macro-import?
+(defn import-macros?
   [node]
   (let [children (meaningful-children node)
         bindings (. children 2)
         target   (literal-text (. children 3))]
     (when (= (list-head node) "import-macros")
-      (macro-import-data bindings target))))
+      (import-macros-data bindings target))))
 
 (defn- has-all-step
   [names required index]

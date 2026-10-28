@@ -115,15 +115,15 @@
 
 
   (testing "renders a warning finding with the same text contract"
-    (is (= ["fnl/lib.fnl:3:2: warning direct-require: use the target-style core binding"
-            "  exclusion: {:rule \"direct-require\" :form \"fnl/lib.fnl > top#1\" :reason \"explain why this is intentional\"}"]
+    (is (= ["fnl/lib.fnl:3:2: warning module-import: use the target-style core binding"
+            "  exclusion: {:rule \"module-import\" :form \"fnl/lib.fnl > top#1\" :reason \"explain why this is intentional\"}"]
            (text-lines [(finding {:path     "fnl/lib.fnl"
                                   :line     3
                                   :col      2
                                   :end-line 3
                                   :end-col  31
                                   :severity "warning"
-                                  :rule     "direct-require"
+                                  :rule     "module-import"
                                   :form     "fnl/lib.fnl > top#1"
                                   :message  "use the target-style core binding"})]))))
 

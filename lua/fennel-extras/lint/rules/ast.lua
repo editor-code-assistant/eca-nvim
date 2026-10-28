@@ -163,24 +163,24 @@ local function macro_binding_children(bindings)
     return {}
   end
 end
-local function macro_import_data(bindings, target)
+local function import_macros_data(bindings, target)
   local binding_children = macro_binding_children(bindings)
   return {target = target, names = collect_macro_names(binding_children, 1, {})}
 end
-local macro_import_3f
+local import_macros_3f
 do
-  local function macro_import_3f0(node)
+  local function import_macros_3f0(node)
     local children = meaningful_children(node)
     local bindings = children[2]
     local target = literal_text(children[3])
     if (list_head(node) == "import-macros") then
-      return macro_import_data(bindings, target)
+      return import_macros_data(bindings, target)
     else
       return nil
     end
   end
-  _2amodule_2a["macro-import?"] = macro_import_3f0
-  macro_import_3f = _2amodule_2a["macro-import?"]
+  _2amodule_2a["import-macros?"] = import_macros_3f0
+  import_macros_3f = _2amodule_2a["import-macros?"]
 end
 local function has_all_step(names, required, index)
   if (index > #required) then

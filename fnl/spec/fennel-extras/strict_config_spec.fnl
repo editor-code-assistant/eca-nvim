@@ -262,21 +262,18 @@
                    nil
                    (config.load ".fnl-extras.fnl"))
           rules  (and loaded (. loaded :lint) (. (. loaded :lint) :rules))
-          names  ["module-style"
-                  "macro-import"
-                  "no-module"
-                  "direct-require"
+          names  ["forbidden-form"
+                  "required-form"
+                  "module-style"
+                  "module-import"
                   "form-child-count"
                   "if-branch-call"
                   "if-without-else"
                   "control-layout"
                   "unused-and-or"
                   "function-shape"
-                  "no-mutation"
                   "multiline-layout"
                   "file-size"
-                  "direct-require"
-                  "binding-per-line"
                   "call-data-arg"]]
       (is (and loaded
                (. (. loaded :format) :indent-width)

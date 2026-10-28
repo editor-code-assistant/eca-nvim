@@ -3,7 +3,7 @@
 (module fennel-extras.lint.rules.when)
 
 (local ast (require :fennel-extras.lint.rules.ast))
-(local mutation (require :fennel-extras.lint.rules.mutation))
+(local traverse (require :fennel-extras.lint.rules.traverse))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local list-head ast.list-head)
 (local meaningful-children ast.meaningful-children)
@@ -60,7 +60,7 @@
 
 (defn- if-nodes
   [source policy]
-  (mutation.executable-nodes source (fn [node] (if-without-else? node policy))))
+  (traverse.executable-nodes source (fn [node] (if-without-else? node policy))))
 
 (defn findings
   [findings path forms policy source]

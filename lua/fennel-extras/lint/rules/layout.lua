@@ -7,7 +7,7 @@ do
 end
 local core = require("eca.nfnl.core")
 local ast = require("fennel-extras.lint.rules.ast")
-local mutation = require("fennel-extras.lint.rules.mutation")
+local traverse = require("fennel-extras.lint.rules.traverse")
 local registry = require("fennel-extras.lint.rules.registry")
 local meaningful_children = ast["meaningful-children"]
 local list_head = ast["list-head"]
@@ -173,7 +173,7 @@ local function layout_nodes(source, policy)
   local function _9_(node)
     return layout_node_3f(node, policy)
   end
-  return mutation["executable-nodes"](source, _9_)
+  return traverse["executable-nodes"](source, _9_)
 end
 local function append_layout_findings(findings, path, forms, policy, source)
   local ordinals = {}

@@ -2,11 +2,11 @@
 
 (module fennel-extras.lint.rules.registry)
 
-(local rule-name-list ["forbidden-form" "module-style" "macro-import" "no-module" "direct-require" "form-child-count" "if-branch-call" "if-without-else" "control-layout" "unused-and-or" "function-shape" "no-mutation" "multiline-layout" "file-size" "binding-per-line" "call-data-arg"])
+(local rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "if-branch-call" "if-without-else" "control-layout" "unused-and-or" "function-shape" "multiline-layout" "file-size" "call-data-arg"])
 (local core (require :eca.nfnl.core))
 (local ast (require :fennel-extras.lint.rules.ast))
 (local options (require :fennel-extras.lint.rules.options))
-(local rule-properties {:module-style {:scope :file} :macro-import {:scope :file} :file-size {:scope :file}})
+(local rule-properties {:module-style {:scope :file} :required-form {:scope :file} :file-size {:scope :file}})
 
 (defn defaults
   []

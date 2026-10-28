@@ -6,7 +6,7 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.call"]
 end
 local ast = require("fennel-extras.lint.rules.ast")
-local mutation = require("fennel-extras.lint.rules.mutation")
+local traverse = require("fennel-extras.lint.rules.traverse")
 local valid = require("fennel-extras.lint.rules.shape.leaf.valid")
 local registry = require("fennel-extras.lint.rules.registry")
 local meaningful_children = ast["meaningful-children"]
@@ -63,7 +63,7 @@ local function call_nodes(source, policy)
   local function _3_(node)
     return offending_node_3f(node, policy)
   end
-  return mutation["executable-nodes"](source, _3_)
+  return traverse["executable-nodes"](source, _3_)
 end
 local function update_ordinal(ordinals, key, ordinal)
   ordinals[key] = ordinal

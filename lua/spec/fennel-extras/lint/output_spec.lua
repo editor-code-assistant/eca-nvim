@@ -66,8 +66,8 @@ local function _5_()
   require("plenary.busted").it("renders an error finding and its valid copyable exclusion suggestion", _6_)
   local function _7_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"fnl/lib.fnl:3:2: warning direct-require: use the target-style core binding", "  exclusion: {:rule \"direct-require\" :form \"fnl/lib.fnl > top#1\" :reason \"explain why this is intentional\"}"}
-    local actual_7_auto = text_lines({finding({path = "fnl/lib.fnl", line = 3, col = 2, ["end-line"] = 3, ["end-col"] = 31, severity = "warning", rule = "direct-require", form = "fnl/lib.fnl > top#1", message = "use the target-style core binding"})})
+    local expected_6_auto = {"fnl/lib.fnl:3:2: warning module-import: use the target-style core binding", "  exclusion: {:rule \"module-import\" :form \"fnl/lib.fnl > top#1\" :reason \"explain why this is intentional\"}"}
+    local actual_7_auto = text_lines({finding({path = "fnl/lib.fnl", line = 3, col = 2, ["end-line"] = 3, ["end-col"] = 31, severity = "warning", rule = "module-import", form = "fnl/lib.fnl > top#1", message = "use the target-style core binding"})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end

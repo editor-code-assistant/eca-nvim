@@ -5,11 +5,11 @@ do
   pkg_1_auto.loaded["fennel-extras.lint.rules.registry"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
-local rule_name_list = {"forbidden-form", "module-style", "macro-import", "no-module", "direct-require", "form-child-count", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "function-shape", "no-mutation", "multiline-layout", "file-size", "binding-per-line", "call-data-arg"}
+local rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "function-shape", "multiline-layout", "file-size", "call-data-arg"}
 local core = require("eca.nfnl.core")
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
-local rule_properties = {["module-style"] = {scope = "file"}, ["macro-import"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
+local rule_properties = {["module-style"] = {scope = "file"}, ["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
 local defaults
 do
   local function defaults0()

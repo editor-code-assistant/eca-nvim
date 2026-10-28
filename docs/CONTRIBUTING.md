@@ -87,11 +87,6 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :applies-to {}
      :options    {:module "require"}
      :exclusions []}]
-   :binding-per-line
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["let" "when-let" "if-let" "with-open"]}
-     :exclusions []}]
    :call-data-arg
    [{:severity   :warning
      :applies-to {:files ["^fennel-extras/"]}
@@ -102,7 +97,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :applies-to {}
      :options    {:forms ["if" "when" "and" "or" "case" "match"]}
      :exclusions []}]
-   :direct-require
+   :module-import
    [{:severity   :error
      :applies-to {}
      :options    {:mode    :require
@@ -142,7 +137,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :options    {:clauses  ["case" "match" "case-try" "match-try"]
                   :bindings ["let" "when-let" "if-let" "with-open"]}
      :exclusions []}]
-   :no-mutation
+   :forbidden-form
    [{:severity   :warning
      :applies-to {:files ["^fennel-extras/"]}
      :options    {:forms ["var" "set" "while"]}
@@ -154,21 +149,21 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :options    {:children ["is"]
                   :max-count 1}
      :exclusions []}]
-   :direct-require
+   :module-import
    [{:severity   :error
      :applies-to {:files ["^spec/"]}
      :options    {:mode         :forbid
                   :modules      ["plenary.busted" "luassert"]
                   :exempt-files ["^spec/eca/macros[.]fnlm$"]}
      :exclusions []}]
-   :macro-import
+   :module-import
    [{:severity   :error
      :applies-to {:files ["^spec/"]}
      :options    {:module       "spec.eca.macros"
                   :forms        ["deftest" "testing" "is"]
                   :exempt-files ["^spec/eca/macros[.]fnlm$"]}
      :exclusions []}]
-   :no-module
+   :forbidden-form
    [{:severity   :error
      :applies-to {:files ["^spec/"]}
      :options    {:module "module"}
@@ -205,11 +200,7 @@ Lint rules are configured under `:lint :rules`. The map is keyed by keyword iden
 The root `.fnl-extras.fnl` is the canonical configuration example. Its entries use the current shape:
 
 ```fennel
-:lint {:rules {:binding-per-line [{:severity :warning
-                                   :applies-to {}
-                                   :options {:forms ["let" "when-let" "if-let" "with-open"]}
-                                   :exclusions []}]
-               :file-size [{:severity :warning
+:lint {:rules {:file-size [{:severity :warning
                             :applies-to {:files ["^fennel-extras/"]}
                             :options {:max-code-lines 300}
                             :exclusions []}]}}
@@ -217,25 +208,22 @@ The root `.fnl-extras.fnl` is the canonical configuration example. Its entries u
 
 `:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields.
 
-The sixteen rules are:
+The thirteen rules are:
 
 | Rule | Options |
 | --- | --- |
-| `forbidden-form` | `:module` |
+| `forbidden-form` | `:module`, `:forms` |
+| `required-form` | `:forms` |
 | `module-style` | `:module`, `:forms` |
-| `macro-import` | `:module`, `:forms`, `:exempt-files` |
-| `no-module` | `:module` |
-| `direct-require` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding` for `:require` |
+| `module-import` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
 | `form-child-count` | `:children`, `:max-count` |
 | `if-branch-call` | `:forms` |
 | `if-without-else` | `:forms`, `:nil-else` |
 | `control-layout` | `:forms` |
 | `unused-and-or` | `:forms` |
 | `function-shape` | `:forms`, `:max-depth` |
-| `no-mutation` | `:forms` |
 | `multiline-layout` | `:clauses`, `:bindings` |
 | `file-size` | `:max-code-lines` |
-| `binding-per-line` | `:forms` |
 | `call-data-arg` | `:forms` |
 
 #### Rule options

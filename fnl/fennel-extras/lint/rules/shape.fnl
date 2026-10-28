@@ -4,7 +4,7 @@
 
 (local core (require :eca.nfnl.core))
 (local ast (require :fennel-extras.lint.rules.ast))
-(local mutation (require :fennel-extras.lint.rules.mutation))
+(local traverse (require :fennel-extras.lint.rules.traverse))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local leaf (require :fennel-extras.lint.rules.shape.leaf))
 (local branch (require :fennel-extras.lint.rules.shape.branch))
@@ -91,7 +91,7 @@
 
 (defn- function-nodes
   [source policy]
-  (mutation.executable-nodes source (fn [node] (configured-function? node policy))))
+  (traverse.executable-nodes source (fn [node] (configured-function? node policy))))
 
 (defn- append-synthetic-node
   [all path forms policy node]

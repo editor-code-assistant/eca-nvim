@@ -4,7 +4,7 @@
 
 (local core (require :eca.nfnl.core))
 (local ast (require :fennel-extras.lint.rules.ast))
-(local mutation (require :fennel-extras.lint.rules.mutation))
+(local traverse (require :fennel-extras.lint.rules.traverse))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local list-head ast.list-head)
 (local meaningful-children ast.meaningful-children)
@@ -95,7 +95,7 @@
 
 (defn- target-nodes
   [source policy]
-  (mutation.executable-nodes source (fn [node] (target-node? node policy))))
+  (traverse.executable-nodes source (fn [node] (target-node? node policy))))
 
 (defn- target-keys
   [source policy]

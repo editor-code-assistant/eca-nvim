@@ -13,21 +13,17 @@ local spec_rule = require("fennel-extras.lint.rules.spec")
 local forbidden_rule = require("fennel-extras.lint.rules.forbidden")
 local branch_rule = require("fennel-extras.lint.rules.branch")
 local size_rule = require("fennel-extras.lint.rules.size")
-local mutation_rule = require("fennel-extras.lint.rules.mutation")
 local layout_rule = require("fennel-extras.lint.rules.layout")
 local control_rule = require("fennel-extras.lint.rules.control")
 local discard_rule = require("fennel-extras.lint.rules.discard")
 local when_rule = require("fennel-extras.lint.rules.when")
-local binding_rule = require("fennel-extras.lint.rules.binding")
 local call_rule = require("fennel-extras.lint.rules.call")
 local shape_rule = require("fennel-extras.lint.rules.shape")
 local shape_leaf = require("fennel-extras.lint.rules.shape.leaf")
 local root_forms = ast["root-forms"]
 local list_head = ast["list-head"]
-local macro_import_3f = ast["macro-import?"]
-local has_all_3f = ast["has-all?"]
+local import_macros_3f = ast["import-macros?"]
 local has_module_import_3f = ast["has-module-import?"]
-local require_node_3f = ast["require-node?"]
 local enabled_3f = registry["enabled?"]
 local finding = registry.finding
 local rule_severity = registry["rule-severity"]
@@ -54,27 +50,12 @@ local function module_import_state(state, import_info, policy)
     return state["module-import"]
   end
 end
-local function spec_import_state_enabled(state, import_info, policy)
-  local options = registry["rule-options"](policy, "macro-import")
-  if (import_info and (import_info.target == options.module)) then
-    return has_all_3f(import_info.names, options.forms)
-  else
-    return state["spec-import"]
-  end
-end
-local function spec_import_state(state, import_info, policy)
-  if enabled_3f(policy, "macro-import") then
-    return spec_import_state_enabled(state, import_info, policy)
-  else
-    return state["spec-import"]
-  end
-end
 local function update_check_state(state, import_info, head, policy)
-  return {["module-import"] = module_import_state(state, import_info, policy), ["module-form"] = (state["module-form"] or (head == "module")), ["spec-import"] = spec_import_state(state, import_info, policy)}
+  return {["module-import"] = module_import_state(state, import_info, policy), ["module-form"] = (state["module-form"] or (head == "module"))}
 end
 local function check_state_step(nodes, index, state, policy, recurse)
   local node = nodes[index]
-  return recurse(nodes, (index + 1), update_check_state(state, macro_import_3f(node), list_head(node), policy), policy)
+  return recurse(nodes, (index + 1), update_check_state(state, import_macros_3f(node), list_head(node), policy), policy)
 end
 local function check_state(nodes, index, state, policy)
   if (index > #nodes) then
@@ -100,14 +81,6 @@ local function evaluate_form(path, form, forms, policy)
   local node = form.node
   local head = list_head(node)
   local findings = {}
-  if (enabled_3f(policy, "no-module") and (head == registry["rule-options"](policy, "no-module").module)) then
-    table.insert(findings, finding(path, form, rule_severity(policy, "no-module"), "no-module", "specs must not declare a module", node))
-  else
-  end
-  if (enabled_3f(policy, "direct-require") and require_node_3f(node)) then
-    spec_rule["direct-require-finding"](findings, path, form, policy, node)
-  else
-  end
   if enabled_3f(policy, "form-child-count") then
     spec_rule["form-child-count-finding"](findings, path, form, policy, node)
   else
@@ -124,17 +97,13 @@ local function evaluate_form(path, form, forms, policy)
     append_all(findings, branch_rule.finding(path, form, policy, node))
   else
   end
-  if (((head == "local") or (head == "require")) and node and enabled_3f(policy, "direct-require")) then
-    module_rule["direct-require-finding"](findings, path, form, head, node, policy)
+  if (node and enabled_3f(policy, "module-import")) then
+    module_rule["module-import-finding"](findings, path, form, head, node, policy)
   else
   end
   return findings
 end
-local function append_form_findings(all, path, forms, policy, spec_import)
-  if enabled_3f(policy, "macro-import") then
-    append_all(all, spec_rule["spec-import-finding"](path, forms, policy, spec_import))
-  else
-  end
+local function append_form_findings(all, path, forms, policy)
   for _, form in ipairs(forms) do
     append_all(all, evaluate_form(path, form, forms, policy))
   end
@@ -195,20 +164,6 @@ local function append_discard_findings(findings, path, forms, policy, source)
     return findings
   end
 end
-local function append_mutation_findings(findings, path, forms, policy, source)
-  if enabled_3f(policy, "no-mutation") then
-    return mutation_rule.findings(findings, path, forms, policy, source)
-  else
-    return findings
-  end
-end
-local function append_binding_findings(findings, path, forms, policy, source)
-  if enabled_3f(policy, "binding-per-line") then
-    return binding_rule.findings(findings, path, forms, policy, source)
-  else
-    return findings
-  end
-end
 local function append_call_findings(findings, path, forms, policy, source)
   if enabled_3f(policy, "call-data-arg") then
     return call_rule.findings(findings, path, forms, policy, source)
@@ -219,20 +174,19 @@ end
 local function check_result(path, forms, policy, source, state)
   local findings = append_file_size_findings({}, path, policy, source)
   local findings0 = append_module_findings(findings, path, forms, policy, state)
-  local findings1 = append_form_findings(findings0, path, forms, policy, state["spec-import"])
-  local findings2 = append_shape_findings(findings1, path, forms, policy, source)
-  local findings3 = append_when_findings(findings2, path, forms, policy, source)
-  local findings4 = append_layout_findings(findings3, path, forms, policy, source)
-  local findings5 = append_control_findings(findings4, path, forms, policy, source)
-  local findings6 = append_discard_findings(findings5, path, forms, policy, source)
-  local findings7 = append_mutation_findings(findings6, path, forms, policy, source)
-  local findings8 = append_binding_findings(findings7, path, forms, policy, source)
-  local findings9 = append_call_findings(findings8, path, forms, policy, source)
-  return remove_contained_function_findings(findings9)
+  local findings1 = append_all(findings0, module_rule["required-form-finding"](path, source, policy))
+  local findings2 = append_form_findings(findings1, path, forms, policy)
+  local findings3 = append_shape_findings(findings2, path, forms, policy, source)
+  local findings4 = append_when_findings(findings3, path, forms, policy, source)
+  local findings5 = append_layout_findings(findings4, path, forms, policy, source)
+  local findings6 = append_control_findings(findings5, path, forms, policy, source)
+  local findings7 = append_discard_findings(findings6, path, forms, policy, source)
+  local findings8 = append_call_findings(findings7, path, forms, policy, source)
+  return remove_contained_function_findings(findings8)
 end
 local function check_instance(path, forms, policy, source, instance)
   local instance_policy = registry["evaluator-policy"](policy, instance.rule, instance.value)
-  local state = check_state(root_forms(source), 1, {["module-form"] = false, ["module-import"] = false, ["spec-import"] = false}, instance_policy)
+  local state = check_state(root_forms(source), 1, {["module-form"] = false, ["module-import"] = false}, instance_policy)
   local result = check_result(path, forms, instance_policy, source, state)
   local tbl_26_ = {}
   local i_27_ = 0

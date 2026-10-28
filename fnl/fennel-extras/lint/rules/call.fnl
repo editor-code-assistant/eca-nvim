@@ -3,7 +3,7 @@
 (module fennel-extras.lint.rules.call)
 
 (local ast (require :fennel-extras.lint.rules.ast))
-(local mutation (require :fennel-extras.lint.rules.mutation))
+(local traverse (require :fennel-extras.lint.rules.traverse))
 (local valid (require :fennel-extras.lint.rules.shape.leaf.valid))
 (local registry (require :fennel-extras.lint.rules.registry))
 (local meaningful-children ast.meaningful-children)
@@ -73,7 +73,7 @@
 
 (defn- call-nodes
   [source policy]
-  (mutation.executable-nodes source (fn [node] (offending-node? node policy))))
+  (traverse.executable-nodes source (fn [node] (offending-node? node policy))))
 
 (defn- update-ordinal
   [ordinals key ordinal]

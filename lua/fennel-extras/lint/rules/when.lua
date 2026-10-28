@@ -6,7 +6,7 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.when"]
 end
 local ast = require("fennel-extras.lint.rules.ast")
-local mutation = require("fennel-extras.lint.rules.mutation")
+local traverse = require("fennel-extras.lint.rules.traverse")
 local registry = require("fennel-extras.lint.rules.registry")
 local list_head = ast["list-head"]
 local meaningful_children = ast["meaningful-children"]
@@ -47,7 +47,7 @@ local function if_nodes(source, policy)
   local function _2_(node)
     return if_without_else_3f(node, policy)
   end
-  return mutation["executable-nodes"](source, _2_)
+  return traverse["executable-nodes"](source, _2_)
 end
 local findings
 do

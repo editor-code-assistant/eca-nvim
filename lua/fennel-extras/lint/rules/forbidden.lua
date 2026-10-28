@@ -14,6 +14,13 @@ local list_head = ast["list-head"]
 local finding = registry.finding
 local enabled_3f = registry["enabled?"]
 local rule_severity = registry["rule-severity"]
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
 local function module_target(node)
   local head = list_head(node)
   local children = meaningful_children(node)
@@ -31,10 +38,15 @@ local function finding_node(node)
     return node
   end
 end
+local function form_forbidden_3f(node, options)
+  local head = list_head(node)
+  local target = module_target(node)
+  return (((options.module == nil) or (target == options.module)) and ((options.forms == nil) or contains_3f(options.forms, head, 1)))
+end
 local findings
 do
   local function findings0(result, path, form, policy, node)
-    if (enabled_3f(policy, "forbidden-form") and node and (node.kind == "list") and list_head(node)) then
+    if (enabled_3f(policy, "forbidden-form") and node and (node.kind == "list") and list_head(node) and form_forbidden_3f(node, registry["rule-options"](policy, "forbidden-form"))) then
       table.insert(result, finding(path, form, rule_severity(policy, "forbidden-form"), "forbidden-form", "forbidden form", finding_node(node)))
     else
     end

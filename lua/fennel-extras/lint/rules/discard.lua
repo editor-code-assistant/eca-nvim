@@ -7,7 +7,7 @@ do
 end
 local core = require("eca.nfnl.core")
 local ast = require("fennel-extras.lint.rules.ast")
-local mutation = require("fennel-extras.lint.rules.mutation")
+local traverse = require("fennel-extras.lint.rules.traverse")
 local registry = require("fennel-extras.lint.rules.registry")
 local list_head = ast["list-head"]
 local meaningful_children = ast["meaningful-children"]
@@ -81,7 +81,7 @@ local function target_nodes(source, policy)
   local function _4_(node)
     return target_node_3f(node, policy)
   end
-  return mutation["executable-nodes"](source, _4_)
+  return traverse["executable-nodes"](source, _4_)
 end
 local function target_keys(source, policy)
   local result = {}

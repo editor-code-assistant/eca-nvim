@@ -95,7 +95,7 @@ local function _11_()
     local root = vim.fn.tempname()
     local config0 = (root .. "/.fnl-extras.fnl")
     local path = (root .. "/fnl/spec/example.fnl")
-    local text = "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {:no-mutation [{:severity :warning :applies-to {:files [\"^fnl/spec/\"]} :options {:forms [\"var\" \"set\" \"while\"]} :exclusions []}]}}}"
+    local text = "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"]} :options {:forms [\"var\" \"set\" \"while\"]} :exclusions []}]}}}"
     local _ = vim.fn.mkdir((root .. "/fnl/spec"), "p")
     local _0 = vim.fn.mkdir((root .. "/.git"), "p")
     local _1 = write_file(config0, text)
@@ -113,7 +113,7 @@ end
 require("plenary.busted").describe("workspace-relative-rule-files", _11_)
 local function _13_()
   local function _14_()
-    local value = {lint = {rules = {["no-mutation"] = {{severity = "warning", ["applies-to"] = {contexts = {"source"}}, options = {forms = {"var", "set", "while"}}, exclusions = {}}}}}}
+    local value = {lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {contexts = {"source"}}, options = {forms = {"var", "set", "while"}}, exclusions = {}}}}}}
     local result = validation(value)
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and ("unknown applies-to key: contexts" == error_message(result)))

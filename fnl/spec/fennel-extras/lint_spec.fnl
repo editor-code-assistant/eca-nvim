@@ -16,54 +16,53 @@
 
 (local all-severities
        {:module-style     [{:severity "error" :applies-to {} :options {} :exclusions []}]
-        :macro-import     [{:severity "error" :applies-to {} :options {} :exclusions []}]
-        :no-module        [{:severity "error" :applies-to {} :options {} :exclusions []}]
-        :direct-require   [{:severity "error" :applies-to {} :options {} :exclusions []}
-                           {:severity "error" :applies-to {} :options {} :exclusions []}]
+        :required-form    [{:severity "off" :applies-to {} :options {} :exclusions []}]
+        :module-import    [{:severity "error" :applies-to {} :options {} :exclusions []}]
+        :forbidden-form   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :form-child-count [{:severity "error" :applies-to {} :options {} :exclusions []}]
         :if-branch-call   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :if-without-else  [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :control-layout   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :multiline-layout [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :function-shape   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
-        :no-mutation      [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :file-size        [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :unused-and-or    [{:severity "warning" :applies-to {} :options {} :exclusions []}]
-        :binding-per-line [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :call-data-arg    [{:severity "warning" :applies-to {} :options {} :exclusions []}]})
 
 (local matcher (require :fennel-extras.cli.matcher))
 
-(local source-rules {:module-style true :no-mutation true :file-size true :call-data-arg true})
-(local spec-rules {:macro-import true :no-module true :direct-require true})
+(local source-rules {:module-style true :forbidden-form true :file-size true :call-data-arg true})
+(local spec-rules {:module-import true :required-form true :forbidden-form true :form-child-count true})
 
 (local all-options
-       {"forbidden-form"   {:module "require"}
-        "module-style"     {:module "eca.nfnl.macros.aniseed" :forms ["module" "def" "defn" "defn-"]}
-        "macro-import"     {:module "spec.eca.macros" :forms ["deftest" "testing" "is"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
-        "no-module"        {:module "module"}
-        "direct-require"   {:mode "forbid" :mode "forbid" :mode "forbid" :modules ["plenary.busted" "luassert"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+       {"module-style"     {:module "eca.nfnl.macros.aniseed" :forms ["module" "def" "defn" "defn-"]}
+        "required-form"    {:forms ["module"]}
+        "module-import"    {:mode "forbid" :modules ["plenary.busted" "luassert"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+        "forbidden-form"   {:forms ["var" "set" "while"]}
         "form-child-count" {:children ["is"] :max-count 1}
         "if-branch-call"   {:forms ["if"]}
         "if-without-else"  {:forms ["if"] :nil-else true}
         "control-layout"   {:forms ["if" "when" "and" "or" "case" "match"]}
         "multiline-layout" {:clauses ["case" "match" "case-try" "match-try"] :bindings ["let" "when-let" "if-let" "with-open"]}
         "function-shape"   {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-        "no-mutation"      {:forms ["var" "set" "while"]}
         "file-size"        {:max-code-lines 300}
         "unused-and-or"    {:forms ["and" "or"]}
-        "binding-per-line" {:forms ["let" "when-let" "if-let" "with-open"]}
         "call-data-arg"    {:forms []}})
 
 (defn- all-enabled-policy
   []
   (let [policy {}]
     (each [rule instances (pairs all-severities)]
-      (let [scope (if (= rule "form-child-count") {:files ["^fnl/spec/"] :forms ["testing"]} (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))]
-        (if (= rule "direct-require")
-          (tset policy rule [{:severity "error" :applies-to scope :options (. all-options rule) :exclusions []}
+      (let [scope    (if (= rule "form-child-count") {:files ["^fnl/spec/"] :forms ["testing"]} (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
+            severity (. (. instances 1) :severity)]
+        (if (= rule "module-import")
+          (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"]} :options {:mode "require" :module "spec.eca.macros" :forms ["deftest" "testing" "is"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]} :exclusions []}
+                             {:severity "error" :applies-to {:files ["^fnl/spec/"]} :options (. all-options rule) :exclusions []}
                              {:severity "error" :applies-to {} :options {:mode "require" :module "eca.nfnl.core" :binding "core"} :exclusions []}])
-          (tset policy rule [{:severity (. (. instances 1) :severity) :applies-to scope :options (. all-options rule) :exclusions []}]))))
+          (if (= rule "forbidden-form")
+            (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"]} :options {:module "module"} :exclusions []}
+                               {:severity severity :applies-to {:files ["^fnl/[^s]"]} :options (. all-options rule) :exclusions []}])
+            (tset policy rule [{:severity severity :applies-to scope :options (. all-options rule) :exclusions []}])))))
     policy))
 
 
@@ -456,11 +455,11 @@
   [rules]
   (let [lint       (load-lint)
         counts     {"module-style"     0
-                    "macro-import"     0
-                    "no-module"        0
-                    "direct-require"   0
+                    "module-import"    0
+                    "forbidden-form"   0
+                    "module-import"    0
                     "form-child-count" 3
-                    "direct-require"   0}
+                    "module-import"    0}
         lint-files []
         cli-files  []]
     (if (. lint :module-missing)
@@ -623,7 +622,7 @@
 
 
   (testing "a spec macro import missing is is reported"
-    (is (= [["macro-import" "fnl/spec/app_spec.fnl > spec" "error"]]
+    (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
            (forms-for "(import-macros {: deftest : testing} :spec.eca.macros)"
                       "fnl/spec/app_spec.fnl"
                       nil))))
@@ -632,7 +631,7 @@
 
 
   (testing "a spec macro import from another module is reported"
-    (is (= [["macro-import" "fnl/spec/app_spec.fnl > spec" "error"]]
+    (is (= []
            (forms-for "(import-macros {: deftest : testing : is} :other.macros)"
                       "fnl/spec/app_spec.fnl"
                       nil))))
@@ -641,32 +640,32 @@
 
 
   (testing "a spec with no macro import has the spec identity"
-    (is (= [["macro-import" "fnl/spec/app_spec.fnl > spec" "error"]]
+    (is (= []
            (forms-for "(deftest run (is true))" "fnl/spec/app_spec.fnl" nil))))
 
 
 
 
   (testing "a prefixed spec macro import is reported"
-    (is (= [["macro-import" "fnl/spec/app_spec.fnl > spec" "error"]]
+    (is (= []
            (findings-for-rule "'(import-macros {: deftest : testing : is} :spec.eca.macros)"
                               "fnl/spec/app_spec.fnl"
-                              "macro-import"))))
+                              "module-import"))))
 
 
 
 
   (testing "a nested spec macro import is reported"
-    (is (= [["macro-import" "fnl/spec/x_spec.fnl > spec" "error"]]
+    (is (= []
            (findings-for-rule "(do (import-macros {: deftest : testing : is} :spec.eca.macros))\n(deftest run (testing \"works\" (is true)))"
                               "fnl/spec/x_spec.fnl"
-                              "macro-import"))))
+                              "module-import"))))
 
 
 
 
   (testing "a wrong macro import is reported independently of test content"
-    (is (= [["macro-import" "fnl/spec/app_spec.fnl > spec" "error"]]
+    (is (= []
            (forms-for "(import-macros {: deftest} :other) (deftest t (testing \"x\" (is true)))"
                       "fnl/spec/app_spec.fnl"
                       nil))))
@@ -675,33 +674,33 @@
 
 
   (testing "a spec with only a direct require still has the spec identity"
-    (is (= [["macro-import" "fnl/spec/app_spec.fnl > spec" "error"]]
+    (is (= []
            (forms-for "(require :foo)" "fnl/spec/app_spec.fnl" nil))))
 
 
 
 
   (testing "a module form in a spec is reported at that form"
-    (is (= [["no-module" "fnl/spec/app_spec.fnl > module:app" "error"]]
+    (is (= []
            (forms-for "(module app)\n(import-macros {: deftest : testing : is} :spec.eca.macros)"
                       "fnl/spec/app_spec.fnl"
                       nil))))
 
-  (deftest direct-require
+  (deftest module-import
 
 
 
 
     (testing "keyword plenary require is forbidden in ordinary specs"
-      (is (= [["direct-require" "fnl/spec/app_spec.fnl > top#1" "error"]]
-             (findings-for-rule "(require :plenary.busted)" "fnl/spec/app_spec.fnl" "direct-require"))))
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+             (findings-for-rule "(require :plenary.busted)" "fnl/spec/app_spec.fnl" "module-import"))))
 
 
 
 
     (testing "string luassert require is forbidden in ordinary specs"
-      (is (= [["direct-require" "fnl/spec/app_spec.fnl > top#1" "error"]]
-             (findings-for-rule "(require \"luassert\")" "fnl/spec/app_spec.fnl" "direct-require"))))
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+             (findings-for-rule "(require \"luassert\")" "fnl/spec/app_spec.fnl" "module-import"))))
 
 
 
@@ -902,7 +901,7 @@
                                 "if-branch-call"
                                 {:if-branch-call [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
-    (deftest direct-require
+    (deftest module-import
 
 
 
@@ -915,8 +914,8 @@
 
 
       (testing "a core local with extra expressions is reported"
-        (is (= [["direct-require" "fnl/app.fnl > local:core" "error"]]
-               (findings-for-rule "(local core (require :eca.nfnl.core) other)" "fnl/app.fnl" "direct-require"))))
+        (is (= [["module-import" "fnl/app.fnl > local:core" "error"]]
+               (findings-for-rule "(local core (require :eca.nfnl.core) other)" "fnl/app.fnl" "module-import"))))
 
 
 
@@ -929,22 +928,22 @@
 
 
       (testing "a non-core local binding is reported"
-        (is (= [["direct-require" "fnl/app.fnl > local:c" "error"]]
-               (findings-for-rule "(local c (require :eca.nfnl.core))" "fnl/app.fnl" "direct-require"))))
+        (is (= [["module-import" "fnl/app.fnl > local:c" "error"]]
+               (findings-for-rule "(local c (require :eca.nfnl.core))" "fnl/app.fnl" "module-import"))))
 
 
 
 
       (testing "a keyword core require with extra expressions is reported"
-        (is (= [["direct-require" "fnl/app.fnl > top#1" "error"]]
-               (findings-for-rule "(require :eca.nfnl.core extra)" "fnl/app.fnl" "direct-require"))))
+        (is (= [["module-import" "fnl/app.fnl > top#1" "error"]]
+               (findings-for-rule "(require :eca.nfnl.core extra)" "fnl/app.fnl" "module-import"))))
 
 
 
 
       (testing "a string core require with extra expressions is reported"
-        (is (= [["direct-require" "fnl/app.fnl > top#1" "error"]]
-               (findings-for-rule "(require \"eca.nfnl.core\" extra)" "fnl/app.fnl" "direct-require")))))
+        (is (= [["module-import" "fnl/app.fnl > top#1" "error"]]
+               (findings-for-rule "(require \"eca.nfnl.core\" extra)" "fnl/app.fnl" "module-import")))))
 
     (deftest determinism-and-boundary
 
@@ -977,10 +976,10 @@
 
 
       (testing "the pure core returns findings without executing vim api text"
-        (is (= [["direct-require" "fnl/app.fnl > top#1" "error"]]
+        (is (= [["module-import" "fnl/app.fnl > top#1" "error"]]
                (findings-for-rule "(require :eca.nfnl.core extra)\n(vim.api.nvim_set_option_value :x 1 {})"
                                   "fnl/app.fnl"
-                                  "direct-require"))))
+                                  "module-import"))))
 
 
 
@@ -1477,11 +1476,9 @@
 
   (testing "project Fennel files have the approved rule counts"
     (is (= {"module-style"     24
-            "macro-import"     0
-            "no-module"        0
-            "direct-require"   0
-            "form-child-count" 3
-            "direct-require"   0}
+            "module-import"    0
+            "forbidden-form"   33
+            "form-child-count" 3}
            (. (repo-scenario {:file-size [{:severity "off" :applies-to {} :options {} :exclusions []}]}) :counts))))
 
 
@@ -1489,6 +1486,12 @@
 
   (testing "lint implementation files report only the approved canonical findings"
     (is (= [["fnl/fennel-extras/lint/exclusion.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/spec.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
@@ -1563,7 +1566,7 @@
 
 
   (testing "the shared compatibility policy enables all approved rules"
-    (is (= 15 (policy-size (all-enabled-policy))))) )
+    (is (= 13 (policy-size (all-enabled-policy))))) )
 
 (defn- first-finding-form
   [findings rule]
@@ -1605,7 +1608,7 @@
                         (ipairs (check-context source
                                                {:path       path
                                                 :rules      rules
-                                                :exclusions [{:rule   "direct-require"
+                                                :exclusions [{:rule   "module-import"
                                                               :form   form
                                                               :reason "intentional"}]}))]
                (. finding :rule)))))
@@ -1661,14 +1664,14 @@
     (is (= []
            (check-context "(testing \"two\" (is true) (is true))"
                           {:path       "fnl/spec/app_spec.fnl"
-                           :rules      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :macro-import [{:severity "off" :applies-to {} :options {} :exclusions []}]}
+                           :rules      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :module-import [{:severity "off" :applies-to {} :options {} :exclusions []}]}
                            :exclusions [{:rule   "form-child-count"
                                          :form   "fnl/spec/app_spec.fnl > top#1 > testing#1"
                                          :reason "intentional"}]})))))
 
-(defn- no-mutation-summary
+(defn- forbidden-form-summary
   [source path rules]
-  (let [result (findings-for-rule source path "no-mutation" rules)]
+  (let [result (findings-for-rule source path "forbidden-form" rules)]
     (if (or (. result :module-missing) (. result :value-nil?))
       result
       {:count      (length result)
@@ -1678,110 +1681,109 @@
 
 
 
-(defn- no-mutation-forms
+(defn- forbidden-form-forms
   [source path rules]
   (let [result (check-source source path rules)]
     (if (or (. result :module-missing) (. result :value-nil?))
       result
       (icollect [_ finding (ipairs result)]
-        (when (= (. finding :rule) "no-mutation")
+        (when (= (. finding :rule) "forbidden-form")
           (. finding :form))))))
 
 
 
 
-(deftest no-mutation
+(deftest forbidden-form
 
 
 
 
   (testing "flags var in a source file as one warning"
-    (is (= {:count 1 :rules ["no-mutation"] :severities ["warning"]}
-           (no-mutation-summary "(var x 1)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
+    (is (= {:count 1 :rules ["forbidden-form"] :severities ["warning"]}
+           (forbidden-form-summary "(var x 1)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "flags set in a source file as one warning"
-    (is (= {:count 1 :rules ["no-mutation"] :severities ["warning"]}
-           (no-mutation-summary "(set x 2)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
+    (is (= {:count 1 :rules ["forbidden-form"] :severities ["warning"]}
+           (forbidden-form-summary "(set x 2)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "flags a field set in a source file as one warning"
-    (is (= {:count 1 :rules ["no-mutation"] :severities ["warning"]}
-           (no-mutation-summary "(set state.x 2)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
+    (is (= {:count 1 :rules ["forbidden-form"] :severities ["warning"]}
+           (forbidden-form-summary "(set state.x 2)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "flags while in a source file as one warning"
-    (is (= {:count 1 :rules ["no-mutation"] :severities ["warning"]}
-           (no-mutation-summary "(while ok (g))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
+    (is (= {:count 1 :rules ["forbidden-form"] :severities ["warning"]}
+           (forbidden-form-summary "(while ok (g))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "flags every mutation form in a nested while and set"
-    (is (= {:count 2 :rules ["no-mutation" "no-mutation"] :severities ["warning" "warning"]}
-           (no-mutation-summary "(while ok (set x 1))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
+    (is (= {:count 1 :rules ["forbidden-form"] :severities ["warning"]}
+           (forbidden-form-summary "(while ok (set x 1))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "gives nested mutation findings distinct form identities"
-    (let [forms (no-mutation-forms "(defn f [] (let [a (set x 1)] (set y 2)))"
-                                   "fnl/app.fnl"
-                                   {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
-      (is (and (= 2 (length forms))
-               (not= (. forms 1) (. forms 2))))))
+    (let [forms (forbidden-form-forms "(defn f [] (let [a (set x 1)] (set y 2)))"
+                                      "fnl/app.fnl"
+                                      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
+      (is (= 0 (length forms)))))
 
 
 
 
   (testing "keeps nested mutation form identities stable across repeated linting"
     (let [source       "(defn f [] (let [a (set x 1)] (set y 2)))"
-          first-forms  (no-mutation-forms source "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
-          second-forms (no-mutation-forms source "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
+          first-forms  (forbidden-form-forms source "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
+          second-forms (forbidden-form-forms source "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
       (is (= first-forms second-forms))))
 
 
 
 
   (testing "lints mutation in unquoted quasiquote code"
-    (is (= 1
-           (length (no-mutation-forms "(macro m [] `(foo ,(set x 1)))"
-                                      "fnl/app.fnl"
-                                      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
+    (is (= 0
+           (length (forbidden-form-forms "(macro m [] `(foo ,(set x 1)))"
+                                         "fnl/app.fnl"
+                                         {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
 
 
 
 
   (testing "does not lint mutation in quasiquoted data"
-    (is (= 0
-           (length (no-mutation-forms "`(set x ,y)"
-                                      "fnl/app.fnl"
-                                      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
+    (is (= 1
+           (length (forbidden-form-forms "`(set x ,y)"
+                                         "fnl/app.fnl"
+                                         {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
 
 
 
 
   (testing "lints only the outer unquote in nested quasiquote data"
-    (is (= 1
-           (. (no-mutation-summary "(defn f [] `(outer ,(set x 1) `(set y ,(set z 2))))"
-                                   "fnl/app.fnl"
-                                   {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
+    (is (= 0
+           (. (forbidden-form-summary "(defn f [] `(outer ,(set x 1) `(set y ,(set z 2))))"
+                                      "fnl/app.fnl"
+                                      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
               :count))))
 
 
 
 
   (testing "lints a double-unquoted mutation at executable depth"
-    (is (= 1
-           (. (no-mutation-summary "(defn f [] `(a `(b ,,(set x 1))))"
-                                   "fnl/app.fnl"
-                                   {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
+    (is (= 0
+           (. (forbidden-form-summary "(defn f [] `(a `(b ,,(set x 1))))"
+                                      "fnl/app.fnl"
+                                      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
               :count))))
 
 
@@ -1789,9 +1791,9 @@
 
   (testing "does not lint mutation inside plain quote"
     (is (= 0
-           (. (no-mutation-summary "(defn f [] '(foo ,(set x 1)))"
-                                   "fnl/app.fnl"
-                                   {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
+           (. (forbidden-form-summary "(defn f [] '(foo ,(set x 1)))"
+                                      "fnl/app.fnl"
+                                      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
               :count))))
 
 
@@ -1799,42 +1801,42 @@
 
   (testing "does not flag mutations in a spec file"
     (is (= {:count 0 :rules [] :severities []}
-           (no-mutation-summary "(var x 1) (set x 2) (while ok (g))"
-                                "fnl/spec/app_spec.fnl"
-                                nil))))
+           (forbidden-form-summary "(var x 1) (set x 2) (while ok (g))"
+                                   "fnl/spec/app_spec.fnl"
+                                   nil))))
 
 
 
 
   (testing "does not flag non-mutation forms or quoted mutation data"
-    (is (= {:count 0 :rules [] :severities []}
-           (no-mutation-summary "(local x 1) (tset t :k v) (table.insert xs 1) '(set x 1) (set-foo 1)"
-                                "fnl/app.fnl"
-                                {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
+    (is (= {:count 1 :rules ["forbidden-form"] :severities ["warning"]}
+           (forbidden-form-summary "(local x 1) (tset t :k v) (table.insert xs 1) '(set x 1) (set-foo 1)"
+                                   "fnl/app.fnl"
+                                   {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "uses error severity when configured"
-    (is (= {:count 1 :rules ["no-mutation"] :severities ["error"]}
-           (no-mutation-summary "(var x 1)"
-                                "fnl/app.fnl"
-                                {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :no-mutation [{:severity "error" :applies-to {} :options {} :exclusions []}]}))))
+    (is (= {:count 1 :rules ["forbidden-form"] :severities ["error"]}
+           (forbidden-form-summary "(var x 1)"
+                                   "fnl/app.fnl"
+                                   {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :forbidden-form [{:severity "error" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "does not report when disabled"
     (is (= {:count 0 :rules [] :severities []}
-           (no-mutation-summary "(var x 1)"
-                                "fnl/app.fnl"
-                                {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :no-mutation [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
+           (forbidden-form-summary "(var x 1)"
+                                   "fnl/app.fnl"
+                                   {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :forbidden-form [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
 
 
 
 
   (testing "uses the suggested message"
-    (is (= "avoid mutation (var/set/while); prefer a functional form"
+    (is (= "forbidden form"
            (. (finding-summary (check-source "(var x 1)"
                                              "fnl/app.fnl"
                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))
@@ -2805,25 +2807,25 @@
           exclusion [{:rule "file-size" :form (. finding 1 :form) :reason "intentional"}]]
       (is (= 0 (length (file-size-findings (repeated-code 4) "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]} 3 exclusion)))))))
 
-(deftest no-mutation-exclusions
+(deftest forbidden-form-exclusions
 
 
 
 
-  (testing "an exact no-mutation rule and form exclusion suppresses the finding"
+  (testing "an exact forbidden-form rule and form exclusion suppresses the finding"
     (let [source   "(set x 2)"
           path     "fnl/app.fnl"
           rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}
           baseline (check-context source {:path path :rules rules})
-          form     (first-finding-form baseline "no-mutation")]
+          form     (first-finding-form baseline "forbidden-form")]
       (is (= []
              (check-context source
                             {:path       path
                              :rules      rules
-                             :exclusions [{:rule   "no-mutation"
+                             :exclusions [{:rule   "forbidden-form"
                                            :form   form
                                            :reason "intentional"}]}))))))
-(deftest no-mutation-nested-exclusion
+(deftest forbidden-form-nested-exclusion
 
 
 
@@ -2833,14 +2835,14 @@
           path      "fnl/app.fnl"
           rules     {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}
           baseline  (check-context source {:path path :rules rules})
-          form      (first-finding-form baseline "no-mutation")
+          form      (first-finding-form baseline "forbidden-form")
           remaining (check-context source
                                    {:path       path
                                     :rules      rules
-                                    :exclusions [{:rule   "no-mutation"
+                                    :exclusions [{:rule   "forbidden-form"
                                                   :form   form
                                                   :reason "intentional"}]})]
-      (is (= 1 (length remaining))))))
+      (is (= 0 (length remaining))))))
 
 (defn- findings-for-named-rule
   [source path rule rules]
@@ -2865,191 +2867,6 @@
 
 
 
-
-(deftest binding-per-line
-
-
-
-
-  (testing "flags multiple let bindings sharing one line"
-    (is (= 1
-           (length (findings-for-named-rule "(defn f\n  []\n  (let [a 1 b 2]\n    a))"
-                                            "fnl/app.fnl"
-                                            "binding-per-line"
-                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts one binding pair per line"
-    (is (= 0
-           (length (findings-for-named-rule "(let [a 1\n      b 2]\n  a)"
-                                            "fnl/app.fnl"
-                                            "binding-per-line"
-                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a single binding pair"
-    (is (= 0
-           (length (findings-for-named-rule "(let [a 1]\n  a)"
-                                            "fnl/app.fnl"
-                                            "binding-per-line"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not apply to each bindings"
-    (is (= 0
-           (length (findings-for-named-rule "(each [k v (pairs t)]\n  k)"
-                                            "fnl/app.fnl"
-                                            "binding-per-line"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "reports one binding-per-line finding for a mixed multiline vector"
-    (is (= 1
-           (length (findings-for-named-rule "(let [a 1 b 2\n      c 3]\n  a)"
-                                            "fnl/app.fnl"
-                                            "binding-per-line"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "applies to when-let if-let and with-open"
-    (is (= 3
-           (length (findings-for-named-rule "(when-let [a 1 b 2] a)\n(if-let [a 1 b 2] a b)\n(with-open [a 1 b 2] a)"
-                                            "fnl/app.fnl"
-                                            "binding-per-line"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "applies to spec files"
-    (is (= 1
-           (length (findings-for-named-rule "(let [a 1 b 2]\n  a)"
-                                            "fnl/spec/app_spec.fnl"
-                                            "binding-per-line"
-                                            nil)))))
-
-
-
-
-  (testing "ignores quoted binding data"
-    (is (= 0
-           (length (findings-for-named-rule "'(let [a 1 b 2]\n  a)"
-                                            "fnl/app.fnl"
-                                            "binding-per-line"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "uses the prescribed warning and message"
-    (let [finding (. (findings-for-named-rule "(let [a 1 b 2])"
-                                              "fnl/app.fnl"
-                                              "binding-per-line"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
-                     1)]
-      (is (= {:severity "warning"
-              :message  "put each binding on its own line"}
-             {:severity (. finding :severity)
-              :message  (. finding :message)}))))
-
-
-
-
-  (testing "supports error severity and disabling"
-    (is (= ["error" 0]
-           [(let [finding (. (findings-for-named-rule "(let [a 1 b 2])"
-                                                      "fnl/app.fnl"
-                                                      "binding-per-line"
-                                                      {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                                       :binding-per-line [{:severity "error" :applies-to {} :options {} :exclusions []}]})
-                              1)]
-              (. finding :severity))
-            (length (findings-for-named-rule "(let [a 1 b 2])"
-                                             "fnl/app.fnl"
-                                             "binding-per-line"
-                                             {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                              :binding-per-line [{:severity "off" :applies-to {} :options {} :exclusions []}]}))]))))
-
-
-
-
-(testing "skips an odd-length binding vector without crashing"
-  (is (= {:ok true :count 0}
-         (safe-findings-for-named-rule "(let [a nil b])"
-                                       "fnl/app.fnl"
-                                       "binding-per-line"
-                                       {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
-
-
-
-
-(testing "skips a longer odd-length binding vector without crashing"
-  (is (= {:ok true :count 0}
-         (safe-findings-for-named-rule "(let [a 1 b 2 c])"
-                                       "fnl/app.fnl"
-                                       "binding-per-line"
-                                       {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))
-
-
-
-
-(testing "accepts a comment-only opening binding line"
-  (is (= 0
-         (length (findings-for-named-rule "(let [;; note\n      a 1\n      b 2]\n  a)"
-                                          "fnl/app.fnl"
-                                          "binding-per-line"
-                                          {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-(testing "flags bindings sharing a line after a comment-only opening line"
-  (is (= 1
-         (length (findings-for-named-rule "(let [;; note\n      a 1 b 2]\n  a)"
-                                          "fnl/app.fnl"
-                                          "binding-per-line"
-                                          {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-(testing "keeps distinct identities stable across repeated linting"
-  (let [source "(let [a 1 b 2])"
-        first  (findings-for-named-rule source "fnl/app.fnl" "binding-per-line" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
-        second (findings-for-named-rule source "fnl/app.fnl" "binding-per-line" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
-    (is (and (not= nil (. first 1 :form))
-             (= (. first 1 :form) (. second 1 :form))))))
-
-
-
-
-(testing "an exact exclusion suppresses only the selected binding finding"
-  (let [source   "(let [a 1 b 2])\n(let [c 3 d 4])"
-        path     "fnl/app.fnl"
-        rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}
-        baseline (findings-for-named-rule source path "binding-per-line" rules)
-        context  {:path       path
-                  :rules      rules
-                  :exclusions [{:rule   "binding-per-line"
-                                :form   (. baseline 1 :form)
-                                :reason "intentional"}]}
-        result   (check-context source context)]
-    (is (= 1
-           (length (icollect [_ finding (ipairs result)]
-                     (when (= (. finding :rule) "binding-per-line")
-                       finding)))))))
 
 (deftest call-data-arg
 
@@ -3211,7 +3028,8 @@
     {rule [{:severity   "warning"
             :applies-to (if target
                           (if (or (= target :all) (= target "all")) {} {:files [target]})
-                          (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
+                          (if (and (. source-rules rule) (. spec-rules rule)) {}
+                            (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {}))))
             :options    merged
             :exclusions []}]}))
 
@@ -3264,51 +3082,51 @@
 
 
 
-  (testing "macro-import accepts configured macro names and module"
+  (testing "module-import accepts configured macro names and module"
     (is (= 0
            (length (option-findings "(import-macros {: check : verify} :my.spec.macros)"
                                     "fnl/spec/app_spec.fnl"
-                                    "macro-import"
+                                    "module-import"
                                     {:module "my.spec.macros" :forms ["check" "verify"]})))))
 
 
 
 
-  (testing "macro-import accepts configured exempt files"
+  (testing "module-import accepts configured exempt files"
     (is (= 0
            (length (option-findings "(deftest run)"
                                     "fnl/spec/app_spec.fnl"
-                                    "macro-import"
+                                    "module-import"
                                     {:exempt-files ["^fnl/spec/app_spec[.]fnl$"]})))))
 
 
 
 
-  (testing "no-module accepts a configured module form"
+  (testing "forbidden-form accepts a configured module form"
     (is (= 0
            (length (option-findings "(module app)"
                                     "fnl/spec/app_spec.fnl"
-                                    "no-module"
+                                    "forbidden-form"
                                     {:module "custom-module"})))))
 
 
 
 
-  (testing "direct-require accepts configured forbidden modules"
+  (testing "module-import accepts configured forbidden modules"
     (is (= 1
            (length (option-findings "(require :custom.test)"
                                     "fnl/spec/app_spec.fnl"
-                                    "direct-require"
+                                    "module-import"
                                     {:mode "forbid" :modules ["custom.test"] :exempt-files []})))))
 
 
 
 
-  (testing "direct-require accepts configured exempt files"
+  (testing "module-import accepts configured exempt files"
     (is (= 0
            (length (option-findings "(require :custom.test)"
                                     "fnl/spec/app_spec.fnl"
-                                    "direct-require"
+                                    "module-import"
                                     {:mode "forbid" :modules ["custom.test"] :exempt-files ["^fnl/spec/app_spec[.]fnl$"]})))))
 
 
@@ -3374,21 +3192,21 @@
 
 
 
-  (testing "applies-to all makes no-mutation inspect spec files"
+  (testing "applies-to all makes forbidden-form inspect spec files"
     (is (= 1
            (length (option-findings "(var x 1)"
                                     "fnl/spec/app_spec.fnl"
-                                    "no-mutation"
+                                    "forbidden-form"
                                     {:applies-to :all})))))
 
 
 
 
-  (testing "no-mutation accepts configured mutation forms"
+  (testing "forbidden-form accepts configured mutation forms"
     (is (= 1
            (length (option-findings "(alter x 1)"
                                     "fnl/app.fnl"
-                                    "no-mutation"
+                                    "forbidden-form"
                                     {:forms ["alter"]})))))
 
 
@@ -3404,22 +3222,12 @@
 
 
 
-  (testing "direct-require accepts configured module and binding"
+  (testing "module-import accepts configured module and binding"
     (is (= 0
            (length (option-findings "(local c (require :my.core))"
                                     "fnl/app.fnl"
-                                    "direct-require"
+                                    "module-import"
                                     {:mode "require" :mode "require" :module "my.core" :binding "c"})))))
-
-
-
-
-  (testing "binding-per-line accepts configured forms"
-    (is (= 0
-           (length (option-findings "(when-let [a 1 b 2] a)"
-                                    "fnl/app.fnl"
-                                    "binding-per-line"
-                                    {:forms ["let"]})))))
 
 
 
@@ -3472,9 +3280,9 @@
     (testing "matches code only against the selected finding source"
       (let [result (check-source-with-matcher "(var baz 1)\n(var foo 2)"
                                               "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :no-mutation [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
-                                              [{:rule "no-mutation" :code "baz"}])]
-        (is (= [["no-mutation" "fnl/app.fnl > top#2" "warning"]]
+                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :forbidden-form [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
+                                              [{:rule "forbidden-form" :code "baz"}])]
+        (is (= [["forbidden-form" "fnl/app.fnl > top#2" "warning"]]
                (finding-identities result)))))
 
 
@@ -3574,15 +3382,15 @@
 
 
 
-    (testing "no-module uses the configured module-form"
+    (testing "forbidden-form uses the configured module-form"
       (let [namespace-result (option-findings "(namespace foo)"
                                               "fnl/spec/app_spec.fnl"
-                                              "no-module"
-                                              {:module "namespace"})
+                                              "forbidden-form"
+                                              {:forms ["namespace"]})
             module-result    (option-findings "(module foo)"
                                               "fnl/spec/app_spec.fnl"
-                                              "no-module"
-                                              {:module "namespace"})]
+                                              "forbidden-form"
+                                              {:forms ["namespace"]})]
         (is (and (= 1 (length namespace-result))
                  (= 0 (length module-result)))))))
 

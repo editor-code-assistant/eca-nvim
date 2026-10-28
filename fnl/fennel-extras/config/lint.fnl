@@ -106,10 +106,12 @@
 (defn- canonical-missing-option-error
   [name index instance]
   (when (not= instance.severity "off")
-    (if (= name "direct-require")
+    (if (= name "module-import")
       (or (canonical-missing-option-step name index instance.options ["mode"] 1)
           (if (= instance.options.mode "require")
-            (canonical-missing-option-step name index instance.options ["module" "binding"] 1)
+            (if instance.options.forms
+              (canonical-missing-option-step name index instance.options ["module"] 1)
+              (canonical-missing-option-step name index instance.options ["module" "binding"] 1))
             (canonical-missing-option-step name index instance.options ["modules" "exempt-files"] 1)))
       (canonical-missing-option-step name index instance.options (registry.required-option-names name) 1))))
 

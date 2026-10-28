@@ -235,7 +235,7 @@ local function _28_()
       loaded = config.load(".fnl-extras.fnl")
     end
     local rules = (loaded and loaded.lint and loaded.lint.rules)
-    local names = {"module-style", "macro-import", "no-module", "direct-require", "form-child-count", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "function-shape", "no-mutation", "multiline-layout", "file-size", "direct-require", "binding-per-line", "call-data-arg"}
+    local names = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "function-shape", "multiline-layout", "file-size", "call-data-arg"}
     local assert_28_auto = require("luassert")
     local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.builtins and loaded.format["prefix-fallbacks"] and loaded.format.parser and loaded.format.alignment and loaded.lint and complete_rules_3f(rules, names, 1))
     assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"builtins\") (. (. loaded \"format\") \"prefix-fallbacks\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (complete-rules? rules names 1))")

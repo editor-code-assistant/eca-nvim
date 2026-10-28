@@ -1205,19 +1205,19 @@
 
 (local lint-rule-options
        {"module-style"     ":applies-to {:files [\"^[^s]\"]} :options {:module \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]}"
-        "macro-import"     ":applies-to {:files [\"^spec/\"]} :options {:module \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"] :exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
-        "no-module"        ":applies-to {:files [\"^spec/\"]} :options {:module \"module\"}"
-        "direct-require"   ":applies-to {:files [\"^spec/\"]} :options {:modules [\"plenary.busted\" \"luassert\"] :exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
+        "module-import"    ":applies-to {:files [\"^spec/\"]} :options {:module \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"] :exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
+        "forbidden-form"   ":applies-to {:files [\"^spec/\"]} :options {:module \"module\"}"
+        "module-import"    ":applies-to {:files [\"^spec/\"]} :options {:modules [\"plenary.busted\" \"luassert\"] :exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
         "form-child-count" ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}"
         "if-branch-call"   ":applies-to {} :options {:forms [\"if\"]}"
         "if-without-else"  ":applies-to {} :options {:forms [\"if\"] :nil-else true}"
         "control-layout"   ":applies-to {} :options {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]}"
         "function-shape"   ":applies-to {} :options {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"λ\"]}"
-        "no-mutation"      ":applies-to {:files [\"^[^s]\"]} :options {:forms [\"var\" \"set\" \"while\"]}"
+        "forbidden-form"   ":applies-to {:files [\"^[^s]\"]} :options {:forms [\"var\" \"set\" \"while\"]}"
         "file-size"        ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}"
-        "direct-require"   ":applies-to {} :options {:module \"eca.nfnl.core\" :binding \"core\"}"
+        "module-import"    ":applies-to {} :options {:module \"eca.nfnl.core\" :binding \"core\"}"
         "unused-and-or"    ":applies-to {} :options {:forms [\"and\" \"or\"]}"
-        "binding-per-line" ":applies-to {} :options {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]}"
+        "split-bindings"   ":applies-to {} :options {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]}"
         "call-data-arg"    ":applies-to {:files [\"^[^s]\"]} :options {:forms []}"})
 
 (defn- lint-config-rule
@@ -1702,7 +1702,7 @@
           config        (.. root "/.fnl-extras.fnl")
           first-file    (.. root "/a.fnl")
           second-file   (.. root "/b.fnl")
-          config-text   "{:lint {:rules {\"direct-require\" :off \"if-branch-call\" :off \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"
+          config-text   "{:lint {:rules {\"module-import\" :off \"if-branch-call\" :off \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
           first-source  "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
           second-source "(testing \"c\" (is 1) (is 2))\\n"]
       (vim.fn.mkdir root "p")
@@ -1721,7 +1721,7 @@
           config        (.. root "/.fnl-extras.fnl")
           first-file    (.. root "/a.fnl")
           second-file   (.. root "/b.fnl")
-          config-text   "{:lint {:rules {\"direct-require\" :off \"if-branch-call\" :off \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"
+          config-text   "{:lint {:rules {\"module-import\" :off \"if-branch-call\" :off \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
           first-source  "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
           second-source "(testing \"c\" (is 1) (is 2))\\n"]
       (vim.fn.mkdir root "p")
@@ -1803,7 +1803,7 @@
 
   (defn- invalid-git-scenario-body
     [mode root]
-    (let [_      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"direct-require\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"))
+    (let [_      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
           _      (write-file (.. root "/a.fnl") "(if x 1 2)\\n")
           result (bounded-cli root (invalid-git-scenario-args mode))
           line   (or (. result :lines 1) "")]
@@ -1829,7 +1829,7 @@
   (defn- unborn-git-scenario-body
     [mode root]
     (let [_      (git-init root)
-          _      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"direct-require\" :off \"if-branch-call\" :off \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"))
+          _      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off \"if-branch-call\" :off \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
           _      (write-file (.. root "/a.fnl") "(testing \"x\") (import-macros {: testing : is} :spec.eca.macros)\n")
           result (bounded-cli root (invalid-git-scenario-args mode))]
       {:code       (. result :code)
@@ -1851,7 +1851,7 @@
 
   (defn- changed-config
     []
-    "{:lint {:rules {\"direct-require\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"if-without-else\" :off \"module-style\" :off \"form-child-count\" :off \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}")
+    "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"if-without-else\" :off \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}")
 
 
 
@@ -2036,7 +2036,7 @@
     (let [root           (vim.fn.tempname)
           changed-path   (.. root "/changed.fnl")
           unchanged-path (.. root "/unchanged.fnl")
-          config         "{:lint {:rules {\"direct-require\" :off :file-size [{:severity :warning :applies-to {:files [\"^changed[.]fnl$\"]} :options { :max-code-lines 2} :exclusions []}] \"function-shape\" :off \"if-branch-call\" :off \"module-style\" :off \"no-mutation\" :off \"form-child-count\" :off \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"
+          config         "{:lint {:rules {\"module-import\" :off :file-size [{:severity :warning :applies-to {:files [\"^changed[.]fnl$\"]} :options { :max-code-lines 2} :exclusions []}] \"function-shape\" :off \"if-branch-call\" :off \"module-style\" :off \"forbidden-form\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
           base-source    "(local a 1)\n(local b 2)\n(local c 3)\n"
           changed-source "(local a 9)\n(local b 2)\n(local c 3)\n"]
       (vim.fn.mkdir root "p")
@@ -2058,7 +2058,7 @@
   (defn- lint-error-configured-scenario
     [root]
     (let [_ (git-init root)
-          _ (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"direct-require\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"))
+          _ (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
           _ (write-file (.. root "/a.fnl") "(if x 1 2)\n")
           _ (git-run root ["add" "."])]
       (git-run root ["commit" "-qm" "base"])))
@@ -2250,7 +2250,7 @@
     (let [root        (vim.fn.tempname)
           config      (.. root "/.fnl-extras.fnl")
           warn        (.. root "/warning.fnl")
-          config-text "{:lint {:rules {\"direct-require\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"]
+          config-text "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"]
       (vim.fn.mkdir root "p")
       (with-cleanup (fn [] (vim.fn.delete root "rf"))
 
@@ -2286,7 +2286,7 @@
           config      (.. root "/.fnl-extras.fnl")
           warn        (.. root "/warning.fnl")
           error       (.. root "/error.fnl")
-          config-text "{:lint {:rules {\"direct-require\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"direct-require\" :off \"macro-import\" :off \"no-module\" :off}}}"]
+          config-text "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"]
       (vim.fn.mkdir root "p")
       (with-cleanup (fn [] (vim.fn.delete root "rf"))
 
