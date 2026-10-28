@@ -127,10 +127,6 @@
   (and (not= value nil)
        (not (boolean? value))))
 
-(defn- invalid-exclude?
-  [value]
-  (and value (not (array-of-strings? value))))
-
 (defn- validate-values
   [config require-scan? strict?]
   (let [width           (. config :indent-width)
@@ -146,9 +142,7 @@
         (and (invalid-boolean? skip-dotfiles)
              {:message "skip-dotfiles must be a boolean"})
         (and (invalid-boolean? follow-symlinks)
-             {:message "follow-symlinks must be a boolean"})
-        (and (invalid-exclude? (. config :exclude))
-             {:message "exclude must be an array of strings"}))))
+             {:message "follow-symlinks must be a boolean"}))))
 
 (defn- missing-binding-forms
   [value]

@@ -6,9 +6,9 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local option_names = {["forbidden-form"] = {"applies-to", "module"}, ["module-style"] = {"applies-to", "module", "forms"}, ["spec-macro-import"] = {"applies-to", "module", "forms", "exempt-files"}, ["spec-no-module"] = {"applies-to", "module"}, ["spec-direct-require"] = {"applies-to", "modules", "exempt-files"}, ["one-is-per-testing"] = {"applies-to", "testing", "assertion", "count"}, ["if-branch-call"] = {"applies-to", "forms"}, ["if-without-else"] = {"applies-to", "forms", "nil-else"}, ["control-layout"] = {"applies-to", "forms"}, ["unused-and-or"] = {"applies-to", "forms"}, ["defn-args-newline"] = {"applies-to", "forms"}, ["function-shape"] = {"applies-to", "forms", "max-depth"}, ["no-mutation"] = {"applies-to", "forms"}, ["multiline-layout"] = {"applies-to", "clauses", "bindings"}, ["file-size"] = {"applies-to", "max-code-lines"}, ["core-require"] = {"applies-to", "module", "binding"}, ["binding-per-line"] = {"applies-to", "forms"}, ["call-data-arg"] = {"applies-to", "forms"}}
+local option_names = {["forbidden-form"] = {"module"}, ["module-style"] = {"module", "forms"}, ["spec-macro-import"] = {"module", "forms", "exempt-files"}, ["spec-no-module"] = {"module"}, ["spec-direct-require"] = {"modules", "exempt-files"}, ["one-is-per-testing"] = {"testing", "assertion", "count"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms", "nil-else"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["defn-args-newline"] = {"forms"}, ["function-shape"] = {"forms", "max-depth"}, ["no-mutation"] = {"forms"}, ["multiline-layout"] = {"clauses", "bindings"}, ["file-size"] = {"max-code-lines"}, ["core-require"] = {"module", "binding"}, ["binding-per-line"] = {"forms"}, ["call-data-arg"] = {"forms"}}
 local required_option_names = {["forbidden-form"] = {"module"}, ["module-style"] = {"module", "forms"}, ["spec-macro-import"] = {"module", "forms", "exempt-files"}, ["spec-no-module"] = {"module"}, ["spec-direct-require"] = {"modules", "exempt-files"}, ["one-is-per-testing"] = {"testing", "assertion", "count"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["defn-args-newline"] = {"forms"}, ["function-shape"] = {"forms"}, ["no-mutation"] = {"forms"}, ["multiline-layout"] = {"clauses", "bindings"}, ["file-size"] = {"max-code-lines"}, ["core-require"] = {"module", "binding"}, ["binding-per-line"] = {"forms"}, ["call-data-arg"] = {"forms"}}
-local option_types = {["applies-to"] = "enum", module = "string", modules = "strings", forms = "strings", ["exempt-files"] = "strings", testing = "string", assertion = "string", count = "positive-integer", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
+local option_types = {module = "string", modules = "strings", forms = "strings", ["exempt-files"] = "strings", testing = "string", assertion = "string", count = "positive-integer", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
 local schema
 do
   local function schema0(rule)
@@ -65,11 +65,8 @@ local validators
 local function _2_(value)
   return (type(value) == "string")
 end
-local function _3_(value)
-  return ((value == "source") or (value == "spec") or (value == "all"))
-end
-validators = {string = _2_, strings = strings_3f, ["positive-integer"] = positive_integer_3f, boolean = boolean_3f, enum = _3_}
-local type_messages = {strings = " must be a list of strings", ["positive-integer"] = " must be a positive integer", boolean = " must be a boolean", enum = "applies-to must be source, spec, or all", string = " must be a string"}
+validators = {string = _2_, strings = strings_3f, ["positive-integer"] = positive_integer_3f, boolean = boolean_3f}
+local type_messages = {strings = " must be a list of strings", ["positive-integer"] = " must be a positive integer", boolean = " must be a boolean", string = " must be a string"}
 local function option_type_valid_3f(kind, value)
   local validator = validators[kind]
   if validator then
@@ -80,11 +77,7 @@ local function option_type_valid_3f(kind, value)
 end
 local function option_type_message(kind, option)
   local message = type_messages[kind]
-  if (kind == "enum") then
-    return message
-  else
-    return (option .. message)
-  end
+  return (option .. message)
 end
 local function first_option_error_step(rule, options, keys, index)
   local key = keys[index]

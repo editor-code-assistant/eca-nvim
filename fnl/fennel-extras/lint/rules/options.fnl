@@ -5,24 +5,24 @@
 (local parse (require :fennel-extras.config.parse))
 
 (local option-names
-       {"forbidden-form"      ["applies-to" "module"]
-        "module-style"        ["applies-to" "module" "forms"]
-        "spec-macro-import"   ["applies-to" "module" "forms" "exempt-files"]
-        "spec-no-module"      ["applies-to" "module"]
-        "spec-direct-require" ["applies-to" "modules" "exempt-files"]
-        "one-is-per-testing"  ["applies-to" "testing" "assertion" "count"]
-        "if-branch-call"      ["applies-to" "forms"]
-        "if-without-else"     ["applies-to" "forms" "nil-else"]
-        "control-layout"      ["applies-to" "forms"]
-        "unused-and-or"       ["applies-to" "forms"]
-        "defn-args-newline"   ["applies-to" "forms"]
-        "function-shape"      ["applies-to" "forms" "max-depth"]
-        "no-mutation"         ["applies-to" "forms"]
-        "multiline-layout"    ["applies-to" "clauses" "bindings"]
-        "file-size"           ["applies-to" "max-code-lines"]
-        "core-require"        ["applies-to" "module" "binding"]
-        "binding-per-line"    ["applies-to" "forms"]
-        "call-data-arg"       ["applies-to" "forms"]})
+       {"forbidden-form"      ["module"]
+        "module-style"        ["module" "forms"]
+        "spec-macro-import"   ["module" "forms" "exempt-files"]
+        "spec-no-module"      ["module"]
+        "spec-direct-require" ["modules" "exempt-files"]
+        "one-is-per-testing"  ["testing" "assertion" "count"]
+        "if-branch-call"      ["forms"]
+        "if-without-else"     ["forms" "nil-else"]
+        "control-layout"      ["forms"]
+        "unused-and-or"       ["forms"]
+        "defn-args-newline"   ["forms"]
+        "function-shape"      ["forms" "max-depth"]
+        "no-mutation"         ["forms"]
+        "multiline-layout"    ["clauses" "bindings"]
+        "file-size"           ["max-code-lines"]
+        "core-require"        ["module" "binding"]
+        "binding-per-line"    ["forms"]
+        "call-data-arg"       ["forms"]})
 
 (local required-option-names
        {"forbidden-form"      ["module"]
@@ -45,7 +45,7 @@
         "call-data-arg"       ["forms"]})
 
 (local option-types
-       {"applies-to"     :enum
+       {
         "module"         :string
         "modules"        :strings
         "forms"          :strings
@@ -105,14 +105,12 @@
        {:string           (fn [value] (= (type value) :string))
         :strings          strings?
         :positive-integer positive-integer?
-        :boolean          boolean?
-        :enum             (fn [value] (or (= value "source") (= value "spec") (= value "all")))})
+        :boolean          boolean?})
 
 (local type-messages
        {:strings          " must be a list of strings"
         :positive-integer " must be a positive integer"
         :boolean          " must be a boolean"
-        :enum             "applies-to must be source, spec, or all"
         :string           " must be a string"})
 
 (defn- option-type-valid?
@@ -125,9 +123,7 @@
 (defn- option-type-message
   [kind option]
   (let [message (. type-messages kind)]
-    (if (= kind :enum)
-      message
-      (.. option message))))
+    (.. option message)))
 
 (defn- first-option-error-step
   [rule options keys index]

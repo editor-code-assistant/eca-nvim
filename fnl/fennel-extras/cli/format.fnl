@@ -18,14 +18,15 @@
 
 (defn- formatter-config
   [cfg]
-  {:indents          (. cfg :indents)
-   :format-as        (. cfg :format-as)
-   :indent-patterns  (. cfg :indent-patterns)
-   :indent-width     (. cfg :indent-width)
-   :builtins         (. cfg :builtins)
-   :prefix-fallbacks (. cfg :prefix-fallbacks)
-   :parser           (. cfg :parser)
-   :alignment        (. cfg :alignment)})
+  (let [format cfg.format]
+    {:indents          (. format :indents)
+     :format-as        (. format :format-as)
+     :indent-patterns  (. format :indent-patterns)
+     :indent-width     (. format :indent-width)
+     :builtins         (. format :builtins)
+     :prefix-fallbacks (. format :prefix-fallbacks)
+     :parser           (. format :parser)
+     :alignment        (. format :alignment)}))
 
 (defn- normalized-path
   [path]

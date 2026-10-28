@@ -8,7 +8,7 @@
   [parsed cfg]
   (if (> (length parsed.paths) 0)
     parsed.paths
-    (. cfg :paths)))
+    (. cfg.workspace :paths)))
 
 (defn- lint-state
   [args index result]

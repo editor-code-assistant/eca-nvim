@@ -237,8 +237,8 @@ local function _28_()
     local rules = (loaded and loaded.lint and loaded.lint.rules)
     local names = {"module-style", "spec-macro-import", "spec-no-module", "spec-direct-require", "one-is-per-testing", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "defn-args-newline", "function-shape", "no-mutation", "multiline-layout", "file-size", "core-require", "binding-per-line", "call-data-arg"}
     local assert_28_auto = require("luassert")
-    local value_29_auto = (loaded and loaded["indent-width"] and loaded.extensions and loaded.paths and loaded.builtins and loaded["prefix-fallbacks"] and loaded.parser and loaded.alignment and loaded.lint and complete_rules_3f(rules, names, 1))
-    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. loaded \"indent-width\") (. loaded \"extensions\") (. loaded \"paths\") (. loaded \"builtins\") (. loaded \"prefix-fallbacks\") (. loaded \"parser\") (. loaded \"alignment\") (. loaded \"lint\") (complete-rules? rules names 1))")
+    local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.builtins and loaded.format["prefix-fallbacks"] and loaded.format.parser and loaded.format.alignment and loaded.lint and complete_rules_3f(rules, names, 1))
+    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"builtins\") (. (. loaded \"format\") \"prefix-fallbacks\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (complete-rules? rules names 1))")
     return true
   end
   return require("plenary.busted").it("the repository config loads with complete format and lint settings", _29_)

@@ -53,17 +53,37 @@
                              (= :table (type err))
                              (= :string (type (. err :message))))})))))
 
+(defn- canonical-fragment
+  [value]
+  (if (and (= :table (type value))
+           (= nil (. value :workspace))
+           (= nil (. value :format))
+           (= nil (. value :lint)))
+    (let [workspace {}
+          format    {}]
+      (each [key item (pairs value)]
+        (if (or (= key :paths)
+                (= key :exclude)
+                (= key :extensions)
+                (= key :dotfiles)
+                (= key :symlinks))
+          (tset workspace key item)
+          (tset format key item)))
+      {:workspace workspace :format format :lint {:rules {}}})
+    value))
+
 (defn- complete-config
   [value]
   (if (= :table (type value))
     (vim.tbl_deep_extend "force"
-                         {:indent-width     2
-                          :builtins         false
-                          :prefix-fallbacks false
-                          :parser           false
-                          :paths            ["fnl"]
-                          :extensions       [".fnl" ".fnlm"]}
-                         value)
+                         {:workspace {:paths      ["fnl"]
+                                      :extensions [".fnl" ".fnlm"]}
+                          :format    {:indent-width     2
+                                      :builtins         false
+                                      :prefix-fallbacks false
+                                      :parser           false}
+                          :lint      {:rules {}}}
+                         (canonical-fragment value))
     value))
 
 (defn- validate-summary
@@ -86,7 +106,7 @@
 
 (defn- complete-lint-config
   [value]
-  value)
+  (canonical-fragment value))
 
 (defn- validation-message
   [config value]
@@ -185,8 +205,8 @@
     (vim.fn.mkdir stop-git "p")
     (with-cleanup (fn [] (vim.fn.delete root "rf"))
       (fn []
-        (write-file root-config "{:exclude [\"root\"]}")
-        (write-file config-path "{:paths [\"fnl\"]}")
+        (write-file root-config "{:workspace {:exclude [\"root\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {}}}")
+        (write-file config-path "{:workspace {:paths [\"fnl\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {}}}")
         (write-file (.. root "/valid.fnl-extras.fnl") "{:exclude [\"generated\"]}")
         {:start       (let [config (load-config)]
                         (if (. config :module-missing)
@@ -260,7 +280,9 @@
            (parse-error-summary "{:a 1" false))))
   (testing "validate rejects an unknown top-level key"
     (is (= {:value? false :has-message true}
-           (validate-summary {:colour 1}))))
+           (validate-summary {:workspace {:colour 1}
+                              :format    {}
+                              :lint      {:rules {}}}))))
   (testing "validate rejects paths that are not a sequence"
     (is (= {:value? false :has-message true}
            (validate-summary {:paths "fnl"})))))
@@ -275,7 +297,10 @@
   (testing "find stops at a .git directory"
     (is (nil? (. (find-load-scenario) :stopped))))
   (testing "load returns the validated table from a file"
-    (is (= {:paths ["fnl"]} (. (find-load-scenario) :loaded))))
+    (is (= {:workspace {:paths ["fnl"]}
+            :format    {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}
+            :lint      {:rules {}}}
+           (. (find-load-scenario) :loaded))))
   (testing "load returns a structured error for a missing path"
     (is (= {:value? false :has-message true}
            (. (find-load-scenario) :missing)))))
@@ -329,34 +354,34 @@
     (is (= {:value? true :has-message false}
            (validate-summary {:extensions [".fnl" ".fnlm"]}))))
   (testing "rejects an empty extensions list with the exact validation message"
-    (is (= "extensions must be a non-empty list of strings starting with \".\""
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
            (validation-error-message "{:extensions []}"))))
   (testing "rejects non-string extensions with the exact validation message"
-    (is (= "extensions must be a non-empty list of strings starting with \".\""
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
            (validation-error-message "{:extensions [1]}"))))
   (testing "rejects extensions without a leading dot with the exact validation message"
-    (is (= "extensions must be a non-empty list of strings starting with \".\""
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
            (validation-error-message "{:extensions [\"fnl\"]}"))))
   (testing "rejects a non-list extensions value with the exact validation message"
-    (is (= "extensions must be a non-empty list of strings starting with \".\""
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
            (validation-error-message "{:extensions \".fnl\"}")))))
 
 (deftest new-keys
   (testing "does not require paths during general configuration validation"
     (is (= nil
            (validation-error-message-raw "{:indent-width 2 :builtins false :prefix-fallbacks false :parser false :extensions [\".fnl\"]}"))))
-  (testing "rejects a non-boolean skip-dotfiles value with the exact validation message"
-    (is (= "skip-dotfiles must be a boolean"
-           (validation-error-message "{:skip-dotfiles 1}"))))
-  (testing "rejects a non-boolean follow-symlinks value with the exact validation message"
-    (is (= "follow-symlinks must be a boolean"
-           (validation-error-message "{:follow-symlinks 1}"))))
+  (testing "rejects a non-boolean dotfiles value with the exact validation message"
+    (is (= "workspace.dotfiles must be a boolean"
+           (validation-error-message "{:dotfiles 1}"))))
+  (testing "rejects a non-boolean symlinks value with the exact validation message"
+    (is (= "workspace.symlinks must be a boolean"
+           (validation-error-message "{:symlinks 1}"))))
   (testing "rejects a non-string parser value with the exact validation message"
     (is (= "parser must be a string or false"
            (validation-error-message "{:parser 1}"))))
   (testing "rejects the removed align-bindings key"
     (is (= "unknown configuration key: align-bindings"
-           (validation-error-message "{:align-bindings true}")))))
+           (validation-error-message-raw "{:align-bindings true}")))))
 
 (deftest alignment-configuration
   (testing "accepts an alignment table"
@@ -427,7 +452,7 @@
     (is (= {:value? true :has-message false}
            (validate-summary {:lint {                                     :rules      {:forbidden-form
                                                                                        [{:severity   :warning
-                                                                                         :applies-to {:files ["^fnl/spec/"]
+                                                                                         :applies-to {:files ["^spec/"]
                                                                                                       :forms ["require"]}
                                                                                          :options    {:module "plenary.busted"}
                                                                                          :exclusions []}]}}}))))
@@ -435,7 +460,7 @@
     (is (= {:value? false :has-message true}
            (validate-summary {:lint {                                     :rules      {:forbidden-form
                                                                                        {:severity   :warning
-                                                                                        :applies-to {:files ["^fnl/spec/"]
+                                                                                        :applies-to {:files ["^spec/"]
                                                                                                      :forms ["require"]}
                                                                                         :options    {:module "plenary.busted"}
                                                                                         :exclusions []}}}}))))

@@ -193,12 +193,12 @@
                   "binding-per-line"
                   "call-data-arg"]]
       (is (and loaded
-               (. loaded :indent-width)
-               (. loaded :extensions)
-               (. loaded :paths)
-               (. loaded :builtins)
-               (. loaded :prefix-fallbacks)
-               (. loaded :parser)
-               (. loaded :alignment)
+               (. (. loaded :format) :indent-width)
+               (. (. loaded :workspace) :extensions)
+               (. (. loaded :workspace) :paths)
+               (. (. loaded :format) :builtins)
+               (. (. loaded :format) :prefix-fallbacks)
+               (. (. loaded :format) :parser)
+               (. (. loaded :format) :alignment)
                (. loaded :lint)
                (complete-rules? rules names 1))))))

@@ -22,7 +22,7 @@ local function _2_()
   end
   require("plenary.busted").it("rules use keyword keys and non-empty vectors of instances", _3_)
   local function _4_()
-    local result = validation({lint = {["spec-files"] = {"^fnl/spec/"}, rules = {}}})
+    local result = validation({lint = {["spec-files"] = {"^spec/"}, rules = {}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and ("unknown lint key: spec-files" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= \"unknown lint key: spec-files\" (error-message result)))")

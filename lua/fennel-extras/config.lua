@@ -104,24 +104,137 @@ local function configuration_error_with_lint(failure, lint)
   return (failure or (lint and lint_config["lint-error"](lint)))
 end
 local function configuration_error(tbl)
-  return (format_config.validate(tbl, false, false, false) or configuration_error_with_lint(nil, tbl.lint))
+  return ((tbl.format and format_config.validate(tbl.format, false, false, false)) or configuration_error_with_lint(nil, tbl.lint))
 end
-local function path_error(tbl)
-  if (tbl.paths and not array_of_strings_3f(tbl.paths)) then
-    return {message = "paths must be an array of strings"}
+local function workspace_key_error(workspace)
+  if (type(workspace) == "table") then
+    local allowed = {paths = true, exclude = true, extensions = true, dotfiles = true, symlinks = true}
+    local key
+    do
+      local candidate = nil
+      for name, _ in pairs(workspace) do
+        if (not allowed[name] and ((candidate == nil) or (tostring(name) < tostring(candidate)))) then
+          candidate = name
+        else
+          candidate = candidate
+        end
+      end
+      key = candidate
+    end
+    if key then
+      return {message = ("unknown workspace key: " .. key)}
+    else
+      return nil
+    end
   else
     return nil
   end
 end
-local function exclude_error(tbl)
-  if (tbl.exclude and not array_of_strings_3f(tbl.exclude)) then
-    return {message = "exclude must be an array of strings"}
+local function workspace_error(tbl)
+  local workspace = tbl.workspace
+  local _16_
+  if (workspace and (type(workspace) ~= "table")) then
+    _16_ = {message = "workspace must be a table"}
   else
-    return nil
+    _16_ = nil
   end
+  local or_18_ = _16_ or workspace_key_error(workspace)
+  if not or_18_ then
+    if (workspace and workspace.paths and not array_of_strings_3f(workspace.paths)) then
+      or_18_ = {message = "workspace.paths must be an array of strings"}
+    else
+      or_18_ = nil
+    end
+  end
+  if not or_18_ then
+    if (workspace and workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
+      or_18_ = {message = "workspace.exclude must be an array of strings"}
+    else
+      or_18_ = nil
+    end
+  end
+  if not or_18_ then
+    if (workspace and workspace.extensions and not extensions_3f(workspace.extensions)) then
+      or_18_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
+    else
+      or_18_ = nil
+    end
+  end
+  if not or_18_ then
+    if (workspace and (workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
+      or_18_ = {message = "workspace.dotfiles must be a boolean"}
+    else
+      or_18_ = nil
+    end
+  end
+  if not or_18_ then
+    if (workspace and (workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
+      or_18_ = {message = "workspace.symlinks must be a boolean"}
+    else
+      or_18_ = nil
+    end
+  end
+  return or_18_
 end
 local function content_error(tbl)
-  return (path_error(tbl) or exclude_error(tbl))
+  return workspace_error(tbl)
+end
+local validate_workspace
+do
+  local function validate_workspace0(workspace, require_paths_3f)
+    local _24_
+    if (type(workspace) ~= "table") then
+      _24_ = {message = "workspace must be a table"}
+    else
+      _24_ = nil
+    end
+    local or_26_ = _24_ or workspace_key_error(workspace)
+    if not or_26_ then
+      if (require_paths_3f and (workspace.paths == nil)) then
+        or_26_ = {message = "missing workspace.paths"}
+      else
+        or_26_ = nil
+      end
+    end
+    if not or_26_ then
+      if (workspace.paths and not array_of_strings_3f(workspace.paths)) then
+        or_26_ = {message = "workspace.paths must be an array of strings"}
+      else
+        or_26_ = nil
+      end
+    end
+    if not or_26_ then
+      if (workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
+        or_26_ = {message = "workspace.exclude must be an array of strings"}
+      else
+        or_26_ = nil
+      end
+    end
+    if not or_26_ then
+      if (workspace.extensions and not extensions_3f(workspace.extensions)) then
+        or_26_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
+      else
+        or_26_ = nil
+      end
+    end
+    if not or_26_ then
+      if ((workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
+        or_26_ = {message = "workspace.dotfiles must be a boolean"}
+      else
+        or_26_ = nil
+      end
+    end
+    if not or_26_ then
+      if ((workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
+        or_26_ = {message = "workspace.symlinks must be a boolean"}
+      else
+        or_26_ = nil
+      end
+    end
+    return or_26_
+  end
+  _2amodule_2a["validate-workspace"] = validate_workspace0
+  validate_workspace = _2amodule_2a["validate-workspace"]
 end
 local function validation_result(tbl, failure)
   if failure then
@@ -137,7 +250,7 @@ local function valid_table(tbl)
   return validation_result(tbl, validation_failure(tbl))
 end
 local function unknown_config_key(tbl)
-  local allowed = {indents = true, ["format-as"] = true, ["indent-patterns"] = true, paths = true, exclude = true, ["indent-width"] = true, builtins = true, ["prefix-fallbacks"] = true, extensions = true, ["skip-dotfiles"] = true, ["follow-symlinks"] = true, alignment = true, parser = true, lint = true}
+  local allowed = {workspace = true, format = true, lint = true}
   local candidate = nil
   for key, _ in pairs(tbl) do
     if (not allowed[key] and ((candidate == nil) or (tostring(key) < tostring(candidate)))) then
@@ -156,6 +269,28 @@ local function unknown_config_error(tbl)
     return nil
   end
 end
+local function format_fragment_key_3f(key)
+  return ((key == "indent-width") or (key == "builtins") or (key == "prefix-fallbacks") or (key == "parser") or (key == "indents") or (key == "format-as") or (key == "indent-patterns") or (key == "alignment") or (key == "extensions"))
+end
+local function unknown_format_fragment_key(tbl)
+  local candidate = nil
+  for key, _ in pairs(tbl) do
+    if (not format_fragment_key_3f(key) and ((candidate == nil) or (tostring(key) < tostring(candidate)))) then
+      candidate = key
+    else
+      candidate = candidate
+    end
+  end
+  return candidate
+end
+local function format_fragment_error(tbl)
+  local key = unknown_format_fragment_key(tbl)
+  if key then
+    return {message = ("unknown configuration key: " .. key)}
+  else
+    return format_config.validate(tbl, false, false, false)
+  end
+end
 local function validate_table_result(tbl, failure)
   if failure then
     return nil, failure
@@ -163,7 +298,7 @@ local function validate_table_result(tbl, failure)
     return valid_table(tbl)
   end
 end
-local function validate_table(tbl)
+local function validate_canonical_table(tbl)
   return validate_table_result(tbl, unknown_config_error(tbl))
 end
 local validate
@@ -172,7 +307,12 @@ do
     if (type(tbl) ~= "table") then
       return nil, {message = "configuration must be a table"}
     else
-      return validate_table(tbl)
+      if (tbl.workspace or tbl.format or tbl.lint) then
+        return validate_canonical_table(tbl)
+      else
+        local failure = format_fragment_error(tbl)
+        return validation_result(tbl, failure)
+      end
     end
   end
   _2amodule_2a["validate"] = validate0
@@ -202,8 +342,8 @@ local function canonical_exclusions(rules)
   return result
 end
 local function valid_lint_policy(cfg)
-  local lint = cfg.lint
-  return {rules = lint.rules, exclusions = canonical_exclusions(lint.rules)}
+  local rules = cfg.lint.rules
+  return {rules = rules, exclusions = canonical_exclusions(rules)}
 end
 local function lint_policy_valid(valid)
   if (valid.lint == nil) then
@@ -313,10 +453,10 @@ do
       local text = file:read("*a")
       file:close()
       local ok, parsed_or_error
-      local function _31_()
+      local function _52_()
         return parse_string(text)
       end
-      ok, parsed_or_error = pcall(_31_)
+      ok, parsed_or_error = pcall(_52_)
       if not ok then
         return nil, parsed_or_error
       else

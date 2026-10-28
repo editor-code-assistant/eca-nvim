@@ -33,7 +33,12 @@ Configure fennel-ls as the Fennel LSP through lspconfig; it reads project settin
 The formatter uses an **explicit configuration contract**. There are no hidden defaults: omitted switches are off, and required values must be present. The repository's real configuration is the main example:
 
 ```fennel
-{:indent-width 2
+{:workspace {:paths ["fnl"]
+             :exclude ["fnl/eca/nfnl"]
+             :extensions [".fnl" ".fnlm"]
+             :dotfiles false
+             :symlinks false}
+ :format {:indent-width 2
  ;; Explicit indentation rules for formatter operation.
  :builtins {"fn" [[:inner 0]]
             "lambda" [[:inner 0]]
@@ -59,12 +64,6 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                     "with-" [[:block 1]]}
  ;; Parser used for AST-preserving formatter checks.
  :parser "eca.nfnl.fennel"
- ;; Files discovered by scan.
- :extensions [".fnl" ".fnlm"]
- :skip-dotfiles true
- :follow-symlinks false
- :paths ["fnl"]
- :exclude ["fnl/eca/nfnl"]
  :indents {"deftest" [[:block 1]]
             "testing" [[:block 1]]
             "if" [[:block 1]]}
@@ -78,12 +77,13 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
              :collapse-padding true
              :binding-forms ["let" "when-let" "if-let" "with-open"]
              :clause-forms ["case" "match" "case-try" "match-try" "if"]}
+ }
  :lint             {                    :rules      {:binding-per-line    [{:severity   :warning
                                                         :applies-to {}}
                                                         :options    {:forms ["let" "when-let" "if-let" "with-open"]}
                                                         :exclusions []}]
                                  :call-data-arg       [{:severity   :warning
-                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :applies-to {:files ["^fennel-extras/"]}}
                                                         :options    {:forms []}
                                                         :exclusions []}]
                                  :control-layout      [{:severity   :warning
@@ -100,7 +100,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                                                         :options    {:forms ["defn" "defn-"]}
                                                         :exclusions []}]
                                  :file-size           [{:severity   :warning
-                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :applies-to {:files ["^fennel-extras/"]}}
                                                         :options    {:max-code-lines 300}
                                                         :exclusions []}]
                                  :function-shape      [{:severity   :warning
@@ -117,7 +117,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                                                                      :nil-else true}
                                                         :exclusions []}]
                                  :module-style        [{:severity   :error
-                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :applies-to {:files ["^fennel-extras/"]}}
                                                         :options    {:module "eca.nfnl.macros.aniseed"
                                                                      :forms  ["module" "def" "defn" "defn-"]}
                                                         :exclusions []}]
@@ -127,7 +127,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                                                                      :bindings ["let" "when-let" "if-let" "with-open"]}
                                                         :exclusions []}]
                                  :no-mutation         [{:severity   :warning
-                                                        :applies-to {:files ["^fnl/[^s]"]}}
+                                                        :applies-to {:files ["^fennel-extras/"]}}
                                                         :options    {:forms ["var" "set" "while"]}
                                                         :exclusions []}]
                                  :one-is-per-testing  [{:severity   :error
@@ -137,18 +137,18 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                                                                      :count     1}
                                                         :exclusions []}]
                                  :spec-direct-require [{:severity   :error
-                                                        :applies-to {:files ["^fnl/spec/"]}}
+                                                        :applies-to {:files ["^spec/"]}}
                                                         :options    {:modules      ["plenary.busted" "luassert"]
-                                                                     :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+                                                                     :exempt-files ["^spec/eca/macros[.]fnlm$"]}
                                                         :exclusions []}]
                                  :spec-macro-import   [{:severity   :error
-                                                        :applies-to {:files ["^fnl/spec/"]}}
+                                                        :applies-to {:files ["^spec/"]}}
                                                         :options    {:module       "spec.eca.macros"
                                                                      :forms        ["deftest" "testing" "is"]
-                                                                     :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+                                                                     :exempt-files ["^spec/eca/macros[.]fnlm$"]}
                                                         :exclusions []}]
                                  :spec-no-module      [{:severity   :error
-                                                        :applies-to {:files ["^fnl/spec/"]}}
+                                                        :applies-to {:files ["^spec/"]}}
                                                         :options    {:module "module"}
                                                         :exclusions []}]
                                  :unused-and-or       [{:severity   :warning
@@ -157,7 +157,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                                                         :exclusions []}]}}}
 ```
 
-The formatter's indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > `:builtins` > `:prefix-fallbacks` > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one form name to another; and `:indent-patterns` contains `[lua-pattern rule-list]` entries. `:paths`, `:exclude`, `:extensions`, `:skip-dotfiles`, and `:follow-symlinks` control discovery. `:indent-width`, `:builtins`, `:prefix-fallbacks`, and `:parser` are required configuration values. Use `--parser` to override the configured parser.
+The configuration has three root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, and `:symlinks`. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > `:builtins` > `:prefix-fallbacks` > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one form name to another; and `:indent-patterns` contains `[lua-pattern rule-list]` entries. `:indent-width`, `:builtins`, `:prefix-fallbacks`, and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
 
 By default, formatting changes leading indentation only. Alignment is separate and must be configured under `:alignment`; there is no legacy `:align-bindings` compatibility key. In this repository, the `if` rule gives bodies regular 2-space indentation; multiline `and`/`or` forms remain aligned under their first argument.
 
@@ -187,12 +187,12 @@ The root `.fnl-extras.fnl` is the canonical configuration example. Its entries u
                                    :options {:forms ["let" "when-let" "if-let" "with-open"]}
                                    :exclusions []}]
                :file-size [{:severity :warning
-                            :applies-to {:files ["^fnl/[^s]"]}
+                            :applies-to {:files ["^fennel-extras/"]}
                             :options {:max-code-lines 300}
                             :exclusions []}]}}
 ```
 
-`:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^fnl/spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields.
+`:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields.
 
 The eighteen rules are:
 
@@ -223,32 +223,32 @@ Put each rule's direct, typed options inside its instance. Required values are e
 
 #### Exclusions
 
-Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with a string `:path` and string `:reason`; the path is matched against the repository-relative path. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
+Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with a string `:path` and string `:reason`; the path is matched against the workspace-relative path. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
 
 ```fennel
 :rules {:function-shape [{:severity :warning
-                          :applies-to {:files ["fnl/legacy/"]}
+                          :applies-to {:files ["^legacy/"]}
                           :options {:forms ["defn" "defn-" "fn" "lambda" "λ"]
                                     :max-depth 2}
-                          :exclusions [{:path "^fnl/legacy/"
+                          :exclusions [{:path "^legacy/"
                                         :reason "migration in progress"}]}]}
 ```
 
 #### `:path` matching
 
-`:path` is a Vim regular expression searched against the repository-relative path; it is not full-string matching. `:code` uses the same Vim regex semantics against the flagged form's source and is not valid for file-level findings. In Fennel config strings, double backslashes, for example `"\\d\\+"` for Vim's digit-plus pattern.
+`:path` is a Vim regular expression searched against the workspace-relative path; it is not full-string matching. `:code` uses the same Vim regex semantics against the flagged form's source and is not valid for file-level findings. In Fennel config strings, double backslashes, for example `"\\d\\+"` for Vim's digit-plus pattern.
 
 ```fennel
-{:path "^fnl/spec/"
+{:path "^spec/"
  :reason "spec path"}
 ```
 
 #### File selectors
 
-Use `:applies-to :files` for path-specific rules. A file selector is a Vim regular expression matched against the repository-relative path. There is no top-level `:lint :spec-files` setting.
+Use `:applies-to :files` for path-specific rules. A file selector is a Vim regular expression matched against the workspace-relative path. There is no top-level `:lint :spec-files` setting.
 
 ```fennel
-:applies-to {:files ["^fnl/spec/"]}
+:applies-to {:files ["^spec/"]}
 ```
 
 #### `:alignment`

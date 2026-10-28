@@ -32,7 +32,23 @@
 
 (defn- format-config
   [body]
-  (.. "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]} :extensions [\".fnl\" \".fnlm\"] :skip-dotfiles false :follow-symlinks false :paths [\".\"] " body "}"))
+  (let [workspace? (or (string.find body ":paths")
+                       (string.find body ":exclude")
+                       (string.find body ":extensions")
+                       (string.find body ":dotfiles")
+                       (string.find body ":symlinks"))
+        workspace  (if workspace?
+                     (.. "{" body
+                         (if (string.find body ":extensions") "" " :extensions [\".fnl\" \".fnlm\"]")
+                         (if (string.find body ":dotfiles") "" " :dotfiles false")
+                         (if (string.find body ":symlinks") "" " :symlinks false")
+                         (if (string.find body ":paths") "" " :paths [\".\"]")
+                         "}")
+                     "{:extensions [\".fnl\" \".fnlm\"] :dotfiles false :symlinks false :paths [\".\"]}")
+        format     (if workspace?
+                     "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}"
+                     (.. "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]} " body "}"))]
+    (.. "{:workspace " workspace " :format " format " :lint {:rules {}}}")))
 
 (defn- run-cli
   [root args]
@@ -145,7 +161,7 @@
 
 (defn- config-invalid-scenario
   [root src-file config-path]
-  (let [_      (write-file config-path (format-config ":colour 1"))
+  (let [_      (write-file config-path "{:workspace {:paths [\".\"] :extensions [\".fnl\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {}} :colour 1}")
         result (run-cli root ["format" "--check" "src/a.fnl"])]
     {:code  (. result :code)
      :lines (. result :lines)}))
@@ -303,7 +319,7 @@
 
 (defn- dotfiles-scenario-setup
   [root hidden-file nested-file git-file]
-  (write-file (.. root "/.fnl-extras.fnl") (format-config ":paths [\"fnl\"] :skip-dotfiles false"))
+  (write-file (.. root "/.fnl-extras.fnl") (format-config ":paths [\"fnl\"] :dotfiles false"))
   (write-file hidden-file "(when x\ny)\n")
   (write-file nested-file "(when x\ny)\n")
   (write-file git-file "(when x\ny)\n"))
@@ -334,7 +350,7 @@
 
 (defn- follow-symlink-scenario-setup
   [root link target]
-  (write-file (.. root "/.fnl-extras.fnl") (format-config ":follow-symlinks true"))
+  (write-file (.. root "/.fnl-extras.fnl") (format-config ":paths [\"fnl\"] :symlinks true"))
   (write-file target "(when x\ny)\n")
   (assert (vim.loop.fs_symlink target link)))
 
@@ -383,7 +399,7 @@
 
 (defn- follow-directory-symlink-scenario-setup
   [root link target outside]
-  (write-file (.. root "/.fnl-extras.fnl") (format-config ":follow-symlinks true"))
+  (write-file (.. root "/.fnl-extras.fnl") (format-config ":symlinks true"))
   (write-file target "(when x\ny)\n")
   (assert (vim.loop.fs_symlink outside link)))
 
@@ -460,7 +476,7 @@
 
 (defn- config-discovery-scenario-setup
   [config-path source-path]
-  (write-file config-path (format-config ":skip-dotfiles false"))
+  (write-file config-path (format-config ":dotfiles false"))
   (write-file source-path "(when x\ny)\n"))
 
 (defn- config-discovery-scenario-args
@@ -498,9 +514,9 @@
   (testing "missing paths and config are reported instead of using a current-directory default"
     (is (= {:code 2 :lines ["config: missing .fnl-extras.fnl"] :content "(when x\ny)\n"}
            (default-path-scenario))))
-  (testing "formats dotfiles and dot-directories when skip-dotfiles is false but never .git"
-    (is (= {:code   1
-            :lines  ["fnl/.hidden.fnl" "fnl/.hidden/nested.fnl"]
+  (testing "skips dotfiles and dot-directories when dotfiles is false and never .git"
+    (is (= {:code   2
+            :lines  ["no files found"]
             :hidden "file"
             :nested "file"
             :git    "(when x\ny)\n"}
@@ -665,7 +681,7 @@
 
 (defn- follow-symlink-dedupe-scenario-setup
   [root target link]
-  (write-file (.. root "/.fnl-extras.fnl") (format-config ":follow-symlinks true"))
+  (write-file (.. root "/.fnl-extras.fnl") (format-config ":symlinks true"))
   (write-file target "(when x\ny)\n")
   (assert (vim.loop.fs_symlink target link)))
 
@@ -690,7 +706,7 @@
 
 (defn- follow-symlink-cycle-scenario-setup
   [root file loop-path]
-  (write-file (.. root "/.fnl-extras.fnl") (format-config ":follow-symlinks true"))
+  (write-file (.. root "/.fnl-extras.fnl") (format-config ":symlinks true"))
   (write-file file "(when x\ny)\n")
   (assert (vim.loop.fs_symlink root loop-path)))
 
@@ -714,7 +730,7 @@
 
 (defn- follow-symlink-explicit-scenario-setup
   [root target link]
-  (write-file (.. root "/.fnl-extras.fnl") (format-config ":follow-symlinks true"))
+  (write-file (.. root "/.fnl-extras.fnl") (format-config ":symlinks true"))
   (write-file target "(when x\ny)\n")
   (assert (vim.loop.fs_symlink target link)))
 
@@ -799,13 +815,13 @@
   (testing "does not report the discovered config file as a formatting target"
     (is (= {:code   1
             :lines  ["a.fnl"]
-            :config (format-config ":skip-dotfiles false")
+            :config (format-config ":dotfiles false")
             :source "(when x\ny)\n"}
            (config-discovery-scenario :check))))
   (testing "does not rewrite the discovered config file"
     (is (= {:code   0
             :lines  ["a.fnl"]
-            :config (format-config ":skip-dotfiles false")
+            :config (format-config ":dotfiles false")
             :source "(when x\n  y)\n"}
            (config-discovery-scenario :write)))))
 
@@ -883,22 +899,22 @@
   root)
 
 (local lint-rule-options
-       {"module-style"        ":applies-to {:files [\"^fnl/[^s]\"]} :options {:module \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]}"
-        "spec-macro-import"   ":applies-to {:files [\"^fnl/spec/\"]} :options {:module \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"] :exempt-files [\"^fnl/spec/eca/macros[.]fnlm$\"]}"
-        "spec-no-module"      ":applies-to {:files [\"^fnl/spec/\"]} :options {:module \"module\"}"
-        "spec-direct-require" ":applies-to {:files [\"^fnl/spec/\"]} :options {:modules [\"plenary.busted\" \"luassert\"] :exempt-files [\"^fnl/spec/eca/macros[.]fnlm$\"]}"
+       {"module-style"        ":applies-to {:files [\"^[^s]\"]} :options {:module \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]}"
+        "spec-macro-import"   ":applies-to {:files [\"^spec/\"]} :options {:module \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"] :exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
+        "spec-no-module"      ":applies-to {:files [\"^spec/\"]} :options {:module \"module\"}"
+        "spec-direct-require" ":applies-to {:files [\"^spec/\"]} :options {:modules [\"plenary.busted\" \"luassert\"] :exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
         "one-is-per-testing"  ":applies-to {} :options {:testing \"testing\" :assertion \"is\" :count 1}"
         "if-branch-call"      ":applies-to {} :options {:forms [\"if\"]}"
         "if-without-else"     ":applies-to {} :options {:forms [\"if\"] :nil-else true}"
         "control-layout"      ":applies-to {} :options {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]}"
         "defn-args-newline"   ":applies-to {} :options {:forms [\"defn\" \"defn-\"]}"
         "function-shape"      ":applies-to {} :options {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"λ\"]}"
-        "no-mutation"         ":applies-to {:files [\"^fnl/[^s]\"]} :options {:forms [\"var\" \"set\" \"while\"]}"
-        "file-size"           ":applies-to {:files [\"^fnl/[^s]\"]} :options {:max-code-lines 300}"
+        "no-mutation"         ":applies-to {:files [\"^[^s]\"]} :options {:forms [\"var\" \"set\" \"while\"]}"
+        "file-size"           ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}"
         "core-require"        ":applies-to {} :options {:module \"eca.nfnl.core\" :binding \"core\"}"
         "unused-and-or"       ":applies-to {} :options {:forms [\"and\" \"or\"]}"
         "binding-per-line"    ":applies-to {} :options {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]}"
-        "call-data-arg"       ":applies-to {:files [\"^fnl/[^s]\"]} :options {:forms []}"})
+        "call-data-arg"       ":applies-to {:files [\"^[^s]\"]} :options {:forms []}"})
 
 (defn- lint-config-rule
   [normalized rule options]
@@ -924,12 +940,13 @@
 
 (defn- lint-config-finish
   [config]
-  (let [(value _) (string.gsub config "}%s*$" " :extensions [\".fnl\"] :paths [\".\"]}")]
-    value))
+  config)
 
 (defn- lint-config
   [config]
-  (let [config     (string.gsub config "^{%s*" "{:indent-width 2 :builtins false :prefix-fallbacks false :parser false ")
+  (let [config     (string.gsub config
+                                "^{%s*"
+                                "{:workspace {:extensions [\".fnl\"] :paths [\"\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} ")
         normalized (lint-config-rules config)]
     (lint-config-finish normalized)))
 
@@ -986,7 +1003,7 @@
 
 (defn- lint-discovery-scenario
   [mode]
-  (let [config "{:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"] :lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"
+  (let [config "{:workspace {:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"]} :lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"
         files  {"src/keep.fnl" "(if x 1 2)\n" "src/skip/no.fnl" "(if x 1 2)\n" "other.fnl" "(if x 1 2)\n"}]
     (lint-project config
                   files

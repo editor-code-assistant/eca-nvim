@@ -23,7 +23,7 @@
                                                                 :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
   (testing "a top-level spec-files key is rejected"
-    (let [result (validation {:lint {:spec-files ["^fnl/spec/"] :rules {}}})]
+    (let [result (validation {:lint {:spec-files ["^spec/"] :rules {}}})]
       (is (and (not (. result :ok))
                (= "unknown lint key: spec-files" (error-message result)))))))
 

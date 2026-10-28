@@ -187,7 +187,7 @@ local function run_lint_policy_success(context, files, policy)
   if not ok then
     return lint_policy_error(context.root, context["config-path"], context.printer, {message = ("invalid exclusion pattern regex: " .. tostring(compile_error))})
   else
-    return run_lint_files(context, table_update.update(policy, {matcher = matcher["vim-matcher"]()}), files)
+    return run_lint_files(context, table_update.update(policy, {matcher = matcher["vim-path-matcher"](context.cfg.workspace.paths)}), files)
   end
 end
 local function run_lint_policy(context, files)
@@ -200,10 +200,10 @@ local function run_lint_policy(context, files)
 end
 local function run_lint_discovery(context)
   local inputs = arg_parser["lint-inputs"](context.parsed, context.cfg)
-  local extensions = context.cfg.extensions
-  local skip_dotfiles = (context.cfg["skip-dotfiles"] or false)
-  local follow_symlinks = (context.cfg["follow-symlinks"] or false)
-  local options = {excludes = (context.cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
+  local extensions = context.cfg.workspace.extensions
+  local skip_dotfiles = not (context.cfg.workspace.dotfiles or false)
+  local follow_symlinks = (context.cfg.workspace.symlinks or false)
+  local options = {excludes = (context.cfg.workspace.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
   local discovered, discovery_error = scan["sorted-files"](context["git-info"].root, inputs, options)
   local files = (discovered and format["without-config-file"](discovered, context["config-path"]))
   if discovery_error then
@@ -221,7 +221,7 @@ local function run_lint(context)
   end
 end
 local function run_format_files(context, files)
-  local parser, parser_error = load_parser((context.parsed.parser or context.cfg.parser))
+  local parser, parser_error = load_parser((context.parsed.parser or context.cfg.format.parser))
   if parser_error then
     return git["emit-git-error"](context.printer, parser_error)
   else
@@ -230,10 +230,10 @@ local function run_format_files(context, files)
 end
 local function run_format_discovery(root, parsed, cfg, config_path)
   local inputs = arg_parser["lint-inputs"](parsed, cfg)
-  local extensions = cfg.extensions
-  local skip_dotfiles = (cfg["skip-dotfiles"] or false)
-  local follow_symlinks = (cfg["follow-symlinks"] or false)
-  local options = {excludes = (cfg.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
+  local extensions = cfg.workspace.extensions
+  local skip_dotfiles = not (cfg.workspace.dotfiles or false)
+  local follow_symlinks = (cfg.workspace.symlinks or false)
+  local options = {excludes = (cfg.workspace.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
   local discovered, discovery_error = scan["sorted-files"](root, inputs, options)
   return (discovered and format["without-config-file"](discovered, config_path)), discovery_error
 end
@@ -267,11 +267,9 @@ end
 local function command_config_error(context)
   local command = context.args[1]
   local require_paths_3f = (#context.parsed.paths == 0)
-  if (command == "format") then
-    return format_config.validate(context.cfg, require_paths_3f, require_paths_3f, true)
-  else
-    return format_config["validate-scan"](context.cfg, require_paths_3f)
-  end
+  local format_error = format_config.validate(context.cfg.format, false, false, true)
+  local workspace_error = config["validate-workspace"](context.cfg.workspace, require_paths_3f)
+  return (format_error or workspace_error)
 end
 local function config_error_result(printer, config_path, config_error)
   printer(format["error-line"](config_path, config_error))
@@ -281,8 +279,16 @@ local function command_config_error_result(printer, config_path, failure)
   printer(format["error-line"](config_path, failure))
   return 2
 end
+local function fragment_config(cfg)
+  if cfg.format then
+    return cfg
+  else
+    return {workspace = {paths = (cfg.paths or {"."}), exclude = (cfg.exclude or {}), extensions = (cfg.extensions or {".fnl", ".fnlm"}), dotfiles = (cfg["skip-dotfiles"] or false), symlinks = (cfg["follow-symlinks"] or false)}, format = cfg, lint = {rules = {}}}
+  end
+end
 local function run_command_loaded(context, cfg, config_path)
-  local loaded = table_update.update(context, {cfg = cfg, ["config-path"] = config_path})
+  local cfg0 = fragment_config(cfg)
+  local loaded = table_update.update(context, {cfg = cfg0, ["config-path"] = config_path})
   local failure = command_config_error(loaded)
   if failure then
     return command_config_error_result(context.printer, config_path, failure)

@@ -86,23 +86,67 @@
 
 (defn- configuration-error
   [tbl]
-  (or (format-config.validate tbl false false false)
+  (or (and (. tbl :format)
+           (format-config.validate (. tbl :format) false false false))
       (configuration-error-with-lint nil (. tbl :lint))))
 
-(defn- path-error
-  [tbl]
-  (when (and (. tbl :paths) (not (array-of-strings? (. tbl :paths))))
-    {:message "paths must be an array of strings"}))
+(defn- workspace-key-error
+  [workspace]
+  (when (= (type workspace) :table)
+    (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true}
+          key     (accumulate [candidate nil name _ (pairs workspace)]
+                    (if (and (not (. allowed name))
+                             (or (= candidate nil)
+                                 (< (tostring name) (tostring candidate))))
+                      name
+                      candidate))]
+      (when key
+        {:message (.. "unknown workspace key: " key)}))))
 
-(defn- exclude-error
+(defn- workspace-error
   [tbl]
-  (when (and (. tbl :exclude) (not (array-of-strings? (. tbl :exclude))))
-    {:message "exclude must be an array of strings"}))
+  (let [workspace (. tbl :workspace)]
+    (or (when (and workspace (not= (type workspace) :table))
+          {:message "workspace must be a table"})
+        (workspace-key-error workspace)
+        (when (and workspace workspace.paths (not (array-of-strings? workspace.paths)))
+          {:message "workspace.paths must be an array of strings"})
+        (when (and workspace workspace.exclude (not (array-of-strings? workspace.exclude)))
+          {:message "workspace.exclude must be an array of strings"})
+        (when (and workspace workspace.extensions (not (extensions? workspace.extensions)))
+          {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
+        (when (and workspace
+                   (not= workspace.dotfiles nil)
+                   (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
+          {:message "workspace.dotfiles must be a boolean"})
+        (when (and workspace
+                   (not= workspace.symlinks nil)
+                   (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
+          {:message "workspace.symlinks must be a boolean"}))))
 
 (defn- content-error
   [tbl]
-  (or (path-error tbl)
-      (exclude-error tbl)))
+  (workspace-error tbl))
+
+(defn validate-workspace
+  [workspace require-paths?]
+  (or (when (not= (type workspace) :table)
+        {:message "workspace must be a table"})
+      (workspace-key-error workspace)
+      (when (and require-paths? (= workspace.paths nil))
+        {:message "missing workspace.paths"})
+      (when (and workspace.paths (not (array-of-strings? workspace.paths)))
+        {:message "workspace.paths must be an array of strings"})
+      (when (and workspace.exclude (not (array-of-strings? workspace.exclude)))
+        {:message "workspace.exclude must be an array of strings"})
+      (when (and workspace.extensions (not (extensions? workspace.extensions)))
+        {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
+      (when (and (not= workspace.dotfiles nil)
+                 (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
+        {:message "workspace.dotfiles must be a boolean"})
+      (when (and (not= workspace.symlinks nil)
+                 (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
+        {:message "workspace.symlinks must be a boolean"})))
 
 (defn- validation-result
   [tbl failure]
@@ -121,7 +165,7 @@
 
 (defn- unknown-config-key
   [tbl]
-  (let [allowed {:indents true :format-as true :indent-patterns true :paths true :exclude true :indent-width true :builtins true :prefix-fallbacks true :extensions true :skip-dotfiles true :follow-symlinks true :alignment true :parser true :lint true}]
+  (let [allowed {:workspace true :format true :lint true}]
     (accumulate [candidate nil key _ (pairs tbl)]
       (if (and (not (. allowed key))
                (or (= candidate nil)
@@ -135,13 +179,41 @@
     (when key
       {:message (.. "unknown configuration key: " key)})))
 
+(defn- format-fragment-key?
+  [key]
+  (or (= key :indent-width)
+      (= key :builtins)
+      (= key :prefix-fallbacks)
+      (= key :parser)
+      (= key :indents)
+      (= key :format-as)
+      (= key :indent-patterns)
+      (= key :alignment)
+      (= key :extensions)))
+
+(defn- unknown-format-fragment-key
+  [tbl]
+  (accumulate [candidate nil key _ (pairs tbl)]
+    (if (and (not (format-fragment-key? key))
+             (or (= candidate nil)
+                 (< (tostring key) (tostring candidate))))
+      key
+      candidate)))
+
+(defn- format-fragment-error
+  [tbl]
+  (let [key (unknown-format-fragment-key tbl)]
+    (if key
+      {:message (.. "unknown configuration key: " key)}
+      (format-config.validate tbl false false false))))
+
 (defn- validate-table-result
   [tbl failure]
   (if failure
     (values nil failure)
     (valid-table tbl)))
 
-(defn- validate-table
+(defn- validate-canonical-table
   [tbl]
   (validate-table-result tbl (unknown-config-error tbl)))
 
@@ -149,7 +221,10 @@
   [tbl]
   (if (not= (type tbl) :table)
     (values nil {:message "configuration must be a table"})
-    (validate-table tbl)))
+    (if (or (. tbl :workspace) (. tbl :format) (. tbl :lint))
+      (validate-canonical-table tbl)
+      (let [failure (format-fragment-error tbl)]
+        (validation-result tbl failure)))))
 
 (defn- append-canonical-instance-exclusions
   [result rule index instance]
@@ -175,9 +250,9 @@
 
 (defn- valid-lint-policy
   [cfg]
-  (let [lint (. cfg :lint)]
-    {:rules      (. lint :rules)
-     :exclusions (canonical-exclusions (. lint :rules))}))
+  (let [rules (. cfg.lint :rules)]
+    {:rules      rules
+     :exclusions (canonical-exclusions rules)}))
 
 (defn- lint-policy-valid
   [valid]

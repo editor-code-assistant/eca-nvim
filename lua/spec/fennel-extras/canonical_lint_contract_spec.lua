@@ -12,7 +12,7 @@ local function error_message(result)
     return error
   end
 end
-local canonical_rule = {lint = {rules = {["spec-direct-require"] = {{severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {modules = {"plenary.busted"}, ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}}
+local canonical_rule = {lint = {rules = {["spec-direct-require"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {modules = {"plenary.busted"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}}
 local function _2_()
   local function _3_()
     local result = validation(canonical_rule)
@@ -23,7 +23,7 @@ local function _2_()
   end
   require("plenary.busted").it("rule instances with files, forms, and modules validate", _3_)
   local function _4_()
-    local result = validation({lint = {rules = {["spec-direct-require"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {modules = {"plenary.busted"}, ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["spec-direct-require"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {modules = {"plenary.busted"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and (nil == result.value) and ("unknown applies-to key: contexts" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= nil (. result \"value\")) (= \"unknown applies-to key: contexts\" (error-message result)))")
@@ -34,7 +34,7 @@ end
 require("plenary.busted").describe("canonical-applies-to-contract", _2_)
 local function _5_()
   local function _6_()
-    local result = validation({lint = {["spec-files"] = {"^fnl/spec/"}, rules = {}}})
+    local result = validation({lint = {["spec-files"] = {"^spec/"}, rules = {}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and (nil == result.value) and ("unknown lint key: spec-files" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= nil (. result \"value\")) (= \"unknown lint key: spec-files\" (error-message result)))")
@@ -45,8 +45,8 @@ local function _5_()
     local result = validation(canonical_rule)
     local value = result.value
     local assert_28_auto = require("luassert")
-    local value_29_auto = (result.ok and value and (nil == value.lint["spec-files"]) and vim.deep_equal({"^fnl/spec/"}, value.lint.rules["spec-direct-require"][1]["applies-to"].files))
-    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") value (= nil (. value \"lint\" \"spec-files\")) (vim.deep_equal [\"^fnl/spec/\"] (. value \"lint\" \"rules\" \"spec-direct-require\" 1 \"applies-to\" \"files\")))")
+    local value_29_auto = (result.ok and value and (nil == value.lint["spec-files"]) and vim.deep_equal({"^spec/"}, value.lint.rules["spec-direct-require"][1]["applies-to"].files))
+    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") value (= nil (. value \"lint\" \"spec-files\")) (vim.deep_equal [\"^spec/\"] (. value \"lint\" \"rules\" \"spec-direct-require\" 1 \"applies-to\" \"files\")))")
     return true
   end
   return require("plenary.busted").it("spec-only behavior uses explicit file regexes", _7_)

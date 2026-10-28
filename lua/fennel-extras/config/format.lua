@@ -93,15 +93,12 @@ end
 local function invalid_boolean_3f(value)
   return ((value ~= nil) and not boolean_3f(value))
 end
-local function invalid_exclude_3f(value)
-  return (value and not array_of_strings_3f(value))
-end
 local function validate_values(config, require_scan_3f, strict_3f)
   local width = config["indent-width"]
   local parser = config.parser
   local skip_dotfiles = config["skip-dotfiles"]
   local follow_symlinks = config["follow-symlinks"]
-  return ((invalid_width_3f(width, strict_3f) and {message = "indent-width must be a positive integer"}) or (invalid_extensions_3f(config, require_scan_3f) and {message = "extensions must be a non-empty list of strings starting with \".\""}) or (invalid_parser_3f(parser, strict_3f) and {message = "parser must be a string or false"}) or (invalid_boolean_3f(skip_dotfiles) and {message = "skip-dotfiles must be a boolean"}) or (invalid_boolean_3f(follow_symlinks) and {message = "follow-symlinks must be a boolean"}) or (invalid_exclude_3f(config.exclude) and {message = "exclude must be an array of strings"}))
+  return ((invalid_width_3f(width, strict_3f) and {message = "indent-width must be a positive integer"}) or (invalid_extensions_3f(config, require_scan_3f) and {message = "extensions must be a non-empty list of strings starting with \".\""}) or (invalid_parser_3f(parser, strict_3f) and {message = "parser must be a string or false"}) or (invalid_boolean_3f(skip_dotfiles) and {message = "skip-dotfiles must be a boolean"}) or (invalid_boolean_3f(follow_symlinks) and {message = "follow-symlinks must be a boolean"}))
 end
 local function missing_binding_forms(value)
   if ((value.bindings or value["split-bindings"]) and (value["binding-forms"] == nil)) then

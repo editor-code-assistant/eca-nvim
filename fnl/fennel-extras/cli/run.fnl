@@ -170,7 +170,7 @@
         (ok compile-error) (pcall compile-exclusion-patterns exclusions 1 compile-exclusion-patterns)]
     (if (not ok)
       (lint-policy-error context.root context.config-path context.printer {:message (.. "invalid exclusion pattern regex: " (tostring compile-error))})
-      (run-lint-files context (table-update.update policy {:matcher (matcher.vim-matcher)}) files))))
+      (run-lint-files context (table-update.update policy {:matcher (matcher.vim-path-matcher context.cfg.workspace.paths)}) files))))
 
 (defn- run-lint-policy
   [context files]
@@ -182,10 +182,10 @@
 (defn- run-lint-discovery
   [context]
   (let [inputs                       ((. arg-parser :lint-inputs) context.parsed context.cfg)
-        extensions                   (. context.cfg :extensions)
-        skip-dotfiles                (or (. context.cfg :skip-dotfiles) false)
-        follow-symlinks              (or (. context.cfg :follow-symlinks) false)
-        options                      {:excludes (or (. context.cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
+        extensions                   (. context.cfg.workspace :extensions)
+        skip-dotfiles                (not (or (. context.cfg.workspace :dotfiles) false))
+        follow-symlinks              (or (. context.cfg.workspace :symlinks) false)
+        options                      {:excludes (or (. context.cfg.workspace :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
         (discovered discovery-error) (scan.sorted-files context.git-info.root inputs options)
         files                        (and discovered (format.without-config-file discovered context.config-path))]
     (if discovery-error
@@ -201,7 +201,7 @@
 
 (defn- run-format-files
   [context files]
-  (let [(parser parser-error) (load-parser (or context.parsed.parser (. context.cfg :parser)))]
+  (let [(parser parser-error) (load-parser (or context.parsed.parser (. context.cfg.format :parser)))]
     (if parser-error
       (git.emit-git-error context.printer parser-error)
       (format.run-files context parser files))))
@@ -209,10 +209,10 @@
 (defn- run-format-discovery
   [root parsed cfg config-path]
   (let [inputs                       ((. arg-parser :lint-inputs) parsed cfg)
-        extensions                   (. cfg :extensions)
-        skip-dotfiles                (or (. cfg :skip-dotfiles) false)
-        follow-symlinks              (or (. cfg :follow-symlinks) false)
-        options                      {:excludes (or (. cfg :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
+        extensions                   (. cfg.workspace :extensions)
+        skip-dotfiles                (not (or (. cfg.workspace :dotfiles) false))
+        follow-symlinks              (or (. cfg.workspace :symlinks) false)
+        options                      {:excludes (or (. cfg.workspace :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
         (discovered discovery-error) (scan.sorted-files root inputs options)]
     (values (and discovered (format.without-config-file discovered config-path)) discovery-error)))
 
@@ -241,11 +241,12 @@
 
 (defn- command-config-error
   [context]
-  (let [command        (. context.args 1)
-        require-paths? (= (length context.parsed.paths) 0)]
-    (if (= command "format")
-      (format-config.validate context.cfg require-paths? require-paths? true)
-      (format-config.validate-scan context.cfg require-paths?))))
+  (let [command         (. context.args 1)
+        require-paths?  (= (length context.parsed.paths) 0)
+        format-error    (format-config.validate context.cfg.format false false true)
+        workspace-error (config.validate-workspace context.cfg.workspace require-paths?)]
+    (or format-error
+        workspace-error)))
 
 (defn- config-error-result
   [printer config-path config-error]
@@ -257,9 +258,22 @@
   (printer (format.error-line config-path failure))
   2)
 
+(defn- fragment-config
+  [cfg]
+  (if cfg.format
+    cfg
+    {:workspace {:paths      (or cfg.paths ["."])
+                 :exclude    (or cfg.exclude [])
+                 :extensions (or cfg.extensions [".fnl" ".fnlm"])
+                 :dotfiles   (or cfg.skip-dotfiles false)
+                 :symlinks   (or cfg.follow-symlinks false)}
+     :format    cfg
+     :lint      {:rules {}}}))
+
 (defn- run-command-loaded
   [context cfg config-path]
-  (let [loaded  (table-update.update context {:cfg cfg :config-path config-path})
+  (let [cfg     (fragment-config cfg)
+        loaded  (table-update.update context {:cfg cfg :config-path config-path})
         failure (command-config-error loaded)]
     (if failure
       (command-config-error-result context.printer config-path failure)
