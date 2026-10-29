@@ -45,7 +45,8 @@
 
 (defn- stale-message
   [exclusion policy]
-  (let [instances (and exclusion.rule (. policy.rules exclusion.rule))
+  (let [instances (or (and exclusion.rule (. policy.rules exclusion.rule))
+                      (and exclusion.rule policy.design (. policy.design exclusion.rule)))
         instance  (and instances exclusion.instance (. instances exclusion.instance))]
     (if (or (and instance (= instance.severity "off"))
             (and (= instance nil) (= instances nil)))
@@ -95,6 +96,7 @@
   [file policy]
   (let [context          {:path             file.path
                           :rules            policy.rules
+                          :design           policy.design
                           :selection        file.selection
                           :matcher          policy.matcher
                           :defer-exclusions true}

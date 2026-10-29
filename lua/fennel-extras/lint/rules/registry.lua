@@ -5,8 +5,10 @@ do
   pkg_1_auto.loaded["fennel-extras.lint.rules.registry"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
-local rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "function-shape", "multiline-layout", "file-size", "call-data-arg"}
 local core = require("eca.nfnl.core")
+local lint_rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg"}
+local design_rule_name_list = {"function-shape", "if-branch-call", "if-without-else", "nested-forms", "leading-bindings", "no-mutation"}
+local rule_name_list = core.concat(lint_rule_name_list, {"function-shape", "if-branch-call", "if-without-else"})
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
 local rule_properties = {["module-style"] = {scope = "file"}, ["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
@@ -29,6 +31,42 @@ do
   end
   _2amodule_2a["rule-names"] = rule_names0
   rule_names = _2amodule_2a["rule-names"]
+end
+local lint_rule_names
+do
+  local function lint_rule_names0()
+    return lint_rule_name_list
+  end
+  _2amodule_2a["lint-rule-names"] = lint_rule_names0
+  lint_rule_names = _2amodule_2a["lint-rule-names"]
+end
+local design_rule_names
+do
+  local function design_rule_names0()
+    return design_rule_name_list
+  end
+  _2amodule_2a["design-rule-names"] = design_rule_names0
+  design_rule_names = _2amodule_2a["design-rule-names"]
+end
+local rule_domain
+do
+  local function rule_domain0(rule)
+    local _1_
+    do
+      local found = false
+      for _, name in ipairs(design_rule_name_list) do
+        found = (found or (name == rule))
+      end
+      _1_ = found
+    end
+    if _1_ then
+      return "design"
+    else
+      return "lint"
+    end
+  end
+  _2amodule_2a["rule-domain"] = rule_domain0
+  rule_domain = _2amodule_2a["rule-domain"]
 end
 local option_schema
 do
@@ -64,10 +102,14 @@ end
 local instances
 do
   local function instances0(policy)
-    local rules = ((policy and policy.rules) or policy)
+    local lint_rules = ((policy and policy.rules) or (policy and not policy.rules and policy) or {})
+    local design_rules = ((policy and policy.design) or lint_rules or {})
     local result = {}
-    for _, rule in ipairs(rule_name_list) do
-      append_instances(result, rule, (rules[rule] or {}))
+    for _, rule in ipairs(lint_rule_name_list) do
+      append_instances(result, rule, (lint_rules[rule] or {}))
+    end
+    for _, rule in ipairs(design_rule_name_list) do
+      append_instances(result, rule, (design_rules[rule] or {}))
     end
     return result
   end
@@ -77,24 +119,29 @@ end
 local evaluator_policy
 do
   local function evaluator_policy0(policy, rule, instance)
-    local result = defaults()
+    local base_result = core.assoc(defaults(), rule, instance.severity)
+    local result
+    if (rule == "no-mutation") then
+      result = core.assoc(base_result, "forbidden-form", instance.severity)
+    else
+      result = base_result
+    end
     local with_options = core.assoc(result, "options", (instance.options or {}))
-    result[rule] = instance.severity
     return core.assoc(with_options, "matcher", policy.matcher)
   end
   _2amodule_2a["evaluator-policy"] = evaluator_policy0
   evaluator_policy = _2amodule_2a["evaluator-policy"]
 end
 local function matches_3f(matcher, pattern, value)
-  local and_1_ = pattern and value
-  if and_1_ then
+  local and_4_ = pattern and value
+  if and_4_ then
     if matcher then
-      and_1_ = matcher(pattern, value)
+      and_4_ = matcher(pattern, value)
     else
-      and_1_ = (pattern == value)
+      and_4_ = (pattern == value)
     end
   end
-  return and_1_
+  return and_4_
 end
 local function any_match_3f(items, matcher, value)
   local result = false

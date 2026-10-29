@@ -155,6 +155,18 @@ local function append_context_rule(result, rule, entries)
     return result
   end
 end
+local function context_lint_value(context)
+  local lint_rules = {}
+  local design_rules = (context.design or {})
+  for rule, entries in pairs((context.rules or {})) do
+    if (registry["rule-domain"](rule) == "design") then
+      design_rules[rule] = entries
+    else
+      lint_rules[rule] = entries
+    end
+  end
+  return {rules = lint_rules, design = design_rules}
+end
 local function append_context_exclusions(result, raw_policy)
   for _, item in ipairs(registry.instances(raw_policy)) do
     for _0, exclusion in ipairs((item.value.exclusions or {})) do
@@ -164,7 +176,7 @@ local function append_context_exclusions(result, raw_policy)
   return result
 end
 local function context_exclusions(context)
-  return append_context_exclusions({}, (context.rules or {}))
+  return append_context_exclusions({}, context_lint_value(context))
 end
 local function regex_exclusion_error_entry(entry, matcher, index)
   if ((entry.pattern or entry.code) and (matcher == nil)) then
@@ -182,16 +194,14 @@ local function regex_exclusion_error(exclusions, matcher, index)
   end
 end
 local function context_policy(context)
-  return core.merge(policy_for_context(context), {matcher = context.matcher})
-end
-local function context_lint_value(context)
-  return {rules = (context.rules or {})}
+  return core.merge(context_lint_value(context), {matcher = context.matcher})
 end
 local function context_matcher_error(context, exclusions)
   return regex_exclusion_error(exclusions, context.matcher, 1)
 end
 local function context_validation_error(context)
-  return config_lint["lint-error"](context_lint_value(context))
+  local value = context_lint_value(context)
+  return (config_lint["lint-error"]({rules = value.rules}) or config_lint["design-error"]({rules = value.design}))
 end
 local function context_forms(source, path)
   return identity.forms(source, path)

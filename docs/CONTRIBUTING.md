@@ -116,22 +116,6 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :options    {:children  ["is"]
                   :max-count 1}
      :exclusions []}]
-   :function-shape
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-     :exclusions []}]
-   :if-branch-call
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["if"]}
-     :exclusions []}]
-   :if-without-else
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms    ["if"]
-                  :nil-else true}
-     :exclusions []}]
    :module-import
    [{:severity   :error
      :applies-to {}
@@ -176,7 +160,16 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :exclusions []}]}}}
 ```
 
-The configuration has three root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, and `:symlinks`. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > `:builtins` > `:prefix-fallbacks` > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one form name to another; and `:indent-patterns` contains `[lua-pattern rule-list]` entries. `:indent-width`, `:builtins`, `:prefix-fallbacks`, and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
+The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, and `:symlinks`. `:lint` contains direct policy rules. Structural and idiomatic rules belong under `:design`, using the same rule-instance schema and finding/exclusion pipeline as lint. The moved design rules are `function-shape`, `if-branch-call`, `if-without-else`, and `no-mutation`; generic `nested-forms` and `leading-bindings` evaluators are also available there.
+
+For example:
+
+```fennel
+:design {:rules {:function-shape [{:severity :warning
+                                    :applies-to {}
+                                    :options {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                                    :exclusions []}]}}
+``` The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > `:format-as` > `:indent-patterns` > `:builtins` > `:prefix-fallbacks` > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one form name to another; and `:indent-patterns` contains `[lua-pattern rule-list]` entries. `:indent-width`, `:builtins`, `:prefix-fallbacks`, and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
 
 By default, formatting changes leading indentation only. Alignment is separate and must be configured under `:alignment`; there is no legacy `:align-bindings` compatibility key. In this repository, the `if` rule gives bodies regular 2-space indentation; multiline `and`/`or` forms remain aligned under their first argument.
 
@@ -209,7 +202,7 @@ The root `.fnl-extras.fnl` is the canonical configuration example. Its entries u
 
 `:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields.
 
-The thirteen rules are:
+The lint rules are:
 
 | Rule | Options |
 | --- | --- |
@@ -218,14 +211,15 @@ The thirteen rules are:
 | `module-style` | `:module`, `:forms` |
 | `module-import` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
 | `form-child-count` | `:children`, `:max-count` |
-| `if-branch-call` | `:forms` |
-| `if-without-else` | `:forms`, `:nil-else` |
 | `control-layout` | `:forms` |
 | `unused-and-or` | `:forms` |
-| `function-shape` | `:forms`, `:max-depth` |
 | `multiline-layout` | `:clauses`, `:bindings` |
 | `file-size` | `:max-code-lines` |
 | `call-data-arg` | `:forms` |
+
+#### Design rule options
+
+Design uses the same instance shape. Its structural rules are `function-shape` (`:forms`, optional `:max-depth`), `if-branch-call` (`:forms`), `if-without-else` (`:forms`, `:nil-else`), `no-mutation` (`:forms`), `nested-forms` (`:forms`, `:max-depth`), and `leading-bindings` (`:forms`).
 
 #### Rule options
 

@@ -2,8 +2,10 @@
 
 (module fennel-extras.lint.rules.registry)
 
-(local rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "if-branch-call" "if-without-else" "control-layout" "unused-and-or" "function-shape" "multiline-layout" "file-size" "call-data-arg"])
 (local core (require :eca.nfnl.core))
+(local lint-rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg"])
+(local design-rule-name-list ["function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])
+(local rule-name-list (core.concat lint-rule-name-list ["function-shape" "if-branch-call" "if-without-else"]))
 (local ast (require :fennel-extras.lint.rules.ast))
 (local options (require :fennel-extras.lint.rules.options))
 (local rule-properties {:module-style {:scope :file} :required-form {:scope :file} :file-size {:scope :file}})
@@ -20,6 +22,27 @@
 (defn rule-names
   []
   rule-name-list)
+
+
+
+(defn lint-rule-names
+  []
+  lint-rule-name-list)
+
+
+
+(defn design-rule-names
+  []
+  design-rule-name-list)
+
+
+
+(defn rule-domain
+  [rule]
+  (if (accumulate [found false _ name (ipairs design-rule-name-list)]
+        (or found (= name rule)))
+    :design
+    :lint))
 
 
 
@@ -53,19 +76,28 @@
 
 (defn instances
   [policy]
-  (let [rules  (or (and policy policy.rules) policy)
-        result []]
-    (each [_ rule (ipairs rule-name-list)]
-      (append-instances result rule (or (. rules rule) [])))
+  (let [lint-rules   (or (and policy policy.rules)
+                         (and policy (not policy.rules) policy)
+                         {})
+        design-rules (or (and policy policy.design)
+                         lint-rules
+                         {})
+        result       []]
+    (each [_ rule (ipairs lint-rule-name-list)]
+      (append-instances result rule (or (. lint-rules rule) [])))
+    (each [_ rule (ipairs design-rule-name-list)]
+      (append-instances result rule (or (. design-rules rule) [])))
     result))
 
 
 
 (defn evaluator-policy
   [policy rule instance]
-  (let [result       (defaults)
+  (let [base-result  (core.assoc (defaults) rule instance.severity)
+        result       (if (= rule "no-mutation")
+                       (core.assoc base-result "forbidden-form" instance.severity)
+                       base-result)
         with-options (core.assoc result :options (or instance.options {}))]
-    (tset result rule instance.severity)
     (core.assoc with-options :matcher policy.matcher)))
 
 

@@ -81,22 +81,6 @@
      :options    {:children  ["is"]
                   :max-count 1}
      :exclusions []}]
-   :function-shape
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-     :exclusions []}]
-   :if-branch-call
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["if"]}
-     :exclusions []}]
-   :if-without-else
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms    ["if"]
-                  :nil-else true}
-     :exclusions []}]
    :module-import
    [{:severity   :error
      :applies-to {}
@@ -138,4 +122,38 @@
    [{:severity   :warning
      :applies-to {}
      :options    {:forms ["and" "or"]}
+     :exclusions []}]}}
+ :design
+ {:rules
+  {:function-shape
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+     :exclusions []}]
+   :if-branch-call
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["if"]}
+     :exclusions []}]
+   :if-without-else
+   [{:severity   :warning
+     :applies-to {}
+     :options    {:forms ["if"]
+                  :nil-else true}
+     :exclusions []}]
+   :nested-forms
+   [{:severity   :off
+     :applies-to {}
+     :options    {:forms []
+                  :max-depth 1}
+     :exclusions []}]
+   :leading-bindings
+   [{:severity   :off
+     :applies-to {}
+     :options    {:forms []}
+     :exclusions []}]
+   :no-mutation
+   [{:severity   :off
+     :applies-to {}
+     :options    {:forms ["var" "set" "while"]}
      :exclusions []}]}}}

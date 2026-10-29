@@ -1220,6 +1220,13 @@
         "split-bindings"   ":applies-to {} :options {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]}"
         "call-data-arg"    ":applies-to {:files [\"^[^s]\"]} :options {:forms []}"})
 
+(local design-rule-names {"function-shape"   true
+                          "if-branch-call"   true
+                          "if-without-else"  true
+                          "no-mutation"      true
+                          "nested-forms"     true
+                          "leading-bindings" true})
+
 (defn- lint-config-rule
   [normalized rule options]
   (let [escaped-rule        (string.gsub rule "-" "%%-")
@@ -1246,9 +1253,71 @@
 
 
 
+(defn- fennel-string
+  [value]
+  (string.format "%q" value))
+
+
+
+(local fennel-sequence-keys {:forms         true
+                             :children      true
+                             :modules       true
+                             :exempt-files  true
+                             :exclusions    true
+                             :paths         true
+                             :exclude       true
+                             :extensions    true
+                             :binding-forms true
+                             :clause-forms  true})
+
+(defn- fennel-value
+  [value as-list?]
+  (if (= :table (type value))
+    (let [list? (or as-list?
+                    (and (> (length value) 0)
+                         (vim.islist value)))
+          parts []]
+      (each [key item (pairs value)]
+        (table.insert parts (if list?
+                              (fennel-value item)
+                              (.. ":" key " "
+                                  (if (and (= :string (type item))
+                                           (or (= key "severity") (= key "mode")))
+                                    (.. ":" item)
+                                    (fennel-value item (. fennel-sequence-keys key)))))))
+      (.. (if list? "[" "{")
+          (table.concat parts " ")
+          (if list? "]" "}")))
+    (if (= :string (type value))
+      (fennel-string value)
+      (tostring value))))
+
+
+
 (defn- lint-config-finish
   [config]
-  config)
+  (let [config-module (require :fennel-extras.config)
+        parsed-result (config-module.parse-string config)]
+    (if (= nil parsed-result)
+      config
+      (let [lint         (or parsed-result.lint {})
+            rules        (or lint.rules {})
+            design       (or parsed-result.design {})
+            design-rules (or design.rules {})
+            lint-rules   {}]
+        (each [rule value (pairs rules)]
+          (if (. design-rule-names rule)
+            (tset design-rules rule value)
+            (tset lint-rules rule value)))
+        (fennel-value (vim.tbl_extend "force"
+                                      parsed-result
+                                      {:lint   (vim.tbl_extend "force"
+                                                               lint
+                                                               {:rules lint-rules})
+                                       :design (vim.tbl_extend "force"
+                                                               design
+                                                               {:rules design-rules})})
+                      false)))))
 
 
 
@@ -1371,8 +1440,10 @@
 (defn- lint-exclusion-config
   [mode]
   (or (and (= mode :stale)
-           "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
-      "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"a.fnl\" :reason \"intentional multi-step branch\"}]}]}}}"))
+           "{:lint {:rules {\"module-style\" :off}}
+             :design {:rules {:if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
+      "{:lint {:rules {\"module-style\" :off}}
+        :design {:rules {:if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"a.fnl\" :reason \"intentional multi-step branch\"}]}]}}}"))
 
 
 
@@ -1395,8 +1466,10 @@
 (defn- lint-selector-exclusion-config
   [mode]
   (or (and (= mode :per-rule)
-           "{:lint {:rules {\"module-style\" :off :if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-rule exclusion\"}]}]}}}")
-      "{:lint {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-instance exclusion\"}]}]}}}"))
+           "{:lint {:rules {\"module-style\" :off}}
+             :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-rule exclusion\"}]}]}}}")
+      "{:lint {:rules {}}
+        :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-instance exclusion\"}]}]}}}"))
 
 
 
@@ -1418,7 +1491,8 @@
 
 (defn- lint-stale-pattern-scenario
   []
-  (lint-project "{:lint {:rules {\"module-style\" :off :if-without-else [{:severity :warning :applies-to {} :options { :forms [\"if\"] :nil-else true} :exclusions [{:path \"missing[.]fnl\" :reason \"stale pattern\"]}]}}}"
+  (lint-project "{:lint {:rules {\"module-style\" :off}}
+                :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options { :forms [\"if\"] :nil-else true} :exclusions [{:path \"missing[.]fnl\" :reason \"stale pattern\"]}]}}}"
                 {"a.fnl" "(if ok then)\n"}
                 ["lint" "--all"]))
 
@@ -1426,7 +1500,8 @@
 
 (defn- lint-disabled-exclusion-scenario
   []
-  (lint-project "{:lint {:rules {:if-without-else [{:severity :off :applies-to {} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"]}]}}}"
+  (lint-project "{:lint {:rules {}}
+                :design {:rules {:if-without-else [{:severity :off :applies-to {} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"]}]}}}"
                 {"a.fnl" "(if ok then)\n"}
                 ["lint" "--all"]))
 

@@ -104,7 +104,7 @@ local function configuration_error_with_lint(failure, lint)
   return (failure or (lint and lint_config["lint-error"](lint)))
 end
 local function configuration_error(tbl)
-  return ((tbl.format and format_config.validate(tbl.format, false, false, false)) or configuration_error_with_lint(nil, tbl.lint))
+  return ((tbl.format and format_config.validate(tbl.format, false, false, false)) or configuration_error_with_lint(nil, tbl.lint) or (tbl.design and lint_config["design-error"](tbl.design)))
 end
 local function workspace_key_error(workspace)
   if (type(workspace) == "table") then
@@ -250,7 +250,7 @@ local function valid_table(tbl)
   return validation_result(tbl, validation_failure(tbl))
 end
 local function unknown_config_key(tbl)
-  local allowed = {workspace = true, format = true, lint = true}
+  local allowed = {workspace = true, format = true, lint = true, design = true}
   local candidate = nil
   for key, _ in pairs(tbl) do
     if (not allowed[key] and ((candidate == nil) or (tostring(key) < tostring(candidate)))) then
@@ -307,7 +307,7 @@ do
     if (type(tbl) ~= "table") then
       return nil, {message = "configuration must be a table"}
     else
-      if (tbl.workspace or tbl.format or tbl.lint) then
+      if (tbl.workspace or tbl.format or tbl.lint or tbl.design) then
         return validate_canonical_table(tbl)
       else
         local failure = format_fragment_error(tbl)
@@ -342,12 +342,13 @@ local function canonical_exclusions(rules)
   return result
 end
 local function valid_lint_policy(cfg)
-  local rules = cfg.lint.rules
-  return {rules = rules, exclusions = canonical_exclusions(rules)}
+  local rules = ((cfg.lint and cfg.lint.rules) or {})
+  local design = (cfg.design and cfg.design.rules)
+  return {rules = rules, design = design, exclusions = core.concat(canonical_exclusions(rules), canonical_exclusions((design or {})))}
 end
 local function lint_policy_valid(valid)
-  if (valid.lint == nil) then
-    return nil, {message = "missing lint"}
+  if ((valid.lint == nil) and (valid.design == nil)) then
+    return nil, {message = "missing lint or design"}
   else
     return valid_lint_policy(valid)
   end

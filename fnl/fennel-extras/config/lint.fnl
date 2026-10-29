@@ -93,33 +93,33 @@
 
 
 (defn- canonical-missing-option-step
-  [name index option-values names option-index]
+  [section name index option-values names option-index]
   (if (> option-index (length names))
     nil
     (let [option-name (. names option-index)]
       (or (and (= (. option-values option-name) nil)
-               {:message (.. "missing lint.rules." name "[" index "].options." option-name)})
-          (canonical-missing-option-step name index option-values names (+ option-index 1))))))
+               {:message (.. "missing " section ".rules." name "[" index "].options." option-name)})
+          (canonical-missing-option-step section name index option-values names (+ option-index 1))))))
 
 
 
 (defn- canonical-missing-option-error
-  [name index instance]
+  [section name index instance]
   (when (not= instance.severity "off")
     (if (= name "module-import")
-      (or (canonical-missing-option-step name index instance.options ["mode"] 1)
+      (or (canonical-missing-option-step section name index instance.options ["mode"] 1)
           (if (= instance.options.mode "require")
             (if instance.options.forms
-              (canonical-missing-option-step name index instance.options ["module"] 1)
-              (canonical-missing-option-step name index instance.options ["module" "binding"] 1))
-            (canonical-missing-option-step name index instance.options ["modules" "exempt-files"] 1)))
-      (canonical-missing-option-step name index instance.options (registry.required-option-names name) 1))))
+              (canonical-missing-option-step section name index instance.options ["module"] 1)
+              (canonical-missing-option-step section name index instance.options ["module" "binding"] 1))
+            (canonical-missing-option-step section name index instance.options ["modules" "exempt-files"] 1)))
+      (canonical-missing-option-step section name index instance.options (registry.required-option-names name) 1))))
 
 
 
 (defn- canonical-instance-error
-  [name index instance]
-  (let [path (.. "lint.rules." name "[" index "]")]
+  [section name index instance]
+  (let [path (.. section ".rules." name "[" index "]")]
     (or (when (not= (type instance) :table)
           {:message (.. path " must be a table")})
         (canonical-map-keys-error instance path {:severity true :applies-to true :options true :exclusions true})
@@ -129,7 +129,7 @@
         (when (not= (type instance.options) :table)
           {:message (.. path ".options must be a table")})
         (canonical-options-error name instance.options (.. path ".options"))
-        (canonical-missing-option-error name index instance)
+        (canonical-missing-option-error section name index instance)
         (canonical-exclusions-error instance.exclusions (.. path ".exclusions")))))
 
 
@@ -144,37 +144,47 @@
 
 
 (defn- canonical-rules-error
-  [rules]
+  [section rules]
   (or (when (not= (type rules) :table)
-        {:message "lint.rules must be a table"})
+        {:message (.. section ".rules must be a table")})
       (let [name (accumulate [candidate nil key _ (pairs rules)]
                    (canonical-rule-error-step rules key candidate))]
         (when name
-          (let [instances (. rules name)]
+          (let [instances (. rules name)
+                allowed   (if (= section "design")
+                            (registry.design-rule-names)
+                            (registry.lint-rule-names))]
             (if (not= (type name) :string)
-              {:message (.. "lint.rules." (tostring name) ": rule key must be a keyword")}
-              (if (= (. (registry.defaults) name) nil)
-                {:message (.. "unknown lint rule: " name)}
+              {:message (.. "unknown " section " rule: " (tostring name))}
+              (if (not (accumulate [found false _ allowed-name (ipairs allowed)]
+                         (or found (= allowed-name name))))
+                {:message (.. "unknown " section " rule: " name)}
                 (if (not (and (sequence? instances) (> (length instances) 0)))
-                  {:message (.. "lint.rules." name " must be a non-empty vector")}
+                  {:message (.. section ".rules." name " must be a non-empty vector")}
                   (let []
                     (var failure nil)
                     (each [index instance (ipairs instances)]
                       (when (= failure nil)
-                        (set failure (canonical-instance-error name index instance))))
+                        (set failure (canonical-instance-error section name index instance))))
                     failure)))))))))
 
 
 
-(defn- canonical-lint-error
-  [lint]
-  (or (when (not= (type lint) :table)
-        {:message "lint must be a table"})
-      (canonical-contract-key-error lint {:rules true} "unknown lint key: ")
-      (canonical-rules-error lint.rules)))
+(defn- canonical-section-error
+  [section value]
+  (or (when (not= (type value) :table)
+        {:message (.. section " must be a table")})
+      (canonical-contract-key-error value {:rules true} (.. "unknown " section " key: "))
+      (canonical-rules-error section value.rules)))
 
 
 
 (defn lint-error
   [lint]
-  (canonical-lint-error lint))
+  (canonical-section-error "lint" lint))
+
+
+
+(defn design-error
+  [design]
+  (canonical-section-error "design" design))

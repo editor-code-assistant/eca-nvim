@@ -17,7 +17,10 @@
         "function-shape"   ["forms" "max-depth"]
         "multiline-layout" ["clauses" "bindings"]
         "file-size"        ["max-code-lines"]
-        "call-data-arg"    ["forms"]})
+        "call-data-arg"    ["forms"]
+        "nested-forms"     ["forms" "max-depth"]
+        "leading-bindings" ["forms"]
+        "no-mutation"      ["forms"]})
 
 (local required-option-names
        {"forbidden-form"   []
@@ -32,7 +35,10 @@
         "function-shape"   ["forms"]
         "multiline-layout" ["clauses" "bindings"]
         "file-size"        ["max-code-lines"]
-        "call-data-arg"    ["forms"]})
+        "call-data-arg"    ["forms"]
+        "nested-forms"     ["forms" "max-depth"]
+        "leading-bindings" ["forms"]
+        "no-mutation"      ["forms"]})
 
 (local option-types
        {

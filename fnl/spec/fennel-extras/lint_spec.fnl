@@ -97,12 +97,33 @@
 
 
 
+(local design-rule-names {:function-shape   true
+                          :if-branch-call   true
+                          :if-without-else  true
+                          :no-mutation      true
+                          :nested-forms     true
+                          :leading-bindings true})
+
 (defn- compatibility-policy
   [rules]
   (let [policy (all-enabled-policy)]
     (each [rule severity (pairs rules)]
       (tset policy rule (compatibility-rule-value rule severity)))
     policy))
+
+
+
+(defn- configured-policy
+  [config]
+  (let [lint-rules   (or (and config.lint config.lint.rules) {})
+        design-rules (or (and config.design config.design.rules) {})
+        rules        {}]
+    (each [rule severity (pairs lint-rules)]
+      (tset rules rule severity))
+    (each [rule severity (pairs design-rules)]
+      (when (. design-rule-names rule)
+        (tset rules rule severity)))
+    (compatibility-policy rules)))
 
 
 
@@ -145,8 +166,10 @@
 
 (defn- policy-for
   [rules]
-  (or (and rules (compatibility-policy rules))
-      (all-enabled-policy)))
+  (if (and rules (or (. rules :lint) (. rules :design)))
+    (configured-policy rules)
+    (or (and rules (compatibility-policy rules))
+        (all-enabled-policy))))
 
 
 
@@ -244,7 +267,7 @@
 (defn- matcher-context
   [path rules exclusions]
   {:path       path
-   :rules      (compatibility-policy rules)
+   :rules      (policy-for rules)
    :exclusions exclusions
    :matcher    (matcher.vim-matcher)})
 
@@ -1486,15 +1509,19 @@
 
   (testing "lint implementation files report only the approved canonical findings"
     (is (= [["fnl/fennel-extras/lint/exclusion.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "multiline-layout"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/spec.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint.fnl" "function-shape"]
             ["fnl/fennel-extras/lint.fnl" "function-shape"]]
            (. (repo-scenario nil) :lint-files))))
 

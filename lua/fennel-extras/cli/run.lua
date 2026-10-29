@@ -160,6 +160,10 @@ local function run_lint_files(context, policy, files)
   end
 end
 local function compile_exclusion_entry(entry)
+  if entry.path then
+    matcher["compile-pattern"](entry.path)
+  else
+  end
   if entry.pattern then
     matcher["compile-pattern"](entry.pattern)
   else
@@ -256,11 +260,11 @@ local function run_format(context)
   return run_format_result(context, files, discovery_error)
 end
 local function run_command_mode(context)
-  local case_24_ = context.args[1]
-  if (case_24_ == "lint") then
+  local case_25_ = context.args[1]
+  if (case_25_ == "lint") then
     return run_lint(table_update.update(context, {["require-git"] = context.parsed.changed}))
   else
-    local _ = case_24_
+    local _ = case_25_
     return run_format(context)
   end
 end

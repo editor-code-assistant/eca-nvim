@@ -14,7 +14,7 @@ local function error_message(result)
 end
 local function _2_()
   local function _3_()
-    local result = validation({lint = {rules = {["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {forms = {"if"}, ["nil-else"] = true}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {}}, design = {rules = {["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {forms = {"if"}, ["nil-else"] = true}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")

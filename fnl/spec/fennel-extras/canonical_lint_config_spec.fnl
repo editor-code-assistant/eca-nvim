@@ -24,10 +24,11 @@
 
 
   (testing "rules use keyword keys and non-empty vectors of instances"
-    (let [result (validation {:lint {:rules {:if-without-else [{:severity   "warning"
-                                                                :applies-to {}
-                                                                :options    {:forms ["if"] :nil-else true}
-                                                                :exclusions []}]}}})]
+    (let [result (validation {:lint   {:rules {}}
+                              :design {:rules {:if-without-else [{:severity   "warning"
+                                                                  :applies-to {}
+                                                                  :options    {:forms ["if"] :nil-else true}
+                                                                  :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
 
 

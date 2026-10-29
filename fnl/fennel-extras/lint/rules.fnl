@@ -17,6 +17,7 @@
 (local call-rule (require :fennel-extras.lint.rules.call))
 (local shape-rule (require :fennel-extras.lint.rules.shape))
 (local shape-leaf (require :fennel-extras.lint.rules.shape.leaf))
+(local generic-rule (require :fennel-extras.lint.rules.generic))
 
 (local root-forms ast.root-forms)
 (local list-head ast.list-head)
@@ -102,6 +103,8 @@
       (shape-rule.add-function-findings findings path form forms policy node))
     (when (enabled? policy "if-branch-call")
       (append-all findings (branch-rule.finding path form policy node)))
+    (when (and node (enabled? policy "no-mutation"))
+      (forbidden-rule.findings findings path form policy node))
     (when (and node (enabled? policy "module-import"))
       (module-rule.module-import-finding findings path form head node policy))
     findings))
@@ -194,6 +197,17 @@
 
 
 
+(defn- append-generic-findings
+  [findings path forms policy source]
+  (let [findings (if (enabled? policy "nested-forms")
+                   (generic-rule.nested-findings findings path forms policy source)
+                   findings)]
+    (if (enabled? policy "leading-bindings")
+      (generic-rule.leading-findings findings path forms policy source)
+      findings)))
+
+
+
 (defn- check-result
   [path forms policy source state]
   (let [findings (append-file-size-findings [] path policy source)
@@ -205,7 +219,8 @@
         findings (append-layout-findings findings path forms policy source)
         findings (append-control-findings findings path forms policy source)
         findings (append-discard-findings findings path forms policy source)
-        findings (append-call-findings findings path forms policy source)]
+        findings (append-call-findings findings path forms policy source)
+        findings (append-generic-findings findings path forms policy source)]
     (remove-contained-function-findings findings)))
 
 

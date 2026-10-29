@@ -149,6 +149,8 @@
 
 (defn- compile-exclusion-entry
   [entry]
+  (when entry.path
+    (matcher.compile-pattern entry.path))
   (when entry.pattern
     (matcher.compile-pattern entry.pattern))
   (when entry.code

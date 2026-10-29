@@ -45,7 +45,7 @@ local function matching_exclusion_3f(exclusion, findings, matcher, index)
   end
 end
 local function stale_message(exclusion, policy)
-  local instances = (exclusion.rule and policy.rules[exclusion.rule])
+  local instances = ((exclusion.rule and policy.rules[exclusion.rule]) or (exclusion.rule and policy.design and policy.design[exclusion.rule]))
   local instance = (instances and exclusion.instance and instances[exclusion.instance])
   if ((instance and (instance.severity == "off")) or ((instance == nil) and (instances == nil))) then
     return ("stale exclusion: rule " .. exclusion.rule .. " is not enabled")
@@ -92,7 +92,7 @@ local function annotate_findings(findings, source, index, recurse)
   end
 end
 local function lint_file(file, policy)
-  local context = {path = file.path, rules = policy.rules, selection = file.selection, matcher = policy.matcher, ["defer-exclusions"] = true}
+  local context = {path = file.path, rules = policy.rules, design = policy.design, selection = file.selection, matcher = policy.matcher, ["defer-exclusions"] = true}
   local findings, error = lint.check(file.source, context)
   if error then
     return nil, {message = error.message, line = error.line, col = error.col, path = file.path}

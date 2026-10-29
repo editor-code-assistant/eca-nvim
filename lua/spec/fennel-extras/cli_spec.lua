@@ -1011,6 +1011,7 @@ local function lint_git_commit(root)
   return root
 end
 local lint_rule_options = {["module-style"] = ":applies-to {:files [\"^[^s]\"]} :options {:module \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]}", ["module-import"] = ":applies-to {} :options {:module \"eca.nfnl.core\" :binding \"core\"}", ["forbidden-form"] = ":applies-to {:files [\"^[^s]\"]} :options {:forms [\"var\" \"set\" \"while\"]}", ["form-child-count"] = ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}", ["if-branch-call"] = ":applies-to {} :options {:forms [\"if\"]}", ["if-without-else"] = ":applies-to {} :options {:forms [\"if\"] :nil-else true}", ["control-layout"] = ":applies-to {} :options {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]}", ["function-shape"] = ":applies-to {} :options {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"\206\187\"]}", ["file-size"] = ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}", ["unused-and-or"] = ":applies-to {} :options {:forms [\"and\" \"or\"]}", ["split-bindings"] = ":applies-to {} :options {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]}", ["call-data-arg"] = ":applies-to {:files [\"^[^s]\"]} :options {:forms []}"}
+local design_rule_names = {["function-shape"] = true, ["if-branch-call"] = true, ["if-without-else"] = true, ["no-mutation"] = true, ["nested-forms"] = true, ["leading-bindings"] = true}
 local function lint_config_rule(normalized, rule, options)
   local escaped_rule = string.gsub(rule, "-", "%%-")
   local warning_pattern = ("\"" .. escaped_rule .. "\"%s*:%s*warning")
@@ -1032,8 +1033,71 @@ local function lint_config_rules(config)
   end
   return normalized
 end
+local function fennel_string(value)
+  return string.format("%q", value)
+end
+local fennel_sequence_keys = {forms = true, children = true, modules = true, ["exempt-files"] = true, exclusions = true, paths = true, exclude = true, extensions = true, ["binding-forms"] = true, ["clause-forms"] = true}
+local function fennel_value(value, as_list_3f)
+  if ("table" == type(value)) then
+    local list_3f = (as_list_3f or ((#value > 0) and vim.islist(value)))
+    local parts = {}
+    for key, item in pairs(value) do
+      local function _107_()
+        if list_3f then
+          return fennel_value(item)
+        else
+          local _105_
+          if (("string" == type(item)) and ((key == "severity") or (key == "mode"))) then
+            _105_ = (":" .. item)
+          else
+            _105_ = fennel_value(item, fennel_sequence_keys[key])
+          end
+          return (":" .. key .. " " .. _105_)
+        end
+      end
+      table.insert(parts, _107_())
+    end
+    local _108_
+    if list_3f then
+      _108_ = "["
+    else
+      _108_ = "{"
+    end
+    local _110_
+    if list_3f then
+      _110_ = "]"
+    else
+      _110_ = "}"
+    end
+    return (_108_ .. table.concat(parts, " ") .. _110_)
+  else
+    if ("string" == type(value)) then
+      return fennel_string(value)
+    else
+      return tostring(value)
+    end
+  end
+end
 local function lint_config_finish(config)
-  return config
+  local config_module = require("fennel-extras.config")
+  local parsed_result = config_module["parse-string"](config)
+  if (nil == parsed_result) then
+    return config
+  else
+    local lint = (parsed_result.lint or {})
+    local rules = (lint.rules or {})
+    local design = (parsed_result.design or {})
+    local design_rules = (design.rules or {})
+    local lint_rules = {}
+    for rule, value in pairs(rules) do
+      if design_rule_names[rule] then
+        design_rules[rule] = value
+      else
+        lint_rules[rule] = value
+      end
+    end
+    return fennel_value(vim.tbl_extend("force", parsed_result, {lint = vim.tbl_extend("force", lint, {rules = lint_rules}), design = vim.tbl_extend("force", design, {rules = design_rules})}), false)
+  end
 end
 local function lint_config(config)
   local config0 = string.gsub(config, "^{%s*", "{:workspace {:extensions [\".fnl\"] :paths [\"\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} ")
@@ -1072,13 +1136,13 @@ local function lint_project(config, files, args)
   local before = {}
   local after = {}
   vim.fn.mkdir(root, "p")
-  local function _105_()
+  local function _116_()
     return vim.fn.delete(root, "rf")
   end
-  local function _106_()
+  local function _117_()
     return lint_project_body(root, config_path, before, after, config, files, args)
   end
-  return with_cleanup(_105_, _106_)
+  return with_cleanup(_116_, _117_)
 end
 local function lint_grammar_scenario(args)
   return lint_project("{:lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions []}]}}}", {["a.fnl"] = "(if x 1 2)\n"}, args)
@@ -1089,14 +1153,14 @@ end
 local function lint_discovery_scenario(mode)
   local config = "{:workspace {:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"]} :lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"
   local files = {["src/keep.fnl"] = "(if x 1 2)\n", ["src/skip/no.fnl"] = "(if x 1 2)\n", ["other.fnl"] = "(if x 1 2)\n"}
-  local function _107_()
+  local function _118_()
     if (mode == "default") then
       return {"lint", "--all"}
     else
       return {"lint", "--all", "src/keep.fnl"}
     end
   end
-  return lint_project(config, files, _107_())
+  return lint_project(config, files, _118_())
 end
 local function lint_output_config(mode)
   return (((mode == "error") and "{:lint {:rules {\"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}]}}}") or ((mode == "warning-error") and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :error :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}") or ((mode == "off") and "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :off}}}") or "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}")
@@ -1108,7 +1172,7 @@ local function lint_output_scenario(mode)
   return lint_project(lint_output_config(mode), {["a.fnl"] = lint_output_source(mode)}, {"lint", "--all"})
 end
 local function lint_exclusion_config(mode)
-  return (((mode == "stale") and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"a.fnl\" :reason \"intentional multi-step branch\"}]}]}}}")
+  return (((mode == "stale") and "{:lint {:rules {\"module-style\" :off}}\n             :design {:rules {:if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or "{:lint {:rules {\"module-style\" :off}}\n        :design {:rules {:if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"a.fnl\" :reason \"intentional multi-step branch\"}]}]}}}")
 end
 local function lint_exclusion_scenario(mode)
   return lint_project(lint_exclusion_config(mode), {["a.fnl"] = "(if x (do (foo) (bar)) nil)\n"}, {"lint", "--all"})
@@ -1117,7 +1181,7 @@ local function lint_normalized_testing_exclusion_scenario()
   return lint_project("{:lint {:rules {\"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions [{:path \"a.fnl\" :reason \"intentional test shape\"}]}]}}}", {["a.fnl"] = "(testing \"two\" (is true) (is true))\n"}, {"lint", "--all"})
 end
 local function lint_selector_exclusion_config(mode)
-  return (((mode == "per-rule") and "{:lint {:rules {\"module-style\" :off :if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-rule exclusion\"}]}]}}}") or "{:lint {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-instance exclusion\"}]}]}}}")
+  return (((mode == "per-rule") and "{:lint {:rules {\"module-style\" :off}}\n             :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-rule exclusion\"}]}]}}}") or "{:lint {:rules {}}\n        :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-instance exclusion\"}]}]}}}")
 end
 local function lint_selector_exclusion_scenario(mode)
   return lint_project(lint_selector_exclusion_config(mode), {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
@@ -1126,10 +1190,10 @@ local function lint_invalid_regex_scenario()
   return lint_project("{:lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions [{:path \"[\" :reason \"bad regex\"]}]}}}", {["a.fnl"] = "(if\n"}, {"lint", "--all"})
 end
 local function lint_stale_pattern_scenario()
-  return lint_project("{:lint {:rules {\"module-style\" :off :if-without-else [{:severity :warning :applies-to {} :options { :forms [\"if\"] :nil-else true} :exclusions [{:path \"missing[.]fnl\" :reason \"stale pattern\"]}]}}}", {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
+  return lint_project("{:lint {:rules {\"module-style\" :off}}\n                :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options { :forms [\"if\"] :nil-else true} :exclusions [{:path \"missing[.]fnl\" :reason \"stale pattern\"]}]}}}", {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
 end
 local function lint_disabled_exclusion_scenario()
-  return lint_project("{:lint {:rules {:if-without-else [{:severity :off :applies-to {} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"]}]}}}", {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
+  return lint_project("{:lint {:rules {}}\n                :design {:rules {:if-without-else [{:severity :off :applies-to {} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"]}]}}}", {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
 end
 local function lint_error_config(mode)
   if (mode == "config") then
@@ -1144,8 +1208,8 @@ end
 local function lint_error_scenario(mode)
   return lint_project(lint_error_config(mode), {["a.fnl"] = lint_error_source(mode)}, {"lint", "--all"})
 end
-local function _109_()
-  local function _110_()
+local function _120_()
+  local function _121_()
     local result = lint_opt_in_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {code = 0, lines = {}}
@@ -1153,157 +1217,157 @@ local function _109_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("omitting lint rules produces no findings", _110_)
-  local function _111_()
+  require("plenary.busted").it("omitting lint rules produces no findings", _121_)
+  local function _122_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = lint_grammar_scenario({"lint", "--all"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts lint all with text output", _111_)
-  local function _112_()
+  require("plenary.busted").it("accepts lint all with text output", _122_)
+  local function _123_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = lint_grammar_scenario({"lint", "--all", "--format", "json"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts lint all with json output", _112_)
-  local function _113_()
+  require("plenary.busted").it("accepts lint all with json output", _123_)
+  local function _124_()
     local result = lint_grammar_scenario({"lint", "--all", "--base", "HEAD"})
     local assert_28_auto = require("luassert")
     local value_29_auto = ((2 == result.code) and string.match((result.lines[1] or ""), "base"))
     assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"base\"))")
     return true
   end
-  require("plenary.busted").it("rejects base together with all with exit two and a clear message", _113_)
-  local function _114_()
+  require("plenary.busted").it("rejects base together with all with exit two and a clear message", _124_)
+  local function _125_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 2
     local actual_7_auto = lint_grammar_scenario({"lint", "--changed", "--all"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects changed together with all with exit two", _114_)
-  local function _115_()
+  require("plenary.busted").it("rejects changed together with all with exit two", _125_)
+  local function _126_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 2
     local actual_7_auto = lint_grammar_scenario({"lint", "--wat"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects unknown flags with exit two", _115_)
-  local function _116_()
+  require("plenary.busted").it("rejects unknown flags with exit two", _126_)
+  local function _127_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 2
     local actual_7_auto = lint_grammar_scenario({"lint", "--all", "--all"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects duplicate flags with exit two", _116_)
-  local function _117_()
+  require("plenary.busted").it("rejects duplicate flags with exit two", _127_)
+  local function _128_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 2
     local actual_7_auto = lint_grammar_scenario({"lint", "--format"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a missing format value with exit two", _117_)
-  local function _118_()
+  require("plenary.busted").it("rejects a missing format value with exit two", _128_)
+  local function _129_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 2
     local actual_7_auto = lint_grammar_scenario({"lint", "--format", "yaml"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an invalid format value with exit two", _118_)
-  local function _119_()
+  require("plenary.busted").it("rejects an invalid format value with exit two", _129_)
+  local function _130_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 2
     local actual_7_auto = lint_grammar_scenario({"lint", "--write"}).code
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects formatter-only flags for lint", _119_)
-  local function _120_()
-    local function _121_()
+  require("plenary.busted").it("rejects formatter-only flags for lint", _130_)
+  local function _131_()
+    local function _132_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {}
       local actual_7_auto = lint_discovery_scenario("default").lines
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("uses configured paths exclusions extensions and omits its config file", _121_)
-    local function _122_()
+    require("plenary.busted").it("uses configured paths exclusions extensions and omits its config file", _132_)
+    local function _133_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {}
       local actual_7_auto = lint_discovery_scenario("explicit").lines
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("optional path arguments restrict lint all discovery", _122_)
-    local function _123_()
-      local function _124_()
+    require("plenary.busted").it("optional path arguments restrict lint all discovery", _133_)
+    local function _134_()
+      local function _135_()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 1
         local actual_7_auto = lint_output_scenario("error").code
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("reports one error finding with text output and exit one", _124_)
-      local function _125_()
+      require("plenary.busted").it("reports one error finding with text output and exit one", _135_)
+      local function _136_()
         local assert_5_auto = require("luassert")
         local expected_6_auto = {"a.fnl:1:1: error form-child-count: each testing form must contain exactly one is", "  exclusion: {:rule \"form-child-count\" :form \"a.fnl > top#1 > testing#1\" :reason \"explain why this is intentional\"}"}
         local actual_7_auto = lint_output_scenario("error").lines
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("prints the exact text line and exclusion suggestion for an error", _125_)
-      local function _126_()
+      require("plenary.busted").it("prints the exact text line and exclusion suggestion for an error", _136_)
+      local function _137_()
         local result = lint_output_scenario("warning")
         local assert_28_auto = require("luassert")
         local value_29_auto = ((0 == result.code) and (nil ~= result.lines[1]))
         assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (not= nil (. result \"lines\" 1)))")
         return true
       end
-      require("plenary.busted").it("prints a warning but exits zero", _126_)
-      local function _127_()
+      require("plenary.busted").it("prints a warning but exits zero", _137_)
+      local function _138_()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 1
         local actual_7_auto = lint_output_scenario("warning-error").code
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("turns the warning into an error when configured", _127_)
-      local function _128_()
+      require("plenary.busted").it("turns the warning into an error when configured", _138_)
+      local function _139_()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 0
         local actual_7_auto = lint_output_scenario("off").code
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("turns the warning off when configured", _128_)
-      local function _129_()
+      require("plenary.busted").it("turns the warning off when configured", _139_)
+      local function _140_()
         local result = lint_project("{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}", {["a.fnl"] = "(if x (do (foo) (bar)) nil)\n"}, {"lint", "--all", "--format", "json"})
         local assert_28_auto = require("luassert")
         local value_29_auto = ((0 == result.code) and string.match((result.lines[1] or ""), "^%{"))
         assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"^%{\"))")
         return true
       end
-      return require("plenary.busted").it("emits json lines with the same warning status", _129_)
+      return require("plenary.busted").it("emits json lines with the same warning status", _140_)
     end
-    require("plenary.busted").describe("lint-output", _123_)
-    local function _130_()
-      local function _131_()
+    require("plenary.busted").describe("lint-output", _134_)
+    local function _141_()
+      local function _142_()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 0
         local actual_7_auto = lint_exclusion_scenario("matching").code
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("suppresses a matching exclusion in all mode", _131_)
-      local function _132_()
+      require("plenary.busted").it("suppresses a matching exclusion in all mode", _142_)
+      local function _143_()
         local result = lint_exclusion_scenario("stale")
         local assert_5_auto = require("luassert")
         local expected_6_auto = 1
@@ -1311,8 +1375,8 @@ local function _109_()
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("reports an unmatched exclusion as a stale error in all mode", _132_)
-      local function _133_()
+      require("plenary.busted").it("reports an unmatched exclusion as a stale error in all mode", _143_)
+      local function _144_()
         local result = lint_normalized_testing_exclusion_scenario()
         local assert_5_auto = require("luassert")
         local expected_6_auto = {code = 0, lines = {}}
@@ -1320,24 +1384,24 @@ local function _109_()
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("suppresses normalized form-child-count identity without stale output", _133_)
-      local function _134_()
+      require("plenary.busted").it("suppresses normalized form-child-count identity without stale output", _144_)
+      local function _145_()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 0
         local actual_7_auto = lint_selector_exclusion_scenario("per-rule").code
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("suppresses a per-rule exclusion end to end", _134_)
-      local function _135_()
+      require("plenary.busted").it("suppresses a per-rule exclusion end to end", _145_)
+      local function _146_()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 0
         local actual_7_auto = lint_selector_exclusion_scenario("general").code
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("suppresses a general exclusion end to end", _135_)
-      local function _136_()
+      require("plenary.busted").it("suppresses a general exclusion end to end", _146_)
+      local function _147_()
         local result = lint_invalid_regex_scenario()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 2
@@ -1345,8 +1409,8 @@ local function _109_()
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("rejects an invalid regex before scanning source", _136_)
-      local function _137_()
+      require("plenary.busted").it("rejects an invalid regex before scanning source", _147_)
+      local function _148_()
         local result = lint_stale_pattern_scenario()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 2
@@ -1354,8 +1418,8 @@ local function _109_()
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("reports a stale pattern exclusion", _137_)
-      local function _138_()
+      require("plenary.busted").it("reports a stale pattern exclusion", _148_)
+      local function _149_()
         local result = lint_disabled_exclusion_scenario()
         local assert_5_auto = require("luassert")
         local expected_6_auto = 2
@@ -1363,11 +1427,11 @@ local function _109_()
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      return require("plenary.busted").it("reports a disabled-rule exclusion as stale", _138_)
+      return require("plenary.busted").it("reports a disabled-rule exclusion as stale", _149_)
     end
-    require("plenary.busted").describe("lint-exclusions", _130_)
-    local function _139_()
-      local function _140_()
+    require("plenary.busted").describe("lint-exclusions", _141_)
+    local function _150_()
+      local function _151_()
         local result = lint_error_scenario("config")
         local assert_5_auto = require("luassert")
         local expected_6_auto = 2
@@ -1375,16 +1439,16 @@ local function _109_()
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      require("plenary.busted").it("returns exit two with a malformed lint configuration error", _140_)
-      local function _141_()
+      require("plenary.busted").it("returns exit two with a malformed lint configuration error", _151_)
+      local function _152_()
         local result = lint_error_scenario("source")
         local assert_28_auto = require("luassert")
         local value_29_auto = ((2 == result.code) and string.match((result.lines[1] or ""), "a%.fnl:[0-9]+:[0-9]+:"))
         assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"a%.fnl:[0-9]+:[0-9]+:\"))")
         return true
       end
-      require("plenary.busted").it("returns exit two with a source parse diagnostic", _141_)
-      local function _142_()
+      require("plenary.busted").it("returns exit two with a source parse diagnostic", _152_)
+      local function _153_()
         local result = lint_output_scenario("warning")
         local assert_5_auto = require("luassert")
         local expected_6_auto = result.before
@@ -1392,13 +1456,13 @@ local function _109_()
         assert_5_auto.same(expected_6_auto, actual_7_auto)
         return true
       end
-      return require("plenary.busted").it("does not change any file in all mode", _142_)
+      return require("plenary.busted").it("does not change any file in all mode", _153_)
     end
-    return require("plenary.busted").describe("lint-errors-and-read-only", _139_)
+    return require("plenary.busted").describe("lint-errors-and-read-only", _150_)
   end
-  require("plenary.busted").describe("lint-discovery", _120_)
+  require("plenary.busted").describe("lint-discovery", _131_)
   local function shell_args(args)
-    local _143_
+    local _154_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -1410,9 +1474,9 @@ local function _109_()
         else
         end
       end
-      _143_ = tbl_26_
+      _154_ = tbl_26_
     end
-    return table.concat(_143_, " ")
+    return table.concat(_154_, " ")
   end
   local function real_cli_lines(root, args)
     local script = (vim.fn.getcwd() .. "/scripts/fennel-extras")
@@ -1462,14 +1526,14 @@ local function _109_()
     local first_source = "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
     local second_source = "(testing \"c\" (is 1) (is 2))\\n"
     vim.fn.mkdir(root, "p")
-    local function _147_()
+    local function _158_()
       return vim.fn.delete(root, "rf")
     end
-    local function _148_()
+    local function _159_()
       real_lint_output_setup(config, first_file, second_file, config_text, first_source, second_source)
       return real_lint_output_result(root, format)
     end
-    return with_cleanup(_147_, _148_)
+    return with_cleanup(_158_, _159_)
   end
   local function real_text_lint_output_scenario()
     local root = vim.fn.tempname()
@@ -1480,34 +1544,34 @@ local function _109_()
     local first_source = "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
     local second_source = "(testing \"c\" (is 1) (is 2))\\n"
     vim.fn.mkdir(root, "p")
-    local function _149_()
+    local function _160_()
       return vim.fn.delete(root, "rf")
     end
-    local function _150_()
+    local function _161_()
       real_lint_output_setup(config, first_file, second_file, config_text, first_source, second_source)
       return real_text_lint_output_result(root)
     end
-    return with_cleanup(_149_, _150_)
+    return with_cleanup(_160_, _161_)
   end
-  local function _151_()
-    local function _152_()
+  local function _162_()
+    local function _163_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {lines = 3, objects = 3, ["each-line-one-object?"] = true}
       local actual_7_auto = real_lint_output_scenario("json")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("prints one JSON object per physical line", _152_)
-    local function _153_()
+    require("plenary.busted").it("prints one JSON object per physical line", _163_)
+    local function _164_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {lines = 6, objects = 3}
       local actual_7_auto = real_text_lint_output_scenario()
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    return require("plenary.busted").it("prints each text finding and exclusion suggestion on its own line", _153_)
+    return require("plenary.busted").it("prints each text finding and exclusion suggestion on its own line", _164_)
   end
-  require("plenary.busted").describe("default-printer", _151_)
+  require("plenary.busted").describe("default-printer", _162_)
   local function bounded_command(command)
     local lines = vim.fn.systemlist({"sh", "-c", command})
     local code = vim.v.shell_error
@@ -1544,13 +1608,13 @@ local function _109_()
     local root = vim.fn.tempname()
     vim.fn.mkdir(root, "p")
     vim.fn.mkdir((root .. "/.git"), "p")
-    local function _154_()
+    local function _165_()
       return vim.fn.delete(root, "rf")
     end
-    local function _155_()
+    local function _166_()
       return invalid_git_scenario_body(mode, root)
     end
-    return with_cleanup(_154_, _155_)
+    return with_cleanup(_165_, _166_)
   end
   local function unborn_git_scenario_body(mode, root)
     local _ = git_init(root)
@@ -1562,13 +1626,13 @@ local function _109_()
   local function unborn_git_scenario(mode)
     local root = vim.fn.tempname()
     vim.fn.mkdir(root, "p")
-    local function _156_()
+    local function _167_()
       return vim.fn.delete(root, "rf")
     end
-    local function _157_()
+    local function _168_()
       return unborn_git_scenario_body(mode, root)
     end
-    return with_cleanup(_156_, _157_)
+    return with_cleanup(_167_, _168_)
   end
   local function changed_config()
     return "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"if-without-else\" :off \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
@@ -1652,13 +1716,13 @@ local function _109_()
     local subdir = (root .. "/nested")
     vim.fn.mkdir(root, "p")
     vim.fn.mkdir(subdir, "p")
-    local function _165_()
+    local function _176_()
       return vim.fn.delete(root, "rf")
     end
-    local function _166_()
+    local function _177_()
       return changed_mode_scenario_body(mode, root, source_path, config_path, subdir)
     end
-    return with_cleanup(_165_, _166_)
+    return with_cleanup(_176_, _177_)
   end
   local function base_mode_setup(root, source_path)
     git_init(root)
@@ -1679,13 +1743,13 @@ local function _109_()
     local root = vim.fn.tempname()
     local source_path = (root .. "/a.fnl")
     vim.fn.mkdir(root, "p")
-    local function _167_()
+    local function _178_()
       return vim.fn.delete(root, "rf")
     end
-    local function _168_()
+    local function _179_()
       return base_mode_scenario_body(root, source_path)
     end
-    return with_cleanup(_167_, _168_)
+    return with_cleanup(_178_, _179_)
   end
   local function file_size_changed_mode_setup(root, changed_path, unchanged_path, config, base_source, changed_source0)
     git_init(root)
@@ -1704,7 +1768,7 @@ local function _109_()
     end
   end
   local function file_size_findings(findings, name)
-    local _170_
+    local _181_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -1716,9 +1780,9 @@ local function _109_()
         else
         end
       end
-      _170_ = tbl_26_
+      _181_ = tbl_26_
     end
-    return #_170_
+    return #_181_
   end
   local function file_size_changed_mode_scenario_body(root, changed_path, unchanged_path, config, base_source, changed_source0)
     local _ = file_size_changed_mode_setup(root, changed_path, unchanged_path, config, base_source, changed_source0)
@@ -1734,13 +1798,13 @@ local function _109_()
     local base_source = "(local a 1)\n(local b 2)\n(local c 3)\n"
     local changed_source0 = "(local a 9)\n(local b 2)\n(local c 3)\n"
     vim.fn.mkdir(root, "p")
-    local function _172_()
+    local function _183_()
       return vim.fn.delete(root, "rf")
     end
-    local function _173_()
+    local function _184_()
       return file_size_changed_mode_scenario_body(root, changed_path, unchanged_path, config, base_source, changed_source0)
     end
-    return with_cleanup(_172_, _173_)
+    return with_cleanup(_183_, _184_)
   end
   local function lint_error_repository_scenario(root)
     write_file((root .. "/.fnl-extras.fnl"), lint_config("{:lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"))
@@ -1768,13 +1832,13 @@ local function _109_()
   local function lint_error_mode_scenario(mode)
     local root = vim.fn.tempname()
     vim.fn.mkdir(root, "p")
-    local function _174_()
+    local function _185_()
       return vim.fn.delete(root, "rf")
     end
-    local function _175_()
+    local function _186_()
       return lint_error_mode_scenario_body(mode, root)
     end
-    return with_cleanup(_174_, _175_)
+    return with_cleanup(_185_, _186_)
   end
   local function stale_exclusion_config(mode)
     return ((((mode == "untouched") or (mode == "all")) and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or ((mode == "modified") and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
@@ -1805,13 +1869,13 @@ local function _109_()
     local config_path = (root .. "/.fnl-extras.fnl")
     local config = stale_exclusion_config(mode)
     vim.fn.mkdir(root, "p")
-    local function _176_()
+    local function _187_()
       return vim.fn.delete(root, "rf")
     end
-    local function _177_()
+    local function _188_()
       return stale_exclusion_scenario_body(mode, root, a_path, b_path, gone_path, config_path, config)
     end
-    return with_cleanup(_176_, _177_)
+    return with_cleanup(_187_, _188_)
   end
   local function shallow_clone_setup(source, config)
     git_init(source)
@@ -1845,14 +1909,14 @@ local function _109_()
     local config = "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}"
     local clone_command = ("git clone --depth 1 " .. vim.fn.shellescape(("file://" .. source)) .. " " .. vim.fn.shellescape(clone) .. " </dev/null 2>&1")
     vim.fn.mkdir(source, "p")
-    local function _179_()
+    local function _190_()
       vim.fn.delete(source, "rf")
       return vim.fn.delete(clone, "rf")
     end
-    local function _180_()
+    local function _191_()
       return shallow_clone_scenario_body(mode, source, clone, config, clone_command)
     end
-    return with_cleanup(_179_, _180_)
+    return with_cleanup(_190_, _191_)
   end
   local function default_lint_setup(root, config, warn, config_text, mode)
     write_file(config, lint_config(config_text))
@@ -1875,14 +1939,14 @@ local function _109_()
     local warn = (root .. "/warning.fnl")
     local config_text = "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
     vim.fn.mkdir(root, "p")
-    local function _182_()
+    local function _193_()
       return vim.fn.delete(root, "rf")
     end
-    local function _183_()
+    local function _194_()
       default_lint_setup(root, config, warn, config_text, mode)
       return default_lint_result(root)
     end
-    return with_cleanup(_182_, _183_)
+    return with_cleanup(_193_, _194_)
   end
   local function default_lint_all_files_setup(root, config, warn, error, config_text)
     git_init(root)
@@ -1904,16 +1968,16 @@ local function _109_()
     local error = (root .. "/error.fnl")
     local config_text = "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
     vim.fn.mkdir(root, "p")
-    local function _184_()
+    local function _195_()
       return vim.fn.delete(root, "rf")
     end
-    local function _185_()
+    local function _196_()
       return default_lint_all_files_result(root, config, warn, error, config_text)
     end
-    return with_cleanup(_184_, _185_)
+    return with_cleanup(_195_, _196_)
   end
-  local function _186_()
-    local function _187_()
+  local function _197_()
+    local function _198_()
       local result = default_lint_all_files_scenario()
       local text = table.concat(result.lines, "\n")
       local assert_28_auto = require("luassert")
@@ -1921,8 +1985,8 @@ local function _109_()
       assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (. result \"code\")) (string.match text \"warning%.fnl:1:7: warning if%-branch%-call\") (string.match text \"error%.fnl:1:1: error form%-child%-count\"))")
       return true
     end
-    require("plenary.busted").it("default lint reports findings from all committed files", _187_)
-    local function _188_()
+    require("plenary.busted").it("default lint reports findings from all committed files", _198_)
+    local function _199_()
       local result = default_lint_scenario("no-git")
       local text = table.concat(result.lines, "\n")
       local assert_28_auto = require("luassert")
@@ -1930,19 +1994,19 @@ local function _109_()
       assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (string.match text \"warning%.fnl:1:7: warning if%-branch%-call\") (not (string.match text \"lint requires a Git repository\")))")
       return true
     end
-    return require("plenary.busted").it("default lint works without a Git repository", _188_)
+    return require("plenary.busted").it("default lint works without a Git repository", _199_)
   end
-  require("plenary.busted").describe("lint-default-selection", _186_)
-  local function _189_()
-    local function _190_()
+  require("plenary.busted").describe("lint-default-selection", _197_)
+  local function _200_()
+    local function _201_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {code = 0, lines = {}, ["timed-out?"] = false}
       local actual_7_auto = changed_mode_scenario("clean")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("clean repositories produce no changed-mode findings", _190_)
-    local function _191_()
+    require("plenary.busted").it("clean repositories produce no changed-mode findings", _201_)
+    local function _202_()
       local result = changed_mode_scenario("modified")
       local findings = finding_lines(result.lines)
       local assert_28_auto = require("luassert")
@@ -1950,8 +2014,8 @@ local function _109_()
       assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 1 (length findings)) (= 2 (length (. result \"lines\"))) (string.match (. result \"lines\" 2) \"defn:first\"))")
       return true
     end
-    require("plenary.busted").it("modified files report only the warning whose form intersects changed lines", _191_)
-    local function _192_()
+    require("plenary.busted").it("modified files report only the warning whose form intersects changed lines", _202_)
+    local function _203_()
       local result = changed_mode_scenario("staged")
       local assert_5_auto = require("luassert")
       local expected_6_auto = 1
@@ -1959,8 +2023,8 @@ local function _109_()
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("staged-only changes are selected", _192_)
-    local function _193_()
+    require("plenary.busted").it("staged-only changes are selected", _203_)
+    local function _204_()
       local result = changed_mode_scenario("both")
       local assert_5_auto = require("luassert")
       local expected_6_auto = 2
@@ -1968,8 +2032,8 @@ local function _109_()
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("staged and unstaged changes are unioned against HEAD", _193_)
-    local function _194_()
+    require("plenary.busted").it("staged and unstaged changes are unioned against HEAD", _204_)
+    local function _205_()
       local result = changed_mode_scenario("untracked")
       local assert_5_auto = require("luassert")
       local expected_6_auto = 1
@@ -1977,8 +2041,8 @@ local function _109_()
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("untracked files are selected as whole files", _194_)
-    local function _195_()
+    require("plenary.busted").it("untracked files are selected as whole files", _205_)
+    local function _206_()
       local result = changed_mode_scenario("rename")
       local findings = finding_lines(result.lines)
       local assert_28_auto = require("luassert")
@@ -1986,8 +2050,8 @@ local function _109_()
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (length findings)) (string.match (. result \"lines\" 1) \"renamed file%.fnl\"))")
       return true
     end
-    require("plenary.busted").it("renamed destinations are selected as whole files and paths with spaces survive", _195_)
-    local function _196_()
+    require("plenary.busted").it("renamed destinations are selected as whole files and paths with spaces survive", _206_)
+    local function _207_()
       local root_result = changed_mode_scenario("modified")
       local subdir_result = changed_mode_scenario("subdir")
       local root = finding_lines(root_result.lines)
@@ -1997,121 +2061,121 @@ local function _109_()
       assert_28_auto.is_truthy(value_29_auto, "(and (not (. root-result \"timed-out?\")) (not (. subdir-result \"timed-out?\")) (= (length root) (length subdir)))")
       return true
     end
-    require("plenary.busted").it("subdirectory invocation matches root changed-mode selection without timing out", _196_)
-    local function _197_()
+    require("plenary.busted").it("subdirectory invocation matches root changed-mode selection without timing out", _207_)
+    local function _208_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = 1
       local actual_7_auto = file_size_changed_mode_scenario()["changed-file-size"]
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("changed oversized files report exactly one file-size finding", _197_)
-    local function _198_()
+    require("plenary.busted").it("changed oversized files report exactly one file-size finding", _208_)
+    local function _209_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = 0
       local actual_7_auto = file_size_changed_mode_scenario()["unchanged-file-size"]
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    return require("plenary.busted").it("unchanged oversized files do not report file-size findings in changed mode", _198_)
+    return require("plenary.busted").it("unchanged oversized files do not report file-size findings in changed mode", _209_)
   end
-  require("plenary.busted").describe("git-changed-selection", _189_)
-  local function _199_()
-    local function _200_()
+  require("plenary.busted").describe("git-changed-selection", _200_)
+  local function _210_()
+    local function _211_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = 1
       local actual_7_auto = #finding_lines(base_mode_scenario().lines)
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("base ref includes committed changes since the selected base", _200_)
-    local function _201_()
+    require("plenary.busted").it("base ref includes committed changes since the selected base", _211_)
+    local function _212_()
       local result = lint_error_mode_scenario("git")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((2 == result.code) and string.match(result.line, "lint requires a Git repository"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (. result \"line\") \"lint requires a Git repository\"))")
       return true
     end
-    require("plenary.busted").it("changed lint outside a Git repository exits two with the repository message", _201_)
-    local function _202_()
+    require("plenary.busted").it("changed lint outside a Git repository exits two with the repository message", _212_)
+    local function _213_()
       local result = invalid_git_scenario("all")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((0 == result.code) and ("" == result.line))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= \"\" (. result \"line\")))")
       return true
     end
-    require("plenary.busted").it("lint all works in an empty Git directory without resolving Git state", _202_)
-    local function _203_()
+    require("plenary.busted").it("lint all works in an empty Git directory without resolving Git state", _213_)
+    local function _214_()
       local result = invalid_git_scenario("changed")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((2 == result.code) and string.match(result.line, "lint requires a Git repository"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (. result \"line\") \"lint requires a Git repository\"))")
       return true
     end
-    require("plenary.busted").it("changed lint rejects an empty Git directory with the repository message", _203_)
-    local function _204_()
+    require("plenary.busted").it("changed lint rejects an empty Git directory with the repository message", _214_)
+    local function _215_()
       local result = lint_error_mode_scenario("base")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((2 == result.code) and string.match(table.concat(result.lines, "\n"), "missing%-ref"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (table.concat (. result \"lines\") \"\\n\") \"missing%-ref\"))")
       return true
     end
-    require("plenary.busted").it("an unknown base ref exits two and names the ref", _204_)
-    local function _205_()
+    require("plenary.busted").it("an unknown base ref exits two and names the ref", _215_)
+    local function _216_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {code = 1, lines = {"a.fnl:1:1: error form-child-count: each testing form must contain exactly one is", "  exclusion: {:rule \"form-child-count\" :form \"a.fnl > top#1 > testing#1\" :reason \"explain why this is intentional\"}"}, ["timed-out?"] = false}
       local actual_7_auto = unborn_git_scenario("all")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("all mode lints an unborn repository without resolving HEAD", _205_)
-    local function _206_()
+    require("plenary.busted").it("all mode lints an unborn repository without resolving HEAD", _216_)
+    local function _217_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {code = 2, lines = {"unknown base ref: HEAD"}, ["timed-out?"] = false}
       local actual_7_auto = unborn_git_scenario("changed")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    return require("plenary.busted").it("changed mode reports the unknown unborn HEAD base", _206_)
+    return require("plenary.busted").it("changed mode reports the unknown unborn HEAD base", _217_)
   end
-  require("plenary.busted").describe("git-base-and-errors", _199_)
-  local function _207_()
-    local function _208_()
+  require("plenary.busted").describe("git-base-and-errors", _210_)
+  local function _218_()
+    local function _219_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {code = 0, lines = {}, ["timed-out?"] = false}
       local actual_7_auto = stale_exclusion_scenario("untouched")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("an untouched file's stale exclusion does not fail changed mode", _208_)
-    local function _209_()
+    require("plenary.busted").it("an untouched file's stale exclusion does not fail changed mode", _219_)
+    local function _220_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {code = 0, lines = {}, ["timed-out?"] = false}
       local actual_7_auto = stale_exclusion_scenario("modified")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("a stale exclusion outside the modified file scope does not fail changed mode", _209_)
-    local function _210_()
+    require("plenary.busted").it("a stale exclusion outside the modified file scope does not fail changed mode", _220_)
+    local function _221_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {code = 0, lines = {}, ["timed-out?"] = false}
       local actual_7_auto = stale_exclusion_scenario("deleted")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("a deleted file's exclusion outside the changed scope does not fail changed mode", _210_)
-    local function _211_()
+    require("plenary.busted").it("a deleted file's exclusion outside the changed scope does not fail changed mode", _221_)
+    local function _222_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {code = 1, lines = {".fnl-extras.fnl:1:1: error if-branch-call: stale exclusion: missing[.]fnl"}, ["timed-out?"] = false}
       local actual_7_auto = stale_exclusion_scenario("all")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    return require("plenary.busted").it("all mode reports stale exclusions regardless of file scope", _211_)
+    return require("plenary.busted").it("all mode reports stale exclusions regardless of file scope", _222_)
   end
-  require("plenary.busted").describe("stale-exclusion-scope", _207_)
-  local function _212_()
-    local function _213_()
+  require("plenary.busted").describe("stale-exclusion-scope", _218_)
+  local function _223_()
+    local function _224_()
       local result = shallow_clone_scenario("changed")
       local line = (result.lines[1] or "")
       local assert_28_auto = require("luassert")
@@ -2119,39 +2183,39 @@ local function _109_()
       assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"timed-out?\")) (= 2 (. result \"code\")) (string.match line \"full clone\"))")
       return true
     end
-    require("plenary.busted").it("a shallow clone exits two with the full-clone message", _213_)
-    local function _214_()
+    require("plenary.busted").it("a shallow clone exits two with the full-clone message", _224_)
+    local function _225_()
       local result = shallow_clone_scenario("all")
       local assert_28_auto = require("luassert")
       local value_29_auto = (not result["timed-out?"] and (0 == result.code) and (0 == #result.lines))
       assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"timed-out?\")) (= 0 (. result \"code\")) (= 0 (length (. result \"lines\"))))")
       return true
     end
-    return require("plenary.busted").it("all mode lints a shallow clone without requiring a full clone", _214_)
+    return require("plenary.busted").it("all mode lints a shallow clone without requiring a full clone", _225_)
   end
-  require("plenary.busted").describe("shallow-clone", _212_)
-  local function _215_()
-    local function _216_()
+  require("plenary.busted").describe("shallow-clone", _223_)
+  local function _226_()
+    local function _227_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = 0
       local actual_7_auto = default_lint_scenario("no-git").code
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    return require("plenary.busted").it("default all mode does not require a Git repository", _216_)
+    return require("plenary.busted").it("default all mode does not require a Git repository", _227_)
   end
-  require("plenary.busted").describe("lint-all-git-boundary", _215_)
-  local function _217_()
-    local function _218_()
+  require("plenary.busted").describe("lint-all-git-boundary", _226_)
+  local function _228_()
+    local function _229_()
       local result = align_bindings_cli_scenario()
       local assert_28_auto = require("luassert")
       local value_29_auto = ((1 == result["check-code"]) and vim.deep_equal({"a.fnl"}, result["check-lines"]) and (0 == result["write-code"]) and vim.deep_equal({"a.fnl"}, result["write-lines"]) and (result.expected == result.content))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (. result \"check-code\")) (vim.deep_equal [\"a.fnl\"] (. result \"check-lines\")) (= 0 (. result \"write-code\")) (vim.deep_equal [\"a.fnl\"] (. result \"write-lines\")) (= (. result \"expected\") (. result \"content\")))")
       return true
     end
-    return require("plenary.busted").it("check reports missing binding alignment and write fixes it", _218_)
+    return require("plenary.busted").it("check reports missing binding alignment and write fixes it", _229_)
   end
-  require("plenary.busted").describe("align-bindings-cli", _217_)
+  require("plenary.busted").describe("align-bindings-cli", _228_)
   local function alignment_maps_cli_setup(config_path, path, source)
     write_file(config_path, "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"lambda\" [[:inner 0]] \"macro\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"when-let\" [[:block 1]] \"if-let\" [[:block 1]] \"each\" [[:block 1]] \"for\" [[:block 1]] \"icollect\" [[:block 1]] \"collect\" [[:block 1]] \"accumulate\" [[:block 1]] \"case\" [[:block 1]] \"match\" [[:block 1]] \"case-try\" [[:block 1]] \"match-try\" [[:block 1]] \"while\" [[:block 1]] \"with-open\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings false :maps true :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
     return write_file(path, source)
@@ -2174,36 +2238,36 @@ local function _109_()
     vim.fn.mkdir((root .. "/.git"), "p")
     return alignment_maps_cli_scenario_body(root, config_path, path, source, expected)
   end
-  local function _219_()
-    local function _220_()
+  local function _230_()
+    local function _231_()
       local result = alignment_maps_cli_scenario()
       local assert_28_auto = require("luassert")
       local value_29_auto = ((1 == result["check-code"]) and vim.deep_equal({"a.fnl"}, result["check-lines"]) and (0 == result["write-code"]) and vim.deep_equal({"a.fnl"}, result["write-lines"]) and (result.expected == result.content))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (. result \"check-code\")) (vim.deep_equal [\"a.fnl\"] (. result \"check-lines\")) (= 0 (. result \"write-code\")) (vim.deep_equal [\"a.fnl\"] (. result \"write-lines\")) (= (. result \"expected\") (. result \"content\")))")
       return true
     end
-    return require("plenary.busted").it("check reports missing map alignment and write fixes it from alignment config", _220_)
+    return require("plenary.busted").it("check reports missing map alignment and write fixes it from alignment config", _231_)
   end
-  require("plenary.busted").describe("alignment-maps-cli", _219_)
-  local function _221_()
-    local function _222_()
+  require("plenary.busted").describe("alignment-maps-cli", _230_)
+  local function _232_()
+    local function _233_()
       local result = lint_project("{:lint {:rules {:if-without-else [{:severity :warning :applies-to {} :options { :forms [\"if\"] :nil-else true} :exclusions []}]}}}", {["a.fnl"] = "(if ok then)\n(var x 1)\n"}, {"lint", "--all"})
       local assert_28_auto = require("luassert")
       local value_29_auto = ((0 == result.code) and (2 == #result.lines) and string.match(result.lines[1], "if%-without%-else"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 2 (length (. result \"lines\"))) (string.match (. result \"lines\" 1) \"if%-without%-else\"))")
       return true
     end
-    require("plenary.busted").it("listing one rule disables unlisted findings", _222_)
-    local function _223_()
+    require("plenary.busted").it("listing one rule disables unlisted findings", _233_)
+    local function _234_()
       local result = lint_project("{:lint {:rules {:file-size [{:severity :warning :applies-to {:files [\"^a[.]fnl$\"]} :options { :max-code-lines 3} :exclusions []}] \"module-style\" :off}}}", {["a.fnl"] = "(module a)\n(local a 1)\n(local b 2)\n(local c 3)\n(local d 4)\n"}, {"lint", "--all"})
       local assert_28_auto = require("luassert")
       local value_29_auto = ((0 == result.code) and (2 == #result.lines) and string.match(result.lines[1], "file%-size") and string.match(result.lines[2], "exclusion:"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 2 (length (. result \"lines\"))) (string.match (. result \"lines\" 1) \"file%-size\") (string.match (. result \"lines\" 2) \"exclusion:\"))")
       return true
     end
-    return require("plenary.busted").it("file-size uses the nested max-code-lines option", _223_)
+    return require("plenary.busted").it("file-size uses the nested max-code-lines option", _234_)
   end
-  require("plenary.busted").describe("lint-policy-cli-regressions", _221_)
+  require("plenary.busted").describe("lint-policy-cli-regressions", _232_)
   local function missing_config_cli_scenario_body(root, path, command)
     local _ = write_file(path, "(module a)\n")
     local result = run_cli(root, {command, "--check", "a.fnl"})
@@ -2218,24 +2282,24 @@ local function _109_()
     vim.fn.mkdir((root .. "/.git"), "p")
     return missing_config_cli_scenario_body(root, path, command)
   end
-  local function _224_()
-    local function _225_()
+  local function _235_()
+    local function _236_()
       local result = missing_config_cli_scenario("format")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((2 == result.code) and string.match((result.lines[1] or ""), "missing .fnl%-extras%.fnl"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"missing .fnl%-extras%.fnl\"))")
       return true
     end
-    require("plenary.busted").it("format exits 2 with a clear missing config message", _225_)
-    local function _226_()
+    require("plenary.busted").it("format exits 2 with a clear missing config message", _236_)
+    local function _237_()
       local result = missing_config_cli_scenario("lint")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((2 == result.code) and string.match((result.lines[1] or ""), "missing .fnl%-extras%.fnl"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"missing .fnl%-extras%.fnl\"))")
       return true
     end
-    return require("plenary.busted").it("lint exits 2 with a clear missing config message", _226_)
+    return require("plenary.busted").it("lint exits 2 with a clear missing config message", _237_)
   end
-  return require("plenary.busted").describe("strict-cli-errors", _224_)
+  return require("plenary.busted").describe("strict-cli-errors", _235_)
 end
-return require("plenary.busted").describe("lint-grammar", _109_)
+return require("plenary.busted").describe("lint-grammar", _120_)

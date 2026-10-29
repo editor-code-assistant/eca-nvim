@@ -205,6 +205,18 @@
 
 
 
+(defn- context-lint-value
+  [context]
+  (let [lint-rules   {}
+        design-rules (or (. context :design) {})]
+    (each [rule entries (pairs (or (. context :rules) {}))]
+      (if (= (registry.rule-domain rule) :design)
+        (tset design-rules rule entries)
+        (tset lint-rules rule entries)))
+    {:rules lint-rules :design design-rules}))
+
+
+
 (defn- append-context-exclusions
   [result raw-policy]
   (each [_ item (ipairs (registry.instances raw-policy))]
@@ -216,7 +228,7 @@
 
 (defn- context-exclusions
   [context]
-  (append-context-exclusions [] (or context.rules {})))
+  (append-context-exclusions [] (context-lint-value context)))
 
 
 
@@ -239,14 +251,8 @@
 
 (defn- context-policy
   [context]
-  (core.merge (policy-for-context context)
+  (core.merge (context-lint-value context)
               {:matcher (. context :matcher)}))
-
-
-
-(defn- context-lint-value
-  [context]
-  {:rules (or (. context :rules) {})})
 
 
 
@@ -258,7 +264,9 @@
 
 (defn- context-validation-error
   [context]
-  (config-lint.lint-error (context-lint-value context)))
+  (let [value (context-lint-value context)]
+    (or (config-lint.lint-error {:rules value.rules})
+        (config-lint.design-error {:rules value.design}))))
 
 
 

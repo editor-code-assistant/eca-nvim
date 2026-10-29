@@ -257,24 +257,25 @@
 
 
   (testing "the repository config loads with complete format and lint settings"
-    (let [config (load-module :fennel-extras.config)
-          loaded (if (. config :module-missing)
-                   nil
-                   (config.load ".fnl-extras.fnl"))
-          rules  (and loaded (. loaded :lint) (. (. loaded :lint) :rules))
-          names  ["forbidden-form"
-                  "required-form"
-                  "module-style"
-                  "module-import"
-                  "form-child-count"
-                  "if-branch-call"
-                  "if-without-else"
-                  "control-layout"
-                  "unused-and-or"
-                  "function-shape"
-                  "multiline-layout"
-                  "file-size"
-                  "call-data-arg"]]
+    (let [config       (load-module :fennel-extras.config)
+          loaded       (if (. config :module-missing)
+                         nil
+                         (config.load ".fnl-extras.fnl"))
+          lint-rules   (and loaded (. loaded :lint) (. (. loaded :lint) :rules))
+          design-rules (and loaded (. loaded :design) (. (. loaded :design) :rules))
+          lint-names   ["forbidden-form"
+                        "required-form"
+                        "module-style"
+                        "module-import"
+                        "form-child-count"
+                        "control-layout"
+                        "unused-and-or"
+                        "multiline-layout"
+                        "file-size"
+                        "call-data-arg"]
+          design-names ["if-branch-call"
+                        "if-without-else"
+                        "function-shape"]]
       (is (and loaded
                (. (. loaded :format) :indent-width)
                (. (. loaded :workspace) :extensions)
@@ -284,4 +285,6 @@
                (. (. loaded :format) :parser)
                (. (. loaded :format) :alignment)
                (. loaded :lint)
-               (complete-rules? rules names 1))))))
+               (. loaded :design)
+               (complete-rules? lint-rules lint-names 1)
+               (complete-rules? design-rules design-names 1))))))

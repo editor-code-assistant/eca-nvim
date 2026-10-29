@@ -234,11 +234,13 @@ local function _28_()
     else
       loaded = config.load(".fnl-extras.fnl")
     end
-    local rules = (loaded and loaded.lint and loaded.lint.rules)
-    local names = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "if-branch-call", "if-without-else", "control-layout", "unused-and-or", "function-shape", "multiline-layout", "file-size", "call-data-arg"}
+    local lint_rules = (loaded and loaded.lint and loaded.lint.rules)
+    local design_rules = (loaded and loaded.design and loaded.design.rules)
+    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg"}
+    local design_names = {"if-branch-call", "if-without-else", "function-shape"}
     local assert_28_auto = require("luassert")
-    local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.builtins and loaded.format["prefix-fallbacks"] and loaded.format.parser and loaded.format.alignment and loaded.lint and complete_rules_3f(rules, names, 1))
-    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"builtins\") (. (. loaded \"format\") \"prefix-fallbacks\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (complete-rules? rules names 1))")
+    local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.builtins and loaded.format["prefix-fallbacks"] and loaded.format.parser and loaded.format.alignment and loaded.lint and loaded.design and complete_rules_3f(lint_rules, lint_names, 1) and complete_rules_3f(design_rules, design_names, 1))
+    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"builtins\") (. (. loaded \"format\") \"prefix-fallbacks\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (. loaded \"design\") (complete-rules? lint-rules lint-names 1) (complete-rules? design-rules design-names 1))")
     return true
   end
   return require("plenary.busted").it("the repository config loads with complete format and lint settings", _29_)

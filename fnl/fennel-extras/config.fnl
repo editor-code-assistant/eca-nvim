@@ -104,7 +104,9 @@
   [tbl]
   (or (and (. tbl :format)
            (format-config.validate (. tbl :format) false false false))
-      (configuration-error-with-lint nil (. tbl :lint))))
+      (configuration-error-with-lint nil (. tbl :lint))
+      (and (. tbl :design)
+           (lint-config.design-error (. tbl :design)))))
 
 
 
@@ -197,7 +199,7 @@
 
 (defn- unknown-config-key
   [tbl]
-  (let [allowed {:workspace true :format true :lint true}]
+  (let [allowed {:workspace true :format true :lint true :design true}]
     (accumulate [candidate nil key _ (pairs tbl)]
       (if (and (not (. allowed key))
                (or (= candidate nil)
@@ -268,7 +270,7 @@
   [tbl]
   (if (not= (type tbl) :table)
     (values nil {:message "configuration must be a table"})
-    (if (or (. tbl :workspace) (. tbl :format) (. tbl :lint))
+    (if (or (. tbl :workspace) (. tbl :format) (. tbl :lint) (. tbl :design))
       (validate-canonical-table tbl)
       (let [failure (format-fragment-error tbl)]
         (validation-result tbl failure)))))
@@ -305,16 +307,19 @@
 
 (defn- valid-lint-policy
   [cfg]
-  (let [rules (. cfg.lint :rules)]
+  (let [rules  (or (and cfg.lint cfg.lint.rules) {})
+        design (and cfg.design cfg.design.rules)]
     {:rules      rules
-     :exclusions (canonical-exclusions rules)}))
+     :design     design
+     :exclusions (core.concat (canonical-exclusions rules)
+                              (canonical-exclusions (or design {})))}))
 
 
 
 (defn- lint-policy-valid
   [valid]
-  (if (= valid.lint nil)
-    (values nil {:message "missing lint"})
+  (if (and (= valid.lint nil) (= valid.design nil))
+    (values nil {:message "missing lint or design"})
     (valid-lint-policy valid)))
 
 
