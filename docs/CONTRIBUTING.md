@@ -34,14 +34,13 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
 
 ```fennel
 {:workspace
- {:paths            ["fnl"]
-  :exclude          ["fnl/eca/nfnl"]
-  :extensions       [".fnl" ".fnlm"]
-  :dotfiles         false
-  :symlinks         false}
+ {:paths      ["fnl"]
+  :exclude    ["fnl/eca/nfnl"]
+  :extensions [".fnl" ".fnlm"]
+  :dotfiles   false
+  :symlinks   false}
  :format
  {:indent-width     2
-  ;; Explicit indentation rules for formatter operation.
   :builtins         {"fn"         [[:inner 0]]
                      "lambda"     [[:inner 0]]
                      "macro"      [[:inner 0]]
@@ -61,31 +60,39 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                      "while"      [[:block 1]]
                      "with-open"  [[:block 1]]
                      "do"         [[:block 0]]}
-  ;; Explicit prefix fallbacks.
   :prefix-fallbacks {"def"   [[:inner 0]]
                      "with-" [[:block 1]]}
-  ;; Parser used for AST-preserving formatter checks.
   :parser           "eca.nfnl.fennel"
-  ;; Files discovered by scan.
   :indents          {"deftest" [[:block 1]]
                      "testing" [[:block 1]]
                      "if"      [[:block 1]]}
   :format-as        {}
   :indent-patterns  []
-  ;; All formatter alignment modes are explicit.
   :alignment        {:bindings         true
                      :maps             true
                      :clauses          true
                      :split-bindings   true
                      :collapse-padding true
                      :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                     :clause-forms     ["case" "match" "case-try" "match-try" "if"]}}
+                     :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
+  :newline          [{:applies-to {:forms ["fn" "defn" "defn-"]}
+                      :options    {:after 1}}
+                     {:applies-to {:forms ["testing"]}
+                      :options    {:before 1}}]}
  :lint
  {:rules
   {:forbidden-form
    [{:severity   :off
      :applies-to {}
-     :options    {:module "require"}
+     :options    {}
+     :exclusions []}
+    {:severity   :error
+     :applies-to {:files ["^spec/"]}
+     :options    {:module "module"}
+     :exclusions []}
+    {:severity   :warning
+     :applies-to {:files ["^fennel-extras/"]}
+     :options    {:forms ["var" "set" "while"]}
      :exclusions []}]
    :call-data-arg
    [{:severity   :warning
@@ -97,17 +104,17 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :applies-to {}
      :options    {:forms ["if" "when" "and" "or" "case" "match"]}
      :exclusions []}]
-   :module-import
-   [{:severity   :error
-     :applies-to {}
-     :options    {:mode    :require
-                  :module  "eca.nfnl.core"
-                  :binding "core"}
-     :exclusions []}]
    :file-size
    [{:severity   :warning
      :applies-to {:files ["^fennel-extras/"]}
      :options    {:max-code-lines 300}
+     :exclusions []}]
+   :form-child-count
+   [{:severity   :error
+     :applies-to {:files ["^spec/"]
+                  :forms ["testing"]}
+     :options    {:children  ["is"]
+                  :max-count 1}
      :exclusions []}]
    :function-shape
    [{:severity   :warning
@@ -125,6 +132,26 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :options    {:forms    ["if"]
                   :nil-else true}
      :exclusions []}]
+   :module-import
+   [{:severity   :error
+     :applies-to {}
+     :options    {:mode    :require
+                  :module  "eca.nfnl.core"
+                  :binding "core"}
+     :exclusions []}
+    {:severity   :error
+     :applies-to {:files ["^spec/"]}
+     :options    {:mode         :require
+                  :module       "spec.eca.macros"
+                  :forms        ["deftest" "testing" "is"]
+                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+     :exclusions []}
+    {:severity   :error
+     :applies-to {:files ["^spec/"]}
+     :options    {:mode         :forbid
+                  :modules      ["plenary.busted" "luassert"]
+                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+     :exclusions []}]
    :module-style
    [{:severity   :error
      :applies-to {:files ["^fennel-extras/"]}
@@ -137,36 +164,10 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :options    {:clauses  ["case" "match" "case-try" "match-try"]
                   :bindings ["let" "when-let" "if-let" "with-open"]}
      :exclusions []}]
-   :forbidden-form
-   [{:severity   :warning
+   :required-form
+   [{:severity   :error
      :applies-to {:files ["^fennel-extras/"]}
-     :options    {:forms ["var" "set" "while"]}
-     :exclusions []}]
-   :form-child-count
-   [{:severity   :error
-     :applies-to {:files ["^spec/"]
-                  :forms ["testing"]}
-     :options    {:children ["is"]
-                  :max-count 1}
-     :exclusions []}]
-   :module-import
-   [{:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:mode         :forbid
-                  :modules      ["plenary.busted" "luassert"]
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}]
-   :module-import
-   [{:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:module       "spec.eca.macros"
-                  :forms        ["deftest" "testing" "is"]
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}]
-   :forbidden-form
-   [{:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:module "module"}
+     :options    {:forms ["module"]}
      :exclusions []}]
    :unused-and-or
    [{:severity   :warning

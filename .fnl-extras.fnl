@@ -1,12 +1,11 @@
 {:workspace
- {:paths            ["fnl"]
-  :exclude          ["fnl/eca/nfnl"]
-  :extensions       [".fnl" ".fnlm"]
-  :dotfiles         false
-  :symlinks         false}
+ {:paths      ["fnl"]
+  :exclude    ["fnl/eca/nfnl"]
+  :extensions [".fnl" ".fnlm"]
+  :dotfiles   false
+  :symlinks   false}
  :format
  {:indent-width     2
-  ;; Explicit indentation rules for formatter operation.
   :builtins         {"fn"         [[:inner 0]]
                      "lambda"     [[:inner 0]]
                      "macro"      [[:inner 0]]
@@ -26,18 +25,14 @@
                      "while"      [[:block 1]]
                      "with-open"  [[:block 1]]
                      "do"         [[:block 0]]}
-  ;; Explicit prefix fallbacks.
   :prefix-fallbacks {"def"   [[:inner 0]]
                      "with-" [[:block 1]]}
-  ;; Parser used for AST-preserving formatter checks.
   :parser           "eca.nfnl.fennel"
-  ;; Files discovered by scan.
   :indents          {"deftest" [[:block 1]]
                      "testing" [[:block 1]]
                      "if"      [[:block 1]]}
   :format-as        {}
   :indent-patterns  []
-  ;; All formatter alignment modes are explicit.
   :alignment        {:bindings         true
                      :maps             true
                      :clauses          true
@@ -46,9 +41,9 @@
                      :binding-forms    ["let" "when-let" "if-let" "with-open"]
                      :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
   :newline          [{:applies-to {:forms ["fn" "defn" "defn-"]}
-                     :options    {:after 1}}
-                    {:applies-to {:forms ["testing"]}
-                     :options    {:before 1}}]}
+                      :options    {:after 1}}
+                     {:applies-to {:forms ["testing"]}
+                      :options    {:before 1}}]}
  :lint
  {:rules
   {:forbidden-form
@@ -83,7 +78,7 @@
    [{:severity   :error
      :applies-to {:files ["^spec/"]
                   :forms ["testing"]}
-     :options    {:children ["is"]
+     :options    {:children  ["is"]
                   :max-count 1}
      :exclusions []}]
    :function-shape
@@ -99,7 +94,7 @@
    :if-without-else
    [{:severity   :warning
      :applies-to {}
-     :options    {:forms ["if"]
+     :options    {:forms    ["if"]
                   :nil-else true}
      :exclusions []}]
    :module-import
