@@ -1,8 +1,8 @@
 -- [nfnl] fnl/eca/init.fnl
-local _local_1_ = require("eca.nfnl.module")
-local autoload = _local_1_.autoload
-local notify = autoload("eca.nfnl.notify")
-local function setup()
-  return notify.info("Hello, World!")
+local api = require("eca.api")
+local commands = require("eca.commands")
+local function setup(opts)
+  api["set-plugin-opts"]((opts or {}))
+  return commands.setup(api)
 end
 return {setup = setup}

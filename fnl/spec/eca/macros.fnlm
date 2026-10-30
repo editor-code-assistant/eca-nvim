@@ -1,0 +1,85 @@
+;; This is the single place that binds the test and assertion libraries (plenary.busted and luassert).
+
+(fn deftest [name ...]
+  `((. (require :plenary.busted) :describe) ,(tostring name) (fn [] ,...)))
+
+(fn testing [description ...]
+  `((. (require :plenary.busted) :it) ,description (fn [] ,...)))
+
+(fn is [form ...]
+  (local args (pack ...))
+  (assert-compile (or (= 0 (. args :n)) (= 1 (. args :n)))
+                  "(is) expects an expression and an optional message"
+                  form)
+  (local message (. args 1))
+  (local has-message (= 1 (. args :n)))
+  (local op (if (list? form) (. form 1)))
+  (if (= op '=)
+    (do
+      (assert-compile (= 3 (length form)) "(=) expects exactly 2 arguments" form)
+      (if has-message
+        `(let [assert#   (require :luassert)
+               expected# ,(. form 2)
+               actual#   ,(. form 3)]
+           (do
+             ((. assert# :same) expected# actual# ,message)
+             true))
+        `(let [assert#   (require :luassert)
+               expected# ,(. form 2)
+               actual#   ,(. form 3)]
+           (do
+             ((. assert# :same) expected# actual#)
+             true))))
+    (= op 'not=)
+    (do
+      (assert-compile (= 3 (length form)) "(not=) expects exactly 2 arguments" form)
+      (if has-message
+        `(let [assert#   (require :luassert)
+               expected# ,(. form 2)
+               actual#   ,(. form 3)]
+           (do
+             ((. (. assert# :are_not) :same) expected# actual# ,message)
+             true))
+        `(let [assert#   (require :luassert)
+               expected# ,(. form 2)
+               actual#   ,(. form 3)]
+           (do
+             ((. (. assert# :are_not) :same) expected# actual#)
+             true))))
+    (= op 'identical?)
+    (do
+      (assert-compile (= 3 (length form)) "(identical?) expects exactly 2 arguments" form)
+      (if has-message
+        `(let [assert#   (require :luassert)
+               expected# ,(. form 2)
+               actual#   ,(. form 3)]
+           (do
+             ((. assert# :equals) expected# actual# ,message)
+             true))
+        `(let [assert#   (require :luassert)
+               expected# ,(. form 2)
+               actual#   ,(. form 3)]
+           (do
+             ((. assert# :equals) expected# actual#)
+             true))))
+    (= op 'nil?)
+    (do
+      (assert-compile (= 2 (length form)) "(nil?) expects exactly 1 argument" form)
+      (if has-message
+        `(let [assert# (require :luassert)
+               value#  ,(. form 2)]
+           (do
+             ((. assert# :is_nil) value# ,message)
+             true))
+        `(let [assert# (require :luassert)
+               value#  ,(. form 2)]
+           (do
+             ((. assert# :is_nil) value#)
+             true))))
+    `(let [assert# (require :luassert)
+           value#  ,form]
+       (do
+         ((. assert# :is_truthy) value# ,(or message (view form)))
+         true))))
+
+{: deftest : testing : is}

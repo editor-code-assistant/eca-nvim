@@ -1,0 +1,154 @@
+-- [nfnl] fnl/fennel-extras/lint/rules/discard.fnl
+local _2amodule_2a
+do
+  local pkg_1_auto = require("package")
+  pkg_1_auto.loaded["fennel-extras.lint.rules.discard"] = {}
+  _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.discard"]
+end
+local core = require("eca.nfnl.core")
+local ast = require("fennel-extras.lint.rules.ast")
+local traverse = require("fennel-extras.lint.rules.traverse")
+local registry = require("fennel-extras.lint.rules.registry")
+local list_head = ast["list-head"]
+local meaningful_children = ast["meaningful-children"]
+local form_for_node = ast["form-for-node"]
+local nearest_form = ast["nearest-form"]
+local finding = registry.finding
+local enabled_3f = registry["enabled?"]
+local rule_severity = registry["rule-severity"]
+local function_heads = {defn = true, ["defn-"] = true, fn = true, lambda = true, ["\206\187"] = true}
+local binding_heads = {let = true, when = true, ["when-let"] = true, ["if-let"] = true, ["with-open"] = true}
+local discard_loop_heads = {each = true, ["for"] = true, ["while"] = true}
+local default_target_heads = {["and"] = true, ["or"] = true}
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
+local function function_body_offset(argument)
+  if (argument and (argument.kind == "string")) then
+    return 1
+  else
+    return 0
+  end
+end
+local function function_argument_index(head)
+  return (((head == "defn") and 3) or ((head == "defn-") and 3) or 2)
+end
+local function function_base(head)
+  return (((head == "defn") and 4) or ((head == "defn-") and 4) or 3)
+end
+local function body_start(head, children)
+  local argument = children[function_argument_index(head)]
+  return ((function_heads[head] and (function_base(head) + function_body_offset(argument))) or ((binding_heads[head] or discard_loop_heads[head]) and 3) or ((head == "do") and 2) or 0)
+end
+local function meaningful_index_step(result, index, child, target)
+  if ((result == 0) and (child == target)) then
+    return index
+  else
+    return result
+  end
+end
+local function meaningful_index(node, target)
+  local children = meaningful_children(node)
+  local result = 0
+  for index, child in ipairs(children) do
+    result = meaningful_index_step(result, index, child, target)
+  end
+  return result
+end
+local function target_node_3f(node, policy)
+  local heads = registry["rule-options"](policy, "unused-and-or").forms
+  return ((node.kind == "list") and contains_3f(heads, list_head(node), 1))
+end
+local function custom_target_root_3f(parent, child, policy)
+  return ((list_head(parent) == nil) and target_node_3f(child, policy) and not default_target_heads[list_head(child)])
+end
+local function discarded_child_3f(parent, child, policy)
+  local head = list_head(parent)
+  local children = meaningful_children(parent)
+  local index = meaningful_index(parent, child)
+  local start = body_start(head, children)
+  return (custom_target_root_3f(parent, child, policy) or ((start > 0) and (index >= start) and (discard_loop_heads[head] or (index < #children))))
+end
+local function add_target_key(result, node)
+  result[(node.open.line .. ":" .. node.open.col)] = true
+  return result
+end
+local function target_nodes(source, policy)
+  local function _4_(node)
+    return target_node_3f(node, policy)
+  end
+  return traverse["executable-nodes"](source, _4_)
+end
+local function target_keys(source, policy)
+  local result = {}
+  for _, node in ipairs(target_nodes(source, policy)) do
+    result = add_target_key(result, node)
+  end
+  return result
+end
+local function executable_child_3f(child)
+  return ((child.kind == "list") or (child.kind == "sequence") or (child.kind == "table"))
+end
+local function append_finding(findings, path, forms, policy, node, ordinals)
+  local existing = form_for_node(forms, node, nil)
+  local base = (existing or nearest_form(forms, node) or {form = path})
+  local head = list_head(node)
+  local key = (base.form .. ":" .. head)
+  local ordinal = ((ordinals[key] or 0) + 1)
+  local form = (existing or {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (base.form .. " > " .. head .. "#" .. ordinal), node = node})
+  table.insert(findings, finding(path, form, rule_severity(policy, "unused-and-or"), "unused-and-or", "and/or result is unused; use when", node))
+  return core.assoc(ordinals, key, ordinal)
+end
+local function visit_child(state, index, child)
+  if executable_child_3f(child) then
+    return state.visit(state.findings, state.path, state.forms, state.policy, state.targets, child, discarded_child_3f(state.node, child, state.policy), state.ordinals)
+  else
+    return state.ordinals
+  end
+end
+local function next_ordinals(findings, path, forms, policy, targets, node, discarded_3f, ordinals)
+  if (discarded_3f and targets[(node.open.line .. ":" .. node.open.col)]) then
+    return append_finding(findings, path, forms, policy, node, ordinals)
+  else
+    return ordinals
+  end
+end
+local function visit_node(findings, path, forms, policy, targets, node, discarded_3f, ordinals)
+  local next_ordinals0 = next_ordinals(findings, path, forms, policy, targets, node, discarded_3f, ordinals)
+  local state = {findings = findings, path = path, forms = forms, policy = policy, targets = targets, node = node, ordinals = next_ordinals0, visit = visit_node}
+  local result = next_ordinals0
+  for index, child in ipairs((node.children or {})) do
+    result = visit_child(core.assoc(state, "ordinals", result), index, child)
+  end
+  return result
+end
+local function visit_root(findings, path, forms, policy, targets, root)
+  visit_node(findings, path, forms, policy, targets, root, false, {})
+  return findings
+end
+local function append_findings(findings, path, forms, policy, source)
+  local reader = require("fennel-extras.reader")
+  local root = reader.parse(source)
+  if root then
+    return visit_root(findings, path, forms, policy, target_keys(source, policy), root)
+  else
+    return findings
+  end
+end
+local findings
+do
+  local function findings0(findings1, path, forms, policy, source)
+    if enabled_3f(policy, "unused-and-or") then
+      return append_findings(findings1, path, forms, policy, source)
+    else
+      return findings1
+    end
+  end
+  _2amodule_2a["findings"] = findings0
+  findings = _2amodule_2a.findings
+end
+return nil

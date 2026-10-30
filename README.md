@@ -4,11 +4,11 @@
 
 A lightweight Neovim plugin that embeds [ECA (Editor Code Assistant)](https://eca.dev/) directly into your editor. It is designed to be very simple, while remaining highly customizable.
 
-> Status: **Work in Progress** — we’re actively developing this plugin and would love feedback, bug reports, and contributions. If you’d like to help, check out [Development & contributing](./docs/development.md) or open an issue/PR.
+> Status: **Work in Progress** — we’re actively developing this plugin and would love feedback, bug reports, and contributions. If you’d like to help, check out [Contributing](./docs/CONTRIBUTING.md) or open an issue/PR.
 
 ## Quick Start
 
-> Requires Neovim >= 0.8.0, curl and unzip.
+> Requires Neovim >= 0.9.5, curl and unzip.
 
 1. Install via your plugin manager (see Installation below)
 2. Run `:EcaChat` or press `<leader>ec`
@@ -16,11 +16,8 @@ A lightweight Neovim plugin that embeds [ECA (Editor Code Assistant)](https://ec
 
 
 ## Documentation
-- [Installation and system requirements](./docs/installation.md)
-- [Usage guide (commands, keymaps, tips)](./docs/usage.md)
-- [Configuration reference and presets](./docs/configuration.md)
-- [Troubleshooting common issues](./docs/troubleshooting.md)
-- [Development & contributing](./docs/development.md)
+- [Contributing — setup, commands, code style, tests](./docs/CONTRIBUTING.md)
+- [Architecture — how the UI code is organized](./docs/architecture.md)
 
 ## Useful Links
 - [Official ECA Website](https://eca.dev/)
