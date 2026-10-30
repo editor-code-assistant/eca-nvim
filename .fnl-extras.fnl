@@ -3,7 +3,8 @@
   :exclude    ["fnl/eca/nfnl"]
   :extensions [".fnl" ".fnlm"]
   :dotfiles   false
-  :symlinks   false}
+  :symlinks   false
+  :config     false}
  :format
  {:indent-width     2
   :builtins         {"fn"         [[:inner 0]]

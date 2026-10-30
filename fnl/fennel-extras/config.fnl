@@ -113,7 +113,7 @@
 (defn- workspace-key-error
   [workspace]
   (when (= (type workspace) :table)
-    (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true}
+    (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}
           key     (accumulate [candidate nil name _ (pairs workspace)]
                     (if (and (not (. allowed name))
                              (or (= candidate nil)
@@ -144,7 +144,11 @@
         (when (and workspace
                    (not= workspace.symlinks nil)
                    (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
-          {:message "workspace.symlinks must be a boolean"}))))
+          {:message "workspace.symlinks must be a boolean"})
+        (when (and workspace
+                   (not= workspace.config nil)
+                   (not (or (= workspace.config true) (= workspace.config false))))
+          {:message "workspace.config must be a boolean"}))))
 
 
 
@@ -172,7 +176,10 @@
         {:message "workspace.dotfiles must be a boolean"})
       (when (and (not= workspace.symlinks nil)
                  (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
-        {:message "workspace.symlinks must be a boolean"})))
+        {:message "workspace.symlinks must be a boolean"})
+      (when (and (not= workspace.config nil)
+                 (not (or (= workspace.config true) (= workspace.config false))))
+        {:message "workspace.config must be a boolean"})))
 
 
 

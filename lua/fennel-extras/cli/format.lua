@@ -8,6 +8,7 @@ end
 local formatter = require("fennel-extras.format")
 local fs = require("fennel-extras.cli.fs")
 local scan = require("fennel-extras.cli.scan")
+local scan_path = require("fennel-extras.cli.scan.path")
 local table_copy = require("fennel-extras.cli.table")
 local error_line
 do
@@ -35,11 +36,32 @@ local function normalized_path(path)
     return path
   end
 end
-local function same_path_3f(left, right)
-  local uv = (vim.uv or vim.loop)
-  local left0 = normalized_path((scan.realpath(uv, left) or left))
-  local right0 = normalized_path((scan.realpath(uv, right) or right))
-  return (left0 == right0)
+local same_path_3f
+do
+  local function same_path_3f0(left, right)
+    local uv = (vim.uv or vim.loop)
+    local left0 = normalized_path((scan.realpath(uv, left) or left))
+    local right0 = normalized_path((scan.realpath(uv, right) or right))
+    return (left0 == right0)
+  end
+  _2amodule_2a["same-path?"] = same_path_3f0
+  same_path_3f = _2amodule_2a["same-path?"]
+end
+local explicit_config_file_3f
+do
+  local function explicit_config_file_3f0(root, paths, config_path)
+    local and_3_ = config_path and (#paths == 1)
+    if and_3_ then
+      local result = false
+      for _, input in ipairs(paths) do
+        result = (result or same_path_3f(scan_path.absolute(root, input), config_path))
+      end
+      and_3_ = result
+    end
+    return and_3_
+  end
+  _2amodule_2a["explicit-config-file?"] = explicit_config_file_3f0
+  explicit_config_file_3f = _2amodule_2a["explicit-config-file?"]
 end
 local function config_file_kept_3f(file, config_path)
   return not same_path_3f(file.absolute, config_path)
@@ -75,6 +97,41 @@ do
   end
   _2amodule_2a["without-config-file"] = without_config_file0
   without_config_file = _2amodule_2a["without-config-file"]
+end
+local discovered_files
+do
+  local function discovered_files0(root, paths, discovered, config_path, include_config_3f)
+    if ((include_config_3f and ((#paths == 0) or ((#paths == 1) and (paths[1] == ".")))) or explicit_config_file_3f(root, paths, config_path)) then
+      return discovered
+    else
+      return without_config_file(discovered, config_path)
+    end
+  end
+  _2amodule_2a["discovered-files"] = discovered_files0
+  discovered_files = _2amodule_2a["discovered-files"]
+end
+local function append_config_input(result, input)
+  table.insert(result, input)
+  return result
+end
+local function append_config_inputs(inputs, config_path)
+  local result = {}
+  for _, input in ipairs(inputs) do
+    append_config_input(result, input)
+  end
+  return append_config_input(result, config_path)
+end
+local discovery_inputs
+do
+  local function discovery_inputs0(parsed, inputs, config_path, include_config_3f)
+    if (include_config_3f and config_path and ((#parsed.paths == 0) or ((#parsed.paths == 1) and (parsed.paths[1] == ".")))) then
+      return append_config_inputs(inputs, config_path)
+    else
+      return inputs
+    end
+  end
+  _2amodule_2a["discovery-inputs"] = discovery_inputs0
+  discovery_inputs = _2amodule_2a["discovery-inputs"]
 end
 local function record_formatted(state, file, source, output)
   table.insert(state.formatted, {path = file.absolute, relative = file.relative, source = source, text = output})
@@ -145,10 +202,10 @@ local function format_source_error(file, source, output, error)
   end
 end
 local function format_source_result(file, source, result)
-  local case_12_ = not result.ok
-  if (case_12_ == true) then
+  local case_15_ = not result.ok
+  if (case_15_ == true) then
     return nil, {path = file.relative, error = result.output}
-  elseif (case_12_ == false) then
+  elseif (case_15_ == false) then
     return format_source_error(file, source, result.output, result.error)
   else
     return nil

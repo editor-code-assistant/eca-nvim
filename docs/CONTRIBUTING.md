@@ -38,7 +38,8 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
   :exclude    ["fnl/eca/nfnl"]
   :extensions [".fnl" ".fnlm"]
   :dotfiles   false
-  :symlinks   false}
+  :symlinks   false
+  :config     false}
  :format
  {:indent-width     2
   :builtins         {"fn"         [[:inner 0]]
@@ -160,7 +161,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :exclusions []}]}}}
 ```
 
-The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, and `:symlinks`. `:lint` contains direct policy rules. Structural and idiomatic rules belong under `:design`, using the same rule-instance schema and finding/exclusion pipeline as lint. The moved design rules are `function-shape`, `if-branch-call`, `if-without-else`, and `no-mutation`; generic `nested-forms` and `leading-bindings` evaluators are also available there.
+The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, `:symlinks`, and `:config`. `:config` defaults to `false`, excluding the discovered `.fnl-extras.fnl` from implicit format and lint scans; set it to `true` to include that discovered file. Explicitly naming the config file always includes it, while naming other files does not add it. `:lint` contains direct policy rules. Structural and idiomatic rules belong under `:design`, using the same rule-instance schema and finding/exclusion pipeline as lint. The moved design rules are `function-shape`, `if-branch-call`, `if-without-else`, and `no-mutation`; generic `nested-forms` and `leading-bindings` evaluators are also available there.
 
 For example:
 

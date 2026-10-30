@@ -69,6 +69,17 @@
                (= false (. value :workspace :dotfiles))
                (= false (. value :workspace :symlinks))))))
 
+  (testing "workspace config inclusion accepts a boolean"
+    (let [result (validation {:workspace {:config true}})]
+      (is (and (. result :ok)
+               (= true (. result :value :workspace :config))))))
+
+  (testing "workspace config inclusion rejects non-booleans"
+    (let [result (validation {:workspace {:config 1}})]
+      (is (and (not (. result :ok))
+               (= "workspace.config must be a boolean"
+                  (error-message result))))))
+
   (testing "old root-level path and scan settings are rejected"
     (each [_ key (ipairs [:paths :exclude :dotfiles :symlinks])]
       (let [result (validation (legacy-config key))]

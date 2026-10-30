@@ -203,13 +203,15 @@ local function run_lint_policy(context, files)
   end
 end
 local function run_lint_discovery(context)
+  local include_config_3f = (context.cfg.workspace.config or false)
   local inputs = arg_parser["lint-inputs"](context.parsed, context.cfg)
+  local scan_inputs = format["discovery-inputs"](context.parsed, inputs, context["config-path"], include_config_3f)
   local extensions = context.cfg.workspace.extensions
   local skip_dotfiles = not (context.cfg.workspace.dotfiles or false)
   local follow_symlinks = (context.cfg.workspace.symlinks or false)
   local options = {excludes = (context.cfg.workspace.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
-  local discovered, discovery_error = scan["sorted-files"](context["git-info"].root, inputs, options)
-  local files = (discovered and format["without-config-file"](discovered, context["config-path"]))
+  local discovered, discovery_error = scan["sorted-files"](context["git-info"].root, scan_inputs, options)
+  local files = (discovered and format["discovered-files"](context["git-info"].root, context.parsed.paths, discovered, context["config-path"], include_config_3f))
   if discovery_error then
     return git["emit-git-error"](context.printer, discovery_error)
   else
@@ -224,6 +226,9 @@ local function run_lint(context)
     return run_lint_discovery(table_update.update(context, {["git-info"] = git_info}))
   end
 end
+local function format_discovery_files(root, paths, discovered, config_path, include_config_3f)
+  return (discovered and format["discovered-files"](root, paths, discovered, config_path, include_config_3f))
+end
 local function run_format_files(context, files)
   local parser, parser_error = load_parser((context.parsed.parser or context.cfg.format.parser))
   if parser_error then
@@ -233,13 +238,16 @@ local function run_format_files(context, files)
   end
 end
 local function run_format_discovery(root, parsed, cfg, config_path)
+  local include_config_3f = (cfg.workspace.config or false)
   local inputs = arg_parser["lint-inputs"](parsed, cfg)
+  local scan_inputs = format["discovery-inputs"](parsed, inputs, config_path, include_config_3f)
   local extensions = cfg.workspace.extensions
   local skip_dotfiles = not (cfg.workspace.dotfiles or false)
   local follow_symlinks = (cfg.workspace.symlinks or false)
   local options = {excludes = (cfg.workspace.exclude or {}), extensions = extensions, ["skip-dotfiles"] = skip_dotfiles, ["follow-symlinks"] = follow_symlinks}
-  local discovered, discovery_error = scan["sorted-files"](root, inputs, options)
-  return (discovered and format["without-config-file"](discovered, config_path)), discovery_error
+  local discovered, discovery_error = scan["sorted-files"](root, scan_inputs, options)
+  local files = format_discovery_files(root, parsed.paths, discovered, config_path, include_config_3f)
+  return files, discovery_error
 end
 local function run_format_files_result(context, files)
   if (#files == 0) then
@@ -283,11 +291,21 @@ local function command_config_error_result(printer, config_path, failure)
   printer(format["error-line"](config_path, failure))
   return 2
 end
+local function canonical_workspace(workspace)
+  return {paths = (workspace.paths or {"."}), exclude = (workspace.exclude or {}), extensions = (workspace.extensions or {".fnl", ".fnlm"}), dotfiles = (workspace.dotfiles or false), symlinks = (workspace.symlinks or false), config = (workspace.config or false)}
+end
+local function canonical_fragment(cfg)
+  if cfg.workspace then
+    return table_update.update(cfg, {workspace = canonical_workspace(cfg.workspace)})
+  else
+    return cfg
+  end
+end
 local function fragment_config(cfg)
   if cfg.format then
-    return cfg
+    return canonical_fragment(cfg)
   else
-    return {workspace = {paths = (cfg.paths or {"."}), exclude = (cfg.exclude or {}), extensions = (cfg.extensions or {".fnl", ".fnlm"}), dotfiles = (cfg["skip-dotfiles"] or false), symlinks = (cfg["follow-symlinks"] or false)}, format = cfg, lint = {rules = {}}}
+    return {workspace = {paths = (cfg.paths or {"."}), exclude = (cfg.exclude or {}), extensions = (cfg.extensions or {".fnl", ".fnlm"}), dotfiles = (cfg["skip-dotfiles"] or false), symlinks = (cfg["follow-symlinks"] or false), config = false}, format = cfg, lint = {rules = {}}}
   end
 end
 local function run_command_loaded(context, cfg, config_path)

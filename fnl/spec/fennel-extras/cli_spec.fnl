@@ -44,7 +44,8 @@
                        (string.find body ":exclude")
                        (string.find body ":extensions")
                        (string.find body ":dotfiles")
-                       (string.find body ":symlinks"))
+                       (string.find body ":symlinks")
+                       (string.find body ":config"))
         workspace  (if workspace?
                      (.. "{" body
                          (if (string.find body ":extensions") "" " :extensions [\".fnl\" \".fnlm\"]")
@@ -620,8 +621,15 @@
 
 
 (defn- config-discovery-scenario-setup
-  [config-path source-path]
-  (write-file config-path (format-config ":dotfiles false"))
+  [mode config-path source-path]
+  (write-file config-path
+              (if (= mode :mixed)
+                (.. (string.gsub (format-config ":dotfiles false") " :format " "\n:format ") "\n")
+                (if (or (= mode :enabled) (= mode :enabled-mixed))
+                  (.. "{:workspace {:config true}\n"
+                      ":format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}\n"
+                      ":lint {:rules {}}}\n")
+                  (format-config ":dotfiles false"))))
   (write-file source-path "(when x\ny)\n"))
 
 
@@ -630,13 +638,17 @@
   [mode]
   (if (= mode :check)
     ["format" "--check"]
-    ["format" "--write"]))
+    (if (= mode :explicit)
+      ["format" "--check" ".fnl-extras.fnl"]
+      (if (or (= mode :mixed) (= mode :enabled-mixed))
+        ["format" "--check" ".fnl-extras.fnl" "a.fnl"]
+        ["format" "--write"]))))
 
 
 
 (defn- config-discovery-scenario-body
   [mode root config-path source-path]
-  (let [_      (config-discovery-scenario-setup config-path source-path)
+  (let [_      (config-discovery-scenario-setup mode config-path source-path)
         result (run-cli root (config-discovery-scenario-args mode))]
     {:code   (. result :code)
      :lines  (. result :lines)
@@ -1092,7 +1104,40 @@
             :lines  ["a.fnl"]
             :config (format-config ":dotfiles false")
             :source "(when x\n  y)\n"}
-           (config-discovery-scenario :write)))))
+           (config-discovery-scenario :write))))
+
+
+
+  (testing "formats an explicitly named config file"
+    (is (= {:code   0
+            :lines  []
+            :config (format-config ":dotfiles false")
+            :source "(when x\ny)\n"}
+           (config-discovery-scenario :explicit))))
+
+
+
+  (testing "removes the config file when explicit inputs are mixed"
+    (let [result (config-discovery-scenario :mixed)]
+      (is (= {:code   1
+              :lines  ["a.fnl"]
+              :source "(when x\ny)\n"}
+             {:code   (. result :code)
+              :lines  (. result :lines)
+              :source (. result :source)}))))
+
+  (testing "includes the config file when workspace config inclusion is enabled"
+    (let [result (config-discovery-scenario :enabled)]
+      (is (and (= 0 (. result :code))
+               (string.match (or (. result :lines 1) "") "fnl%-extras")))))
+
+  (testing "excludes the config file from mixed explicit inputs when inclusion is enabled"
+    (let [result (config-discovery-scenario :enabled-mixed)]
+      (is (= {:code   1
+              :lines  ["a.fnl"]
+              :config "{:workspace {:config true}\n:format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}\n:lint {:rules {}}}\n"
+              :source "(when x\ny)\n"}
+             result)))))
 
 (deftest edge-cases
 
@@ -1410,6 +1455,29 @@
 
 
 
+(defn- lint-config-discovery-scenario
+  [mode]
+  (let [root        (vim.fn.tempname)
+        config-path (.. root "/.fnl-extras.fnl")
+        config      "{:workspace {:paths [\".\"] :extensions [\".fnl\"] :config true}\n:format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}\n:lint {:rules {:file-size [{:severity :error :applies-to {} :options {:max-code-lines 1} :exclusions []}]}}}\n"]
+    (vim.fn.mkdir root "p")
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
+
+      (fn []
+        (lint-git-init root)
+        (write-file config-path config)
+        (write-file (.. root "/a.fnl") "(when x\ny)\n")
+        (let [result (run-cli root
+                              (if (= mode :mixed)
+                                ["lint" "--all" ".fnl-extras.fnl" "a.fnl"]
+                                ["lint" "--all"]))
+              lines  (or (. result :lines) [])]
+          {:code            (. result :code)
+           :lines           lines
+           :mentions-config (not (not (string.match (table.concat lines "\n") "fnl%-extras")))})))))
+
+
+
 (defn- lint-output-config
   [mode]
   (or (and (= mode :error)
@@ -1595,6 +1663,25 @@
 
     (testing "optional path arguments restrict lint all discovery"
       (is (= [] (. (lint-discovery-scenario :explicit) :lines))))
+
+
+    (testing "includes the config file when workspace config inclusion is enabled"
+      (is (= {:code 1 :mentions-config true}
+             (let [result (lint-config-discovery-scenario :enabled)]
+               {:code            (. result :code)
+                :mentions-config (. result :mentions-config)}))))
+
+
+
+    (testing "excludes the config file from mixed explicit inputs when inclusion is enabled"
+      (let [result (lint-config-discovery-scenario :mixed)]
+        (is (= {:code            1
+                :lines           ["a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules"
+                                  "  exclusion: {:rule \"file-size\" :form \"a.fnl > file\" :reason \"explain why this is intentional\"}"]
+                :mentions-config false}
+               {:code            (. result :code)
+                :lines           (. result :lines)
+                :mentions-config (. result :mentions-config)}))))
 
 
     (deftest lint-output

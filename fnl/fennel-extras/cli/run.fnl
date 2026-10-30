@@ -183,13 +183,16 @@
 
 (defn- run-lint-discovery
   [context]
-  (let [inputs                       ((. arg-parser :lint-inputs) context.parsed context.cfg)
+  (let [include-config?              (or (. context.cfg.workspace :config) false)
+        inputs                       ((. arg-parser :lint-inputs) context.parsed context.cfg)
+        scan-inputs                  (format.discovery-inputs context.parsed inputs context.config-path include-config?)
         extensions                   (. context.cfg.workspace :extensions)
         skip-dotfiles                (not (or (. context.cfg.workspace :dotfiles) false))
         follow-symlinks              (or (. context.cfg.workspace :symlinks) false)
         options                      {:excludes (or (. context.cfg.workspace :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
-        (discovered discovery-error) (scan.sorted-files context.git-info.root inputs options)
-        files                        (and discovered (format.without-config-file discovered context.config-path))]
+        (discovered discovery-error) (scan.sorted-files context.git-info.root scan-inputs options)
+        files                        (and discovered
+                                          (format.discovered-files context.git-info.root context.parsed.paths discovered context.config-path include-config?))]
     (if discovery-error
       (git.emit-git-error context.printer discovery-error)
       (run-lint-policy context files))))
@@ -201,6 +204,13 @@
       (git.emit-git-error context.printer git-error-value)
       (run-lint-discovery (table-update.update context {:git-info git-info})))))
 
+(defn- format-discovery-files
+  [root paths discovered config-path include-config?]
+  (and discovered
+       (format.discovered-files root paths discovered config-path include-config?)))
+
+
+
 (defn- run-format-files
   [context files]
   (let [(parser parser-error) (load-parser (or context.parsed.parser (. context.cfg.format :parser)))]
@@ -210,13 +220,16 @@
 
 (defn- run-format-discovery
   [root parsed cfg config-path]
-  (let [inputs                       ((. arg-parser :lint-inputs) parsed cfg)
+  (let [include-config?              (or (. cfg.workspace :config) false)
+        inputs                       ((. arg-parser :lint-inputs) parsed cfg)
+        scan-inputs                  (format.discovery-inputs parsed inputs config-path include-config?)
         extensions                   (. cfg.workspace :extensions)
         skip-dotfiles                (not (or (. cfg.workspace :dotfiles) false))
         follow-symlinks              (or (. cfg.workspace :symlinks) false)
         options                      {:excludes (or (. cfg.workspace :exclude) []) :extensions extensions :skip-dotfiles skip-dotfiles :follow-symlinks follow-symlinks}
-        (discovered discovery-error) (scan.sorted-files root inputs options)]
-    (values (and discovered (format.without-config-file discovered config-path)) discovery-error)))
+        (discovered discovery-error) (scan.sorted-files root scan-inputs options)
+        files                        (format-discovery-files root parsed.paths discovered config-path include-config?)]
+    (values files discovery-error)))
 
 (defn- run-format-files-result
   [context files]
@@ -260,15 +273,31 @@
   (printer (format.error-line config-path failure))
   2)
 
+(defn- canonical-workspace
+  [workspace]
+  {:paths      (or workspace.paths ["."])
+   :exclude    (or workspace.exclude [])
+   :extensions (or workspace.extensions [".fnl" ".fnlm"])
+   :dotfiles   (or workspace.dotfiles false)
+   :symlinks   (or workspace.symlinks false)
+   :config     (or workspace.config false)})
+
+(defn- canonical-fragment
+  [cfg]
+  (if cfg.workspace
+    (table-update.update cfg {:workspace (canonical-workspace cfg.workspace)})
+    cfg))
+
 (defn- fragment-config
   [cfg]
   (if cfg.format
-    cfg
+    (canonical-fragment cfg)
     {:workspace {:paths      (or cfg.paths ["."])
                  :exclude    (or cfg.exclude [])
                  :extensions (or cfg.extensions [".fnl" ".fnlm"])
                  :dotfiles   (or cfg.skip-dotfiles false)
-                 :symlinks   (or cfg.follow-symlinks false)}
+                 :symlinks   (or cfg.follow-symlinks false)
+                 :config     false}
      :format    cfg
      :lint      {:rules {}}}))
 

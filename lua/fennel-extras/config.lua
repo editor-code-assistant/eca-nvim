@@ -108,7 +108,7 @@ local function configuration_error(tbl)
 end
 local function workspace_key_error(workspace)
   if (type(workspace) == "table") then
-    local allowed = {paths = true, exclude = true, extensions = true, dotfiles = true, symlinks = true}
+    local allowed = {paths = true, exclude = true, extensions = true, dotfiles = true, symlinks = true, config = true}
     local key
     do
       local candidate = nil
@@ -174,6 +174,13 @@ local function workspace_error(tbl)
       or_18_ = nil
     end
   end
+  if not or_18_ then
+    if (workspace and (workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
+      or_18_ = {message = "workspace.config must be a boolean"}
+    else
+      or_18_ = nil
+    end
+  end
   return or_18_
 end
 local function content_error(tbl)
@@ -182,56 +189,63 @@ end
 local validate_workspace
 do
   local function validate_workspace0(workspace, require_paths_3f)
-    local _24_
+    local _25_
     if (type(workspace) ~= "table") then
-      _24_ = {message = "workspace must be a table"}
+      _25_ = {message = "workspace must be a table"}
     else
-      _24_ = nil
+      _25_ = nil
     end
-    local or_26_ = _24_ or workspace_key_error(workspace)
-    if not or_26_ then
+    local or_27_ = _25_ or workspace_key_error(workspace)
+    if not or_27_ then
       if (require_paths_3f and (workspace.paths == nil)) then
-        or_26_ = {message = "missing workspace.paths"}
+        or_27_ = {message = "missing workspace.paths"}
       else
-        or_26_ = nil
+        or_27_ = nil
       end
     end
-    if not or_26_ then
+    if not or_27_ then
       if (workspace.paths and not array_of_strings_3f(workspace.paths)) then
-        or_26_ = {message = "workspace.paths must be an array of strings"}
+        or_27_ = {message = "workspace.paths must be an array of strings"}
       else
-        or_26_ = nil
+        or_27_ = nil
       end
     end
-    if not or_26_ then
+    if not or_27_ then
       if (workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
-        or_26_ = {message = "workspace.exclude must be an array of strings"}
+        or_27_ = {message = "workspace.exclude must be an array of strings"}
       else
-        or_26_ = nil
+        or_27_ = nil
       end
     end
-    if not or_26_ then
+    if not or_27_ then
       if (workspace.extensions and not extensions_3f(workspace.extensions)) then
-        or_26_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
+        or_27_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
       else
-        or_26_ = nil
+        or_27_ = nil
       end
     end
-    if not or_26_ then
+    if not or_27_ then
       if ((workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
-        or_26_ = {message = "workspace.dotfiles must be a boolean"}
+        or_27_ = {message = "workspace.dotfiles must be a boolean"}
       else
-        or_26_ = nil
+        or_27_ = nil
       end
     end
-    if not or_26_ then
+    if not or_27_ then
       if ((workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
-        or_26_ = {message = "workspace.symlinks must be a boolean"}
+        or_27_ = {message = "workspace.symlinks must be a boolean"}
       else
-        or_26_ = nil
+        or_27_ = nil
       end
     end
-    return or_26_
+    if not or_27_ then
+      if ((workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
+        or_27_ = {message = "workspace.config must be a boolean"}
+      else
+        or_27_ = nil
+      end
+    end
+    return or_27_
   end
   _2amodule_2a["validate-workspace"] = validate_workspace0
   validate_workspace = _2amodule_2a["validate-workspace"]
@@ -454,10 +468,10 @@ do
       local text = file:read("*a")
       file:close()
       local ok, parsed_or_error
-      local function _52_()
+      local function _54_()
         return parse_string(text)
       end
-      ok, parsed_or_error = pcall(_52_)
+      ok, parsed_or_error = pcall(_54_)
       if not ok then
         return nil, parsed_or_error
       else

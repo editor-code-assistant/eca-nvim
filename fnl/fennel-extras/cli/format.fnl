@@ -5,6 +5,7 @@
 (local formatter (require :fennel-extras.format))
 (local fs (require :fennel-extras.cli.fs))
 (local scan (require :fennel-extras.cli.scan))
+(local scan-path (require :fennel-extras.cli.scan.path))
 (local table-copy (require :fennel-extras.cli.table))
 
 (defn error-line
@@ -41,12 +42,23 @@
 
 
 
-(defn- same-path?
+(defn same-path?
   [left right]
   (let [uv    (or vim.uv vim.loop)
         left  (normalized-path (or (scan.realpath uv left) left))
         right (normalized-path (or (scan.realpath uv right) right))]
     (= left right)))
+
+
+
+(defn explicit-config-file?
+  [root paths config-path]
+  (and config-path
+       (= (length paths) 1)
+       (accumulate [result false _ input (ipairs paths)]
+         (or result
+             (same-path? (scan-path.absolute root input)
+                         config-path)))))
 
 
 
@@ -75,6 +87,42 @@
   (if config-path
     (without-config-file-result files config-path)
     files))
+
+
+
+(defn discovered-files
+  [root paths discovered config-path include-config?]
+  (if (or (and include-config?
+               (or (= (length paths) 0)
+                   (and (= (length paths) 1)
+                        (= (. paths 1) "."))))
+          (explicit-config-file? root paths config-path))
+    discovered
+    (without-config-file discovered config-path)))
+
+
+
+(defn- append-config-input
+  [result input]
+  (table.insert result input)
+  result)
+
+(defn- append-config-inputs
+  [inputs config-path]
+  (let [result []]
+    (each [_ input (ipairs inputs)]
+      (append-config-input result input))
+    (append-config-input result config-path)))
+
+(defn discovery-inputs
+  [parsed inputs config-path include-config?]
+  (if (and include-config?
+           config-path
+           (or (= (length parsed.paths) 0)
+               (and (= (length parsed.paths) 1)
+                    (= (. parsed.paths 1) "."))))
+    (append-config-inputs inputs config-path)
+    inputs))
 
 
 
