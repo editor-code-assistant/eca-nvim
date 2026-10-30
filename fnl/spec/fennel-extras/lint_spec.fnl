@@ -30,6 +30,7 @@
         :call-data-arg    [{:severity "warning" :applies-to {} :options {} :exclusions []}]})
 
 (local matcher (require :fennel-extras.cli.matcher))
+(local registry (require :fennel-extras.lint.rules.registry))
 
 (local source-rules {:module-style true :forbidden-form true :file-size true :call-data-arg true})
 (local spec-rules {:module-import true :required-form true :forbidden-form true :form-child-count true})
@@ -76,6 +77,8 @@
         (tset clean key nil)))
     (when clean.module
       (set applies.modules clean.module)
+      (when (= rule "module-import")
+        (set clean.mode "require"))
       (set clean.module nil))
     {:applies-to applies :options clean}))
 
@@ -1532,7 +1535,9 @@
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/registry.fnl" "control-layout"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "multiline-layout"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
@@ -3495,3 +3500,83 @@
                                                                       :exclusions []}]}}})]
       (is (= ["no-mutation"]
              (icollect [_ finding (ipairs result)] (. finding :rule)))))))
+
+(deftest module-selector-vector-compatibility
+
+  (testing "semantic singleton module vectors preserve scalar behavior"
+    (let [forbidden-source "(module other)"
+          forbidden-scalar (finding-identities
+                            (check-source-exact forbidden-source
+                                                "fnl/app.fnl"
+                                                {:forbidden-form [{:severity   "warning"
+                                                                   :applies-to {:modules "app"
+                                                                                :forms   []}
+                                                                   :options    {}
+                                                                   :exclusions []}]}))
+          forbidden-vector (finding-identities
+                            (check-source-exact forbidden-source
+                                                "fnl/app.fnl"
+                                                {:forbidden-form [{:severity   "warning"
+                                                                   :applies-to {:modules ["app"]
+                                                                                :forms   []}
+                                                                   :options    {}
+                                                                   :exclusions []}]}))
+          require-source   "(require :eca.nfnl.core extra)"
+          require-scalar   (finding-identities
+                            (check-source-exact require-source
+                                                "fnl/app.fnl"
+                                                {:module-import [{:severity   "error"
+                                                                  :applies-to {:modules "eca.nfnl.core"}
+                                                                  :options    {:mode    "require"
+                                                                               :binding "core"}
+                                                                  :exclusions []}]}))
+          require-vector   (finding-identities
+                            (check-source-exact require-source
+                                                "fnl/app.fnl"
+                                                {:module-import [{:severity   "error"
+                                                                  :applies-to {:modules ["eca.nfnl.core"]}
+                                                                  :options    {:mode    "require"
+                                                                               :binding "core"}
+                                                                  :exclusions []}]}))
+          style-source     "(import-macros {: module : def : defn : defn-} :eca.nfnl.macros.aniseed)\n(module app)"
+          style-scalar     (finding-identities
+                            (check-source-exact style-source
+                                                "fnl/app.fnl"
+                                                {:module-style [{:severity   "error"
+                                                                 :applies-to {:modules "eca.nfnl.macros.aniseed"
+                                                                              :forms   ["module" "def" "defn" "defn-"]}
+                                                                 :options    {}
+                                                                 :exclusions []}]}))
+          style-vector     (finding-identities
+                            (check-source-exact style-source
+                                                "fnl/app.fnl"
+                                                {:module-style [{:severity   "error"
+                                                                 :applies-to {:modules ["eca.nfnl.macros.aniseed"]
+                                                                              :forms   ["module" "def" "defn" "defn-"]}
+                                                                 :options    {}
+                                                                 :exclusions []}]}))]
+      (is (and (vim.deep_equal [] forbidden-scalar)
+               (vim.deep_equal forbidden-scalar forbidden-vector)
+               (vim.deep_equal require-scalar require-vector)
+               (vim.deep_equal style-scalar style-vector)))))
+
+  (testing "scalar generic module selectors behave as one-item vectors"
+    (let [finding     {:path "fnl/app.fnl" :node {:text "my.module"}}
+          vim-matcher (matcher.vim-matcher)
+          (scalar-ok scalar)
+          (pcall (fn []
+                   (registry.instance-applies-to? "control-layout"
+                                                  {:applies-to {:modules "my.module"}}
+                                                  finding
+                                                  vim-matcher)))
+
+          (vector-ok vector)
+          (pcall (fn []
+                   (registry.instance-applies-to? "control-layout"
+                                                  {:applies-to {:modules ["my.module"]}}
+                                                  finding
+                                                  vim-matcher)))]
+
+      (is (and scalar-ok
+               vector-ok
+               (= vector scalar))))))

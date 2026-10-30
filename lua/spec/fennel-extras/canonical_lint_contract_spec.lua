@@ -101,4 +101,69 @@ local function _14_()
   assert_28_auto.is_truthy(value_29_auto, "(and (string.find source \":lint\") (string.find source \":rules\") (string.find source \":forbidden%-form%s+%[%{\") (not (string.find source \":forbidden%-form%s+%[%{:%s*severity%s+:%s*off%s+%}%]\")))")
   return true
 end
-return require("plenary.busted").it("the canonical source keeps rule vectors inline and has no empty forbidden-form placeholder", _14_)
+require("plenary.busted").it("the canonical source keeps rule vectors inline and has no empty forbidden-form placeholder", _14_)
+local function _15_()
+  local loaded = config.load(".fnl-extras.fnl")
+  local rules = loaded.lint.rules
+  local assert_28_auto = require("luassert")
+  local value_29_auto = (vim.deep_equal({"module"}, rules["forbidden-form"][1]["applies-to"].modules) and vim.deep_equal({"eca.nfnl.core"}, rules["module-import"][1]["applies-to"].modules) and vim.deep_equal({"spec.eca.macros"}, rules["module-import"][2]["applies-to"].modules) and vim.deep_equal({"plenary.busted", "luassert"}, rules["module-import"][3]["applies-to"].modules) and vim.deep_equal({"eca.nfnl.macros.aniseed"}, rules["module-style"][1]["applies-to"].modules))
+  assert_28_auto.is_truthy(value_29_auto, "(and (vim.deep_equal [\"module\"] (. rules \"forbidden-form\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"eca.nfnl.core\"] (. rules \"module-import\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"spec.eca.macros\"] (. rules \"module-import\" 2 \"applies-to\" \"modules\")) (vim.deep_equal [\"plenary.busted\" \"luassert\"] (. rules \"module-import\" 3 \"applies-to\" \"modules\")) (vim.deep_equal [\"eca.nfnl.macros.aniseed\"] (. rules \"module-style\" 1 \"applies-to\" \"modules\")))")
+  return true
+end
+require("plenary.busted").describe("canonical-module-selectors-are-vectors", _15_)
+local function _16_()
+  local function _17_()
+    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {modules = {"one", "two"}}, options = {}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.forbidden-form[1].applies-to.modules must contain at most one module"
+    local actual_7_auto = error_message(result)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("forbidden-form rejects multiple semantic singleton modules", _17_)
+  local function _18_()
+    local result = validation({lint = {rules = {["module-style"] = {{severity = "warning", ["applies-to"] = {modules = {"one", "two"}}, options = {}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.module-style[1].applies-to.modules must contain at most one module"
+    local actual_7_auto = error_message(result)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("module-style rejects multiple semantic singleton modules", _18_)
+  local function _19_()
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = {mode = "require", binding = "one"}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.module-import[1].applies-to.modules must contain at most one module"
+    local actual_7_auto = error_message(result)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("module-import require rejects multiple semantic singleton modules", _19_)
+  local function _20_()
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = {mode = "forbid", ["exempt-files"] = {}}, exclusions = {}}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = result.ok
+    assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
+    return true
+  end
+  require("plenary.busted").it("module-import forbid accepts multiple module selectors", _20_)
+  local function _21_()
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.module-import[1].options must be a table"
+    local actual_7_auto = error_message(result)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("module-import missing options returns a structured validation error", _21_)
+  local function _22_()
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = "require", exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.module-import[1].options must be a table"
+    local actual_7_auto = error_message(result)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("module-import non-map options returns a structured validation error", _22_)
+end
+return require("plenary.busted").describe("canonical-module-selector-cardinality", _16_)

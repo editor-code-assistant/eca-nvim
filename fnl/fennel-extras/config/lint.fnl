@@ -105,6 +105,22 @@
 
 
 
+(defn- canonical-singleton-module-error
+  [name instance path]
+  (let [modules  (and (= (type instance.applies-to) :table)
+                      instance.applies-to.modules)
+        singular (or (= name "forbidden-form")
+                     (= name "module-style")
+                     (and (= name "module-import")
+                          (= (type instance.options) :table)
+                          (= instance.options.mode "require")))]
+    (when (and singular
+               (sequence? modules)
+               (> (length modules) 1))
+      {:message (.. path ".modules must contain at most one module")})))
+
+
+
 (defn- canonical-missing-option-step
   [section name index option-values names option-index]
   (if (> option-index (length names))
@@ -155,6 +171,7 @@
         (when (not (or (= instance.severity "error") (= instance.severity "warning") (= instance.severity "off")))
           {:message (.. path ".severity must be error, warning, or off")})
         (canonical-applies-to-error instance.applies-to (.. path ".applies-to"))
+        (canonical-singleton-module-error name instance (.. path ".applies-to"))
         (when (not= (type instance.options) :table)
           {:message (.. path ".options must be a table")})
         (canonical-options-error name instance.options (.. path ".options"))

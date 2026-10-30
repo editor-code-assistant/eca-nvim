@@ -47,96 +47,96 @@
                       :options    {:before 1}}]}
  :lint
  {:rules
-  {:forbidden-form [{:severity   :error
-     :applies-to {:files   ["^spec/"]
-                  :modules "module"}
-     :options    {}
-     :exclusions []}
-    {:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]
-                  :forms ["var" "set" "while"]}
-     :options    {}
-     :exclusions []}]
-   :call-data-arg [{:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]
-                  :forms []}
-     :options    {}
-     :exclusions []}]
-   :control-layout [{:severity   :warning
-     :applies-to {:forms ["if" "when" "and" "or" "case" "match"]}
-     :options    {}
-     :exclusions []}]
-   :file-size [{:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:max-code-lines 300}
-     :exclusions []}]
+  {:forbidden-form   [{:severity   :error
+                       :applies-to {:files   ["^spec/"]
+                                    :modules ["module"]}
+                       :options    {}
+                       :exclusions []}
+                      {:severity   :warning
+                       :applies-to {:files ["^fennel-extras/"]
+                                    :forms ["var" "set" "while"]}
+                       :options    {}
+                       :exclusions []}]
+   :call-data-arg    [{:severity   :warning
+                       :applies-to {:files ["^fennel-extras/"]
+                                    :forms []}
+                       :options    {}
+                       :exclusions []}]
+   :control-layout   [{:severity   :warning
+                       :applies-to {:forms ["if" "when" "and" "or" "case" "match"]}
+                       :options    {}
+                       :exclusions []}]
+   :file-size        [{:severity   :warning
+                       :applies-to {:files ["^fennel-extras/"]}
+                       :options    {:max-code-lines 300}
+                       :exclusions []}]
    :form-child-count [{:severity   :error
-     :applies-to {:files ["^spec/"]
-                  :forms ["testing"]}
-     :options    {:children  ["is"]
-                  :max-count 1}
-     :exclusions []}]
-   :module-import [{:severity   :error
-     :applies-to {:modules "eca.nfnl.core"}
-     :options    {:mode    :require
-                  :binding "core"}
-     :exclusions []}
-    {:severity   :error
-     :applies-to {:files   ["^spec/"]
-                  :forms   ["deftest" "testing" "is"]
-                  :modules "spec.eca.macros"}
-     :options    {:mode         :require
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}
-    {:severity   :error
-     :applies-to {:files   ["^spec/"]
-                  :modules ["plenary.busted" "luassert"]}
-     :options    {:mode         :forbid
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}]
-   :module-style [{:severity   :error
-     :applies-to {:files   ["^fennel-extras/"]
-                  :forms   ["module" "def" "defn" "defn-"]
-                  :modules "eca.nfnl.macros.aniseed"}
-     :options    {}
-     :exclusions []}]
+                       :applies-to {:files ["^spec/"]
+                                    :forms ["testing"]}
+                       :options    {:children  ["is"]
+                                    :max-count 1}
+                       :exclusions []}]
+   :module-import    [{:severity   :error
+                       :applies-to {:modules ["eca.nfnl.core"]}
+                       :options    {:mode    :require
+                                    :binding "core"}
+                       :exclusions []}
+                      {:severity   :error
+                       :applies-to {:files   ["^spec/"]
+                                    :forms   ["deftest" "testing" "is"]
+                                    :modules ["spec.eca.macros"]}
+                       :options    {:mode         :require
+                                    :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+                       :exclusions []}
+                      {:severity   :error
+                       :applies-to {:files   ["^spec/"]
+                                    :modules ["plenary.busted" "luassert"]}
+                       :options    {:mode         :forbid
+                                    :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+                       :exclusions []}]
+   :module-style     [{:severity   :error
+                       :applies-to {:files   ["^fennel-extras/"]
+                                    :forms   ["module" "def" "defn" "defn-"]
+                                    :modules ["eca.nfnl.macros.aniseed"]}
+                       :options    {}
+                       :exclusions []}]
    :multiline-layout [{:severity   :warning
-     :applies-to {}
-     :options    {:clauses  ["case" "match" "case-try" "match-try"]
-                  :bindings ["let" "when-let" "if-let" "with-open"]}
-     :exclusions []}]
-   :required-form [{:severity   :error
-     :applies-to {:files ["^fennel-extras/"]
-                  :forms ["module"]}
-     :options    {}
-     :exclusions []}]
-   :unused-and-or [{:severity   :warning
-     :applies-to {:forms ["and" "or"]}
-     :options    {}
-     :exclusions []}]}}
+                       :applies-to {}
+                       :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                                    :bindings ["let" "when-let" "if-let" "with-open"]}
+                       :exclusions []}]
+   :required-form    [{:severity   :error
+                       :applies-to {:files ["^fennel-extras/"]
+                                    :forms ["module"]}
+                       :options    {}
+                       :exclusions []}]
+   :unused-and-or    [{:severity   :warning
+                       :applies-to {:forms ["and" "or"]}
+                       :options    {}
+                       :exclusions []}]}}
  :design
  {:rules
-  {:function-shape [{:severity   :warning
-     :applies-to {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-     :options    {}
-     :exclusions []}]
-   :if-branch-call [{:severity   :warning
-     :applies-to {:forms ["if"]}
-     :options    {}
-     :exclusions []}]
-   :if-without-else [{:severity   :warning
-     :applies-to {:forms ["if"]}
-     :options    {:nil-else true}
-     :exclusions []}]
-   :nested-forms [{:severity   :off
-     :applies-to {:forms []}
-     :options    {:max-depth 1}
-     :exclusions []}]
+  {:function-shape   [{:severity   :warning
+                       :applies-to {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                       :options    {}
+                       :exclusions []}]
+   :if-branch-call   [{:severity   :warning
+                       :applies-to {:forms ["if"]}
+                       :options    {}
+                       :exclusions []}]
+   :if-without-else  [{:severity   :warning
+                       :applies-to {:forms ["if"]}
+                       :options    {:nil-else true}
+                       :exclusions []}]
+   :nested-forms     [{:severity   :off
+                       :applies-to {:forms []}
+                       :options    {:max-depth 1}
+                       :exclusions []}]
    :leading-bindings [{:severity   :off
-     :applies-to {:forms []}
-     :options    {}
-     :exclusions []}]
-   :no-mutation [{:severity   :off
-     :applies-to {:forms ["var" "set" "while"]}
-     :options    {}
-     :exclusions []}]}}}
+                       :applies-to {:forms []}
+                       :options    {}
+                       :exclusions []}]
+   :no-mutation      [{:severity   :off
+                       :applies-to {:forms ["var" "set" "while"]}
+                       :options    {}
+                       :exclusions []}]}}}

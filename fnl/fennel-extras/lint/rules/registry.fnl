@@ -123,22 +123,52 @@
 
 
 
+(defn- singleton-module-value
+  [value]
+  (if (= (type value) :string)
+    value
+    (if (and (= (type value) :table)
+             (= (length value) 1))
+      (. value 1)
+      value)))
+
+
+
+(defn- module-set-value
+  [value]
+  (if (= (type value) :string)
+    [value]
+    value))
+
+
+
 (defn- semantic-option-value
-  [applies name]
+  [applies name singleton]
   (if (= name "module")
-    (let [modules (. applies :modules)]
-      (if (= (type modules) :string) modules nil))
-    (. applies (if (= name "modules") :modules :forms))))
+    (if singleton
+      (singleton-module-value (. applies :modules))
+      nil)
+    (if (= name "modules")
+      (module-set-value (. applies :modules))
+      (. applies :forms))))
 
 
 
 (defn- normalized-options
   [rule instance]
-  (let [options (core.merge (or instance.options {}))
-        applies (or instance.applies-to {})]
+  (let [options   (core.merge (or instance.options {}))
+        applies   (or instance.applies-to {})
+        singleton (or (= rule "forbidden-form")
+                      (= rule "module-style")
+                      (and (= rule "module-import")
+                           (= options.mode "require")))]
     (accumulate [result options _ name (ipairs (or (. semantic-applies-to rule) []))]
-      (let [value (semantic-option-value applies name)]
-        (if (= value nil)
+      (let [value (semantic-option-value applies name singleton)]
+        (if (or (= value nil)
+                (and (= rule "module-import")
+                     (= name "modules")
+                     (= (type applies.modules) :string)
+                     options.modules))
           result
           (core.assoc result name value))))))
 
@@ -152,7 +182,13 @@
                                    "no-mutation"
                                    instance.severity)
                        base-result)
-        with-options (core.assoc result :options (normalized-options rule instance))]
+        raw-options  (normalized-options rule instance)
+        normalized   (if (and (= rule "module-import")
+                              raw-options.module
+                              (= raw-options.mode "forbid"))
+                       (core.assoc raw-options :mode "require")
+                       raw-options)
+        with-options (core.assoc result :options normalized)]
     (core.assoc with-options :matcher policy.matcher)))
 
 
@@ -216,7 +252,8 @@
       (when (and (. applies name)
                  (not (or (semantic-name? rule name)
                           (and (= name "modules") (semantic-name? rule "module")))))
-        (tset result name (. applies name))))
+        (tset result name (or (and (= name "modules") (module-set-value (. applies name)))
+                              (. applies name)))))
     result))
 
 

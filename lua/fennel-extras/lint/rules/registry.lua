@@ -126,31 +126,47 @@ do
   _2amodule_2a["instances"] = instances0
   instances = _2amodule_2a.instances
 end
-local function semantic_option_value(applies, name)
+local function singleton_module_value(value)
+  if (type(value) == "string") then
+    return value
+  else
+    if ((type(value) == "table") and (#value == 1)) then
+      return value[1]
+    else
+      return value
+    end
+  end
+end
+local function module_set_value(value)
+  if (type(value) == "string") then
+    return {value}
+  else
+    return value
+  end
+end
+local function semantic_option_value(applies, name, singleton)
   if (name == "module") then
-    local modules = applies.modules
-    if (type(modules) == "string") then
-      return modules
+    if singleton then
+      return singleton_module_value(applies.modules)
     else
       return nil
     end
   else
-    local _4_
     if (name == "modules") then
-      _4_ = "modules"
+      return module_set_value(applies.modules)
     else
-      _4_ = "forms"
+      return applies.forms
     end
-    return applies[_4_]
   end
 end
 local function normalized_options(rule, instance)
   local options0 = core.merge((instance.options or {}))
   local applies = (instance["applies-to"] or {})
+  local singleton = ((rule == "forbidden-form") or (rule == "module-style") or ((rule == "module-import") and (options0.mode == "require")))
   local result = options0
   for _, name in ipairs((semantic_applies_to[rule] or {})) do
-    local value = semantic_option_value(applies, name)
-    if (value == nil) then
+    local value = semantic_option_value(applies, name, singleton)
+    if ((value == nil) or ((rule == "module-import") and (name == "modules") and (type(applies.modules) == "string") and options0.modules)) then
       result = result
     else
       result = core.assoc(result, name, value)
@@ -168,22 +184,29 @@ do
     else
       result = base_result
     end
-    local with_options = core.assoc(result, "options", normalized_options(rule, instance))
+    local raw_options = normalized_options(rule, instance)
+    local normalized
+    if ((rule == "module-import") and raw_options.module and (raw_options.mode == "forbid")) then
+      normalized = core.assoc(raw_options, "mode", "require")
+    else
+      normalized = raw_options
+    end
+    local with_options = core.assoc(result, "options", normalized)
     return core.assoc(with_options, "matcher", policy.matcher)
   end
   _2amodule_2a["evaluator-policy"] = evaluator_policy0
   evaluator_policy = _2amodule_2a["evaluator-policy"]
 end
 local function matches_3f(matcher, pattern, value)
-  local and_9_ = pattern and value
-  if and_9_ then
+  local and_12_ = pattern and value
+  if and_12_ then
     if matcher then
-      and_9_ = matcher(pattern, value)
+      and_12_ = matcher(pattern, value)
     else
-      and_9_ = (vim.fn.match(value, pattern) >= 0)
+      and_12_ = (vim.fn.match(value, pattern) >= 0)
     end
   end
-  return and_9_
+  return and_12_
 end
 local function any_match_3f(items, matcher, value)
   local result = false
@@ -215,7 +238,7 @@ local function generic_applies_to(rule, applies)
   local result = {}
   for _, name in ipairs({"files", "forms", "modules"}) do
     if (applies[name] and not (semantic_name_3f(rule, name) or ((name == "modules") and semantic_name_3f(rule, "module")))) then
-      result[name] = applies[name]
+      result[name] = (((name == "modules") and module_set_value(applies[name])) or applies[name])
     else
     end
   end

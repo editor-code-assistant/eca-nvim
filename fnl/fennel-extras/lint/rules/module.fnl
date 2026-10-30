@@ -85,6 +85,7 @@
         modules      (or options.modules [])
         binding      (or options.binding "core")
         forbidden    (and (= options.mode "forbid")
+                          (not (= target options.module))
                           (not (exempt-file? path policy options))
                           target
                           (contains? modules target 1))

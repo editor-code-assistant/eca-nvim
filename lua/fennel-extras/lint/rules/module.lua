@@ -111,7 +111,7 @@ do
     local import_info = import_macros_3f(node)
     local modules = (options.modules or {})
     local binding = (options.binding or "core")
-    local forbidden = ((options.mode == "forbid") and not exempt_file_3f(path, policy, options) and target and contains_3f(modules, target, 1))
+    local forbidden = ((options.mode == "forbid") and not (target == options.module) and not exempt_file_3f(path, policy, options) and target and contains_3f(modules, target, 1))
     local required
     local and_9_ = (options.mode == "require") and not exempt_file_3f(path, policy, options) and (target == options.module)
     if and_9_ then

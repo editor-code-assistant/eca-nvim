@@ -129,3 +129,67 @@
              (string.find source ":rules")
              (string.find source ":forbidden%-form%s+%[%{")
              (not (string.find source ":forbidden%-form%s+%[%{:%s*severity%s+:%s*off%s+%}%]"))))))
+
+(deftest canonical-module-selectors-are-vectors
+  (let [loaded (config.load ".fnl-extras.fnl")
+        rules  (. loaded :lint :rules)]
+    (is (and (vim.deep_equal ["module"]
+                             (. rules :forbidden-form 1 :applies-to :modules))
+             (vim.deep_equal ["eca.nfnl.core"]
+                             (. rules :module-import 1 :applies-to :modules))
+             (vim.deep_equal ["spec.eca.macros"]
+                             (. rules :module-import 2 :applies-to :modules))
+             (vim.deep_equal ["plenary.busted" "luassert"]
+                             (. rules :module-import 3 :applies-to :modules))
+             (vim.deep_equal ["eca.nfnl.macros.aniseed"]
+                             (. rules :module-style 1 :applies-to :modules))))))
+
+(deftest canonical-module-selector-cardinality
+
+  (testing "forbidden-form rejects multiple semantic singleton modules"
+    (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
+                                                               :applies-to {:modules ["one" "two"]}
+                                                               :options    {}
+                                                               :exclusions []}]}}})]
+      (is (= "lint.rules.forbidden-form[1].applies-to.modules must contain at most one module"
+             (error-message result)))))
+
+  (testing "module-style rejects multiple semantic singleton modules"
+    (let [result (validation {:lint {:rules {:module-style [{:severity   "warning"
+                                                             :applies-to {:modules ["one" "two"]}
+                                                             :options    {}
+                                                             :exclusions []}]}}})]
+      (is (= "lint.rules.module-style[1].applies-to.modules must contain at most one module"
+             (error-message result)))))
+
+  (testing "module-import require rejects multiple semantic singleton modules"
+    (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
+                                                              :applies-to {:modules ["one" "two"]}
+                                                              :options    {:mode    "require"
+                                                                           :binding "one"}
+                                                              :exclusions []}]}}})]
+      (is (= "lint.rules.module-import[1].applies-to.modules must contain at most one module"
+             (error-message result)))))
+
+  (testing "module-import forbid accepts multiple module selectors"
+    (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
+                                                              :applies-to {:modules ["one" "two"]}
+                                                              :options    {:mode         "forbid"
+                                                                           :exempt-files []}
+                                                              :exclusions []}]}}})]
+      (is (. result :ok))))
+
+  (testing "module-import missing options returns a structured validation error"
+    (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
+                                                              :applies-to {:modules ["one" "two"]}
+                                                              :exclusions []}]}}})]
+      (is (= "lint.rules.module-import[1].options must be a table"
+             (error-message result)))))
+
+  (testing "module-import non-map options returns a structured validation error"
+    (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
+                                                              :applies-to {:modules ["one" "two"]}
+                                                              :options    "require"
+                                                              :exclusions []}]}}})]
+      (is (= "lint.rules.module-import[1].options must be a table"
+             (error-message result))))))
