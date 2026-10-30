@@ -1010,7 +1010,7 @@ local function lint_git_commit(root)
   lint_git_command(root, {"commit", "-qm", "base"})
   return root
 end
-local lint_rule_options = {["module-style"] = ":applies-to {:files [\"^[^s]\"]} :options {:module \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]}", ["module-import"] = ":applies-to {} :options {:module \"eca.nfnl.core\" :binding \"core\"}", ["forbidden-form"] = ":applies-to {:files [\"^[^s]\"]} :options {:forms [\"var\" \"set\" \"while\"]}", ["form-child-count"] = ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}", ["if-branch-call"] = ":applies-to {} :options {:forms [\"if\"]}", ["if-without-else"] = ":applies-to {} :options {:forms [\"if\"] :nil-else true}", ["control-layout"] = ":applies-to {} :options {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]}", ["function-shape"] = ":applies-to {} :options {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"\206\187\"]}", ["file-size"] = ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}", ["unused-and-or"] = ":applies-to {} :options {:forms [\"and\" \"or\"]}", ["split-bindings"] = ":applies-to {} :options {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]}", ["call-data-arg"] = ":applies-to {:files [\"^[^s]\"]} :options {:forms []}"}
+local lint_rule_options = {["module-style"] = ":applies-to {:files [\"^[^s]\"] :modules \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]} :options {}", ["module-import"] = ":applies-to {:modules \"eca.nfnl.core\"} :options {:binding \"core\"}", ["forbidden-form"] = ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}", ["form-child-count"] = ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}", ["if-branch-call"] = ":applies-to {:forms [\"if\"]} :options {}", ["if-without-else"] = ":applies-to {:forms [\"if\"]} :options {:nil-else true}", ["control-layout"] = ":applies-to {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]} :options {}", ["function-shape"] = ":applies-to {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"\206\187\"]} :options {}", ["file-size"] = ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}", ["unused-and-or"] = ":applies-to {:forms [\"and\" \"or\"]} :options {}", ["split-bindings"] = ":applies-to {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]} :options {}", ["call-data-arg"] = ":applies-to {:files [\"^[^s]\"] :forms []} :options {}"}
 local design_rule_names = {["function-shape"] = true, ["if-branch-call"] = true, ["if-without-else"] = true, ["no-mutation"] = true, ["nested-forms"] = true, ["leading-bindings"] = true}
 local function lint_config_rule(normalized, rule, options)
   local escaped_rule = string.gsub(rule, "-", "%%-")
@@ -1163,7 +1163,7 @@ local function lint_discovery_scenario(mode)
   return lint_project(config, files, _118_())
 end
 local function lint_output_config(mode)
-  return (((mode == "error") and "{:lint {:rules {\"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}]}}}") or ((mode == "warning-error") and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :error :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}") or ((mode == "off") and "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :off}}}") or "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}")
+  return (((mode == "error") and "{:lint {:rules {\"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}]}}}") or ((mode == "warning-error") and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :error :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}") or ((mode == "off") and "{:lint {:rules {\"module-style\" :off \"if-branch-call\" :off}}}") or "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}")
 end
 local function lint_output_source(mode)
   return (((mode == "error") and "(testing \"x\" (is 1) (is 2))\n") or "(if x (do (foo) (bar)) nil)\n")
@@ -1172,7 +1172,7 @@ local function lint_output_scenario(mode)
   return lint_project(lint_output_config(mode), {["a.fnl"] = lint_output_source(mode)}, {"lint", "--all"})
 end
 local function lint_exclusion_config(mode)
-  return (((mode == "stale") and "{:lint {:rules {\"module-style\" :off}}\n             :design {:rules {:if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or "{:lint {:rules {\"module-style\" :off}}\n        :design {:rules {:if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"a.fnl\" :reason \"intentional multi-step branch\"}]}]}}}")
+  return (((mode == "stale") and "{:lint {:rules {\"module-style\" :off}}\n             :design {:rules {:if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or "{:lint {:rules {\"module-style\" :off}}\n        :design {:rules {:if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"intentional multi-step branch\"}]}]}}}")
 end
 local function lint_exclusion_scenario(mode)
   return lint_project(lint_exclusion_config(mode), {["a.fnl"] = "(if x (do (foo) (bar)) nil)\n"}, {"lint", "--all"})
@@ -1181,7 +1181,7 @@ local function lint_normalized_testing_exclusion_scenario()
   return lint_project("{:lint {:rules {\"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions [{:path \"a.fnl\" :reason \"intentional test shape\"}]}]}}}", {["a.fnl"] = "(testing \"two\" (is true) (is true))\n"}, {"lint", "--all"})
 end
 local function lint_selector_exclusion_config(mode)
-  return (((mode == "per-rule") and "{:lint {:rules {\"module-style\" :off}}\n             :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-rule exclusion\"}]}]}}}") or "{:lint {:rules {}}\n        :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:forms [\"if\"] :nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-instance exclusion\"}]}]}}}")
+  return (((mode == "per-rule") and "{:lint {:rules {\"module-style\" :off}}\n             :design {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-rule exclusion\"}]}]}}}") or "{:lint {:rules {}}\n        :design {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-instance exclusion\"}]}]}}}")
 end
 local function lint_selector_exclusion_scenario(mode)
   return lint_project(lint_selector_exclusion_config(mode), {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
@@ -1190,7 +1190,7 @@ local function lint_invalid_regex_scenario()
   return lint_project("{:lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions [{:path \"[\" :reason \"bad regex\"]}]}}}", {["a.fnl"] = "(if\n"}, {"lint", "--all"})
 end
 local function lint_stale_pattern_scenario()
-  return lint_project("{:lint {:rules {\"module-style\" :off}}\n                :design {:rules {:if-without-else [{:severity :warning :applies-to {} :options { :forms [\"if\"] :nil-else true} :exclusions [{:path \"missing[.]fnl\" :reason \"stale pattern\"]}]}}}", {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
+  return lint_project("{:lint {:rules {\"module-style\" :off}}\n                :design {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions [{:path \"missing[.]fnl\" :reason \"stale pattern\"]}]}}}", {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
 end
 local function lint_disabled_exclusion_scenario()
   return lint_project("{:lint {:rules {}}\n                :design {:rules {:if-without-else [{:severity :off :applies-to {} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"]}]}}}", {["a.fnl"] = "(if ok then)\n"}, {"lint", "--all"})
@@ -1349,7 +1349,7 @@ local function _120_()
       end
       require("plenary.busted").it("turns the warning off when configured", _139_)
       local function _140_()
-        local result = lint_project("{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}", {["a.fnl"] = "(if x (do (foo) (bar)) nil)\n"}, {"lint", "--all", "--format", "json"})
+        local result = lint_project("{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}", {["a.fnl"] = "(if x (do (foo) (bar)) nil)\n"}, {"lint", "--all", "--format", "json"})
         local assert_28_auto = require("luassert")
         local value_29_auto = ((0 == result.code) and string.match((result.lines[1] or ""), "^%{"))
         assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"^%{\"))")
@@ -1598,7 +1598,7 @@ local function _120_()
     return (((mode == "all") and {"lint", "--all"}) or {"lint", "--changed"})
   end
   local function invalid_git_scenario_body(mode, root)
-    local _ = write_file((root .. "/.fnl-extras.fnl"), lint_config("{:lint {:rules {\"module-import\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
+    local _ = write_file((root .. "/.fnl-extras.fnl"), lint_config("{:lint {:rules {\"module-import\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
     local _0 = write_file((root .. "/a.fnl"), "(if x 1 2)\\n")
     local result = bounded_cli(root, invalid_git_scenario_args(mode))
     local line = (result.lines[1] or "")
@@ -1635,7 +1635,7 @@ local function _120_()
     return with_cleanup(_167_, _168_)
   end
   local function changed_config()
-    return "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"if-without-else\" :off \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+    return "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"if-without-else\" :off \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
   end
   local function changed_source(which)
     if (which == "changed") then
@@ -1812,7 +1812,7 @@ local function _120_()
   end
   local function lint_error_configured_scenario(root)
     local _ = git_init(root)
-    local _0 = write_file((root .. "/.fnl-extras.fnl"), lint_config("{:lint {:rules {\"module-import\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
+    local _0 = write_file((root .. "/.fnl-extras.fnl"), lint_config("{:lint {:rules {\"module-import\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
     local _1 = write_file((root .. "/a.fnl"), "(if x 1 2)\n")
     local _2 = git_run(root, {"add", "."})
     return git_run(root, {"commit", "-qm", "base"})
@@ -1841,7 +1841,7 @@ local function _120_()
     return with_cleanup(_185_, _186_)
   end
   local function stale_exclusion_config(mode)
-    return ((((mode == "untouched") or (mode == "all")) and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or ((mode == "modified") and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
+    return ((((mode == "untouched") or (mode == "all")) and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or ((mode == "modified") and "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}") or "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
   end
   local function stale_exclusion_setup(root, config_path, a_path, b_path, gone_path, config, mode)
     git_init(root)
@@ -1906,7 +1906,7 @@ local function _120_()
   local function shallow_clone_scenario(mode)
     local source = vim.fn.tempname()
     local clone = vim.fn.tempname()
-    local config = "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}]}}}"
+    local config = "{:lint {:rules {\"module-style\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}"
     local clone_command = ("git clone --depth 1 " .. vim.fn.shellescape(("file://" .. source)) .. " " .. vim.fn.shellescape(clone) .. " </dev/null 2>&1")
     vim.fn.mkdir(source, "p")
     local function _190_()
@@ -1937,7 +1937,7 @@ local function _120_()
     local root = vim.fn.tempname()
     local config = (root .. "/.fnl-extras.fnl")
     local warn = (root .. "/warning.fnl")
-    local config_text = "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+    local config_text = "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
     vim.fn.mkdir(root, "p")
     local function _193_()
       return vim.fn.delete(root, "rf")
@@ -1966,7 +1966,7 @@ local function _120_()
     local config = (root .. "/.fnl-extras.fnl")
     local warn = (root .. "/warning.fnl")
     local error = (root .. "/error.fnl")
-    local config_text = "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {} :options { :forms [\"if\"]} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+    local config_text = "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
     vim.fn.mkdir(root, "p")
     local function _195_()
       return vim.fn.delete(root, "rf")
@@ -2251,7 +2251,7 @@ local function _120_()
   require("plenary.busted").describe("alignment-maps-cli", _230_)
   local function _232_()
     local function _233_()
-      local result = lint_project("{:lint {:rules {:if-without-else [{:severity :warning :applies-to {} :options { :forms [\"if\"] :nil-else true} :exclusions []}]}}}", {["a.fnl"] = "(if ok then)\n(var x 1)\n"}, {"lint", "--all"})
+      local result = lint_project("{:lint {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions []}]}}}", {["a.fnl"] = "(if ok then)\n(var x 1)\n"}, {"lint", "--all"})
       local assert_28_auto = require("luassert")
       local value_29_auto = ((0 == result.code) and (2 == #result.lines) and string.match(result.lines[1], "if%-without%-else"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 2 (length (. result \"lines\"))) (string.match (. result \"lines\" 1) \"if%-without%-else\"))")

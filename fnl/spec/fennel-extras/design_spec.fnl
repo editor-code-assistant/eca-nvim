@@ -32,17 +32,17 @@
 
   (testing "top-level design accepts the lint vector-instance rule schema"
     (let [result (validation {:design {:rules {:function-shape [{:severity   "warning"
-                                                                 :applies-to {:files ["^fnl/"]}
-                                                                 :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                                                                 :applies-to {:files ["^fnl/"] :forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                                                                 :options    {}
                                                                  :exclusions []}]}}})]
       (is (and (. result :ok)
                (. result :value)
-               (. (. result :value) :design :rules :function-shape 1 :options :forms)))))
+               (. (. result :value) :design :rules :function-shape 1 :applies-to :forms)))))
 
   (testing "design owns the structural rule keys"
     (let [instance {:severity   "warning"
-                    :applies-to {}
-                    :options    {:forms ["if"]}
+                    :applies-to {:forms ["if"]}
+                    :options    {}
                     :exclusions []}
           result   (validation {:design {:rules {:function-shape   [instance]
                                                  :if-branch-call   [instance]
@@ -72,22 +72,22 @@
     (is (= [["function-shape" "fnl/app.fnl > defn:run > if#1 > then > if#1" "warning"]]
            (findings-for "(defn run [] (if x (if y a b) c))"
                          {:function-shape [{:severity   "warning"
-                                            :applies-to {}
-                                            :options    {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                                            :applies-to {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+                                            :options    {}
                                             :exclusions []}]}))))
 
   (testing "design findings preserve if-branch-call identity and severity"
     (is (= [["if-branch-call" "fnl/app.fnl > defn:run > if#1 > then" "warning"]]
            (findings-for "(defn run [] (if ok (do a b) c))"
                          {:if-branch-call [{:severity   "warning"
-                                            :applies-to {}
-                                            :options    {:forms ["if"]}
+                                            :applies-to {:forms ["if"]}
+                                            :options    {}
                                             :exclusions []}]}))))
 
   (testing "design findings preserve if-without-else identity and severity"
     (is (= [["if-without-else" "fnl/app.fnl > defn:run > if#1" "warning"]]
            (findings-for "(defn run [] (if ok value))"
                          {:if-without-else [{:severity   "warning"
-                                             :applies-to {}
-                                             :options    {:forms ["if"] :nil-else true}
+                                             :applies-to {:forms ["if"]}
+                                             :options    {:nil-else true}
                                              :exclusions []}]})))))

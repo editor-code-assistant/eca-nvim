@@ -25,8 +25,8 @@
 
   (testing "forbids a selected module target"
     (let [policy {:forbidden-form [{:severity   "warning"
-                                    :applies-to {}
-                                    :options    {:module "plenary.busted"}
+                                    :applies-to {:modules "plenary.busted"}
+                                    :options    {}
                                     :exclusions []}]}
           result (identities (findings-for "(require :plenary.busted)\n(local value 1)"
                                            "fnl/spec/one.fnl"
@@ -35,8 +35,8 @@
 
   (testing "forbids selected executable forms"
     (let [policy {:forbidden-form [{:severity   "warning"
-                                    :applies-to {}
-                                    :options    {:forms ["var" "set" "while"]}
+                                    :applies-to {:forms ["var" "set" "while"]}
+                                    :options    {}
                                     :exclusions []}]}
           result (identities (findings-for "(var x 1)" "fnl/app.fnl" policy))]
       (is (= [["forbidden-form" "fnl/app.fnl > top#1" "warning"]] result)))))
@@ -45,9 +45,8 @@
 
   (testing "requires the canonical core binding"
     (let [policy {:module-import [{:severity   "error"
-                                   :applies-to {}
+                                   :applies-to {:modules "eca.nfnl.core"}
                                    :options    {:mode    "require"
-                                                :module  "eca.nfnl.core"
                                                 :binding "core"}
                                    :exclusions []}]}
           result (identities (findings-for "(local c (require :eca.nfnl.core))"
@@ -57,9 +56,8 @@
 
   (testing "forbids direct test-library requires"
     (let [policy {:module-import [{:severity   "error"
-                                   :applies-to {}
+                                   :applies-to {:modules ["plenary.busted"]}
                                    :options    {:mode         "forbid"
-                                                :modules      ["plenary.busted"]
                                                 :exempt-files []}
                                    :exclusions []}]}
           result (identities (findings-for "(require :plenary.busted)"
@@ -71,16 +69,16 @@
 
   (testing "reports a missing top-level form"
     (let [policy {:required-form [{:severity   "error"
-                                   :applies-to {}
-                                   :options    {:forms ["module"]}
+                                   :applies-to {:forms ["module"]}
+                                   :options    {}
                                    :exclusions []}]}
           result (identities (findings-for "(local value 1)" "fnl/app.fnl" policy))]
       (is (= [["required-form" "fnl/app.fnl > file" "error"]] result))))
 
   (testing "accepts a compliant top-level form"
     (let [policy {:required-form [{:severity   "error"
-                                   :applies-to {}
-                                   :options    {:forms ["module"]}
+                                   :applies-to {:forms ["module"]}
+                                   :options    {}
                                    :exclusions []}]}
           result (identities (findings-for "(module app)" "fnl/app.fnl" policy))]
       (is (= [] result)))))

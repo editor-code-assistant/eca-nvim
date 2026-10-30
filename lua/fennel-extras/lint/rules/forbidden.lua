@@ -41,13 +41,14 @@ end
 local function form_forbidden_3f(node, options)
   local head = list_head(node)
   local target = module_target(node)
-  return (((options.module == nil) or (target == options.module)) and ((options.forms == nil) or contains_3f(options.forms, head, 1)))
+  return (((options.module == nil) or (target == options.module)) and ((options.forms == nil) or (#options.forms == 0) or contains_3f(options.forms, head, 1)))
 end
 local findings
 do
-  local function findings0(result, path, form, policy, node)
+  local function findings0(result, path, form, policy, node, rule_name)
+    local rule = (rule_name or "forbidden-form")
     if (enabled_3f(policy, "forbidden-form") and node and (node.kind == "list") and list_head(node) and form_forbidden_3f(node, registry["rule-options"](policy, "forbidden-form"))) then
-      table.insert(result, finding(path, form, rule_severity(policy, "forbidden-form"), "forbidden-form", "forbidden form", finding_node(node)))
+      table.insert(result, finding(path, form, rule_severity(policy, rule), rule, "forbidden form", finding_node(node)))
     else
     end
     return result

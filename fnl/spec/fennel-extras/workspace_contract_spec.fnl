@@ -93,7 +93,7 @@
     (let [root   (vim.fn.tempname)
           config (.. root "/.fnl-extras.fnl")
           path   (.. root "/fnl/spec/example.fnl")
-          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"]} :options {:forms [\"var\" \"set\" \"while\"]} :exclusions []}]}}}"
+          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {} :exclusions []}]}}}"
           _      (vim.fn.mkdir (.. root "/fnl/spec") "p")
           _      (vim.fn.mkdir (.. root "/.git") "p")
           _      (write-file config text)
@@ -106,8 +106,9 @@
 
   (testing "contexts is not a public applies-to selector"
     (let [value  {:lint {:rules {:forbidden-form [{:severity   "warning"
-                                                   :applies-to {:contexts ["source"]}
-                                                   :options    {:forms ["var" "set" "while"]}
+                                                   :applies-to {:contexts ["source"]
+                                                                :forms    ["var" "set" "while"]}
+                                                   :options    {}
                                                    :exclusions []}]}}}
           result (validation value)]
       (is (and (not (. result :ok))

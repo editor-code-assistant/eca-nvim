@@ -42,6 +42,10 @@
   [formatter source]
   (formatter.format-string source {:config split-config}))
 
+(defn- formatted-with-config
+  [formatter source config]
+  (formatter.format-string source {:config config}))
+
 (defn- formatted-split
   [source]
   (let [(ok value) (pcall formatted-split-body format source)]
@@ -60,3 +64,15 @@
   (testing "split-bindings separates configured binding pairs"
     (is (= "(when-let [a 1\n           b 2] a)"
            (formatted-split "(when-let [a 1 b 2] a)")))))
+
+(testing "after-header inserts a blank line after a named defn header"
+  (let [config {:indent-width     2
+                :builtins         false
+                :prefix-fallbacks false
+                :parser           false
+                :indents          {"defn" [[:block 1]]}
+                :newline          [{:applies-to {:forms ["defn"]}
+                                    :options    {:after-header 1}}]}
+        source "(defn run []\ntrue)\n(foo)"
+        result (formatted-with-config format source config)]
+    (is (= "(defn run []\n\n  true)\n(foo)" result))))

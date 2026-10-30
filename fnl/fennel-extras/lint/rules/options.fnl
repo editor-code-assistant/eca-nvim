@@ -24,21 +24,21 @@
 
 (local required-option-names
        {"forbidden-form"   []
-        "required-form"    ["forms"]
-        "module-style"     ["module" "forms"]
+        "required-form"    []
+        "module-style"     []
         "module-import"    ["mode"]
         "form-child-count" ["children" "max-count"]
-        "if-branch-call"   ["forms"]
-        "if-without-else"  ["forms"]
-        "control-layout"   ["forms"]
-        "unused-and-or"    ["forms"]
-        "function-shape"   ["forms"]
+        "if-branch-call"   []
+        "if-without-else"  []
+        "control-layout"   []
+        "unused-and-or"    []
+        "function-shape"   []
         "multiline-layout" ["clauses" "bindings"]
         "file-size"        ["max-code-lines"]
-        "call-data-arg"    ["forms"]
-        "nested-forms"     ["forms" "max-depth"]
-        "leading-bindings" ["forms"]
-        "no-mutation"      ["forms"]})
+        "call-data-arg"    []
+        "nested-forms"     []
+        "leading-bindings" []
+        "no-mutation"      []})
 
 (local option-types
        {

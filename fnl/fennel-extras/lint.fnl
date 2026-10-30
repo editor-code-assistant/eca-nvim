@@ -208,11 +208,17 @@
 (defn- context-lint-value
   [context]
   (let [lint-rules   {}
-        design-rules (or (. context :design) {})]
+        design-rules (let [design (. context :design)]
+                       (or (and design (. design :rules))
+                           design
+                           {}))]
     (each [rule entries (pairs (or (. context :rules) {}))]
-      (if (= (registry.rule-domain rule) :design)
-        (tset design-rules rule entries)
-        (tset lint-rules rule entries)))
+      (if (= rule "design")
+        (each [design-rule design-entries (pairs (or (. entries :rules) entries))]
+          (tset design-rules design-rule design-entries))
+        (if (= (registry.rule-domain rule) :design)
+          (tset design-rules rule entries)
+          (tset lint-rules rule entries))))
     {:rules lint-rules :design design-rules}))
 
 

@@ -512,9 +512,10 @@
     (is (= {:value? true :has-message false}
            (validate-summary {:lint {                                     :rules      {:forbidden-form
                                                                                        [{:severity   :warning
-                                                                                         :applies-to {:files ["^spec/"]
-                                                                                                      :forms ["require"]}
-                                                                                         :options    {:module "plenary.busted"}
+                                                                                         :applies-to {:files   ["^spec/"]
+                                                                                                      :forms   ["require"]
+                                                                                                      :modules "plenary.busted"}
+                                                                                         :options    {}
                                                                                          :exclusions []}]}}}))))
 
   (testing "rejects a direct rule map"

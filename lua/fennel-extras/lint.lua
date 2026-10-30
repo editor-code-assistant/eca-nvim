@@ -157,12 +157,22 @@ local function append_context_rule(result, rule, entries)
 end
 local function context_lint_value(context)
   local lint_rules = {}
-  local design_rules = (context.design or {})
+  local design_rules
+  do
+    local design = context.design
+    design_rules = ((design and design.rules) or design or {})
+  end
   for rule, entries in pairs((context.rules or {})) do
-    if (registry["rule-domain"](rule) == "design") then
-      design_rules[rule] = entries
+    if (rule == "design") then
+      for design_rule, design_entries in pairs((entries.rules or entries)) do
+        design_rules[design_rule] = design_entries
+      end
     else
-      lint_rules[rule] = entries
+      if (registry["rule-domain"](rule) == "design") then
+        design_rules[rule] = entries
+      else
+        lint_rules[rule] = entries
+      end
     end
   end
   return {rules = lint_rules, design = design_rules}

@@ -26,8 +26,8 @@
   (testing "rules use keyword keys and non-empty vectors of instances"
     (let [result (validation {:lint   {:rules {}}
                               :design {:rules {:if-without-else [{:severity   "warning"
-                                                                  :applies-to {}
-                                                                  :options    {:forms ["if"] :nil-else true}
+                                                                  :applies-to {:forms ["if"]}
+                                                                  :options    {:nil-else true}
                                                                   :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
 
@@ -47,7 +47,7 @@
                                                                :applies-to {:files   ["^fnl/"]
                                                                             :forms   ["require"]
                                                                             :modules ["plenary.busted"]}
-                                                               :options    {:module "require"}
+                                                               :options    {}
                                                                :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
 

@@ -9,6 +9,32 @@
 (local ast (require :fennel-extras.lint.rules.ast))
 (local options (require :fennel-extras.lint.rules.options))
 (local rule-properties {:module-style {:scope :file} :required-form {:scope :file} :file-size {:scope :file}})
+(local semantic-applies-to
+       {"forbidden-form"   ["module" "forms"]
+        "required-form"    ["forms"]
+        "module-style"     ["module" "forms"]
+        "module-import"    ["module" "modules" "forms"]
+        "if-branch-call"   ["forms"]
+        "if-without-else"  ["forms"]
+        "control-layout"   ["forms"]
+        "unused-and-or"    ["forms"]
+        "function-shape"   ["forms"]
+        "call-data-arg"    ["forms"]
+        "nested-forms"     ["forms"]
+        "leading-bindings" ["forms"]
+        "no-mutation"      ["forms"]})
+(local required-semantic-applies-to
+       {"required-form"    ["forms"]
+        "module-style"     ["module" "forms"]
+        "if-branch-call"   ["forms"]
+        "if-without-else"  ["forms"]
+        "control-layout"   ["forms"]
+        "unused-and-or"    ["forms"]
+        "function-shape"   ["forms"]
+        "call-data-arg"    ["forms"]
+        "nested-forms"     ["forms"]
+        "leading-bindings" ["forms"]
+        "no-mutation"      ["forms"]})
 
 (defn defaults
   []
@@ -58,6 +84,12 @@
 
 
 
+(defn applies-to-required-names
+  [rule]
+  (. required-semantic-applies-to rule))
+
+
+
 (defn rule-scope
   [rule]
   (let [properties (. rule-properties rule)]
@@ -91,13 +123,36 @@
 
 
 
+(defn- semantic-option-value
+  [applies name]
+  (if (= name "module")
+    (let [modules (. applies :modules)]
+      (if (= (type modules) :string) modules nil))
+    (. applies (if (= name "modules") :modules :forms))))
+
+
+
+(defn- normalized-options
+  [rule instance]
+  (let [options (core.merge (or instance.options {}))
+        applies (or instance.applies-to {})]
+    (accumulate [result options _ name (ipairs (or (. semantic-applies-to rule) []))]
+      (let [value (semantic-option-value applies name)]
+        (if (= value nil)
+          result
+          (core.assoc result name value))))))
+
+
+
 (defn evaluator-policy
   [policy rule instance]
   (let [base-result  (core.assoc (defaults) rule instance.severity)
         result       (if (= rule "no-mutation")
-                       (core.assoc base-result "forbidden-form" instance.severity)
+                       (core.assoc (core.assoc base-result "forbidden-form" instance.severity)
+                                   "no-mutation"
+                                   instance.severity)
                        base-result)
-        with-options (core.assoc result :options (or instance.options {}))]
+        with-options (core.assoc result :options (normalized-options rule instance))]
     (core.assoc with-options :matcher policy.matcher)))
 
 
@@ -108,7 +163,7 @@
        value
        (if matcher
          (matcher pattern value)
-         (= pattern value))))
+         (>= (vim.fn.match value pattern) 0))))
 
 
 
@@ -147,9 +202,28 @@
 
 
 
+(defn- semantic-name?
+  [rule name]
+  (accumulate [found false _ candidate (ipairs (or (. semantic-applies-to rule) []))]
+    (or found (= candidate name))))
+
+
+
+(defn- generic-applies-to
+  [rule applies]
+  (let [result {}]
+    (each [_ name (ipairs ["files" "forms" "modules"])]
+      (when (and (. applies name)
+                 (not (or (semantic-name? rule name)
+                          (and (= name "modules") (semantic-name? rule "module")))))
+        (tset result name (. applies name))))
+    result))
+
+
+
 (defn instance-applies-to?
-  [instance finding matcher]
-  (scope-matches? (or instance.applies-to {}) finding matcher))
+  [rule instance finding matcher]
+  (scope-matches? (generic-applies-to rule (or instance.applies-to {})) finding matcher))
 
 
 

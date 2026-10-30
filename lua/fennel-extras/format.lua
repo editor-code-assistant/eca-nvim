@@ -38,6 +38,12 @@ local function form_selected_3f(forms, head)
   end
   return or_1_
 end
+local function named_definition_header_3f(line, head)
+  return (((head == "defn") or (head == "defn-")) and string.match(line, "^%s*%(defn%-?%s+[^%s%(]+") and true)
+end
+local function form_header_line(lines, span)
+  return (lines[span.start] and named_definition_header_3f(lines[span.start], span.head) and span.start)
+end
 local function form_spans(source)
   local tokens, error = reader.tokenize(source)
   local stack = {}
@@ -104,11 +110,17 @@ local function apply_newline_rules(source, config)
     local forms = rule["applies-to"].forms
     local before = (rule.options.before or 0)
     local after = (rule.options.after or 0)
+    local after_header = (rule.options["after-header"] or 0)
     for _0, span in ipairs(spans) do
       if form_selected_3f(forms, span.head) then
         max_break(breaks, preceding_break_index(lines, (span.start - 1)), before)
         if (span["end"] < #lines) then
           max_break(breaks, span["end"], after)
+        else
+        end
+        local header_line = form_header_line(lines, span)
+        if header_line then
+          max_break(breaks, header_line, after_header)
         else
         end
       else
@@ -179,17 +191,17 @@ local function token_text_equal_3f(left, right)
   end
 end
 local function token_sequences_equal_3f(left, right, index)
-  local and_19_ = (#left == #right)
-  if and_19_ then
+  local and_20_ = (#left == #right)
+  if and_20_ then
     local result = true
     for offset in ipairs(left) do
       local token = left[offset]
       local other = right[offset]
       result = (result and token_kind_equal_3f(token, other) and token_text_equal_3f(token, other))
     end
-    and_19_ = result
+    and_20_ = result
   end
-  return and_19_
+  return and_20_
 end
 local function binding_whitespace_equal_3f(left, right)
   local left_body = string.gsub(left, "^ *", "")
@@ -349,7 +361,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _32_()
+    local function _33_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -358,7 +370,7 @@ do
         return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_32_)
+    ok, result = pcall(_33_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0

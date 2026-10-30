@@ -223,6 +223,8 @@
        (= (type (. value :options)) :table)
        (or (= (. value :options :after) nil)
            (and (integer? (. value :options :after)) (>= (. value :options :after) 0)))
+       (or (= (. value :options :after-header) nil)
+           (and (integer? (. value :options :after-header)) (>= (. value :options :after-header) 0)))
        (or (= (. value :options :before) nil)
            (and (integer? (. value :options :before)) (>= (. value :options :before) 0)))))
 

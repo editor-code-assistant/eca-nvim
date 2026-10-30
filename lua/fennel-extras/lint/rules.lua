@@ -86,8 +86,8 @@ local function evaluate_form(path, form, forms, policy)
     spec_rule["form-child-count-finding"](findings, path, form, policy, node)
   else
   end
-  if enabled_3f(policy, "forbidden-form") then
-    forbidden_rule.findings(findings, path, form, policy, node)
+  if (enabled_3f(policy, "forbidden-form") and not enabled_3f(policy, "no-mutation")) then
+    forbidden_rule.findings(findings, path, form, policy, node, "forbidden-form")
   else
   end
   if (enabled_3f(policy, "function-shape") and node and contains_3f(registry["rule-options"](policy, "function-shape").forms, head, 1)) then
@@ -99,7 +99,7 @@ local function evaluate_form(path, form, forms, policy)
   else
   end
   if (node and enabled_3f(policy, "no-mutation")) then
-    forbidden_rule.findings(findings, path, form, policy, node)
+    forbidden_rule.findings(findings, path, form, policy, node, "no-mutation")
   else
   end
   if (node and enabled_3f(policy, "module-import")) then
@@ -211,7 +211,7 @@ local function check_instance(path, forms, policy, source, instance)
   local i_27_ = 0
   for _, finding0 in ipairs(result) do
     local val_28_
-    if registry["instance-applies-to?"](instance.value, finding0, policy.matcher) then
+    if registry["instance-applies-to?"](instance.rule, instance.value, finding0, policy.matcher) then
       val_28_ = core.assoc(finding0, "instance", instance.index)
     else
       val_28_ = nil

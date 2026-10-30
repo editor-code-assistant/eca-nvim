@@ -35,7 +35,7 @@ end
 require("plenary.busted").describe("defaults", _3_)
 local function _5_()
   local function _6_()
-    local policy = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {}, options = {module = "plenary.busted"}, exclusions = {}}}}
+    local policy = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {modules = "plenary.busted"}, options = {}, exclusions = {}}}}
     local result = identities(findings_for("(require :plenary.busted)\n(local value 1)", "fnl/spec/one.fnl", policy))
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"forbidden-form", "fnl/spec/one.fnl > top#1", "warning"}}
@@ -45,7 +45,7 @@ local function _5_()
   end
   require("plenary.busted").it("forbids a selected module target", _6_)
   local function _7_()
-    local policy = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {}, options = {forms = {"var", "set", "while"}}, exclusions = {}}}}
+    local policy = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"var", "set", "while"}}, options = {}, exclusions = {}}}}
     local result = identities(findings_for("(var x 1)", "fnl/app.fnl", policy))
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"forbidden-form", "fnl/app.fnl > top#1", "warning"}}
@@ -58,7 +58,7 @@ end
 require("plenary.busted").describe("forbidden-form", _5_)
 local function _8_()
   local function _9_()
-    local policy = {["module-import"] = {{severity = "error", ["applies-to"] = {}, options = {mode = "require", module = "eca.nfnl.core", binding = "core"}, exclusions = {}}}}
+    local policy = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = "eca.nfnl.core"}, options = {mode = "require", binding = "core"}, exclusions = {}}}}
     local result = identities(findings_for("(local c (require :eca.nfnl.core))", "fnl/app.fnl", policy))
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"module-import", "fnl/app.fnl > local:c", "error"}}
@@ -68,7 +68,7 @@ local function _8_()
   end
   require("plenary.busted").it("requires the canonical core binding", _9_)
   local function _10_()
-    local policy = {["module-import"] = {{severity = "error", ["applies-to"] = {}, options = {mode = "forbid", modules = {"plenary.busted"}, ["exempt-files"] = {}}, exclusions = {}}}}
+    local policy = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"plenary.busted"}}, options = {mode = "forbid", ["exempt-files"] = {}}, exclusions = {}}}}
     local result = identities(findings_for("(require :plenary.busted)", "fnl/spec/app_spec.fnl", policy))
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1", "error"}}
@@ -81,7 +81,7 @@ end
 require("plenary.busted").describe("module-import", _8_)
 local function _11_()
   local function _12_()
-    local policy = {["required-form"] = {{severity = "error", ["applies-to"] = {}, options = {forms = {"module"}}, exclusions = {}}}}
+    local policy = {["required-form"] = {{severity = "error", ["applies-to"] = {forms = {"module"}}, options = {}, exclusions = {}}}}
     local result = identities(findings_for("(local value 1)", "fnl/app.fnl", policy))
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"required-form", "fnl/app.fnl > file", "error"}}
@@ -91,7 +91,7 @@ local function _11_()
   end
   require("plenary.busted").it("reports a missing top-level form", _12_)
   local function _13_()
-    local policy = {["required-form"] = {{severity = "error", ["applies-to"] = {}, options = {forms = {"module"}}, exclusions = {}}}}
+    local policy = {["required-form"] = {{severity = "error", ["applies-to"] = {forms = {"module"}}, options = {}, exclusions = {}}}}
     local result = identities(findings_for("(module app)", "fnl/app.fnl", policy))
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}

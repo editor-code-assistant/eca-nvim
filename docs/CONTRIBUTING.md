@@ -200,7 +200,7 @@ The root `.fnl-extras.fnl` is the canonical configuration example. Its entries u
                             :exclusions []}]}}
 ```
 
-`:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields.
+`:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields. Rule-specific `:forms`, `:module`, and `:modules` values belong under `:applies-to` and keep their original scalar, list, or empty value. These semantic selectors are matched literally and in list order; generic `:applies-to` selectors continue to use file/form/module matcher behavior. For example: `{:applies-to {:forms ["var" "set"] :modules "my.module"} :options {}}`. Old selector values under `:options` are rejected by configuration validation.
 
 The lint rules are:
 
@@ -273,7 +273,7 @@ The boolean switches are `:bindings`, `:maps`, `:clauses`, `:split-bindings`, an
 
 #### `:newline`
 
-`:newline` is a list of formatter instances. Each instance has `:applies-to`, optionally selecting `:forms`, and `:options` with non-negative integer `:before` and/or `:after` counts. Omitted counts are zero. Newline rules add blank lines without changing tokens or parsed forms.
+`:newline` is a list of formatter instances. Each instance has `:applies-to`, optionally selecting `:forms`, and `:options` with non-negative integer `:before`, `:after`, and/or `:after-header` counts. Omitted counts are zero. `:after-header` applies only to named `defn` and `defn-` forms and inserts blank lines after the declaration header line. Newline rules add blank lines without changing tokens or parsed forms.
 
 ```fennel
 :newline [{:applies-to {:forms ["defn" "defn-"]}

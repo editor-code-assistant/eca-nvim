@@ -119,7 +119,7 @@ local function validate_alignment(config)
   return (alignment.validate(value) or (value and (missing_binding_forms(value) or missing_clause_forms(value))))
 end
 local function newline_instance_3f(value)
-  return ((type(value) == "table") and (type(value["applies-to"]) == "table") and ((value["applies-to"].forms == nil) or array_of_strings_3f(value["applies-to"].forms)) and (type(value.options) == "table") and ((value.options.after == nil) or (integer_3f(value.options.after) and (value.options.after >= 0))) and ((value.options.before == nil) or (integer_3f(value.options.before) and (value.options.before >= 0))))
+  return ((type(value) == "table") and (type(value["applies-to"]) == "table") and ((value["applies-to"].forms == nil) or array_of_strings_3f(value["applies-to"].forms)) and (type(value.options) == "table") and ((value.options.after == nil) or (integer_3f(value.options.after) and (value.options.after >= 0))) and ((value.options["after-header"] == nil) or (integer_3f(value.options["after-header"]) and (value.options["after-header"] >= 0))) and ((value.options.before == nil) or (integer_3f(value.options.before) and (value.options.before >= 0))))
 end
 local function validate_newline(config)
   local value = config.newline

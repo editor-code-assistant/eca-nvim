@@ -12,6 +12,8 @@ local rule_name_list = core.concat(lint_rule_name_list, {"function-shape", "if-b
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
 local rule_properties = {["module-style"] = {scope = "file"}, ["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
+local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"module", "modules", "forms"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
+local required_semantic_applies_to = {["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
 local defaults
 do
   local function defaults0()
@@ -84,6 +86,14 @@ do
   _2amodule_2a["required-option-names"] = required_option_names0
   required_option_names = _2amodule_2a["required-option-names"]
 end
+local applies_to_required_names
+do
+  local function applies_to_required_names0(rule)
+    return required_semantic_applies_to[rule]
+  end
+  _2amodule_2a["applies-to-required-names"] = applies_to_required_names0
+  applies_to_required_names = _2amodule_2a["applies-to-required-names"]
+end
 local rule_scope
 do
   local function rule_scope0(rule)
@@ -116,32 +126,64 @@ do
   _2amodule_2a["instances"] = instances0
   instances = _2amodule_2a.instances
 end
+local function semantic_option_value(applies, name)
+  if (name == "module") then
+    local modules = applies.modules
+    if (type(modules) == "string") then
+      return modules
+    else
+      return nil
+    end
+  else
+    local _4_
+    if (name == "modules") then
+      _4_ = "modules"
+    else
+      _4_ = "forms"
+    end
+    return applies[_4_]
+  end
+end
+local function normalized_options(rule, instance)
+  local options0 = core.merge((instance.options or {}))
+  local applies = (instance["applies-to"] or {})
+  local result = options0
+  for _, name in ipairs((semantic_applies_to[rule] or {})) do
+    local value = semantic_option_value(applies, name)
+    if (value == nil) then
+      result = result
+    else
+      result = core.assoc(result, name, value)
+    end
+  end
+  return result
+end
 local evaluator_policy
 do
   local function evaluator_policy0(policy, rule, instance)
     local base_result = core.assoc(defaults(), rule, instance.severity)
     local result
     if (rule == "no-mutation") then
-      result = core.assoc(base_result, "forbidden-form", instance.severity)
+      result = core.assoc(core.assoc(base_result, "forbidden-form", instance.severity), "no-mutation", instance.severity)
     else
       result = base_result
     end
-    local with_options = core.assoc(result, "options", (instance.options or {}))
+    local with_options = core.assoc(result, "options", normalized_options(rule, instance))
     return core.assoc(with_options, "matcher", policy.matcher)
   end
   _2amodule_2a["evaluator-policy"] = evaluator_policy0
   evaluator_policy = _2amodule_2a["evaluator-policy"]
 end
 local function matches_3f(matcher, pattern, value)
-  local and_4_ = pattern and value
-  if and_4_ then
+  local and_9_ = pattern and value
+  if and_9_ then
     if matcher then
-      and_4_ = matcher(pattern, value)
+      and_9_ = matcher(pattern, value)
     else
-      and_4_ = (pattern == value)
+      and_9_ = (vim.fn.match(value, pattern) >= 0)
     end
   end
-  return and_4_
+  return and_9_
 end
 local function any_match_3f(items, matcher, value)
   local result = false
@@ -162,10 +204,27 @@ end
 local function scope_matches_3f(applies, finding, matcher)
   return (((#(applies.files or {}) == 0) or any_match_3f((applies.files or {}), matcher, finding.path)) and node_matches_3f((applies.forms or {}), finding, matcher, node_form) and node_matches_3f((applies.modules or {}), finding, matcher, node_module))
 end
+local function semantic_name_3f(rule, name)
+  local found = false
+  for _, candidate in ipairs((semantic_applies_to[rule] or {})) do
+    found = (found or (candidate == name))
+  end
+  return found
+end
+local function generic_applies_to(rule, applies)
+  local result = {}
+  for _, name in ipairs({"files", "forms", "modules"}) do
+    if (applies[name] and not (semantic_name_3f(rule, name) or ((name == "modules") and semantic_name_3f(rule, "module")))) then
+      result[name] = applies[name]
+    else
+    end
+  end
+  return result
+end
 local instance_applies_to_3f
 do
-  local function instance_applies_to_3f0(instance, finding, matcher)
-    return scope_matches_3f((instance["applies-to"] or {}), finding, matcher)
+  local function instance_applies_to_3f0(rule, instance, finding, matcher)
+    return scope_matches_3f(generic_applies_to(rule, (instance["applies-to"] or {})), finding, matcher)
   end
   _2amodule_2a["instance-applies-to?"] = instance_applies_to_3f0
   instance_applies_to_3f = _2amodule_2a["instance-applies-to?"]

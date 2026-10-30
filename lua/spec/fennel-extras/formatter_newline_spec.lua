@@ -16,6 +16,9 @@ end
 local function formatted_split_body(formatter, source)
   return formatter["format-string"](source, {config = split_config})
 end
+local function formatted_with_config(formatter, source, config)
+  return formatter["format-string"](source, {config = config})
+end
 local function formatted_split(source)
   local ok, value = pcall(formatted_split_body, format, source)
   if ok then
@@ -50,4 +53,15 @@ local function _3_()
   end
   return require("plenary.busted").it("split-bindings separates configured binding pairs", _6_)
 end
-return require("plenary.busted").describe("formatter-newline-contract", _3_)
+require("plenary.busted").describe("formatter-newline-contract", _3_)
+local function _7_()
+  local config = {["indent-width"] = 2, indents = {defn = {{"block", 1}}}, newline = {{["applies-to"] = {forms = {"defn"}}, options = {["after-header"] = 1}}}, builtins = false, parser = false, ["prefix-fallbacks"] = false}
+  local source = "(defn run []\ntrue)\n(foo)"
+  local result = formatted_with_config(format, source, config)
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = "(defn run []\n\n  true)\n(foo)"
+  local actual_7_auto = result
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+return require("plenary.busted").it("after-header inserts a blank line after a named defn header", _7_)

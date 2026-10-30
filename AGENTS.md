@@ -7,10 +7,10 @@ Read docs/CONTRIBUTING.md first; its rules apply to you.
 - The `if-without-else` rule (warning) flags `(if test then)` and `(if test then nil)`; use `when` instead.
 - The `control-layout` rule (warning) requires control forms to span several lines only when they are the sole expression of a body.
 - The `unused-and-or` rule (warning) requires discarded `and`/`or` results in statement bodies to use `when`.
-- The `binding-per-line` rule (warning) requires multi-pair `let`/`when-let`/`if-let`/`with-open` bindings to put each pair on its own line.
+- The `formatter split-bindings` rule (warning) requires multi-pair `let`/`when-let`/`if-let`/`with-open` bindings to put each pair on its own line.
 - The `call-data-arg` rule (warning, source files only) requires multi-line map/vector call arguments to move into a `let` binding.
 - The `multiline-layout` rule (warning) requires list heads and first arguments on the head line; `do` forms are exempt, and `defn`/`defn-` names remain on the head line.
-- The `no-mutation` rule (warning, source files only) flags `var`, `set`, and `while`; prefer returning new values instead.
+- The `forbidden-form` rule (warning, source files only) flags `var`, `set`, and `while`; prefer returning new values instead.
 - The `function-shape` rule (warning) applies to `defn`, `defn-`, `fn`, `lambda`, and `λ` bodies: use an optional first `let` with leaf values, then leaf or one-layer expressions; move deeper code into named private functions.
 - The `file-size` rule (warning) limits source files to its explicit `:max-code-lines` option.
 - Lint rule implementation is split between `fnl/fennel-extras/lint/rules.fnl` and cohesive modules under `fnl/fennel-extras/lint/rules/`; keep generated Lua in the matching `lua/` paths.

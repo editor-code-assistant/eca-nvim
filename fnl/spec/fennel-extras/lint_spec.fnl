@@ -49,6 +49,36 @@
         "unused-and-or"    {:forms ["and" "or"]}
         "call-data-arg"    {:forms []}})
 
+(local canonical-selectors
+       {"module-style"    {:modules "eca.nfnl.macros.aniseed" :forms ["module" "def" "defn" "defn-"]}
+        "required-form"   {:forms ["module"]}
+        "if-branch-call"  {:forms ["if"]}
+        "if-without-else" {:forms ["if"]}
+        "control-layout"  {:forms ["if" "when" "and" "or" "case" "match"]}
+        "function-shape"  {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+        "unused-and-or"   {:forms ["and" "or"]}
+        "call-data-arg"   {:forms []}})
+
+(local canonical-options
+       {"if-without-else"  {:nil-else true}
+        "file-size"        {:max-code-lines 300}
+        "form-child-count" {:children ["is"] :max-count 1}
+        "multiline-layout" {:clauses ["case" "match" "case-try" "match-try"] :bindings ["let" "when-let" "if-let" "with-open"]}})
+
+(defn- canonical-rule-data
+  [rule options]
+  (let [clean   (vim.deepcopy (or options {}))
+        applies (vim.deepcopy (or (. canonical-selectors rule) {}))]
+    (set clean.applies-to nil)
+    (each [key _ (pairs {:forms true :modules true})]
+      (when (. clean key)
+        (tset applies key (. clean key))
+        (tset clean key nil)))
+    (when clean.module
+      (set applies.modules clean.module)
+      (set clean.module nil))
+    {:applies-to applies :options clean}))
+
 (defn- all-enabled-policy
   []
   (let [policy {}]
@@ -56,13 +86,16 @@
       (let [scope    (if (= rule "form-child-count") {:files ["^fnl/spec/"] :forms ["testing"]} (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
             severity (. (. instances 1) :severity)]
         (if (= rule "module-import")
-          (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"]} :options {:mode "require" :module "spec.eca.macros" :forms ["deftest" "testing" "is"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]} :exclusions []}
-                             {:severity "error" :applies-to {:files ["^fnl/spec/"]} :options (. all-options rule) :exclusions []}
-                             {:severity "error" :applies-to {} :options {:mode "require" :module "eca.nfnl.core" :binding "core"} :exclusions []}])
+          (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :forms ["deftest" "testing" "is"] :modules "spec.eca.macros"} :options {:mode "require" :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]} :exclusions []}
+                             {:severity "error" :applies-to {:files ["^fnl/spec/"] :modules ["plenary.busted" "luassert"]} :options {:mode "forbid" :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]} :exclusions []}
+                             {:severity "error" :applies-to {:modules "eca.nfnl.core"} :options {:mode "require" :binding "core"} :exclusions []}])
           (if (= rule "forbidden-form")
-            (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"]} :options {:module "module"} :exclusions []}
-                               {:severity severity :applies-to {:files ["^fnl/[^s]"]} :options (. all-options rule) :exclusions []}])
-            (tset policy rule [{:severity severity :applies-to scope :options (. all-options rule) :exclusions []}])))))
+            (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :modules "module"} :options {} :exclusions []}
+                               {:severity severity :applies-to {:files ["^fnl/[^s]"] :forms ["var" "set" "while"]} :options {} :exclusions []}])
+            (tset policy rule [{:severity   severity
+                                :applies-to (core.merge scope (or (. canonical-selectors rule) {}))
+                                :options    (or (. canonical-options rule) {})
+                                :exclusions []}])))))
     policy))
 
 
@@ -72,37 +105,37 @@
   [rule severity]
   (if (and (= :table (type severity)) (= :table (type (. severity 1))))
     (icollect [_ entry (ipairs severity)]
-      {:severity   entry.severity
-       :applies-to (if (and entry.applies-to (> (length (vim.tbl_keys entry.applies-to)) 0))
-                     entry.applies-to
-                     (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
-       :options    (if (and entry.options (> (length (vim.tbl_keys entry.options)) 0))
-                     entry.options
-                     (. all-options rule))
-       :exclusions (or entry.exclusions [])})
+      (let [raw  (if (and entry.options (> (length (vim.tbl_keys entry.options)) 0))
+                   entry.options
+                   (. all-options rule))
+            data (canonical-rule-data rule raw)]
+        {:severity   entry.severity
+         :applies-to (core.merge (if (and entry.applies-to (> (length (vim.tbl_keys entry.applies-to)) 0))
+                                   entry.applies-to
+                                   (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
+                                 data.applies-to)
+         :options    data.options
+         :exclusions (or entry.exclusions [])}))
     (if (= :table (type severity))
-      [{:severity   severity.severity
-        :applies-to (if (and severity.applies-to (> (length (vim.tbl_keys severity.applies-to)) 0))
-                      severity.applies-to
-                      (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
-        :options    (if (and severity.options (> (length (vim.tbl_keys severity.options)) 0))
-                      severity.options
-                      (. all-options rule))
-        :exclusions (or severity.exclusions [])}]
-      [{:severity   severity
-        :applies-to {}
-        :options    (. all-options rule)
-        :exclusions []}])))
+      (let [raw  (if (and severity.options (> (length (vim.tbl_keys severity.options)) 0))
+                   severity.options
+                   (. all-options rule))
+            data (canonical-rule-data rule raw)]
+        [{:severity   severity.severity
+          :applies-to (core.merge (if (and severity.applies-to (> (length (vim.tbl_keys severity.applies-to)) 0))
+                                    severity.applies-to
+                                    (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
+                                  data.applies-to)
+          :options    data.options
+          :exclusions (or severity.exclusions [])}])
+      (let [data (canonical-rule-data rule (. all-options rule))]
+        [{:severity   severity
+          :applies-to data.applies-to
+          :options    data.options
+          :exclusions []}]))))
 
 
 
-
-(local design-rule-names {:function-shape   true
-                          :if-branch-call   true
-                          :if-without-else  true
-                          :no-mutation      true
-                          :nested-forms     true
-                          :leading-bindings true})
 
 (defn- compatibility-policy
   [rules]
@@ -110,20 +143,6 @@
     (each [rule severity (pairs rules)]
       (tset policy rule (compatibility-rule-value rule severity)))
     policy))
-
-
-
-(defn- configured-policy
-  [config]
-  (let [lint-rules   (or (and config.lint config.lint.rules) {})
-        design-rules (or (and config.design config.design.rules) {})
-        rules        {}]
-    (each [rule severity (pairs lint-rules)]
-      (tset rules rule severity))
-    (each [rule severity (pairs design-rules)]
-      (when (. design-rule-names rule)
-        (tset rules rule severity)))
-    (compatibility-policy rules)))
 
 
 
@@ -166,10 +185,8 @@
 
 (defn- policy-for
   [rules]
-  (if (and rules (or (. rules :lint) (. rules :design)))
-    (configured-policy rules)
-    (or (and rules (compatibility-policy rules))
-        (all-enabled-policy))))
+  (or (and rules (compatibility-policy rules))
+      (all-enabled-policy)))
 
 
 
@@ -267,7 +284,7 @@
 (defn- matcher-context
   [path rules exclusions]
   {:path       path
-   :rules      (policy-for rules)
+   :rules      (compatibility-policy rules)
    :exclusions exclusions
    :matcher    (matcher.vim-matcher)})
 
@@ -1515,12 +1532,19 @@
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "control-layout"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "if-without-else"]
             ["fnl/fennel-extras/lint/rules/spec.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint.fnl" "function-shape"]
             ["fnl/fennel-extras/lint.fnl" "function-shape"]
             ["fnl/fennel-extras/lint.fnl" "function-shape"]]
            (. (repo-scenario nil) :lint-files))))
@@ -3050,14 +3074,16 @@
 
 (defn- option-rule
   [rule options]
-  (let [merged (core.assoc (vim.tbl_extend "force" (. all-options rule) options) :applies-to nil)
-        target options.applies-to]
+  (let [merged (vim.tbl_extend "force" (. all-options rule) options)
+        target options.applies-to
+        data   (canonical-rule-data rule merged)]
     {rule [{:severity   "warning"
-            :applies-to (if target
-                          (if (or (= target :all) (= target "all")) {} {:files [target]})
-                          (if (and (. source-rules rule) (. spec-rules rule)) {}
-                            (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {}))))
-            :options    merged
+            :applies-to (core.merge (if target
+                                      (if (or (= target :all) (= target "all")) {} {:files [target]})
+                                      (if (and (. source-rules rule) (. spec-rules rule)) {}
+                                        (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {}))))
+                                    data.applies-to)
+            :options    data.options
             :exclusions []}]}))
 
 
@@ -3385,8 +3411,8 @@
                                        "fnl/app.fnl"
                                        {:module-style    [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                         :if-without-else [{:severity   "warning"
-                                                           :applies-to {}
-                                                           :options    (. all-options "if-without-else")
+                                                           :applies-to {:forms ["if"]}
+                                                           :options    {:nil-else true}
                                                            :exclusions []}]})]
         (is (= ["if-without-else"]
                (icollect [_ finding (ipairs result)] (. finding :rule))))))
@@ -3422,3 +3448,50 @@
                  (= 0 (length module-result)))))))
 
 )
+
+(deftest migrated-selector-runtime-contract
+
+  (testing "moved module selectors preserve exact, order-sensitive matching"
+    (let [result (check-source-exact "(require :plenary.busted)\n(require :luassert)"
+                                     "fnl/spec/app_spec.fnl"
+                                     {:module-import [{:severity   "error"
+                                                       :applies-to {:modules ["plenary.busted"]}
+                                                       :options    {:mode "forbid"}
+                                                       :exclusions []}]})]
+      (is (= ["module-import"]
+             (icollect [_ finding (ipairs result)] (. finding :rule))))))
+
+  (testing "empty and absent form selectors both mean all forms"
+    (let [empty-result  (check-source-exact "(var x 1)"
+                                            "fnl/app.fnl"
+                                            {:forbidden-form [{:severity   "warning"
+                                                               :applies-to {:forms []}
+                                                               :options    {}
+                                                               :exclusions []}]})
+          absent-result (check-source-exact "(var x 1)"
+                                            "fnl/app.fnl"
+                                            {:forbidden-form [{:severity   "warning"
+                                                               :applies-to {}
+                                                               :options    {}
+                                                               :exclusions []}]})]
+      (is (= (length absent-result) (length empty-result)))))
+
+  (testing "file-level findings retain a nil node with moved file selectors"
+    (let [result (check-source-exact "(module app)\n(local x 1)"
+                                     "fnl/app.fnl"
+                                     {:file-size [{:severity   "warning"
+                                                   :applies-to {:files ["^fnl/app[.]fnl$"]}
+                                                   :options    {:max-code-lines 1}
+                                                   :exclusions []}]})]
+      (is (and (= 1 (length result))
+               (= nil (. result 1 :node))))))
+
+  (testing "the no-mutation alias path reports the moved design rule"
+    (let [result (check-source-exact "(set state.value 1)"
+                                     "fnl/app.fnl"
+                                     {:design {:rules {:no-mutation [{:severity   "warning"
+                                                                      :applies-to {:forms ["set"]}
+                                                                      :options    {}
+                                                                      :exclusions []}]}}})]
+      (is (= ["no-mutation"]
+             (icollect [_ finding (ipairs result)] (. finding :rule)))))))

@@ -36,6 +36,22 @@
 
 
 
+(defn- named-definition-header?
+  [line head]
+  (and (or (= head "defn") (= head "defn-"))
+       (string.match line "^%s*%(defn%-?%s+[^%s%(]+")
+       true))
+
+
+
+(defn- form-header-line
+  [lines span]
+  (and (. lines span.start)
+       (named-definition-header? (. lines span.start) span.head)
+       span.start))
+
+
+
 (defn- form-spans
   [source]
   (let [(tokens error) (reader.tokenize source)
@@ -84,14 +100,18 @@
         spans  (form-spans source)
         breaks {}]
     (each [_ rule (ipairs (newline-rules config))]
-      (let [forms  (. rule :applies-to :forms)
-            before (or (. rule :options :before) 0)
-            after  (or (. rule :options :after) 0)]
+      (let [forms        (. rule :applies-to :forms)
+            before       (or (. rule :options :before) 0)
+            after        (or (. rule :options :after) 0)
+            after-header (or (. rule :options :after-header) 0)]
         (each [_ span (ipairs spans)]
           (when (form-selected? forms span.head)
             (max-break breaks (preceding-break-index lines (- span.start 1)) before)
             (when (< span.end (length lines))
-              (max-break breaks span.end after))))))
+              (max-break breaks span.end after))
+            (let [header-line (form-header-line lines span)]
+              (when header-line
+                (max-break breaks header-line after-header)))))))
     (let [output []
           limit  (if (and (> (length lines) 1)
                           (= (. lines (length lines)) ""))

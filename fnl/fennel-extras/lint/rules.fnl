@@ -95,8 +95,9 @@
         findings []]
     (when (enabled? policy "form-child-count")
       (spec-rule.form-child-count-finding findings path form policy node))
-    (when (enabled? policy "forbidden-form")
-      (forbidden-rule.findings findings path form policy node))
+    (when (and (enabled? policy "forbidden-form")
+               (not (enabled? policy "no-mutation")))
+      (forbidden-rule.findings findings path form policy node "forbidden-form"))
     (when (and (enabled? policy "function-shape")
                node
                (contains? (. (registry.rule-options policy "function-shape") :forms) head 1))
@@ -104,7 +105,7 @@
     (when (enabled? policy "if-branch-call")
       (append-all findings (branch-rule.finding path form policy node)))
     (when (and node (enabled? policy "no-mutation"))
-      (forbidden-rule.findings findings path form policy node))
+      (forbidden-rule.findings findings path form policy node "no-mutation"))
     (when (and node (enabled? policy "module-import"))
       (module-rule.module-import-finding findings path form head node policy))
     findings))
@@ -231,7 +232,7 @@
         state           (check-state (root-forms source) 1 {:module-import false :module-form false} instance-policy)
         result          (check-result path forms instance-policy source state)]
     (icollect [_ finding (ipairs result)]
-      (when (registry.instance-applies-to? instance.value finding policy.matcher)
+      (when (registry.instance-applies-to? instance.rule instance.value finding policy.matcher)
         (core.assoc finding :instance instance.index)))))
 
 

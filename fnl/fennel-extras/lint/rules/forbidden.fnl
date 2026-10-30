@@ -40,20 +40,22 @@
     (and (or (= options.module nil)
              (= target options.module))
          (or (= options.forms nil)
+             (= (length options.forms) 0)
              (contains? options.forms head 1)))))
 
 (defn findings
-  [result path form policy node]
-  (when (and (enabled? policy "forbidden-form")
-             node
-             (= node.kind :list)
-             (list-head node)
-             (form-forbidden? node (registry.rule-options policy "forbidden-form")))
-    (table.insert result
-                  (finding path
-                           form
-                           (rule-severity policy "forbidden-form")
-                           "forbidden-form"
-                           "forbidden form"
-                           (finding-node node))))
-  result)
+  [result path form policy node rule-name]
+  (let [rule (or rule-name "forbidden-form")]
+    (when (and (enabled? policy "forbidden-form")
+               node
+               (= node.kind :list)
+               (list-head node)
+               (form-forbidden? node (registry.rule-options policy "forbidden-form")))
+      (table.insert result
+                    (finding path
+                             form
+                             (rule-severity policy rule)
+                             rule
+                             "forbidden form"
+                             (finding-node node))))
+    result))

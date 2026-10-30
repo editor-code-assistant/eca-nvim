@@ -58,8 +58,10 @@
         {:message (.. path ".files must be a list of strings")})
       (when (and value.forms (not (canonical-sequence-of-strings? value.forms)))
         {:message (.. path ".forms must be a list of strings")})
-      (when (and value.modules (not (canonical-sequence-of-strings? value.modules)))
-        {:message (.. path ".modules must be a list of strings")})))
+      (when (and value.modules
+                 (not (or (= (type value.modules) :string)
+                          (canonical-sequence-of-strings? value.modules))))
+        {:message (.. path ".modules must be a string or list of strings")})))
 
 
 
@@ -92,6 +94,17 @@
 
 
 
+(defn- canonical-legacy-selector-error
+  [instance path]
+  (let [options instance.options]
+    (when (and (= (type options) :table)
+               (or (not= options.forms nil)
+                   (not= options.module nil)
+                   (not= options.modules nil)))
+      {:message (.. path ": forms, module, and modules must be under applies-to")})))
+
+
+
 (defn- canonical-missing-option-step
   [section name index option-values names option-index]
   (if (> option-index (length names))
@@ -103,17 +116,33 @@
 
 
 
+(defn- canonical-missing-applies-step
+  [section name index applies options names option-index]
+  (if (> option-index (length names))
+    nil
+    (let [option-name (. names option-index)
+          key         (if (= option-name "module") :modules (if (= option-name "modules") :modules :forms))]
+      (or (and (= (. applies key) nil)
+               {:message (.. "missing " section ".rules." name "[" index "].applies-to." (tostring key))})
+          (canonical-missing-applies-step section name index applies options names (+ option-index 1))))))
+
+
+
 (defn- canonical-missing-option-error
   [section name index instance]
   (when (not= instance.severity "off")
     (if (= name "module-import")
       (or (canonical-missing-option-step section name index instance.options ["mode"] 1)
           (if (= instance.options.mode "require")
-            (if instance.options.forms
-              (canonical-missing-option-step section name index instance.options ["module"] 1)
-              (canonical-missing-option-step section name index instance.options ["module" "binding"] 1))
-            (canonical-missing-option-step section name index instance.options ["modules" "exempt-files"] 1)))
-      (canonical-missing-option-step section name index instance.options (registry.required-option-names name) 1))))
+            (if instance.applies-to.forms
+              (canonical-missing-applies-step section name index instance.applies-to instance.options ["module"] 1)
+              (or (canonical-missing-applies-step section name index instance.applies-to instance.options ["module"] 1)
+                  (canonical-missing-option-step section name index instance.options ["binding"] 1)))
+            (canonical-missing-applies-step section name index instance.applies-to instance.options ["modules"] 1)))
+      (or (canonical-missing-option-step section name index instance.options (registry.required-option-names name) 1)
+          (let [names (if (= name "module-style") ["module"] (registry.applies-to-required-names name))]
+            (and names
+                 (canonical-missing-applies-step section name index instance.applies-to instance.options names 1)))))))
 
 
 
@@ -129,6 +158,7 @@
         (when (not= (type instance.options) :table)
           {:message (.. path ".options must be a table")})
         (canonical-options-error name instance.options (.. path ".options"))
+        (canonical-legacy-selector-error instance (.. path ".options"))
         (canonical-missing-option-error section name index instance)
         (canonical-exclusions-error instance.exclusions (.. path ".exclusions")))))
 
