@@ -13,6 +13,7 @@
 (local count-is ast.count-is)
 
 (defn- count-child-forms
+
   [node children index result]
   (if (> index (length children))
     result
@@ -20,6 +21,7 @@
                        (+ result (count-is node 1 0 (list-head node) (. children index))))))
 
 (defn form-child-count-finding
+
   [findings path form policy node]
   (let [options (rule-options policy "form-child-count")
         count   (count-child-forms node options.children 1 0)]

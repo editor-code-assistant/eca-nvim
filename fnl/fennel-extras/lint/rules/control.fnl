@@ -15,6 +15,7 @@
 (local rule-severity registry.rule-severity)
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -25,6 +26,7 @@
 (local binding-heads {:let true :when-let true :if-let true :with-open true})
 
 (defn- quoted-mode-for-prefix
+
   [prefix mode]
   (or (and (= prefix "'") :quoted)
       (and (= mode :quoted) :quoted)
@@ -33,6 +35,7 @@
       mode))
 
 (defn- quoted-mode-for-child
+
   [node index mode]
   (let [previous-index (previous-meaningful-index node.children index)
         previous       (and previous-index (. node.children previous-index))]
@@ -41,18 +44,21 @@
       mode)))
 
 (defn- meaningful-index-step
+
   [result child target index]
   (if (and (= result 0) (= child target))
     index
     result))
 
 (defn- meaningful-index
+
   [node target]
   (let [children (meaningful-children node)]
     (accumulate [result 0 index child (ipairs children)]
       (meaningful-index-step result child target index))))
 
 (defn- function-body-offset
+
   [argument]
   (if (and argument (= argument.kind :string))
     1
@@ -73,24 +79,28 @@
 (local built-in-control-heads {:if true :when true :and true :or true :case true :match true})
 
 (defn- function-argument-index
+
   [head]
   (or (and (= head "defn") 3)
       (and (= head "defn-") 3)
       2))
 
 (defn- function-base
+
   [head]
   (or (and (= head "defn") 4)
       (and (= head "defn-") 4)
       3))
 
 (defn- body-form?
+
   [head policy]
   (or (. body-heads head)
       (and (not (. built-in-control-heads head))
            (contains? (. (registry.rule-options policy "control-layout") :forms) head 1))))
 
 (defn- body-start
+
   [head children policy]
   (let [argument (. children (function-argument-index head))]
     (or (and (. function-heads head)
@@ -100,16 +110,19 @@
         0)))
 
 (defn- body-child?
+
   [head children index policy]
   (let [start (body-start head children policy)]
     (and (> start 0) (>= index start))))
 
 (defn- last-body-child?
+
   [head children index policy]
   (and (body-child? head children index policy)
        (= index (length children))))
 
 (defn- custom-control-root?
+
   [parent child policy]
   (and (= (list-head parent) nil)
        (= child.kind :list)
@@ -117,6 +130,7 @@
        (contains? (. (registry.rule-options policy "control-layout") :forms) (list-head child) 1)))
 
 (defn- statement-child?
+
   [parent child policy]
   (let [head     (list-head parent)
         children (meaningful-children parent)
@@ -129,11 +143,13 @@
                            (= (list-head child) "or"))))))))
 
 (defn- executable-child?
+
   [child mode]
   (and (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table))
        (not= mode :quoted)))
 
 (defn- control-form?
+
   [node statement? policy]
   (let [heads (. (registry.rule-options policy "control-layout") :forms)]
     (and statement?
@@ -141,6 +157,7 @@
          (contains? heads (list-head node) 1))))
 
 (defn- append-control-finding
+
   [findings path forms policy node ordinals]
   (let [existing (form-for-node forms node nil)
         base     (or existing (nearest-form forms node) {:form path})
@@ -154,18 +171,21 @@
     (core.assoc ordinals key ordinal)))
 
 (defn- offending-control?
+
   [node statement? mode policy]
   (and (= mode 0)
        (control-form? node statement? policy)
        (= node.open.line node.close.line)))
 
 (defn- next-ordinals
+
   [findings path forms policy node statement? mode ordinals]
   (if (offending-control? node statement? mode policy)
     (append-control-finding findings path forms policy node ordinals)
     ordinals))
 
 (defn- visit-child
+
   [state index child]
   (let [child-mode (quoted-mode-for-child state.node index state.mode)]
     (if (executable-child? child child-mode)
@@ -173,6 +193,7 @@
       state.ordinals)))
 
 (defn- visit-node
+
   [findings path forms policy node statement? mode ordinals]
   (let [next-ordinals (next-ordinals findings path forms policy node statement? mode ordinals)
         state         {:findings findings :path path :forms forms :policy policy :node node :mode mode :ordinals next-ordinals :visit visit-node}]
@@ -180,11 +201,13 @@
       (visit-child (core.assoc state :ordinals result) index child))))
 
 (defn- visit-root
+
   [findings path forms policy root]
   (visit-node findings path forms policy root false 0 {})
   findings)
 
 (defn- append-control-findings
+
   [findings path forms policy source]
   (let [reader (require :fennel-extras.reader)
         root   (reader.parse source)]
@@ -193,6 +216,7 @@
       findings)))
 
 (defn findings
+
   [findings path forms policy source]
   (if (enabled? policy "control-layout")
     (append-control-findings findings path forms policy source)

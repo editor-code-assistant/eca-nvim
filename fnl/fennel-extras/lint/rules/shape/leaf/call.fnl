@@ -12,12 +12,14 @@
 (local layer-argument-valid? valid.layer-argument-valid?)
 (local leaf-valid? valid.leaf-valid?)
 (defn- plain-call-layer-count
+
   [layer?]
   (if layer?
     1
     0))
 
 (defn- plain-call-layer-state
+
   [state child]
   (let [child-head (list-head child)
         layer?     (or (loop-head? child-head)
@@ -27,6 +29,7 @@
      :layers (+ state.layers (plain-call-layer-count layer?))}))
 
 (defn- plain-call-state-step
+
   [children state child index]
   (if (and state.valid
            (>= index 2)
@@ -35,11 +38,13 @@
     state))
 
 (defn- plain-call-result
+
   [children]
   (accumulate [state {:valid true :layers 0} index child (ipairs children)]
     (plain-call-state-step children state child index)))
 
 (defn plain-call-one-layer?
+
   [node]
   (let [children (meaningful-children node)
         result   (plain-call-result children)]
@@ -47,12 +52,14 @@
          (>= result.layers 1))))
 
 (defn leaf-violations
+
   [node]
   (if (leaf-valid? node)
     []
     [node]))
 
 (defn expression-violations
+
   [node]
   (let [head (list-head node)]
     (or (and (= head "do") [node])

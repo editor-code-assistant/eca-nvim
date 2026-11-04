@@ -10,14 +10,17 @@
 (local table-marker :fennel-extras-table)
 
 (defn- marked-sequence
+
   [value]
   (setmetatable value {sequence-marker true}))
 
 (defn- marked-table
+
   [value]
   (setmetatable value {table-marker true}))
 
 (defn- plain-sequence-step
+
   [value key count maximum]
   (let [(next-key next-value) (next value key)]
     (if (= next-key nil)
@@ -29,6 +32,7 @@
            (plain-sequence-step value next-key (+ count 1) (math.max maximum next-key))))))
 
 (defn- marked-with?
+
   [value marker]
   (let [metadata (getmetatable value)]
     (if metadata
@@ -36,6 +40,7 @@
       false)))
 
 (defn- sequence-table?
+
   [value]
   (let [metadata (getmetatable value)]
     (if metadata
@@ -43,22 +48,26 @@
       (plain-sequence-step value nil 0 0))))
 
 (defn sequence?
+
   [value]
   (if (= (type value) :table)
     (sequence-table? value)
     false))
 
 (defn- parsed-table?
+
   [value]
   (if (= (type value) :table)
     (marked-with? value table-marker)
     false))
 
 (defn- error-at
+
   [message token]
   {:message message :line token.line :col token.col})
 
 (defn- trivia?
+
   [child]
   (if (and child child.kind)
     (or (= child.kind :whitespace)
@@ -68,11 +77,13 @@
     false))
 
 (defn- append-meaningful-child
+
   [result child]
   (when (not (trivia? child))
     (table.insert result child)))
 
 (defn- meaningful-children
+
   [children]
   (let [result []]
     (each [_ child (ipairs children)]
@@ -80,10 +91,12 @@
     result))
 
 (defn- append-decoded-char
+
   [result c]
   (table.insert result c))
 
 (defn- normalize-escaped-delimiters-step
+
   [state]
   (let [text      state.text
         index     state.index
@@ -100,16 +113,19 @@
             (normalize-escaped-delimiters-step {:text text :index (+ index 1) :in-string (if (= c "\"") (not in-string) in-string) :result (.. result c)})))))))
 
 (defn- normalize-escaped-delimiters
+
   [text]
   (let [state {:text text :index 1 :in-string false :result ""}]
     (normalize-escaped-delimiters-step state)))
 
 (defn- append-unsupported-escape
+
   [result escaped]
   (table.insert result "\\")
   (table.insert result escaped))
 
 (defn- decode-string
+
   [token]
   (let [text   token.text
         n      (string.len text)
@@ -134,6 +150,7 @@
     (table.concat result)))
 
 (defn- convert-symbol
+
   [token]
   (let [text token.text]
     (if (= (string.sub text 1 1) ":")
@@ -147,6 +164,7 @@
             (error (error-at "symbols are not allowed" token) 0)))))))
 
 (defn- convert-table-children
+
   [convert-fn children result]
   (var i 1)
   (var failure nil)
@@ -162,6 +180,7 @@
   failure)
 
 (defn- convert
+
   [node]
   (if (= node.kind :table)
     (let [children (meaningful-children node.children)
@@ -198,10 +217,12 @@
                 (error (error-at "unsupported form" node) 0)))))))))
 
 (defn- node-key
+
   [node]
   (and node (= node.kind :symbol) node.text))
 
 (defn- source-entry
+
   [table-node key-text]
   (let [children (meaningful-children table-node.children)]
     (var index 1)
@@ -214,6 +235,7 @@
     result))
 
 (defn- source-keyword-node-error
+
   [node path]
   (when (or (not node)
             (not= node.kind :symbol)
@@ -223,6 +245,7 @@
      :col     (and node node.col)}))
 
 (defn- source-keyword-sequence-error
+
   [node path]
   (when (and node (= node.kind :sequence))
     (let [children (meaningful-children node.children)]
@@ -234,6 +257,7 @@
       failure)))
 
 (defn- source-rule-instance-error
+
   [node path]
   (when (and node (= node.kind :table))
     (or (source-keyword-node-error (source-entry node ":severity") (.. path ".severity"))
@@ -252,6 +276,7 @@
                 nil)))))))
 
 (defn- canonical-source-error
+
   [root]
   (let [top   (. (meaningful-children root.children) 1)
         lint  (and top (= top.kind :table) (source-entry top ":lint"))
@@ -276,8 +301,10 @@
         failure))))
 
 (defn parse-string
+
   [text]
   (let [(ok result) (pcall (fn []
+
                              (let [(root reader-error) (reader.parse (normalize-escaped-delimiters text))]
                                (if reader-error
                                  {:error reader-error}

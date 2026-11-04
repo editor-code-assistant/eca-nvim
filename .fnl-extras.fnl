@@ -48,8 +48,9 @@
                  :collapse-padding true
                  :binding-forms    ["let" "when-let" "if-let" "with-open"]
                  :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
-  :newline      [{:applies-to {:forms ["fn" "defn" "defn-"]}
-                  :options    {:after 1}}
+  :newline      [{:applies-to {:files ["^fennel-extras/"]
+                               :forms ["fn" "defn" "defn-"]}
+                  :options    {:after-header 1}}
                  {:applies-to {:forms ["testing"]}
                   :options    {:before 1}}]}
  :lint

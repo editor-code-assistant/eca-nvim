@@ -12,11 +12,13 @@
 (local format-config (require :fennel-extras.config.format))
 
 (defn- append-line
+
   [lines source start end]
   (table.insert lines (string.sub source start (- end 1)))
   (+ end 1))
 
 (defn- split-lines
+
   [source]
   (let [lines []]
     (var start 1)
@@ -31,6 +33,7 @@
     (values lines (= (and (> n 0) (= (string.sub source n n) "\n")) true))))
 
 (defn- first-token-on-line
+
   [tokens line]
   (var result nil)
   (each [_ token (ipairs tokens)]
@@ -41,6 +44,7 @@
   result)
 
 (defn- newline-count
+
   [text]
   (var count 0)
   (var i 1)
@@ -52,6 +56,7 @@
   count)
 
 (defn- string-on-line?
+
   [tokens line]
   (var result false)
   (each [_ token (ipairs tokens)]
@@ -62,12 +67,14 @@
   result)
 
 (defn- collect-node-entry
+
   [node nodes tokens depth]
   (set node.depth depth)
   (table.insert nodes node)
   (table.insert tokens node.open))
 
 (defn- collect-node
+
   [node nodes tokens depth]
   (when (not= node.kind :root)
     (collect-node-entry node nodes tokens depth))
@@ -79,6 +86,7 @@
     (table.insert tokens node.close)))
 
 (defn- active-node
+
   [nodes line]
   (var result nil)
   (each [_ node (ipairs nodes)]
@@ -89,6 +97,7 @@
   result)
 
 (defn- output-column
+
   [token line indent strip-leading?]
   (let [spaces        (if strip-leading? (helpers.leading-spaces line) 0)
         content-start (+ spaces 1)
@@ -98,6 +107,7 @@
     (+ indent (helpers.codepoint-width before))))
 
 (defn- argument-index
+
   [node first-token]
   (let [children (helpers.nontrivia-children node)]
     (var result nil)
@@ -110,6 +120,7 @@
     result))
 
 (defn- matching-rule-indent
+
   [rule node arg-index config]
   (var result nil)
   (each [_ entry (ipairs rule)]
@@ -126,12 +137,14 @@
   result)
 
 (defn- block-argument-index
+
   [arg-index first-token node]
   (if (and (= arg-index 0) (> first-token.line node.open.line))
     1
     arg-index))
 
 (defn- custom-rule
+
   [config name]
   (let [alignment (settings.resolve config)]
     (when (or (and alignment.bindings ((. settings "binding-form?") alignment name))
@@ -139,6 +152,7 @@
       [[:block 1]])))
 
 (defn- rule-indent
+
   [node first-token line-number config]
   (when (and node (= node.kind :list) (> line-number node.open.line))
     (let [children (helpers.nontrivia-children node)
@@ -150,10 +164,12 @@
             (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
 
 (defn- started-before?
+
   [child line-number]
   (< (. (helpers.child-start child) :line) line-number))
 
 (defn- default-indent-for
+
   [node first-token line-number]
   (if (= node nil)
     0
@@ -180,17 +196,20 @@
               (+ (. node.open :out-col) 1))))))))
 
 (defn- indent-for
+
   [node first-token line-number config]
   (or (rule-indent node first-token line-number config)
       (default-indent-for node first-token line-number)))
 
 (defn- next-token-indent
+
   [token node config]
   (if (= token.kind :close)
     (+ node.open.out-col 1)
     (indent-for node token token.line config)))
 
 (defn- comment-indent
+
   [tokens nodes line-number config]
   (let [token (comments.first-code-token-after tokens line-number)
         node  (and token (active-node nodes token.line))]
@@ -198,6 +217,7 @@
         0)))
 
 (defn- default-line-indent
+
   [node first-token line-number tokens config]
   (let [rule   (rule-indent node first-token line-number config)
         indent (indent-for node first-token line-number config)]
@@ -206,39 +226,46 @@
       indent)))
 
 (defn- line-indent
+
   [node first-token line-number tokens nodes config]
   (if (= first-token.kind :comment)
     (comment-indent tokens nodes line-number config)
     (default-line-indent node first-token line-number tokens config)))
 
 (defn- assign-token-output
+
   [token line indent strip-leading?]
   (set (. token :out-col) (output-column token line indent strip-leading?))
   (when (= token.kind :open)
     (set (. token :line-indent) indent)))
 
 (defn- assign-output-columns
+
   [tokens line-number line indent strip-leading?]
   (each [_ token (ipairs tokens)]
     (when (= token.line line-number)
       (assign-token-output token line indent strip-leading?))))
 
 (defn- process-string-line
+
   [line-number line tokens]
   (assign-output-columns tokens line-number line 0 false)
   line)
 
 (defn- process-empty-line
+
   [line-number line tokens]
   (assign-output-columns tokens line-number line 0 true)
   "")
 
 (defn- process-unchanged-line
+
   [line-number line tokens]
   (assign-output-columns tokens line-number line 0 false)
   line)
 
 (defn- process-line
+
   [line-number line nodes tokens config]
   (let [string-line? (string-on-line? tokens line-number)
         first-token  (first-token-on-line tokens line-number)
@@ -260,6 +287,7 @@
             (.. (string.rep " " indent) body)))))))
 
 (defn- reindent-once
+
   [source config]
   (let [(tree error) (reader.parse source)]
     (if error
@@ -276,12 +304,14 @@
           (values (.. (table.concat output "\n") (if final-newline "\n" "")) tree nil))))))
 
 (defn- alignment-source
+
   [source tree alignment]
   (let [(lines final-newline) (split-lines source)
         aligned               (align.apply lines tree alignment)]
     (.. (table.concat aligned "\n") (if final-newline "\n" ""))))
 
 (defn- alignment-pass
+
   [source config alignment]
   (let [(plain tree error) (reindent-once source config)]
     (if error
@@ -291,6 +321,7 @@
         (values result result-error)))))
 
 (defn- fixed-point-result
+
   [source config alignment rounds result recurse]
   (let [next-rounds (- rounds 1)]
     (if (or (= rounds 0) (= result source))
@@ -298,6 +329,7 @@
       (recurse result config alignment next-rounds))))
 
 (defn- alignment-fixed-point
+
   [source config alignment rounds]
   (let [(result _ error) (alignment-pass source config alignment)]
     (if error
@@ -305,6 +337,7 @@
       (fixed-point-result source config alignment rounds result alignment-fixed-point))))
 
 (defn- split-and-align
+
   [source config alignment]
   (let [(prepared error edits) (split.split source alignment)]
     (if error
@@ -315,6 +348,7 @@
           (values result nil))))))
 
 (defn reindent
+
   [source config]
   (let [alignment-error (settings.validate (and config (. config :alignment)))
         config-error    (format-config.validate config false false true)]

@@ -17,6 +17,7 @@
 (local finding registry.finding)
 
 (defn required-form-finding
+
   [path source policy]
   (if (enabled? policy "required-form")
     (let [options (registry.rule-options policy "required-form")
@@ -28,6 +29,7 @@
     []))
 
 (defn module-finding
+
   [path forms policy module-ok]
   (if (and (enabled? policy "module-style")
            (not module-ok))
@@ -36,6 +38,7 @@
 
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -43,6 +46,7 @@
         (contains? items target (+ index 1)))))
 
 (defn- module-target
+
   [node]
   (let [head     (list-head node)
         children (meaningful-children node)
@@ -54,12 +58,14 @@
       (literal-text (. children index)))))
 
 (defn- finding-form
+
   [path form head children]
   (if (= head "local")
     {:line form.line :col form.col :end-line form.end-line :end-col form.end-col :form (.. path " > local:" (symbol-text (. children 2)))}
     form))
 
 (defn- canonical-require?
+
   [head children require-children binding]
   (or (and (= head "local")
            (= (length children) 3)
@@ -68,6 +74,7 @@
       (and (= head "require") (= (length children) 2))))
 
 (defn- exempt-file?
+
   [path policy options]
   (let [patterns (or options.exempt-files [])]
     (accumulate [result false _ pattern (ipairs patterns)]
@@ -75,6 +82,7 @@
           (and policy.matcher (policy.matcher pattern path))))))
 
 (defn module-import-finding
+
   [findings path form head node policy]
   (let [children     (meaningful-children node)
         require      (and (= head "local") (. children 3))

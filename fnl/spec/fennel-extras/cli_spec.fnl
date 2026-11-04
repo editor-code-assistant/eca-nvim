@@ -236,6 +236,35 @@
 
 
 
+(defn- config-newline-scenario
+  []
+  (let [root        (vim.fn.tempname)
+        extras      (.. root "/fennel-extras")
+        eca         (.. root "/eca")
+        extras-file (.. extras "/a.fnl")
+        eca-file    (.. eca "/a.fnl")
+        config-path (.. root "/.fnl-extras.fnl")
+        source      "(defn run\n  []\n  true)\n"
+        config      (.. ":indents {\"defn\" [[:block 1]]} "
+                        ":newline [{:applies-to {:files [\"^fennel-extras/\"] "
+                        ":forms [\"fn\" \"defn\" \"defn-\"]} "
+                        ":options {:after-header 1}}]")]
+    (vim.fn.mkdir extras "p")
+    (vim.fn.mkdir eca "p")
+    (vim.fn.mkdir (.. root "/.git") "p")
+    (with-cleanup (fn [] (vim.fn.delete root "rf"))
+      (fn []
+        (write-file config-path (format-config config))
+        (write-file extras-file source)
+        (write-file eca-file source)
+        (let [result (run-cli root ["format" "--write" "fennel-extras/a.fnl" "eca/a.fnl"])]
+          {:code   (. result :code)
+           :lines  (. result :lines)
+           :extras (read-file extras-file)
+           :eca    (read-file eca-file)})))))
+
+
+
 (defn- align-bindings-cli-scenario-result
   [root path expected]
   (let [check-result (run-cli root ["format" "--check" "a.fnl"])
@@ -344,6 +373,15 @@
             :src   "(when x\n  y)\n"
             :skip  "(when x\ny)\n"}
            (config-scenario :paths))))
+
+
+
+  (testing "applies file-scoped newline rules using workspace-relative paths"
+    (is (= {:code   0
+            :lines  ["fennel-extras/a.fnl"]
+            :extras "(defn run\n\n  []\n  true)\n"
+            :eca    "(defn run\n  []\n  true)\n"}
+           (config-newline-scenario))))
 
 
 

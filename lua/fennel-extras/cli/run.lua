@@ -234,7 +234,7 @@ local function run_format_files(context, files)
   if parser_error then
     return git["emit-git-error"](context.printer, parser_error)
   else
-    return format["run-files"](context, parser, files)
+    return format["run-files"](table_update.update(context, {matcher = matcher["vim-path-matcher"](context.cfg.workspace.paths)}), parser, files)
   end
 end
 local function run_format_discovery(root, parsed, cfg, config_path)

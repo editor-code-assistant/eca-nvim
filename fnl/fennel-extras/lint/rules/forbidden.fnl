@@ -13,6 +13,7 @@
 (local rule-severity registry.rule-severity)
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -20,6 +21,7 @@
         (contains? items target (+ index 1)))))
 
 (defn- module-target
+
   [node]
   (let [head     (list-head node)
         children (meaningful-children node)]
@@ -27,6 +29,7 @@
       (literal-text (. children 2)))))
 
 (defn- finding-node
+
   [node]
   (let [target (module-target node)]
     (if target
@@ -34,6 +37,7 @@
       node)))
 
 (defn- form-forbidden?
+
   [node options]
   (let [head   (list-head node)
         target (module-target node)]
@@ -44,6 +48,7 @@
              (contains? options.forms head 1)))))
 
 (defn findings
+
   [result path form policy node rule-name]
   (let [rule (or rule-name "forbidden-form")]
     (when (and (enabled? policy "forbidden-form")

@@ -9,6 +9,7 @@
 (local table-copy (require :fennel-extras.cli.table))
 
 (defn error-line
+
   [path error]
   (let [message (or (. error :message) (tostring error))
         line    (. error :line)
@@ -20,6 +21,7 @@
 
 
 (defn- formatter-config
+
   [cfg]
   (let [format cfg.format]
     {:indents      (. format :indents)
@@ -32,6 +34,7 @@
 
 
 (defn- normalized-path
+
   [path]
   (if (= (string.sub path 1 9) "/private/")
     (string.sub path 9)
@@ -40,6 +43,7 @@
 
 
 (defn same-path?
+
   [left right]
   (let [uv    (or vim.uv vim.loop)
         left  (normalized-path (or (scan.realpath uv left) left))
@@ -49,6 +53,7 @@
 
 
 (defn explicit-config-file?
+
   [root paths config-path]
   (and config-path
        (= (length paths) 1)
@@ -60,12 +65,14 @@
 
 
 (defn- config-file-kept?
+
   [file config-path]
   (not (same-path? file.absolute config-path)))
 
 
 
 (defn- without-config-file-item
+
   [file config-path]
   (when (config-file-kept? file config-path)
     file))
@@ -73,6 +80,7 @@
 
 
 (defn- without-config-file-result
+
   [files config-path]
   (icollect [_ file (ipairs files)]
     (without-config-file-item file config-path)))
@@ -80,6 +88,7 @@
 
 
 (defn without-config-file
+
   [files config-path]
   (if config-path
     (without-config-file-result files config-path)
@@ -88,6 +97,7 @@
 
 
 (defn discovered-files
+
   [root paths discovered config-path include-config?]
   (if (or (and include-config?
                (or (= (length paths) 0)
@@ -100,11 +110,13 @@
 
 
 (defn- append-config-input
+
   [result input]
   (table.insert result input)
   result)
 
 (defn- append-config-inputs
+
   [inputs config-path]
   (let [result []]
     (each [_ input (ipairs inputs)]
@@ -112,6 +124,7 @@
     (append-config-input result config-path)))
 
 (defn discovery-inputs
+
   [parsed inputs config-path include-config?]
   (if (and include-config?
            config-path
@@ -124,6 +137,7 @@
 
 
 (defn- record-formatted
+
   [state file source output]
   (table.insert state.formatted {:path file.absolute :relative file.relative :source source :text output})
   (when (not= source output)
@@ -133,6 +147,7 @@
 
 
 (defn- run-files-error
+
   [printer failure]
   (printer (error-line failure.path failure.error))
   2)
@@ -140,6 +155,7 @@
 
 
 (defn- check-files
+
   [changed printer]
   (each [_ path (ipairs changed)] (printer path))
   (if (> (length changed) 0)
@@ -149,6 +165,7 @@
 
 
 (defn- write-failure-result
+
   [temps write-failure printer]
   (each [_ item (ipairs temps)] (os.remove item.temp))
   (printer (.. write-failure.path ": " write-failure.error))
@@ -157,6 +174,7 @@
 
 
 (defn- rename-item
+
   [item]
   (let [(ok renamed error) (pcall os.rename item.temp item.path)]
     (when (or (not ok) (not renamed))
@@ -165,6 +183,7 @@
 
 
 (defn- rename-step
+
   [rename-failure item]
   (if rename-failure
     rename-failure
@@ -173,6 +192,7 @@
 
 
 (defn- rename-loop
+
   [temps index failure]
   (if (> index (length temps))
     failure
@@ -181,12 +201,14 @@
 
 
 (defn- rename-files
+
   [temps]
   (rename-loop temps 1 nil))
 
 
 
 (defn- rename-failure-result
+
   [temps rename-failure printer]
   (each [_ item (ipairs temps)] (os.remove item.temp))
   (printer (.. rename-failure.path ": " rename-failure.error))
@@ -195,6 +217,7 @@
 
 
 (defn- format-source-error
+
   [file source output error]
   (if error
     (values nil {:path file.relative :error error})
@@ -203,6 +226,7 @@
 
 
 (defn- format-source-result
+
   [file source result]
   (case (not result.ok)
     true  (values nil {:path file.relative :error result.output})
@@ -211,28 +235,36 @@
 
 
 (defn- format-string-call
-  [parser cfg source]
-  ((. formatter :format-string) source {:parser parser :config (formatter-config cfg)}))
+
+  [parser cfg matcher path source]
+  (let [options {:parser  parser
+                 :config  (formatter-config cfg)
+                 :matcher matcher
+                 :path    path}]
+    ((. formatter :format-string) source options)))
 
 
 
 (defn- format-file-source
-  [parser cfg file source]
-  (let [(ok output error) (pcall format-string-call parser cfg source)]
+
+  [parser cfg matcher file source]
+  (let [(ok output error) (pcall format-string-call parser cfg matcher file.relative source)]
     (format-source-result file source {:ok ok :output output :error error})))
 
 
 
 (defn- format-file
-  [parser cfg file]
+
+  [parser cfg matcher file]
   (let [(source read-error) (fs.read-file file.absolute)]
     (if read-error
       (values nil {:path file.relative :error read-error})
-      (format-file-source parser cfg file source))))
+      (format-file-source parser cfg matcher file source))))
 
 
 
 (defn- append-formatted
+
   [state item]
   (table.insert state.formatted item)
   (when (not= item.source item.text)
@@ -242,6 +274,7 @@
 
 
 (defn- write-success-result
+
   [changed printer]
   (each [_ path (ipairs changed)] (printer path))
   0)
@@ -249,6 +282,7 @@
 
 
 (defn- write-item
+
   [item temps]
   (let [(temp error) (fs.temp-write item.path item.text)]
     (if (not temp)
@@ -258,6 +292,7 @@
 
 
 (defn- write-step
+
   [write-failure item temps]
   (if (or write-failure (= item.source item.text))
     write-failure
@@ -266,6 +301,7 @@
 
 
 (defn- write-files-loop
+
   [formatted index temps failure]
   (if (> index (length formatted))
     (values temps failure)
@@ -274,6 +310,7 @@
 
 
 (defn- write-files-rename
+
   [temps changed printer]
   (let [rename-failure (rename-files temps)]
     (if rename-failure
@@ -283,6 +320,7 @@
 
 
 (defn- write-files-finish
+
   [formatted changed printer]
   (let [(temps write-failure) (write-files-loop formatted 1 [] nil)]
     (if write-failure
@@ -292,6 +330,7 @@
 
 
 (defn- process-files-result
+
   [mode formatted changed printer]
   (table.sort changed)
   (if (= mode :check)
@@ -301,8 +340,9 @@
 
 
 (defn- run-file-item
+
   [ctx state file]
-  (let [(item error) (format-file ctx.parser ctx.cfg file)]
+  (let [(item error) (format-file ctx.parser ctx.cfg ctx.matcher file)]
     (if error
       (table-copy.update state {:failure error})
       (append-formatted state item))))
@@ -310,6 +350,7 @@
 
 
 (defn- run-files-step
+
   [ctx state file]
   (if state.failure
     state
@@ -318,6 +359,7 @@
 
 
 (defn- run-files-result
+
   [ctx state]
   (if state.failure
     (run-files-error ctx.printer state.failure)
@@ -326,6 +368,7 @@
 
 
 (defn- run-files-loop
+
   [ctx state files index]
   (if (> index (length files))
     state
@@ -334,6 +377,7 @@
 
 
 (defn run-files
+
   [context parser files]
   (let [ctx   (table-copy.update context {:mode context.parsed.mode :parser parser})
         state {:formatted [] :changed [] :failure nil}]

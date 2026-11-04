@@ -368,6 +368,13 @@
            (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {\"if\" [[:block 1]]} :format-as {\"my-if\" \"if\"}}")))))
 
+(deftest file-scoped-newline-configuration
+
+  (testing "accepts file and form selectors on newline rules"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^fennel-extras/\"] :forms [\"fn\" \"defn\" \"defn-\"]} :options {:after-header 1}}]}")))))
+
 (deftest extensions
 
   (testing "accepts a non-empty list of dotted extension strings"

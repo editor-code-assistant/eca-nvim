@@ -3,14 +3,17 @@
 (module fennel-extras.reader)
 
 (defn- token
+
   [kind text line col]
   {:kind kind :text text :line line :col col})
 
 (defn- fail
+
   [message line col]
   (values nil {:message message :line line :col col}))
 
 (defn- classify
+
   [c]
   (case c
     "\"" :string
@@ -33,10 +36,12 @@
     _    :atom))
 
 (defn- close-string
+
   [j]
   (values true (+ j 1)))
 
 (defn- scan-string
+
   [source i]
   (let [n (string.len source)]
     (var j (+ i 1))
@@ -64,6 +69,7 @@
         (values nil {:message "unterminated string" :offset i})))))
 
 (defn- scan-comment
+
   [source i]
   (let [n (string.len source)]
     (var j i)
@@ -71,6 +77,7 @@
     (- j 1)))
 
 (defn- scan-whitespace
+
   [source i]
   (let [n (string.len source)]
     (var j i)
@@ -78,6 +85,7 @@
     (- j 1)))
 
 (defn- scan-atom
+
   [source i]
   (let [n (string.len source)]
     (var j i)
@@ -85,6 +93,7 @@
     (- j 1)))
 
 (defn- number?
+
   [text]
   (or (string.match text "^[0-9][0-9_]*$")
       (string.match text "^%-[0-9][0-9_]*$")
@@ -102,10 +111,12 @@
       (string.match text "^%-[0-9][0-9_]*[eE][+-][0-9][0-9_]*$")))
 
 (defn- advance-line
+
   [line col]
   (values (+ line 1) 1))
 
 (defn- advance-position
+
   [text line col]
   (var j 1)
   (var current-line line)
@@ -121,6 +132,7 @@
   (values current-line current-col))
 
 (defn- next-token
+
   [source i line col]
   (let [shebang? (and (= i 1) (= (string.sub source 1 1) "#") (= (string.sub source 2 2) "!"))
         kind     (if shebang? :comment (classify (string.sub source i i)))]
@@ -159,23 +171,27 @@
         (values (token :prefix (string.sub source i i) line col) (+ i 1))))))
 
 (defn- push-open-node
+
   [node stack tok]
   (let [child {:kind (case tok.text "(" :list "[" :sequence "{" :table) :open tok :children []}]
     (table.insert node.children child)
     (table.insert stack {:node child :open tok})))
 
 (defn- advance-token
+
   [tokens tok line col]
   (table.insert tokens tok)
   (advance-position tok.text line col))
 
 (defn- close-matching-node
+
   [stack tok]
   (let [top (. stack (length stack))]
     (set top.node.close tok)
     (table.remove stack)))
 
 (defn tokenize
+
   [source]
   (let [tokens []
         n      (string.len source)]
@@ -199,6 +215,7 @@
       tokens)))
 
 (defn- matching-close
+
   [open]
   (case open
     "(" ")"
@@ -206,6 +223,7 @@
     "{" "}"))
 
 (defn- node-kind
+
   [open]
   (case open
     "(" :list
@@ -213,6 +231,7 @@
     "{" :table))
 
 (defn parse
+
   [source]
   (let [(tokens error) (tokenize source)]
     (if error
@@ -242,6 +261,7 @@
             root))))))
 
 (defn- stringify-container
+
   [stringify node buffer]
   (table.insert buffer node.open.text)
   (each [_ child (ipairs node.children)]
@@ -249,6 +269,7 @@
   (table.insert buffer node.close.text))
 
 (defn- stringify
+
   [node buffer]
   (if (= node.kind :root)
     (each [_ child (ipairs node.children)]
@@ -258,6 +279,7 @@
       (stringify-container stringify node buffer))))
 
 (defn to-string
+
   [node]
   (let [buffer []]
     (stringify node buffer)

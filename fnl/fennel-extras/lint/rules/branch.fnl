@@ -13,6 +13,7 @@
 (local rule-severity registry.rule-severity)
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -20,18 +21,21 @@
         (contains? items target (+ index 1)))))
 
 (defn- default-conditional-form?
+
   [form]
   (or (string.match form.form " > then$")
       (string.match form.form " > else$")
       (string.match form.form " > then#[0-9]+$")))
 
 (defn- named-conditional-form?
+
   [form name]
   (or (string.match form.form (.. " > " name "[^ >]* > then$") )
       (string.match form.form (.. " > " name "[^ >]* > else$") )
       (string.match form.form (.. " > " name "[^ >]* > then#[0-9]+$") )))
 
 (defn- conditional-form?
+
   [form policy index]
   (let [forms (. (registry.rule-options policy "if-branch-call") :forms)
         name  (. forms index)]
@@ -41,6 +45,7 @@
              (conditional-form? form policy (+ index 1))))))
 
 (defn- custom-branch?
+
   [node forms]
   (let [children (meaningful-children node)
         head     (list-head node)]
@@ -51,6 +56,7 @@
              (do-branch? (. children 4))))))
 
 (defn finding
+
   [path form policy node]
   (let [forms  (. (registry.rule-options policy "if-branch-call") :forms)
         custom (and forms (not= (. forms 1) "if"))]

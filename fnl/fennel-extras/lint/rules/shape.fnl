@@ -19,6 +19,7 @@
 (local enabled? registry.enabled?)
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -26,17 +27,20 @@
         (contains? items target (+ index 1)))))
 
 (defn- configured-function-child
+
   [index child]
   (if (= index 1)
     (core.assoc child :text "fn")
     child))
 
 (defn- configured-function-children
+
   [node]
   (icollect [index child (ipairs node.children)]
     (configured-function-child index child)))
 
 (defn- configured-function-node
+
   [node policy]
   (let [forms (. (registry.rule-options policy "function-shape") :forms)]
     (if (contains? forms (list-head node) 1)
@@ -44,6 +48,7 @@
       node)))
 
 (defn function-violations
+
   [node policy]
   (let [target (configured-function-node node policy)
         info   (function-info target)
@@ -51,6 +56,7 @@
     (validate-function-body body [])))
 
 (defn- function-target
+
   [base offending]
   (if (and (= (list-head offending) "if")
            (or (string.match base.form " > then$")
@@ -59,6 +65,7 @@
     base))
 
 (defn- add-function-finding
+
   [findings path form forms policy offending]
   (let [base   (form-for-node forms offending form)
         target (function-target base offending)]
@@ -71,54 +78,65 @@
                            offending))))
 
 (defn- add-function-findings-for-node
+
   [findings path form forms policy node]
   (each [_ offending (ipairs (function-violations node policy))]
     (add-function-finding findings path form forms policy offending)))
 
 (defn add-function-findings
+
   [findings path form forms policy node]
   (when (enabled? policy "function-shape")
     (add-function-findings-for-node findings path form forms policy node)))
 
 (defn- configured-function?
+
   [node policy]
   (and (= node.kind :list)
        (contains? (. (registry.rule-options policy "function-shape") :forms) (list-head node) 1)))
 
 (defn- synthetic-form
+
   [path node]
   {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form (.. path " > function-shape") :node node})
 
 (defn- function-nodes
+
   [source policy]
   (traverse.executable-nodes source (fn [node] (configured-function? node policy))))
 
 (defn- append-synthetic-node
+
   [all path forms policy node]
   (and (not (form-for-node forms node nil))
        (add-function-findings all path (synthetic-form path node) forms policy node)))
 
 (defn- append-synthetic-nodes
+
   [all path forms policy source]
   (each [_ node (ipairs (function-nodes source policy))]
     (append-synthetic-node all path forms policy node))
   all)
 
 (defn- append-synthetic-findings
+
   [all path forms policy source]
   (append-synthetic-nodes all path forms policy source))
 
 (defn- position-before-or-equal?
+
   [left right]
   (or (< left.line right.line)
       (and (= left.line right.line) (<= left.col right.col))))
 
 (defn- position-after-or-equal?
+
   [left right]
   (or (> left.line right.line)
       (and (= left.line right.line) (>= left.col right.col))))
 
 (defn- node-contains?
+
   [outer inner]
   (and outer
        inner
@@ -134,28 +152,33 @@
            (> outer.close.col inner.close.col))))
 
 (defn- contained-function-finding?
+
   [finding candidate]
   (and (= candidate.rule "function-shape")
        (not= finding candidate)
        (node-contains? candidate.node finding.node)))
 
 (defn- function-finding-contained?
+
   [finding findings]
   (accumulate [contained? false _ candidate (ipairs findings)]
     (or contained?
         (contained-function-finding? finding candidate))))
 
 (defn- keep-function-finding
+
   [finding findings]
   (when (not (and (= finding.rule "function-shape")
                   (function-finding-contained? finding findings)))
     finding))
 
 (defn remove-contained-function-findings
+
   [findings]
   (icollect [_ finding (ipairs findings)]
     (keep-function-finding finding findings)))
 
 (defn synthetic-findings
+
   [all path forms policy source]
   (append-synthetic-findings all path forms policy source))

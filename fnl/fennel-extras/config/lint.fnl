@@ -9,6 +9,7 @@
 (local sequence? parse.sequence?)
 
 (defn- canonical-sequence-of-strings?
+
   [value]
   (and (sequence? value)
        (let []
@@ -21,6 +22,7 @@
 
 
 (defn- sorted-unknown-key
+
   [value allowed]
   (accumulate [candidate nil key _ (pairs value)]
     (if (and (not (. allowed key))
@@ -32,6 +34,7 @@
 
 
 (defn- canonical-map-keys-error
+
   [value path allowed]
   (when (= (type value) :table)
     (let [key (sorted-unknown-key value allowed)]
@@ -41,6 +44,7 @@
 
 
 (defn- canonical-contract-key-error
+
   [value allowed prefix]
   (when (= (type value) :table)
     (let [key (sorted-unknown-key value allowed)]
@@ -50,6 +54,7 @@
 
 
 (defn- canonical-applies-to-error
+
   [value path]
   (or (when (not= (type value) :table)
         {:message (.. path " must be a table")})
@@ -66,6 +71,7 @@
 
 
 (defn- canonical-exclusions-error
+
   [value path]
   (or (when (not (sequence? value))
         {:message (.. path " must be a list")})
@@ -86,6 +92,7 @@
 
 
 (defn- canonical-options-error
+
   [name option-values path]
   (when (= (type option-values) :table)
     (let [error (options.validate name option-values)]
@@ -95,6 +102,7 @@
 
 
 (defn- canonical-legacy-selector-error
+
   [instance path]
   (let [options instance.options]
     (when (and (= (type options) :table)
@@ -106,6 +114,7 @@
 
 
 (defn- canonical-singleton-module-error
+
   [name instance path]
   (let [modules  (and (= (type instance.applies-to) :table)
                       instance.applies-to.modules)
@@ -122,6 +131,7 @@
 
 
 (defn- canonical-missing-option-step
+
   [section name index option-values names option-index]
   (if (> option-index (length names))
     nil
@@ -133,6 +143,7 @@
 
 
 (defn- canonical-missing-applies-step
+
   [section name index applies options names option-index]
   (if (> option-index (length names))
     nil
@@ -145,6 +156,7 @@
 
 
 (defn- canonical-missing-option-error
+
   [section name index instance]
   (when (not= instance.severity "off")
     (if (= name "module-import")
@@ -163,6 +175,7 @@
 
 
 (defn- canonical-instance-error
+
   [section name index instance]
   (let [path (.. section ".rules." name "[" index "]")]
     (or (when (not= (type instance) :table)
@@ -182,6 +195,7 @@
 
 
 (defn- canonical-rule-error-step
+
   [rules key candidate]
   (if (or (= candidate nil)
           (< (tostring key) (tostring candidate)))
@@ -191,6 +205,7 @@
 
 
 (defn- canonical-rules-error
+
   [section rules]
   (or (when (not= (type rules) :table)
         {:message (.. section ".rules must be a table")})
@@ -218,6 +233,7 @@
 
 
 (defn- canonical-section-error
+
   [section value]
   (or (when (not= (type value) :table)
         {:message (.. section " must be a table")})
@@ -227,11 +243,13 @@
 
 
 (defn lint-error
+
   [lint]
   (canonical-section-error "lint" lint))
 
 
 
 (defn design-error
+
   [design]
   (canonical-section-error "design" design))

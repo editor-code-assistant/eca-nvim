@@ -21,6 +21,7 @@
 (local function-heads {:defn true :defn- true :fn true :lambda true :λ true})
 
 (defn- special-head?
+
   [head]
   (or (. control-heads head)
       (. binding-heads head)
@@ -29,28 +30,33 @@
       (valid.loop-head? head)))
 
 (defn- multiline-data?
+
   [node]
   (and (or (= node.kind :sequence) (= node.kind :table))
        (> node.close.line node.open.line)))
 
 (defn- data-argument?
+
   [children index child]
   (and (>= index 2)
        (not (quoted-child? children index))
        (multiline-data? child)))
 
 (defn- data-argument-step
+
   [children index child]
   (if (data-argument? children index child)
     true
     false))
 
 (defn- has-data-argument?
+
   [children]
   (accumulate [result false index child (ipairs children)]
     (or result (data-argument-step children index child))))
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -58,6 +64,7 @@
         (contains? items target (+ index 1)))))
 
 (defn- plain-call?
+
   [node policy]
   (let [head   (list-head node)
         ignore (. (registry.rule-options policy "call-data-arg") :forms)]
@@ -67,20 +74,24 @@
          (not (contains? ignore head 1)))))
 
 (defn- offending-node?
+
   [node policy]
   (and (plain-call? node policy)
        (has-data-argument? (meaningful-children node))))
 
 (defn- call-nodes
+
   [source policy]
   (traverse.executable-nodes source (fn [node] (offending-node? node policy))))
 
 (defn- update-ordinal
+
   [ordinals key ordinal]
   (tset ordinals key ordinal)
   ordinals)
 
 (defn- append-finding
+
   [findings path forms policy node ordinals]
   (let [existing (form-for-node forms node nil)
         base     (or existing (nearest-form forms node) {:form path})
@@ -102,12 +113,14 @@
     (update-ordinal ordinals base.form ordinal)))
 
 (defn- append-node-finding
+
   [findings path forms policy node ordinals]
   (if (and (enabled? policy "call-data-arg"))
     (append-finding findings path forms policy node ordinals)
     ordinals))
 
 (defn findings
+
   [findings path forms policy source]
   (accumulate [ordinals {} _ node (ipairs (call-nodes source policy))]
     (append-node-finding findings path forms policy node ordinals))

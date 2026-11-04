@@ -38,11 +38,29 @@ local function form_selected_3f(forms, head)
   end
   return or_1_
 end
+local function file_selected_3f(files, path, matcher)
+  local or_2_ = (files == nil)
+  if not or_2_ then
+    local and_3_ = path and matcher
+    if and_3_ then
+      local result = false
+      for _, pattern in ipairs(files) do
+        result = (result or matcher(pattern, path))
+      end
+      and_3_ = result
+    end
+    or_2_ = and_3_
+  end
+  return or_2_
+end
+local function rule_selected_3f(rule, path, matcher, head)
+  return (file_selected_3f(rule["applies-to"].files, path, matcher) and form_selected_3f(rule["applies-to"].forms, head))
+end
 local function named_definition_header_3f(line, head)
   return (((head == "defn") or (head == "defn-")) and string.match(line, "^%s*%(defn%-?%s+[^%s%(]+") and true)
 end
 local function form_header_line(lines, span)
-  return (lines[span.start] and named_definition_header_3f(lines[span.start], span.head) and span.start)
+  return (lines[span.start] and ((span.head == "fn") or named_definition_header_3f(lines[span.start], span.head)) and span.start)
 end
 local function form_spans(source)
   local tokens, error = reader.tokenize(source)
@@ -73,10 +91,10 @@ local function form_spans(source)
     end
   else
   end
-  local function _8_(left, right)
+  local function _10_(left, right)
     return (left.start > right.start)
   end
-  table.sort(result, _8_)
+  table.sort(result, _10_)
   return result
 end
 local function max_break(breaks, index, count)
@@ -102,24 +120,23 @@ local function preceding_break_index(lines, index)
     return index
   end
 end
-local function apply_newline_rules(source, config)
+local function apply_newline_rules(source, config, path, matcher)
   local lines = split_lines(source)
   local spans = form_spans(source)
   local breaks = {}
   for _, rule in ipairs(newline_rules(config)) do
-    local forms = rule["applies-to"].forms
     local before = (rule.options.before or 0)
     local after = (rule.options.after or 0)
     local after_header = (rule.options["after-header"] or 0)
     for _0, span in ipairs(spans) do
-      if form_selected_3f(forms, span.head) then
+      if rule_selected_3f(rule, path, matcher, span.head) then
         max_break(breaks, preceding_break_index(lines, (span.start - 1)), before)
         if (span["end"] < #lines) then
           max_break(breaks, span["end"], after)
         else
         end
         local header_line = form_header_line(lines, span)
-        if header_line then
+        if (header_line and (header_line < span["end"])) then
           max_break(breaks, header_line, after_header)
         else
         end
@@ -191,17 +208,17 @@ local function token_text_equal_3f(left, right)
   end
 end
 local function token_sequences_equal_3f(left, right, index)
-  local and_20_ = (#left == #right)
-  if and_20_ then
+  local and_22_ = (#left == #right)
+  if and_22_ then
     local result = true
     for offset in ipairs(left) do
       local token = left[offset]
       local other = right[offset]
       result = (result and token_kind_equal_3f(token, other) and token_text_equal_3f(token, other))
     end
-    and_20_ = result
+    and_22_ = result
   end
-  return and_20_
+  return and_22_
 end
 local function binding_whitespace_equal_3f(left, right)
   local left_body = string.gsub(left, "^ *", "")
@@ -361,7 +378,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _33_()
+    local function _35_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -370,7 +387,7 @@ do
         return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_33_)
+    ok, result = pcall(_35_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
@@ -410,13 +427,13 @@ end
 local function format_string_error(alignment_error, rules_error)
   return (alignment_error or rules_error)
 end
-local function format_string_valid(source, parser, config)
+local function format_string_valid(source, parser, config, path, matcher)
   local alignment = settings.resolve(config)
   local out, error = indent.reindent(source, config)
   if error then
     return nil, error
   else
-    local output = apply_newline_rules(out, config)
+    local output = apply_newline_rules(out, config, path, matcher)
     return validated_output(source, parser, alignment, output, config)
   end
 end
@@ -425,6 +442,8 @@ do
   local function format_string0(source, opts)
     local config = (opts.config or {})
     local parser = opts.parser
+    local path = opts.path
+    local matcher = opts.matcher
     local alignment_error = settings.validate(config.alignment)
     local rule_config = rules_config(config)
     local rules_error = rules.validate(rule_config)
@@ -432,7 +451,7 @@ do
     if validation_error then
       return nil, validation_error
     else
-      return format_string_valid(source, parser, config)
+      return format_string_valid(source, parser, config, path, matcher)
     end
   end
   _2amodule_2a["format-string"] = format_string0

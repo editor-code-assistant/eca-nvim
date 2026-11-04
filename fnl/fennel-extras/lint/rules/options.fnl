@@ -57,6 +57,7 @@
         "binding"        :string})
 
 (defn schema
+
   [rule]
   (let [result {}]
     (each [_ name (ipairs (or (. option-names rule) []))]
@@ -66,30 +67,35 @@
 
 
 (defn names
+
   [rule]
   (. option-names rule))
 
 
 
 (defn required-names
+
   [rule]
   (. required-option-names rule))
 
 
 
 (defn defaults
+
   []
   {})
 
 
 
 (defn- boolean?
+
   [value]
   (or (= value true) (= value false)))
 
 
 
 (defn- positive-integer?
+
   [value]
   (and (= (type value) :number)
        (= value (math.floor value))
@@ -98,6 +104,7 @@
 
 
 (defn- strings-step
+
   [value index]
   (if (> index (length value))
     true
@@ -107,6 +114,7 @@
 
 
 (defn- strings?
+
   [value]
   (and (parse.sequence? value)
        (strings-step value 1)))
@@ -128,6 +136,7 @@
         :string           " must be a string"})
 
 (defn- option-type-valid?
+
   [kind value]
   (let [validator (. validators kind)]
     (if validator
@@ -137,6 +146,7 @@
 
 
 (defn- option-type-message
+
   [kind option]
   (let [message (. type-messages kind)]
     (.. option message)))
@@ -144,6 +154,7 @@
 
 
 (defn- first-option-error-step
+
   [rule options keys index]
   (let [key   (. keys index)
         value (and key (. options key))
@@ -159,6 +170,7 @@
 
 
 (defn- first-option-error
+
   [rule options]
   (let [keys (vim.tbl_keys options)]
     (table.sort keys)
@@ -167,12 +179,14 @@
 
 
 (defn- unknown-option-result
+
   [rule error]
   {:message (.. error.message " for lint rule " rule)})
 
 
 
 (defn- table-validation-result
+
   [rule error]
   (if error.unknown
     (unknown-option-result rule error)
@@ -181,6 +195,7 @@
 
 
 (defn- table-validation-error
+
   [rule options]
   (let [error (first-option-error rule options)]
     (and error
@@ -189,6 +204,7 @@
 
 
 (defn- validate-present
+
   [rule options]
   (if (= (type options) :table)
     (table-validation-error rule options)
@@ -197,6 +213,7 @@
 
 
 (defn validate
+
   [rule options]
   (if (= options nil)
     nil
@@ -205,5 +222,6 @@
 
 
 (defn normalized
+
   [overrides]
   (or overrides {}))

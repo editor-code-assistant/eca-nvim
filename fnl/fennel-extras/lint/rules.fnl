@@ -28,12 +28,14 @@
 (local rule-severity registry.rule-severity)
 
 (defn defaults
+
   []
   (registry.defaults))
 
 
 
 (defn- module-import-state-enabled
+
   [state import-info policy]
   (let [target-module (. (registry.rule-options policy "module-style") :module)]
     (if (and import-info (= import-info.target target-module))
@@ -43,6 +45,7 @@
 
 
 (defn- module-import-state
+
   [state import-info policy]
   (if (enabled? policy "module-style")
     (module-import-state-enabled state import-info policy)
@@ -51,12 +54,14 @@
 
 
 (defn- update-check-state
+
   [state import-info head policy]
   {:module-import (module-import-state state import-info policy) :module-form (or state.module-form (= head "module"))})
 
 
 
 (defn- check-state-step
+
   [nodes index state policy recurse]
   (let [node (. nodes index)]
     (recurse nodes (+ index 1) (update-check-state state (import-macros? node) (list-head node) policy) policy)))
@@ -64,6 +69,7 @@
 
 
 (defn- check-state
+
   [nodes index state policy]
   (if (> index (length nodes))
     state
@@ -72,6 +78,7 @@
 
 
 (defn- append-all
+
   [target items]
   (each [_ value (ipairs (or items []))]
     (table.insert target value))
@@ -80,6 +87,7 @@
 
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -89,6 +97,7 @@
 
 
 (defn- evaluate-form
+
   [path form forms policy]
   (let [node     form.node
         head     (list-head node)
@@ -113,6 +122,7 @@
 
 
 (defn- append-form-findings
+
   [all path forms policy]
   (each [_ form (ipairs forms)]
     (append-all all (evaluate-form path form forms policy)))
@@ -121,18 +131,21 @@
 
 
 (defn- append-synthetic-findings
+
   [all path forms policy source]
   (shape-rule.synthetic-findings all path forms policy source))
 
 
 
 (defn- remove-contained-function-findings
+
   [findings]
   (shape-rule.remove-contained-function-findings findings))
 
 
 
 (defn- append-file-size-findings
+
   [findings path policy source]
   (if (enabled? policy "file-size")
     (size-rule.finding path policy source)
@@ -141,6 +154,7 @@
 
 
 (defn- append-module-findings
+
   [findings path forms policy state]
   (if (enabled? policy "module-style")
     (append-all findings
@@ -150,6 +164,7 @@
 
 
 (defn- append-shape-findings
+
   [findings path forms policy source]
   (if (enabled? policy "function-shape")
     (append-synthetic-findings findings path forms policy source)
@@ -158,6 +173,7 @@
 
 
 (defn- append-when-findings
+
   [findings path forms policy source]
   (if (enabled? policy "if-without-else")
     (when-rule.findings findings path forms policy source)
@@ -166,6 +182,7 @@
 
 
 (defn- append-layout-findings
+
   [findings path forms policy source]
   (if (or (enabled? policy "multiline-layout")
           (enabled? policy "if-branch-call"))
@@ -175,6 +192,7 @@
 
 
 (defn- append-control-findings
+
   [findings path forms policy source]
   (if (enabled? policy "control-layout")
     (control-rule.findings findings path forms policy source)
@@ -183,6 +201,7 @@
 
 
 (defn- append-discard-findings
+
   [findings path forms policy source]
   (if (enabled? policy "unused-and-or")
     (discard-rule.findings findings path forms policy source)
@@ -191,6 +210,7 @@
 
 
 (defn- append-call-findings
+
   [findings path forms policy source]
   (if (enabled? policy "call-data-arg")
     (call-rule.findings findings path forms policy source)
@@ -199,6 +219,7 @@
 
 
 (defn- append-generic-findings
+
   [findings path forms policy source]
   (let [findings (if (enabled? policy "nested-forms")
                    (generic-rule.nested-findings findings path forms policy source)
@@ -210,6 +231,7 @@
 
 
 (defn- check-result
+
   [path forms policy source state]
   (let [findings (append-file-size-findings [] path policy source)
         findings (append-module-findings findings path forms policy state)
@@ -227,6 +249,7 @@
 
 
 (defn- check-instance
+
   [path forms policy source instance]
   (let [instance-policy (registry.evaluator-policy policy instance.rule instance.value)
         state           (check-state (root-forms source) 1 {:module-import false :module-form false} instance-policy)
@@ -238,6 +261,7 @@
 
 
 (defn- append-instance-findings
+
   [result path forms policy source instance]
   (each [_ finding (ipairs (check-instance path forms policy source instance))]
     (table.insert result finding))
@@ -246,6 +270,7 @@
 
 
 (defn check
+
   [path forms policy source]
   (accumulate [result [] _ instance (ipairs (registry.instances policy))]
     (append-instance-findings result path forms policy source instance)))

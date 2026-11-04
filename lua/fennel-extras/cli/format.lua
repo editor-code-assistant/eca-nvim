@@ -211,19 +211,20 @@ local function format_source_result(file, source, result)
     return nil
   end
 end
-local function format_string_call(parser, cfg, source)
-  return formatter["format-string"](source, {parser = parser, config = formatter_config(cfg)})
+local function format_string_call(parser, cfg, matcher, path, source)
+  local options = {parser = parser, config = formatter_config(cfg), matcher = matcher, path = path}
+  return formatter["format-string"](source, options)
 end
-local function format_file_source(parser, cfg, file, source)
-  local ok, output, error = pcall(format_string_call, parser, cfg, source)
+local function format_file_source(parser, cfg, matcher, file, source)
+  local ok, output, error = pcall(format_string_call, parser, cfg, matcher, file.relative, source)
   return format_source_result(file, source, {ok = ok, output = output, error = error})
 end
-local function format_file(parser, cfg, file)
+local function format_file(parser, cfg, matcher, file)
   local source, read_error = fs["read-file"](file.absolute)
   if read_error then
     return nil, {path = file.relative, error = read_error}
   else
-    return format_file_source(parser, cfg, file, source)
+    return format_file_source(parser, cfg, matcher, file, source)
   end
 end
 local function append_formatted(state, item)
@@ -287,7 +288,7 @@ local function process_files_result(mode, formatted, changed, printer)
   end
 end
 local function run_file_item(ctx, state, file)
-  local item, error = format_file(ctx.parser, ctx.cfg, file)
+  local item, error = format_file(ctx.parser, ctx.cfg, ctx.matcher, file)
   if error then
     return table_copy.update(state, {failure = error})
   else

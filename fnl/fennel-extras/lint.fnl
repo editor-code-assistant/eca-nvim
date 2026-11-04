@@ -12,12 +12,14 @@
 (local config-lint (require :fennel-extras.config.lint))
 
 (defn- policy-for-context
+
   [context]
   (or (. context :rules) {}))
 
 
 
 (defn- normalized-testing-form
+
   [finding]
   (or (and (string.match finding.form " > top#[0-9]+$")
            (.. finding.form " > testing#1"))
@@ -26,6 +28,7 @@
 
 
 (defn- normalized-branch-form
+
   [finding]
   (let [form (string.gsub finding.form " > (top#[0-9]+) > (then.*)$" " > %1 > if#1 > %2")]
     form))
@@ -33,6 +36,7 @@
 
 
 (defn- normalized-form
+
   [finding]
   (if (= finding.rule "form-child-count")
     (normalized-testing-form finding)
@@ -41,6 +45,7 @@
 
 
 (defn- normalize-finding
+
   [finding]
   (let [form (normalized-form finding)]
     (if (= finding.form form)
@@ -50,6 +55,7 @@
 
 
 (defn- excluded?
+
   [exclusions finding source matcher index]
   (if (> index (length exclusions))
     false
@@ -59,12 +65,14 @@
 
 
 (defn- branch-base
+
   [form suffix]
   (string.gsub form suffix ""))
 
 
 
 (defn- branch-form
+
   [form]
   (let [then-base (branch-base form " > then$")
         else-base (branch-base form " > else$")]
@@ -74,6 +82,7 @@
 
 
 (defn- selected-form-step
+
   [forms target scope index recurse]
   (let [form (. forms index)]
     (if (= form.form target)
@@ -83,6 +92,7 @@
 
 
 (defn- selected-form?
+
   [forms target scope index]
   (if (> index (length forms))
     false
@@ -91,6 +101,7 @@
 
 
 (defn- selected-branch?
+
   [finding forms scope]
   (let [branch (branch-form finding.form)]
     (and branch
@@ -99,6 +110,7 @@
 
 
 (defn- selected-scope?
+
   [finding forms scope]
   (if (= (registry.rule-scope finding.rule) :file)
     (> (length scope) 0)
@@ -108,6 +120,7 @@
 
 
 (defn- selected?
+
   [finding forms scope]
   (or (= scope nil)
       (= scope true)
@@ -116,6 +129,7 @@
 
 
 (defn- append-selected-finding
+
   [result finding forms scope exclusions source matcher]
   (let [normalized (normalize-finding finding)]
     (when (and (selected? finding forms scope)
@@ -126,6 +140,7 @@
 
 
 (defn- filter-findings-step
+
   [findings forms scope exclusions source matcher index result recurse]
   (let [finding     (. findings index)
         next-result (append-selected-finding result finding forms scope exclusions source matcher)]
@@ -134,6 +149,7 @@
 
 
 (defn- filter-findings
+
   [findings forms scope exclusions source matcher index result]
   (if (> index (length findings))
     result
@@ -142,6 +158,7 @@
 
 
 (defn- filter-checked-findings
+
   [findings forms scope exclusions source matcher defer]
   (if defer
     (filter-findings findings forms scope [] source matcher 1 [])
@@ -150,6 +167,7 @@
 
 
 (defn- checked-findings-success
+
   [forms path policy exclusions scope source matcher defer]
   (let [findings (rules.check path forms policy source)]
     (filter-checked-findings findings forms scope exclusions source matcher defer)))
@@ -157,6 +175,7 @@
 
 
 (defn- checked-findings
+
   [forms error path policy exclusions scope source matcher defer]
   (if error
     (values nil error)
@@ -165,6 +184,7 @@
 
 
 (defn- copy-context-exclusion
+
   [rule index value]
   (let [copy {}]
     (each [key item (pairs value)]
@@ -174,6 +194,7 @@
 
 
 (defn- append-context-values
+
   [result rule index entries]
   (each [_ value (ipairs entries)]
     (table.insert result (copy-context-exclusion rule index value)))
@@ -182,6 +203,7 @@
 
 
 (defn- append-context-entry
+
   [result rule index entry]
   (if (and (= (type entry) :table) entry.exclusions)
     (append-context-values result rule index entry.exclusions)
@@ -190,6 +212,7 @@
 
 
 (defn- append-context-entries
+
   [result rule entries]
   (each [index entry (ipairs entries)]
     (append-context-entry result rule index entry))
@@ -198,6 +221,7 @@
 
 
 (defn- append-context-rule
+
   [result rule entries]
   (if (= (type entries) :table)
     (append-context-entries result rule entries)
@@ -206,6 +230,7 @@
 
 
 (defn- context-lint-value
+
   [context]
   (let [lint-rules   {}
         design-rules (let [design (. context :design)]
@@ -224,6 +249,7 @@
 
 
 (defn- append-context-exclusions
+
   [result raw-policy]
   (each [_ item (ipairs (registry.instances raw-policy))]
     (each [_ exclusion (ipairs (or item.value.exclusions []))]
@@ -233,12 +259,14 @@
 
 
 (defn- context-exclusions
+
   [context]
   (append-context-exclusions [] (context-lint-value context)))
 
 
 
 (defn- regex-exclusion-error-entry
+
   [entry matcher index]
   (when (and (or entry.pattern entry.code) (= matcher nil))
     {:message (.. "lint exclusion " index ": regex selectors require a matcher")}))
@@ -246,6 +274,7 @@
 
 
 (defn- regex-exclusion-error
+
   [exclusions matcher index]
   (let [entry (. exclusions index)]
     (if (= entry nil)
@@ -256,6 +285,7 @@
 
 
 (defn- context-policy
+
   [context]
   (core.merge (context-lint-value context)
               {:matcher (. context :matcher)}))
@@ -263,12 +293,14 @@
 
 
 (defn- context-matcher-error
+
   [context exclusions]
   (regex-exclusion-error exclusions context.matcher 1))
 
 
 
 (defn- context-validation-error
+
   [context]
   (let [value (context-lint-value context)]
     (or (config-lint.lint-error {:rules value.rules})
@@ -277,12 +309,14 @@
 
 
 (defn- context-forms
+
   [source path]
   (identity.forms source path))
 
 
 
 (defn- checked-context
+
   [forms parse-error path policy exclusions scope source context validation-error matcher-error]
   (let [failure (or validation-error matcher-error)]
     (if failure
@@ -292,6 +326,7 @@
 
 
 (defn check
+
   [source context]
   (let [path                (or (. context :path) "")
         policy              (context-policy context)

@@ -10,6 +10,7 @@
 (local append-nodes ast.append-nodes)
 
 (defn function-head?
+
   [head]
   (or (= head "defn")
       (= head "defn-")
@@ -18,6 +19,7 @@
       (= head "λ")))
 
 (defn layer-head?
+
   [head]
   (or (= head "if")
       (= head "when")
@@ -32,6 +34,7 @@
       (function-head? head)))
 
 (defn loop-head?
+
   [head]
   (or (= head "each")
       (= head "for")
@@ -41,12 +44,14 @@
       (= head "while")))
 
 (defn- append-nodes
+
   [target nodes]
   (each [_ node (ipairs nodes)]
     (table.insert target node))
   target)
 
 (defn- parameter-index
+
   [children head index]
   (if (> index (length children))
     nil
@@ -57,6 +62,7 @@
         (parameter-index children head (+ index 1)))))
 
 (defn- docstring-adjusted-index
+
   [children index]
   (if (and index
            (. children index)
@@ -65,6 +71,7 @@
     index))
 
 (defn- function-body-child
+
   [children body-start index child]
   (when (and body-start
              (>= index body-start)
@@ -72,26 +79,31 @@
     child))
 
 (defn- function-body
+
   [children body-start]
   (icollect [index child (ipairs children)]
     (function-body-child children body-start index child)))
 
 (defn- function-parameter
+
   [children head]
   (if (or (= head "defn") (= head "defn-"))
     3
     (parameter-index children head 2)))
 
 (defn- function-body-index
+
   [parameter]
   (and parameter
        (+ parameter 1)))
 
 (defn- function-body-start
+
   [children parameter]
   (docstring-adjusted-index children (function-body-index parameter)))
 
 (defn function-info
+
   [node]
   (let [children   (meaningful-children node)
         head       (symbol-text (. children 1))
@@ -103,47 +115,55 @@
          {:head head :children children :parameter parameter :body body})))
 
 (defn- marker?
+
   [node text]
   (and node
        (= node.kind :symbol)
        (= node.text text)))
 
 (defn- direct-layer?
+
   [children index]
   (and (not (quoted-child? children index))
        (or (loop-head? (list-head (. children index)))
            (function-head? (list-head (. children index))))))
 
 (defn- direct-layer-value
+
   [children index]
   (if (direct-layer? children index)
     1
     0))
 
 (defn- layer-value
+
   [layer?]
   (if layer?
     1
     0))
 
 (defn- direct-layer-count
+
   [children index]
   (or (and (> index (length children)) 0)
       (+ (direct-layer-value children index) (direct-layer-count children (+ index 1)))))
 
 (defn- leaf-valid-sequence-step
+
   [state children child index valid?]
   (and state
        (or (quoted-child? children index)
            (valid? child))))
 
 (defn- leaf-valid-sequence?
+
   [node valid?]
   (let [children (meaningful-children node)]
     (accumulate [state true index child (ipairs children)]
       (leaf-valid-sequence-step state children child index valid?))))
 
 (defn- leaf-valid-binding-step
+
   [state children child index valid?]
   (and state
        (or (< index 2)
@@ -151,11 +171,13 @@
            (valid? child))))
 
 (defn- leaf-valid-binding-list?
+
   [children valid?]
   (accumulate [state true index child (ipairs children)]
     (leaf-valid-binding-step state children child index valid?)))
 
 (defn- function-argument-leaf-valid?
+
   [node valid?]
   (let [info (function-info node)
         body (or (and info info.body) [])]
@@ -165,12 +187,14 @@
                 (valid? child))))))
 
 (defn- loop-start-index
+
   [bindings]
   (if (and bindings (> (length bindings) 0))
     3
     2))
 
 (defn- loop-argument-leaf-valid?
+
   [node valid?]
   (let [children (meaningful-children node)
         bindings (and (. children 2)
@@ -186,16 +210,19 @@
                     (valid? child)))))))
 
 (defn layer-argument-valid?
+
   [node valid?]
   (let [head (list-head node)]
     (or (and (function-head? head) (function-argument-leaf-valid? node valid?))
         (and (loop-head? head) (loop-argument-leaf-valid? node valid?)))))
 
 (defn- leaf-valid-call-state-update
+
   [state child valid?]
   {:valid (and state.valid (valid? child)) :layers state.layers})
 
 (defn- leaf-valid-call-state-step
+
   [children state child index valid?]
   (if (and state.valid
            (>= index 2)
@@ -204,17 +231,20 @@
     state))
 
 (defn- leaf-valid-call-state
+
   [children valid?]
   (accumulate [state {:valid true :layers 0} index child (ipairs children)]
     (leaf-valid-call-state-step children state child index valid?)))
 
 (defn- leaf-valid-call?
+
   [children valid?]
   (let [result (leaf-valid-call-state children valid?)]
     (and result.valid
          (<= result.layers 1))))
 
 (defn- leaf-valid-list?
+
   [children head valid?]
   (and (not (or (loop-head? head) (function-head? head)))
        (or (and (or (= head "var")
@@ -229,6 +259,7 @@
                 (leaf-valid-call? children valid?)))))
 
 (defn- leaf-node-kind
+
   [node]
   (or (and (or (not node)
                (= node.kind :prefix)
@@ -246,6 +277,7 @@
       "other"))
 
 (defn- leaf-valid-list-node?
+
   [node valid?]
   (let [children (meaningful-children node)
         head     (symbol-text (. children 1))]
@@ -261,6 +293,7 @@
       _       (leaf-valid-list? children head valid?))))
 
 (defn leaf-valid?
+
   [node]
   (case (leaf-node-kind node)
     "atomic"   true

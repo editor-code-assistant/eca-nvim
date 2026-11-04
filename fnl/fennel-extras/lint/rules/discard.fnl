@@ -19,6 +19,7 @@
 (local discard-loop-heads {:each true :for true :while true})
 (local default-target-heads {:and true :or true})
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -26,24 +27,28 @@
         (contains? items target (+ index 1)))))
 
 (defn- function-body-offset
+
   [argument]
   (if (and argument (= argument.kind :string))
     1
     0))
 
 (defn- function-argument-index
+
   [head]
   (or (and (= head "defn") 3)
       (and (= head "defn-") 3)
       2))
 
 (defn- function-base
+
   [head]
   (or (and (= head "defn") 4)
       (and (= head "defn-") 4)
       3))
 
 (defn- body-start
+
   [head children]
   (let [argument (. children (function-argument-index head))]
     (or (and (. function-heads head)
@@ -53,30 +58,35 @@
         0)))
 
 (defn- meaningful-index-step
+
   [result index child target]
   (if (and (= result 0) (= child target))
     index
     result))
 
 (defn- meaningful-index
+
   [node target]
   (let [children (meaningful-children node)]
     (accumulate [result 0 index child (ipairs children)]
       (meaningful-index-step result index child target))))
 
 (defn- target-node?
+
   [node policy]
   (let [heads (. (registry.rule-options policy "unused-and-or") :forms)]
     (and (= node.kind :list)
          (contains? heads (list-head node) 1))))
 
 (defn- custom-target-root?
+
   [parent child policy]
   (and (= (list-head parent) nil)
        (target-node? child policy)
        (not (. default-target-heads (list-head child)))))
 
 (defn- discarded-child?
+
   [parent child policy]
   (let [head     (list-head parent)
         children (meaningful-children parent)
@@ -89,24 +99,29 @@
                  (< index (length children)))))))
 
 (defn- add-target-key
+
   [result node]
   (tset result (.. node.open.line ":" node.open.col) true)
   result)
 
 (defn- target-nodes
+
   [source policy]
   (traverse.executable-nodes source (fn [node] (target-node? node policy))))
 
 (defn- target-keys
+
   [source policy]
   (accumulate [result {} _ node (ipairs (target-nodes source policy))]
     (add-target-key result node)))
 
 (defn- executable-child?
+
   [child]
   (or (= child.kind :list) (= child.kind :sequence) (= child.kind :table)))
 
 (defn- append-finding
+
   [findings path forms policy node ordinals]
   (let [existing (form-for-node forms node nil)
         base     (or existing (nearest-form forms node) {:form path})
@@ -120,12 +135,14 @@
     (core.assoc ordinals key ordinal)))
 
 (defn- visit-child
+
   [state index child]
   (if (executable-child? child)
     (state.visit state.findings state.path state.forms state.policy state.targets child (discarded-child? state.node child state.policy) state.ordinals)
     state.ordinals))
 
 (defn- next-ordinals
+
   [findings path forms policy targets node discarded? ordinals]
   (if (and discarded?
            (. targets (.. node.open.line ":" node.open.col)))
@@ -133,6 +150,7 @@
     ordinals))
 
 (defn- visit-node
+
   [findings path forms policy targets node discarded? ordinals]
   (let [next-ordinals (next-ordinals findings path forms policy targets node discarded? ordinals)
         state         {:findings findings :path path :forms forms :policy policy :targets targets :node node :ordinals next-ordinals :visit visit-node}]
@@ -140,11 +158,13 @@
       (visit-child (core.assoc state :ordinals result) index child))))
 
 (defn- visit-root
+
   [findings path forms policy targets root]
   (visit-node findings path forms policy targets root false {})
   findings)
 
 (defn- append-findings
+
   [findings path forms policy source]
   (let [reader (require :fennel-extras.reader)
         root   (reader.parse source)]
@@ -153,6 +173,7 @@
       findings)))
 
 (defn findings
+
   [findings path forms policy source]
   (if (enabled? policy "unused-and-or")
     (append-findings findings path forms policy source)

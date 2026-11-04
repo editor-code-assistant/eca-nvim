@@ -14,6 +14,7 @@
 (local rule-severity registry.rule-severity)
 
 (defn- contains?
+
   [items target index]
   (if (> index (length items))
     false
@@ -21,6 +22,7 @@
         (contains? items target (+ index 1)))))
 
 (defn- if-without-else?
+
   [node policy]
   (let [children      (meaningful-children node)
         else-child    (. children 4)
@@ -36,12 +38,14 @@
                   (= else-child.text "nil"))))))
 
 (defn- finding-form
+
   [path forms node]
   (or (form-for-node forms node nil)
       (nearest-form forms node)
       {:line node.open.line :col node.open.col :end-line node.close.line :end-col (+ node.close.col 1) :form path :node node}))
 
 (defn- append-finding
+
   [findings path forms policy node]
   (table.insert findings
                 (finding path
@@ -53,16 +57,19 @@
   findings)
 
 (defn- append-node-findings
+
   [findings path forms policy nodes]
   (each [_ node (ipairs nodes)]
     (append-finding findings path forms policy node))
   findings)
 
 (defn- if-nodes
+
   [source policy]
   (traverse.executable-nodes source (fn [node] (if-without-else? node policy))))
 
 (defn findings
+
   [findings path forms policy source]
   (when (enabled? policy "if-without-else")
     (append-node-findings findings path forms policy (if-nodes source policy)))

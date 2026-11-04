@@ -494,163 +494,174 @@ require("plenary.busted").describe("exact-formatter-configuration", _65_)
 local function _70_()
   local function _71_()
     local assert_5_auto = require("luassert")
+    local expected_6_auto = nil
+    local actual_7_auto = validation_error_message_raw("{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^fennel-extras/\"] :forms [\"fn\" \"defn\" \"defn-\"]} :options {:after-header 1}}]}")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("accepts file and form selectors on newline rules", _71_)
+end
+require("plenary.busted").describe("file-scoped-newline-configuration", _70_)
+local function _72_()
+  local function _73_()
+    local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({extensions = {".fnl", ".fnlm"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a non-empty list of dotted extension strings", _71_)
-  local function _72_()
+  require("plenary.busted").it("accepts a non-empty list of dotted extension strings", _73_)
+  local function _74_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "workspace.extensions must be a non-empty list of strings starting with \".\""
     local actual_7_auto = validation_error_message("{:extensions []}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an empty extensions list with the exact validation message", _72_)
-  local function _73_()
+  require("plenary.busted").it("rejects an empty extensions list with the exact validation message", _74_)
+  local function _75_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "workspace.extensions must be a non-empty list of strings starting with \".\""
     local actual_7_auto = validation_error_message("{:extensions [1]}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects non-string extensions with the exact validation message", _73_)
-  local function _74_()
+  require("plenary.busted").it("rejects non-string extensions with the exact validation message", _75_)
+  local function _76_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "workspace.extensions must be a non-empty list of strings starting with \".\""
     local actual_7_auto = validation_error_message("{:extensions [\"fnl\"]}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects extensions without a leading dot with the exact validation message", _74_)
-  local function _75_()
+  require("plenary.busted").it("rejects extensions without a leading dot with the exact validation message", _76_)
+  local function _77_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "workspace.extensions must be a non-empty list of strings starting with \".\""
     local actual_7_auto = validation_error_message("{:extensions \".fnl\"}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("rejects a non-list extensions value with the exact validation message", _75_)
+  return require("plenary.busted").it("rejects a non-list extensions value with the exact validation message", _77_)
 end
-require("plenary.busted").describe("extensions", _70_)
-local function _76_()
-  local function _77_()
+require("plenary.busted").describe("extensions", _72_)
+local function _78_()
+  local function _79_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nil
     local actual_7_auto = validation_error_message_raw("{:indent-width 2 :indents {} :parser false :extensions [\".fnl\"]}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not require paths during general configuration validation", _77_)
-  local function _78_()
+  require("plenary.busted").it("does not require paths during general configuration validation", _79_)
+  local function _80_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "workspace.dotfiles must be a boolean"
     local actual_7_auto = validation_error_message("{:dotfiles 1}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-boolean dotfiles value with the exact validation message", _78_)
-  local function _79_()
+  require("plenary.busted").it("rejects a non-boolean dotfiles value with the exact validation message", _80_)
+  local function _81_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "workspace.symlinks must be a boolean"
     local actual_7_auto = validation_error_message("{:symlinks 1}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-boolean symlinks value with the exact validation message", _79_)
-  local function _80_()
+  require("plenary.busted").it("rejects a non-boolean symlinks value with the exact validation message", _81_)
+  local function _82_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "parser must be a string or false"
     local actual_7_auto = validation_error_message("{:parser 1}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-string parser value with the exact validation message", _80_)
-  local function _81_()
+  require("plenary.busted").it("rejects a non-string parser value with the exact validation message", _82_)
+  local function _83_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown configuration key: align-bindings"
     local actual_7_auto = validation_error_message_raw("{:align-bindings true}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("rejects the removed align-bindings key", _81_)
+  return require("plenary.busted").it("rejects the removed align-bindings key", _83_)
 end
-require("plenary.busted").describe("new-keys", _76_)
-local function _82_()
-  local function _83_()
+require("plenary.busted").describe("new-keys", _78_)
+local function _84_()
+  local function _85_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({alignment = {maps = true}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts an alignment table", _83_)
-  local function _84_()
+  require("plenary.busted").it("accepts an alignment table", _85_)
+  local function _86_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "alignment must be a table"
     local actual_7_auto = validation_error_message("{:alignment true}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a boolean alignment value with the exact validation message", _84_)
-  local function _85_()
+  require("plenary.busted").it("rejects a boolean alignment value with the exact validation message", _86_)
+  local function _87_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "alignment must be a table"
     local actual_7_auto = validation_error_message("{:alignment \"yes\"}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a string alignment value with the exact validation message", _85_)
-  local function _86_()
+  require("plenary.busted").it("rejects a string alignment value with the exact validation message", _87_)
+  local function _88_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown alignment key: nope"
     local actual_7_auto = validation_error_message("{:alignment {:nope true}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an unknown alignment key with the key in the error", _86_)
-  local function _87_()
+  require("plenary.busted").it("rejects an unknown alignment key with the key in the error", _88_)
+  local function _89_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "alignment key maps must be a boolean"
     local actual_7_auto = validation_error_message("{:alignment {:maps 1}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-boolean alignment toggle with the exact validation message", _87_)
-  local function _88_()
+  require("plenary.busted").it("rejects a non-boolean alignment toggle with the exact validation message", _89_)
+  local function _90_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "alignment key binding-forms must be a list of strings"
     local actual_7_auto = validation_error_message("{:alignment {:binding-forms \"let\"}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-list binding-forms value with the exact validation message", _88_)
-  local function _89_()
+  require("plenary.busted").it("rejects a non-list binding-forms value with the exact validation message", _90_)
+  local function _91_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "alignment key binding-forms must be a list of strings"
     local actual_7_auto = validation_error_message("{:alignment {:binding-forms {:foo \"bar\"}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a map binding-forms value with the exact validation message", _89_)
-  local function _90_()
+  require("plenary.busted").it("rejects a map binding-forms value with the exact validation message", _91_)
+  local function _92_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "alignment key clause-forms must be a list of strings"
     local actual_7_auto = validation_error_message("{:alignment {:clause-forms [1]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-string clause form with the exact validation message", _90_)
-  local function _91_()
+  require("plenary.busted").it("rejects a non-string clause form with the exact validation message", _92_)
+  local function _93_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "alignment key clause-forms must be a list of strings"
     local actual_7_auto = validation_error_message("{:alignment {:clause-forms {:foo \"bar\"}}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a map clause-forms value with the exact validation message", _91_)
-  local function _92_()
+  require("plenary.busted").it("rejects a map clause-forms value with the exact validation message", _93_)
+  local function _94_()
     local config = load_config()
     local settings = require("fennel-extras.indent.settings")
     local value = {alignment = {["binding-forms"] = {"let"}, ["clause-forms"] = {"case"}}}
@@ -660,17 +671,17 @@ local function _82_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("missing alignment switches remain off", _92_)
-  local function _93_()
+  require("plenary.busted").it("missing alignment switches remain off", _94_)
+  local function _95_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "missing alignment.binding-forms"
     local actual_7_auto = validation_error_message("{:alignment {:bindings true}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("alignment tables require binding forms when binding alignment is enabled", _93_)
+  return require("plenary.busted").it("alignment tables require binding forms when binding alignment is enabled", _95_)
 end
-require("plenary.busted").describe("alignment-configuration", _82_)
+require("plenary.busted").describe("alignment-configuration", _84_)
 local function formatter_projection(config)
   return {indents = config.indents, ["format-as"] = config["format-as"], ["indent-width"] = config["indent-width"]}
 end
@@ -680,31 +691,31 @@ local function format_with_config(source, config)
     return {["module-missing"] = true}
   else
     local ok0, value, err
-    local function _94_()
+    local function _96_()
       return format["format-string"](source, {config = config})
     end
-    ok0, value, err = pcall(_94_)
+    ok0, value, err = pcall(_96_)
     return {value = value, error = err, ok = ok0}
   end
 end
-local function _96_()
-  local function _97_()
+local function _98_()
+  local function _99_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
     local actual_7_auto = validate_summary({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = "plenary.busted"}, options = {}, exclusions = {}}}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a canonical lint rule instance", _97_)
-  local function _98_()
+  require("plenary.busted").it("accepts a canonical lint rule instance", _99_)
+  local function _100_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["has-message"] = true, ["value?"] = false}
     local actual_7_auto = validate_summary({lint = {rules = {["forbidden-form"] = {severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}}, options = {module = "plenary.busted"}, exclusions = {}}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a direct rule map", _98_)
-  local function _99_()
+  require("plenary.busted").it("rejects a direct rule map", _100_)
+  local function _101_()
     local first = "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true :module 1} :exclusions []}]}}}"
     local second = "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}"
     local first_message = validation_error_message(first)
@@ -715,49 +726,49 @@ local function _96_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("reports option errors deterministically", _99_)
-  local function _100_()
+  require("plenary.busted").it("reports option errors deterministically", _101_)
+  local function _102_()
     local message = validation_error_message("{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}")
     local assert_28_auto = require("luassert")
     local value_29_auto = string.match(message, "module must be a string")
     assert_28_auto.is_truthy(value_29_auto, "(string.match message \"module must be a string\")")
     return true
   end
-  require("plenary.busted").it("reports the lexicographically first invalid option", _100_)
-  local function _101_()
+  require("plenary.busted").it("reports the lexicographically first invalid option", _102_)
+  local function _103_()
     local message = validation_error_message("{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")
     local assert_28_auto = require("luassert")
     local value_29_auto = string.match(message, "unknown option unknown")
     assert_28_auto.is_truthy(value_29_auto, "(string.match message \"unknown option unknown\")")
     return true
   end
-  return require("plenary.busted").it("unknown options include the rule name", _101_)
+  return require("plenary.busted").it("unknown options include the rule name", _103_)
 end
-require("plenary.busted").describe("lint-configuration", _96_)
-local function _102_()
-  local function _103_()
+require("plenary.busted").describe("lint-configuration", _98_)
+local function _104_()
+  local function _105_()
     local policy = lint_policy_value({lint = {rules = {}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not policy.error and policy.rules)
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. policy \"error\")) (. policy \"rules\"))")
     return true
   end
-  return require("plenary.busted").it("lint policy preserves explicit rule options", _103_)
+  return require("plenary.busted").it("lint policy preserves explicit rule options", _105_)
 end
-require("plenary.busted").describe("lint-policy", _102_)
-local function _104_()
-  local function _105_()
+require("plenary.busted").describe("lint-policy", _104_)
+local function _106_()
+  local function _107_()
     local result = format_with_config("(let [x 1] x)", {["indent-width"] = 2, paths = {"fnl"}, extensions = {".fnl"}, parser = false})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result["module-missing"] or result.value)
     assert_28_auto.is_truthy(value_29_auto, "(or (. result \"module-missing\") (. result \"value\"))")
     return true
   end
-  return require("plenary.busted").it("lint configuration does not change formatter output", _105_)
+  return require("plenary.busted").it("lint configuration does not change formatter output", _107_)
 end
-require("plenary.busted").describe("formatter-isolation", _104_)
-local function _106_()
-  local function _107_()
+require("plenary.busted").describe("formatter-isolation", _106_)
+local function _108_()
+  local function _109_()
     local config = assert(load_config())
     local format = assert(config.load(".fnl-extras.fnl")).format
     local assert_5_auto = require("luassert")
@@ -766,6 +777,6 @@ local function _106_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("canonical indents contain only base builtins and non-base forms are exact format-as aliases", _107_)
+  return require("plenary.busted").it("canonical indents contain only base builtins and non-base forms are exact format-as aliases", _109_)
 end
-return require("plenary.busted").describe("canonical-format-aliases", _106_)
+return require("plenary.busted").describe("canonical-format-aliases", _108_)

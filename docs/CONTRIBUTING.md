@@ -83,8 +83,9 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                      :collapse-padding true
                      :binding-forms    ["let" "when-let" "if-let" "with-open"]
                      :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
-  :newline          [{:applies-to {:forms ["fn" "defn" "defn-"]}
-                      :options    {:after 1}}
+  :newline          [{:applies-to {:files ["^fennel-extras/"]
+                                    :forms ["fn" "defn" "defn-"]}
+                      :options    {:after-header 1}}
                      {:applies-to {:forms ["testing"]}
                       :options    {:before 1}}]}
  :lint
@@ -281,11 +282,12 @@ The boolean switches are `:bindings`, `:maps`, `:clauses`, `:split-bindings`, an
 
 #### `:newline`
 
-`:newline` is a list of formatter instances. Each instance has `:applies-to`, optionally selecting `:forms`, and `:options` with non-negative integer `:before`, `:after`, and/or `:after-header` counts. Omitted counts are zero. `:after-header` applies only to named `defn` and `defn-` forms and inserts blank lines after the declaration header line. Newline rules add blank lines without changing tokens or parsed forms.
+`:newline` is a list of formatter instances. Each instance has `:applies-to`, optionally selecting `:files` and/or `:forms`, and `:options` with non-negative integer `:before`, `:after`, and/or `:after-header` counts. File selectors are Vim regular expressions matched against the workspace-relative source path. File and form selectors are ANDed; a file-scoped rule is skipped when no source path and matcher are provided. Rules without `:files` remain global. Omitted counts are zero. `:after-header` applies to `fn`, and named `defn` and `defn-` forms when the header line is before the form end, and inserts blank lines after the declaration header line. Newline rules add blank lines without changing tokens or parsed forms.
 
 ```fennel
-:newline [{:applies-to {:forms ["defn" "defn-"]}
-           :options {:after 1}}
+:newline [{:applies-to {:files ["^fennel-extras/"]
+                        :forms ["fn" "defn" "defn-"]}
+           :options {:after-header 1}}
           {:applies-to {:forms ["testing"]}
            :options {:before 1}}]
 ```

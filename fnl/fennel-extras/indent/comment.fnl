@@ -3,6 +3,7 @@
 (module fennel-extras.indent.comment)
 
 (defn first-code-token-after
+
   [tokens line-number]
   (accumulate [result nil _ token (ipairs tokens)]
     (or result
@@ -13,6 +14,7 @@
              token))))
 
 (defn- code-before-comment-step
+
   [before prior line-number comment-token]
   (if (and (= prior.line line-number)
            (< prior.col comment-token.col)
@@ -26,11 +28,13 @@
                       (= prior.kind :comment)))))))
 
 (defn- code-before-comment?
+
   [tokens line-number comment-token]
   (accumulate [before false _ prior (ipairs tokens)]
     (code-before-comment-step before prior line-number comment-token)))
 
 (defn- code-before-comment-on-line?
+
   [tokens line-number]
   (accumulate [found false _ token (ipairs tokens)]
     (or found
@@ -39,6 +43,7 @@
              (code-before-comment? tokens line-number token)))))
 
 (defn continuation-indent
+
   [indent tokens line-number]
   (if (code-before-comment-on-line? tokens (- line-number 1))
     (+ indent 1)
