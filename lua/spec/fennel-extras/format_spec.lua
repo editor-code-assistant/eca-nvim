@@ -1732,4 +1732,15 @@ local function _221_()
   end
   return require("plenary.busted").it("a configurable alignment combination is idempotent", _233_)
 end
-return require("plenary.busted").describe("configurable-alignment", _221_)
+require("plenary.busted").describe("configurable-alignment", _221_)
+local function _234_()
+  local function _235_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(my-if\n  short (a)\n  longer (b))"
+    local actual_7_auto = format_summary("(my-if\nshort (a)\nlonger (b))", {indents = {when = {{"block", 1}}}, ["format-as"] = {["my-if"] = "when"}, alignment = {clauses = true, ["clause-forms"] = {"when"}}}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("an exact alias uses target indentation without inheriting clause alignment membership", _235_)
+end
+return require("plenary.busted").describe("exact-alias-alignment-membership", _234_)

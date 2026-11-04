@@ -70,3 +70,16 @@
         source "(defn run []\ntrue)\n(foo)"
         result (formatted-with-config format source config)]
     (is (= "(defn run []\n\n  true)\n(foo)" result))))
+
+(deftest exact-alias-newline-membership
+
+  (testing "an exact alias formats through its target without inheriting newline membership"
+    (let [config {:indent-width 2
+                  :parser       false
+                  :indents      {"fn" [[:inner 0]]}
+                  :format-as    {"my-fn" "fn"}
+                  :newline      [{:applies-to {:forms ["fn"]}
+                                  :options    {:after 1}}]}
+          source "(my-fn []\ntrue)\n(foo)"
+          result (formatted-with-config format source config)]
+      (is (= "(my-fn []\n  true)\n(foo)" result)))))

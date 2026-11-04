@@ -26,21 +26,21 @@
             "match-try" [[:block 1]]
             "while" [[:block 1]]
             "with-open" [[:block 1]]
-            "do" [[:block 0]]
-            "def" [[:inner 0]]
-            "defn" [[:inner 0]]
-            "defn-" [[:inner 0]]
-            "deftest" [[:block 1]]
-            "testing" [[:block 1]]
-            "if" [[:block 1]]
-            "with-internal-edit" [[:block 1]]
-            "with-cleanup" [[:block 1]]
-            "with-api-stub" [[:block 1]]
-            "with-api-stubs" [[:block 1]]
-            "with-footer-bar" [[:block 1]]
-            "with-lualine-plugin" [[:block 1]]
-            "with-message-list" [[:block 1]]}
-  :format-as        {}
+            "do" [[:block 0]]}
+  :format-as        {"def"                 "fn"
+                    "def-"               "fn"
+                    "defn"               "fn"
+                    "defn-"              "fn"
+                    "deftest"            "when"
+                    "testing"            "when"
+                    "if"                 "when"
+                    "with-internal-edit" "with-open"
+                    "with-cleanup"       "with-open"
+                    "with-api-stub"      "with-open"
+                    "with-api-stubs"     "with-open"
+                    "with-footer-bar"    "with-open"
+                    "with-lualine-plugin" "with-open"
+                    "with-message-list"  "with-open"}
   :alignment        {:bindings         true
                      :maps             true
                      :clauses          true

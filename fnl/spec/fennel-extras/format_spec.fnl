@@ -1271,3 +1271,14 @@
           once   (. (format-summary source config) :value)
           twice  (. (format-summary once config) :value)]
       (is (= once twice)))))
+
+(deftest exact-alias-alignment-membership
+
+  (testing "an exact alias uses target indentation without inheriting clause alignment membership"
+    (is (= "(my-if\n  short (a)\n  longer (b))"
+           (. (format-summary "(my-if\nshort (a)\nlonger (b))"
+                              {:indents   {"when" [[:block 1]]}
+                               :format-as {"my-if" "when"}
+                               :alignment {:clauses      true
+                                           :clause-forms ["when"]}})
+              :value)))))

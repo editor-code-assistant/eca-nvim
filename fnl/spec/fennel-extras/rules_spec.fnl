@@ -163,3 +163,19 @@
                                        {:indents {"foo" [[:inner 1]]}})]
              {:value?      (. result :value?)
               :has-message (. result :has-message)})))))
+
+(deftest canonical-function-aliases
+
+  (testing "def aliases resolve through fn so changing fn changes every definition form"
+    (let [rules  (require :fennel-extras.rules)
+          config {:indents   {"fn" [[:inner 0]]}
+                  :format-as {"def" "fn" "def-" "fn" "defn" "fn" "defn-" "fn"}}]
+      (tset (. config :indents) "fn" [[:block 1]])
+      (is (= {"def"   [[:block 1]]
+              "def-"  [[:block 1]]
+              "defn"  [[:block 1]]
+              "defn-" [[:block 1]]}
+             {"def"   (rules.resolve config "def")
+              "def-"  (rules.resolve config "def-")
+              "defn"  (rules.resolve config "defn")
+              "defn-" (rules.resolve config "defn-")})))))

@@ -64,4 +64,18 @@ local function _7_()
   assert_5_auto.same(expected_6_auto, actual_7_auto)
   return true
 end
-return require("plenary.busted").it("after-header inserts a blank line after a named defn header", _7_)
+require("plenary.busted").it("after-header inserts a blank line after a named defn header", _7_)
+local function _8_()
+  local function _9_()
+    local config = {["indent-width"] = 2, indents = {fn = {{"inner", 0}}}, ["format-as"] = {["my-fn"] = "fn"}, newline = {{["applies-to"] = {forms = {"fn"}}, options = {after = 1}}}, parser = false}
+    local source = "(my-fn []\ntrue)\n(foo)"
+    local result = formatted_with_config(format, source, config)
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(my-fn []\n  true)\n(foo)"
+    local actual_7_auto = result
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("an exact alias formats through its target without inheriting newline membership", _9_)
+end
+return require("plenary.busted").describe("exact-alias-newline-membership", _8_)
