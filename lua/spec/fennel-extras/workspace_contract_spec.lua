@@ -41,7 +41,7 @@ local function legacy_config(key)
   result[key] = value
   return result
 end
-local workspace_config = {workspace = {paths = {"fnl"}, exclude = {"fnl/generated"}, extensions = {".fnl", ".fnlm"}, dotfiles = false, symlinks = false}, format = {["indent-width"] = 2, builtins = false, parser = false, ["prefix-fallbacks"] = false}, lint = {rules = {}}}
+local workspace_config = {workspace = {paths = {"fnl"}, exclude = {"fnl/generated"}, extensions = {".fnl", ".fnlm"}, dotfiles = false, symlinks = false}, format = {["indent-width"] = 2, parser = false}, lint = {rules = {}}}
 local function _5_()
   local function _6_()
     local result = validation(workspace_config)
@@ -111,7 +111,7 @@ local function _13_()
     local root = vim.fn.tempname()
     local config0 = (root .. "/.fnl-extras.fnl")
     local path = (root .. "/fnl/spec/example.fnl")
-    local text = "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {} :exclusions []}]}}}"
+    local text = "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {} :exclusions []}]}}}"
     local _ = vim.fn.mkdir((root .. "/fnl/spec"), "p")
     local _0 = vim.fn.mkdir((root .. "/.git"), "p")
     local _1 = write_file(config0, text)

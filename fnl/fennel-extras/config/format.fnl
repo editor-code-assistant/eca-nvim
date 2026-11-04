@@ -120,26 +120,6 @@
 
 
 
-(defn- validate-builtins
-  [config]
-  (let [value (. config :builtins)]
-    (when (and (not= value nil)
-               (not= value false)
-               (not (rule-map? value)))
-      {:message "builtins must be a map or false"})))
-
-
-
-(defn- validate-prefix-fallbacks
-  [config]
-  (let [value (. config :prefix-fallbacks)]
-    (when (and (not= value nil)
-               (not= value false)
-               (not (rule-map? value)))
-      {:message "prefix-fallbacks must be a map or false"})))
-
-
-
 (defn- invalid-width?
   [width strict?]
   (and (or strict? (not= width nil))
@@ -271,13 +251,9 @@
 (defn- validate-table
   [config require-paths? require-scan? strict?]
   (or (and strict? (required config :indent-width "indent-width"))
-      (and strict? (required config :builtins "builtins"))
-      (and strict? (required config :prefix-fallbacks "prefix-fallbacks"))
       (and strict? (required config :parser "parser"))
       (and require-scan? (required config :extensions "extensions"))
       (and require-paths? (required config :paths "paths"))
-      (validate-builtins config)
-      (validate-prefix-fallbacks config)
       (validate-values config require-scan? strict?)
       (validate-alignment config)
       (validate-newline config)))

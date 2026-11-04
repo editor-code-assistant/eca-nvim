@@ -1469,7 +1469,7 @@ require("plenary.busted").describe("function-shape", _116_)
 local function _184_()
   local function _185_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {["module-style"] = 24, ["module-import"] = 0, ["forbidden-form"] = 33, ["form-child-count"] = 3}
+    local expected_6_auto = {["module-style"] = 24, ["module-import"] = 0, ["forbidden-form"] = 29, ["form-child-count"] = 3}
     local actual_7_auto = repo_scenario({["file-size"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}).counts
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

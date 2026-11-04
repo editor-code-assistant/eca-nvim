@@ -6,34 +6,41 @@
   :symlinks   false
   :config     false}
  :format
- {:indent-width     2
-  :builtins         {"fn"         [[:inner 0]]
-                     "lambda"     [[:inner 0]]
-                     "macro"      [[:inner 0]]
-                     "let"        [[:block 1]]
-                     "when"       [[:block 1]]
-                     "when-let"   [[:block 1]]
-                     "if-let"     [[:block 1]]
-                     "each"       [[:block 1]]
-                     "for"        [[:block 1]]
-                     "icollect"   [[:block 1]]
-                     "collect"    [[:block 1]]
-                     "accumulate" [[:block 1]]
-                     "case"       [[:block 1]]
-                     "match"      [[:block 1]]
-                     "case-try"   [[:block 1]]
-                     "match-try"  [[:block 1]]
-                     "while"      [[:block 1]]
-                     "with-open"  [[:block 1]]
-                     "do"         [[:block 0]]}
-  :prefix-fallbacks {"def"   [[:inner 0]]
-                     "with-" [[:block 1]]}
-  :parser           "eca.nfnl.fennel"
-  :indents          {"deftest" [[:block 1]]
-                     "testing" [[:block 1]]
-                     "if"      [[:block 1]]}
+ {:indent-width 2
+  :parser "eca.nfnl.fennel"
+  :indents {"fn" [[:inner 0]]
+            "lambda" [[:inner 0]]
+            "macro" [[:inner 0]]
+            "let" [[:block 1]]
+            "when" [[:block 1]]
+            "when-let" [[:block 1]]
+            "if-let" [[:block 1]]
+            "each" [[:block 1]]
+            "for" [[:block 1]]
+            "icollect" [[:block 1]]
+            "collect" [[:block 1]]
+            "accumulate" [[:block 1]]
+            "case" [[:block 1]]
+            "match" [[:block 1]]
+            "case-try" [[:block 1]]
+            "match-try" [[:block 1]]
+            "while" [[:block 1]]
+            "with-open" [[:block 1]]
+            "do" [[:block 0]]
+            "def" [[:inner 0]]
+            "defn" [[:inner 0]]
+            "defn-" [[:inner 0]]
+            "deftest" [[:block 1]]
+            "testing" [[:block 1]]
+            "if" [[:block 1]]
+            "with-internal-edit" [[:block 1]]
+            "with-cleanup" [[:block 1]]
+            "with-api-stub" [[:block 1]]
+            "with-api-stubs" [[:block 1]]
+            "with-footer-bar" [[:block 1]]
+            "with-lualine-plugin" [[:block 1]]
+            "with-message-list" [[:block 1]]}
   :format-as        {}
-  :indent-patterns  []
   :alignment        {:bindings         true
                      :maps             true
                      :clauses          true

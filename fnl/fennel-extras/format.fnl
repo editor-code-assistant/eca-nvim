@@ -449,13 +449,10 @@
 
 (defn- rules-config
   [config]
-  {:indents          (. config :indents)
-   :format-as        (. config :format-as)
-   :indent-patterns  (. config :indent-patterns)
-   :indent-width     (. config :indent-width)
-   :builtins         (or (. config :builtins) false)
-   :prefix-fallbacks (or (. config :prefix-fallbacks) false)
-   :alignment        (. config :alignment)})
+  {:indents      (. config :indents)
+   :format-as    (. config :format-as)
+   :indent-width (. config :indent-width)
+   :alignment    (. config :alignment)})
 
 
 

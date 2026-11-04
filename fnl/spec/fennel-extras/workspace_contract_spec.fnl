@@ -46,10 +46,8 @@
                     :extensions [".fnl" ".fnlm"]
                     :dotfiles   false
                     :symlinks   false}
-        :format    {:indent-width     2
-                    :builtins         false
-                    :prefix-fallbacks false
-                    :parser           false}
+        :format    {:indent-width 2
+                    :parser       false}
         :lint      {:rules {}}})
 
 (deftest workspace-root-contract
@@ -104,7 +102,7 @@
     (let [root   (vim.fn.tempname)
           config (.. root "/.fnl-extras.fnl")
           path   (.. root "/fnl/spec/example.fnl")
-          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {} :exclusions []}]}}}"
+          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {} :exclusions []}]}}}"
           _      (vim.fn.mkdir (.. root "/fnl/spec") "p")
           _      (vim.fn.mkdir (.. root "/.git") "p")
           _      (write-file config text)

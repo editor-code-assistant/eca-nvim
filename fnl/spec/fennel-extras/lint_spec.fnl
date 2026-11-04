@@ -1520,7 +1520,7 @@
   (testing "project Fennel files have the approved rule counts"
     (is (= {"module-style"     24
             "module-import"    0
-            "forbidden-form"   33
+            "forbidden-form"   29
             "form-child-count" 3}
            (. (repo-scenario {:file-size [{:severity "off" :applies-to {} :options {} :exclusions []}]}) :counts))))
 

@@ -79,10 +79,8 @@
     (vim.tbl_deep_extend "force"
                          {:workspace {:paths      ["fnl"]
                                       :extensions [".fnl" ".fnlm"]}
-                          :format    {:indent-width     2
-                                      :builtins         false
-                                      :prefix-fallbacks false
-                                      :parser           false}
+                          :format    {:indent-width 2
+                                      :parser       false}
                           :lint      {:rules {}}}
                          (canonical-fragment value))
     value))
@@ -211,8 +209,8 @@
     (with-cleanup (fn [] (vim.fn.delete root "rf"))
 
       (fn []
-        (write-file root-config "{:workspace {:exclude [\"root\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {}}}")
-        (write-file config-path "{:workspace {:paths [\"fnl\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {}}}")
+        (write-file root-config "{:workspace {:exclude [\"root\"]} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {}}}")
+        (write-file config-path "{:workspace {:paths [\"fnl\"]} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {}}}")
         (write-file (.. root "/valid.fnl-extras.fnl") "{:exclude [\"generated\"]}")
         {:start       (let [config (load-config)]
                         (if (. config :module-missing)
@@ -320,7 +318,7 @@
 
   (testing "load returns the validated table from a file"
     (is (= {:workspace {:paths ["fnl"]}
-            :format    {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}
+            :format    {:indent-width 2 :indents {} :parser false}
             :lint      {:rules {}}}
            (. (find-load-scenario) :loaded))))
 
@@ -333,26 +331,6 @@
   (testing "accepts an indent width of four"
     (is (= {:value? true :has-message false}
            (validate-summary {:indent-width 4}))))
-
-  (testing "rejects true builtins because the setting must be explicit"
-    (is (= "builtins must be a map or false"
-           (validation-error-message "{:builtins true}"))))
-
-  (testing "accepts disabling builtins"
-    (is (= {:value? true :has-message false}
-           (validate-summary {:builtins false}))))
-
-  (testing "accepts a replacement builtins table"
-    (is (= {:value? true :has-message false}
-           (validate-summary {:builtins {"foo" [[:block 1]]}}))))
-
-  (testing "accepts disabling prefix fallbacks"
-    (is (= {:value? true :has-message false}
-           (validate-summary {:prefix-fallbacks false}))))
-
-  (testing "accepts a replacement prefix fallback table"
-    (is (= {:value? true :has-message false}
-           (validate-summary {:prefix-fallbacks {"foo-" [[:block 1]]}}))))
 
   (testing "rejects zero indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width 0}")]
@@ -369,22 +347,26 @@
   (testing "rejects string indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width \"4\"}")]
       (is (= "indent-width must be a positive integer" message))))
+)
 
-  (testing "rejects malformed builtins with a specific validation message"
-    (let [message (validation-error-message "{:builtins 1}")]
-      (is (= "builtins must be a map or false" message))))
+(deftest exact-formatter-configuration
 
-  (testing "rejects malformed prefix fallbacks with a specific validation message"
-    (let [message (validation-error-message "{:prefix-fallbacks 1}")]
-      (is (= "prefix-fallbacks must be a map or false" message))))
+  (testing "rejects the removed builtins key"
+    (is (= "unknown configuration key: builtins"
+           (validation-error-message-raw "{:builtins false}"))))
 
-  (testing "rejects malformed builtins rules with a specific validation message"
-    (let [message (validation-error-message "{:builtins {\"foo\" 1}}")]
-      (is (= "builtins must be a map or false" message))))
+  (testing "rejects the removed prefix-fallbacks key"
+    (is (= "unknown configuration key: prefix-fallbacks"
+           (validation-error-message-raw "{:prefix-fallbacks false}"))))
 
-  (testing "rejects malformed prefix fallback rules with a specific validation message"
-    (let [message (validation-error-message "{:prefix-fallbacks {\"foo-\" 1}}")]
-      (is (= "prefix-fallbacks must be a map or false" message)))))
+  (testing "rejects the removed indent-patterns key"
+    (is (= "unknown configuration key: indent-patterns"
+           (validation-error-message-raw "{:indent-patterns []}"))))
+
+  (testing "accepts exact indents and preserves format-as aliases"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {\"if\" [[:block 1]]} :format-as {\"my-if\" \"if\"}}")))))
 
 (deftest extensions
 
@@ -412,7 +394,7 @@
 
   (testing "does not require paths during general configuration validation"
     (is (= nil
-           (validation-error-message-raw "{:indent-width 2 :builtins false :prefix-fallbacks false :parser false :extensions [\".fnl\"]}"))))
+           (validation-error-message-raw "{:indent-width 2 :indents {} :parser false :extensions [\".fnl\"]}"))))
 
   (testing "rejects a non-boolean dotfiles value with the exact validation message"
     (is (= "workspace.dotfiles must be a boolean"
@@ -488,12 +470,9 @@
 
 (defn- formatter-projection
   [config]
-  {:indents          (. config :indents)
-   :format-as        (. config :format-as)
-   :indent-patterns  (. config :indent-patterns)
-   :indent-width     (. config :indent-width)
-   :builtins         (. config :builtins)
-   :prefix-fallbacks (. config :prefix-fallbacks)})
+  {:indents      (. config :indents)
+   :format-as    (. config :format-as)
+   :indent-width (. config :indent-width)})
 
 (defn- format-with-config
   [source config]
@@ -551,10 +530,8 @@
 (deftest formatter-isolation
 
   (testing "lint configuration does not change formatter output"
-    (let [result (format-with-config "(let [x 1] x)" {:indent-width     2
-                                                      :builtins         false
-                                                      :prefix-fallbacks false
-                                                      :parser           false
-                                                      :paths            ["fnl"]
-                                                      :extensions       [".fnl"]})]
+    (let [result (format-with-config "(let [x 1] x)" {:indent-width 2
+                                                      :parser       false
+                                                      :paths        ["fnl"]
+                                                      :extensions   [".fnl"]})]
       (is (or (. result :module-missing) (. result :value))))))

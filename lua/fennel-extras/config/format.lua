@@ -65,22 +65,6 @@ local function required(config, key, path)
     return nil
   end
 end
-local function validate_builtins(config)
-  local value = config.builtins
-  if ((value ~= nil) and (value ~= false) and not rule_map_3f(value)) then
-    return {message = "builtins must be a map or false"}
-  else
-    return nil
-  end
-end
-local function validate_prefix_fallbacks(config)
-  local value = config["prefix-fallbacks"]
-  if ((value ~= nil) and (value ~= false) and not rule_map_3f(value)) then
-    return {message = "prefix-fallbacks must be a map or false"}
-  else
-    return nil
-  end
-end
 local function invalid_width_3f(width, strict_3f)
   return ((strict_3f or (width ~= nil)) and not (integer_3f(width) and (width > 0)))
 end
@@ -144,7 +128,7 @@ do
   validate_scan = _2amodule_2a["validate-scan"]
 end
 local function validate_table(config, require_paths_3f, require_scan_3f, strict_3f)
-  return ((strict_3f and required(config, "indent-width", "indent-width")) or (strict_3f and required(config, "builtins", "builtins")) or (strict_3f and required(config, "prefix-fallbacks", "prefix-fallbacks")) or (strict_3f and required(config, "parser", "parser")) or (require_scan_3f and required(config, "extensions", "extensions")) or (require_paths_3f and required(config, "paths", "paths")) or validate_builtins(config) or validate_prefix_fallbacks(config) or validate_values(config, require_scan_3f, strict_3f) or validate_alignment(config) or validate_newline(config))
+  return ((strict_3f and required(config, "indent-width", "indent-width")) or (strict_3f and required(config, "parser", "parser")) or (require_scan_3f and required(config, "extensions", "extensions")) or (require_paths_3f and required(config, "paths", "paths")) or validate_values(config, require_scan_3f, strict_3f) or validate_alignment(config) or validate_newline(config))
 end
 local validate
 do

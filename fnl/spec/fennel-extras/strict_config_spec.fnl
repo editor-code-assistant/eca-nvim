@@ -140,18 +140,8 @@
 
 
 
-  (testing "format API reports missing builtins"
-    (is (missing-message? (format-error {:indent-width 2}) "builtins")))
-
-
-
-  (testing "format API reports missing prefix-fallbacks"
-    (is (missing-message? (format-error {:indent-width 2 :builtins false}) "prefix-fallbacks")))
-
-
-
   (testing "format API reports missing parser"
-    (is (missing-message? (format-error {:indent-width 2 :builtins false :prefix-fallbacks false}) "parser")))
+    (is (missing-message? (format-error {:indent-width 2 :indents {}}) "parser")))
 
 
 
@@ -160,18 +150,8 @@
 
 
 
-  (testing "indent API reports missing builtins"
-    (is (missing-message? (indent-error {:indent-width 2}) "builtins")))
-
-
-
-  (testing "indent API reports missing prefix-fallbacks"
-    (is (missing-message? (indent-error {:indent-width 2 :builtins false}) "prefix-fallbacks")))
-
-
-
   (testing "indent API reports missing parser"
-    (is (missing-message? (indent-error {:indent-width 2 :builtins false :prefix-fallbacks false}) "parser"))))
+    (is (missing-message? (indent-error {:indent-width 2 :indents {}}) "parser"))))
 
 (deftest strict-config-shape
 
@@ -180,18 +160,6 @@
   (testing "align-bindings is rejected as an unknown key"
     (is (= "unknown configuration key: align-bindings"
            (. (config-error {:align-bindings true}) :message))))
-
-
-
-  (testing "true builtins is rejected"
-    (is (= "builtins must be a map or false"
-           (. (config-error {:builtins true}) :message))))
-
-
-
-  (testing "true prefix-fallbacks is rejected"
-    (is (= "prefix-fallbacks must be a map or false"
-           (. (config-error {:prefix-fallbacks true}) :message))))
 
 
 
@@ -280,8 +248,8 @@
                (. (. loaded :format) :indent-width)
                (. (. loaded :workspace) :extensions)
                (. (. loaded :workspace) :paths)
-               (. (. loaded :format) :builtins)
-               (. (. loaded :format) :prefix-fallbacks)
+               (. (. loaded :format) :indents)
+               (. (. loaded :format) :format-as)
                (. (. loaded :format) :parser)
                (. (. loaded :format) :alignment)
                (. loaded :lint)

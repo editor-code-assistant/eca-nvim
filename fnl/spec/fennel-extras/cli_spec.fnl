@@ -55,8 +55,8 @@
                          "}")
                      "{:extensions [\".fnl\" \".fnlm\"] :dotfiles false :symlinks false :paths [\".\"]}")
         format     (if workspace?
-                     "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}"
-                     (.. "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]} " body "}"))]
+                     "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}"
+                     (.. "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]} " body "}"))]
     (.. "{:workspace " workspace " :format " format " :lint {:rules {}}}")))
 
 
@@ -202,7 +202,7 @@
 
 (defn- config-invalid-scenario
   [root src-file config-path]
-  (let [_      (write-file config-path "{:workspace {:paths [\".\"] :extensions [\".fnl\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} :lint {:rules {}} :colour 1}")
+  (let [_      (write-file config-path "{:workspace {:paths [\".\"] :extensions [\".fnl\"]} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {}} :colour 1}")
         result (run-cli root ["format" "--check" "src/a.fnl"])]
     {:code  (. result :code)
      :lines (. result :lines)}))
@@ -251,7 +251,7 @@
 
 (defn- align-bindings-cli-scenario-body
   [root path config-path source expected]
-  (write-file config-path "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"lambda\" [[:inner 0]] \"macro\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"when-let\" [[:block 1]] \"if-let\" [[:block 1]] \"each\" [[:block 1]] \"for\" [[:block 1]] \"icollect\" [[:block 1]] \"collect\" [[:block 1]] \"accumulate\" [[:block 1]] \"case\" [[:block 1]] \"match\" [[:block 1]] \"case-try\" [[:block 1]] \"match-try\" [[:block 1]] \"while\" [[:block 1]] \"with-open\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
+  (write-file config-path "{:indent-width 2 :indents {} :parser false :alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
   (write-file path source)
   (align-bindings-cli-scenario-result root path expected))
 
@@ -627,7 +627,7 @@
                 (.. (string.gsub (format-config ":dotfiles false") " :format " "\n:format ") "\n")
                 (if (or (= mode :enabled) (= mode :enabled-mixed))
                   (.. "{:workspace {:config true}\n"
-                      ":format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}\n"
+                      ":format {:indent-width 2 :indents {} :parser false}\n"
                       ":lint {:rules {}}}\n")
                   (format-config ":dotfiles false"))))
   (write-file source-path "(when x\ny)\n"))
@@ -1063,28 +1063,7 @@
            (rule-config-scenario ":indent-width 4"
                                  "(when x\ny)\n"
                                  "(when x\n    y)\n"))))
-
-
-
-  (testing "disables built-in indentation rules when builtins is false"
-    (is (= {:code     0
-            :lines    ["a.fnl"]
-            :content  "(let [x 1]\n     x)\n"
-            :expected "(let [x 1]\n     x)\n"}
-           (rule-config-scenario ":builtins false"
-                                 "(let [x 1]\nx)\n"
-                                 "(let [x 1]\n     x)\n"))))
-
-
-
-  (testing "disables prefix fallback indentation rules when prefix-fallbacks is false"
-    (is (= {:code     0
-            :lines    ["a.fnl"]
-            :content  "(defn x\n      y)\n"
-            :expected "(defn x\n      y)\n"}
-           (rule-config-scenario ":prefix-fallbacks false"
-                                 "(defn x\ny)\n"
-                                 "(defn x\n      y)\n")))))
+)
 
 (deftest config-file-discovery
 
@@ -1135,7 +1114,7 @@
     (let [result (config-discovery-scenario :enabled-mixed)]
       (is (= {:code   1
               :lines  ["a.fnl"]
-              :config "{:workspace {:config true}\n:format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}\n:lint {:rules {}}}\n"
+              :config "{:workspace {:config true}\n:format {:indent-width 2 :indents {} :parser false}\n:lint {:rules {}}}\n"
               :source "(when x\ny)\n"}
              result)))))
 
@@ -1370,7 +1349,7 @@
   [config]
   (let [config     (string.gsub config
                                 "^{%s*"
-                                "{:workspace {:extensions [\".fnl\"] :paths [\"\"]} :format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false} ")
+                                "{:workspace {:extensions [\".fnl\"] :paths [\"\"]} :format {:indent-width 2 :indents {} :parser false} ")
         normalized (lint-config-rules config)]
     (lint-config-finish normalized)))
 
@@ -1459,7 +1438,7 @@
   [mode]
   (let [root        (vim.fn.tempname)
         config-path (.. root "/.fnl-extras.fnl")
-        config      "{:workspace {:paths [\".\"] :extensions [\".fnl\"] :config true}\n:format {:indent-width 2 :builtins false :prefix-fallbacks false :parser false}\n:lint {:rules {:file-size [{:severity :error :applies-to {} :options {:max-code-lines 1} :exclusions []}]}}}\n"]
+        config      "{:workspace {:paths [\".\"] :extensions [\".fnl\"] :config true}\n:format {:indent-width 2 :indents {} :parser false}\n:lint {:rules {:file-size [{:severity :error :applies-to {} :options {:max-code-lines 1} :exclusions []}]}}}\n"]
     (vim.fn.mkdir root "p")
     (with-cleanup (fn [] (vim.fn.delete root "rf"))
 
@@ -2659,7 +2638,7 @@
 
   (defn- alignment-maps-cli-setup
     [config-path path source]
-    (write-file config-path "{:indent-width 2 :builtins {\"fn\" [[:inner 0]] \"lambda\" [[:inner 0]] \"macro\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"when-let\" [[:block 1]] \"if-let\" [[:block 1]] \"each\" [[:block 1]] \"for\" [[:block 1]] \"icollect\" [[:block 1]] \"collect\" [[:block 1]] \"accumulate\" [[:block 1]] \"case\" [[:block 1]] \"match\" [[:block 1]] \"case-try\" [[:block 1]] \"match-try\" [[:block 1]] \"while\" [[:block 1]] \"with-open\" [[:block 1]] \"do\" [[:block 0]]} :prefix-fallbacks {\"def\" [[:inner 0]] \"with-\" [[:block 1]]} :parser false :alignment {:bindings false :maps true :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
+    (write-file config-path "{:indent-width 2 :indents {} :parser false :alignment {:bindings false :maps true :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
     (write-file path source))
 
 

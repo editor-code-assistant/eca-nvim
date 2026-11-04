@@ -9,17 +9,16 @@
       {:error "module missing"})))
 
 (local explicit-indent-config
-       {:indent-width     2
-        :parser           "eca.nfnl.fennel"
-        :builtins         {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]]}
-        :prefix-fallbacks {"def" [[:inner 0]] "with-" [[:block 1]]}
-        :alignment        {:bindings         false
-                           :maps             false
-                           :clauses          false
-                           :split-bindings   false
-                           :collapse-padding false
-                           :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                           :clause-forms     ["case" "match" "case-try" "match-try" "if"]}})
+       {:indent-width 2
+        :parser       "eca.nfnl.fennel"
+        :indents      {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]] "def" [[:inner 0]] "defn" [[:inner 0]] "defn-" [[:inner 0]]}
+        :alignment    {:bindings         false
+                       :maps             false
+                       :clauses          false
+                       :split-bindings   false
+                       :collapse-padding false
+                       :binding-forms    ["let" "when-let" "if-let" "with-open"]
+                       :clause-forms     ["case" "match" "case-try" "match-try" "if"]}})
 
 (defn- reindent-call-body
   [indent source config]
@@ -61,6 +60,20 @@
       result
       (. result :value))))
 
+(defn- exact-output-for
+  [source config]
+  (let [indent          (load-indent)
+        config          (vim.tbl_deep_extend "force"
+                                             {:indent-width 2
+                                              :parser       "eca.nfnl.fennel"
+                                              :indents      {}
+                                              :format-as    {}}
+                                             config)
+        (ok result err) (pcall indent.reindent source config)]
+    (if ok
+      result
+      {:error err})))
+
 (defn- error-summary
   [source config]
   (let [indent (load-indent)]
@@ -96,56 +109,31 @@
     (is (= "(foo a\n  b\n     c)"
            (output-for "(foo a\nb\nc)" {:indents {"foo" [[:inner 0 1]]}})))))
 
-(deftest built-in-rules
+(deftest exact-only-rules
 
-  (testing "uses the inner built-in for fn"
-    (is (= "(fn [x]\n  x)"
-           (output-for "(fn [x]\nx)" {}))))
+  (testing "uses generic indentation for an undeclared builtin, prefix, or pattern form"
+    (let [outputs [(exact-output-for "(when x\ny)" {})
+                   (exact-output-for "(defn f\n[x]\nx)" {})
+                   (exact-output-for "(with-foo x\ny)" {})]]
+      (is (= ["(when x\n      y)"
+              "(defn f\n      [x]\n      x)"
+              "(with-foo x\n          y)"]
+             outputs))))
 
-  (testing "uses the block built-in for let"
-    (is (= "(let [a 1]\n  a)"
-           (output-for "(let [a 1]\na)" {}))))
-
-  (testing "uses the block built-in for when"
-    (is (= "(when x\n  y)"
-           (output-for "(when x\ny)" {}))))
-
-  (testing "uses the block zero built-in for do"
-    (is (= "(do\n  a\n  b)"
-           (output-for "(do\na\nb)" {}))))
-
-  (testing "keeps if at default alignment"
-    (is (= "(if c\n    a\n    b)"
-           (output-for "(if c\na\nb)" {}))))
-
-  (testing "uses the def prefix fallback"
-    (is (= "(defn- g\n  [x]\n  x)"
-           (output-for "(defn- g\n[x]\nx)" {}))))
-
-  (testing "uses the with prefix fallback"
-    (is (= "(with-foo x\n  y)"
-           (output-for "(with-foo x\ny)" {}))))
-
-  (testing "does not apply an unqualified fallback to a dotted head"
-    (is (= "(a.let x\n       y)"
-           (output-for "(a.let x\ny)" {})))))
+  (testing "uses only an exact indent or format-as alias when declared"
+    (is (= ["(custom-if x\n  y)"
+            "(custom-let [a 1]\n  a)"]
+           [(exact-output-for "(custom-if x\ny)"
+                              {:indents {"custom-if" [[:block 1]]}})
+            (exact-output-for "(custom-let [a 1]\na)"
+                              {:format-as {"custom-let" "let"}
+                               :indents   {"let" [[:block 1]]}})]))))
 
 (deftest format-as-and-config-errors
 
   (testing "resolves format-as aliases"
     (is (= "(my-let [a 1]\n  a)"
            (output-for "(my-let [a 1]\na)" {:format-as {"my-let" "let"}}))))
-
-  (testing "exact indents take precedence over patterns"
-    (is (= "(when x\n  y\n  z)"
-           (output-for "(when x\ny\nz)"
-                       {:indents         {"when" [[:inner 0]]}
-                        :indent-patterns [["^when" [[:block 2]]]]}))))
-
-  (testing "patterns take precedence over built-ins"
-    (is (= "(when x\n      y\n  z)"
-           (output-for "(when x\ny\nz)"
-                       {:indent-patterns [["^when" [[:block 2]]]]}))))
 
   (testing "rejects a name present in indents and format-as"
     (is (= {:value? false :has-message true}

@@ -15,9 +15,8 @@
       result
       {:error "parser module missing"})))
 
-(local full-builtins
-       {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]]})
-(local full-prefix-fallbacks {"def" [[:inner 0]] "with-" [[:block 1]]})
+(local full-indents
+       {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]] "def" [[:inner 0]] "defn" [[:inner 0]] "defn-" [[:inner 0]]})
 (local full-alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]})
 (local aligned-format-config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]}})
 
@@ -37,11 +36,10 @@
   [config]
   (and config
        (vim.tbl_deep_extend "force"
-                            {:indent-width     2
-                             :builtins         full-builtins
-                             :prefix-fallbacks full-prefix-fallbacks
-                             :parser           false
-                             :alignment        (explicit-alignment config)}
+                            {:indent-width 2
+                             :indents      full-indents
+                             :parser       false
+                             :alignment    (explicit-alignment config)}
                             config)))
 
 (defn- verifier-scenario
@@ -428,44 +426,18 @@
     (is (= "missing indent-width"
            (. (format-summary "(let [x 1]\nx)" nil) :message))))
 
-  (testing "builtins false disables the let block rule"
-    (is (= "(let [x 1]\n     x)"
-           (. (format-summary "(let [x 1]\nx)" {:builtins false}) :value))))
-
-  (testing "the configured builtins table is used without a built-in table"
-    (is (= "(let [x 1]\n  x)"
-           (. (format-summary "(let [x 1]\nx)"
-                              {:builtins {"when" [[:block 1]]}})
-              :value))))
-
-  (testing "a custom builtins table supplies its replacement rule"
-    (is (= "(when x\n  y)"
-           (. (format-summary "(when x\ny)"
-                              {:builtins {"when" [[:block 1]]}})
-              :value))))
-
-  (testing "prefix fallbacks false disables the def fallback"
-    (is (= "(defn x\n      y)"
-           (. (format-summary "(defn x\ny)" {:prefix-fallbacks false}) :value))))
-
   (testing "repo-style formatting indents defn args and body at two spaces"
     (is (= "(defn- git-root\n  [start]\n  (foo start))"
            (. (format-summary "(defn- git-root\n[start]\n(foo start))"
-                              {:indents        {"if" [[:block 1]]}
-                               :align-bindings
-                               true})
-              :value))))
-
-  (testing "the configured prefix fallback table is used without defaults"
-    (is (= "(defn x\n  y)"
-           (. (format-summary "(defn x\ny)"
-                              {:prefix-fallbacks {"with-" [[:block 1]]}})
-              :value))))
-
-  (testing "a custom prefix fallback table supplies its replacement rule"
-    (is (= "(foo x\n  y)"
-           (. (format-summary "(foo x\ny)"
-                              {:prefix-fallbacks {"foo-" [[:block 1]]}})
+                              {:indents   {"if"    [[:block 1]]
+                                           "defn-" [[:inner 0]]}
+                               :alignment {:bindings         true
+                                           :maps             true
+                                           :clauses          true
+                                           :split-bindings   true
+                                           :collapse-padding true
+                                           :binding-forms    ["let" "when-let" "if-let" "with-open"]
+                                           :clause-forms     ["case" "match" "case-try" "match-try" "if"]}})
               :value))))
 
   (testing "a long one-line form stays exactly one line"

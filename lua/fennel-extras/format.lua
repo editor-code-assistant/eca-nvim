@@ -380,7 +380,7 @@ local function alignment_enabled_3f(alignment)
   return (alignment.bindings or alignment.maps or alignment.clauses or alignment["split-bindings"] or alignment["collapse-padding"])
 end
 local function rules_config(config)
-  return {indents = config.indents, ["format-as"] = config["format-as"], ["indent-patterns"] = config["indent-patterns"], ["indent-width"] = config["indent-width"], builtins = (config.builtins or false), ["prefix-fallbacks"] = (config["prefix-fallbacks"] or false), alignment = config.alignment}
+  return {indents = config.indents, ["format-as"] = config["format-as"], ["indent-width"] = config["indent-width"], alignment = config.alignment}
 end
 local function indentation_output_error(source, alignment, out, config)
   if not (indent_only_3f(source, out, alignment_enabled_3f(alignment)) or config.newline) then

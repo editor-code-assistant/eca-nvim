@@ -227,12 +227,9 @@
 (defn- format-fragment-key?
   [key]
   (or (= key :indent-width)
-      (= key :builtins)
-      (= key :prefix-fallbacks)
       (= key :parser)
       (= key :indents)
       (= key :format-as)
-      (= key :indent-patterns)
       (= key :alignment)
       (= key :newline)
       (= key :extensions)))

@@ -22,15 +22,12 @@
 (defn- formatter-config
   [cfg]
   (let [format cfg.format]
-    {:indents          (. format :indents)
-     :format-as        (. format :format-as)
-     :indent-patterns  (. format :indent-patterns)
-     :indent-width     (. format :indent-width)
-     :builtins         (. format :builtins)
-     :prefix-fallbacks (. format :prefix-fallbacks)
-     :parser           (. format :parser)
-     :alignment        (. format :alignment)
-     :newline          (. format :newline)}))
+    {:indents      (. format :indents)
+     :format-as    (. format :format-as)
+     :indent-width (. format :indent-width)
+     :parser       (. format :parser)
+     :alignment    (. format :alignment)
+     :newline      (. format :newline)}))
 
 
 
