@@ -104,6 +104,8 @@
         findings []]
     (when (enabled? policy "form-child-count")
       (spec-rule.form-child-count-finding findings path form policy node))
+    (when (enabled? policy "child-count")
+      (spec-rule.child-count-finding findings path form policy node))
     (when (and (enabled? policy "forbidden-form")
                (not (enabled? policy "no-mutation")))
       (forbidden-rule.findings findings path form policy node "forbidden-form"))

@@ -155,6 +155,25 @@
 
 
 
+(defn- canonical-child-count-option-error
+
+  [section name index instance]
+  (when (and (= name "child-count")
+             (not= instance.severity "off"))
+    (let [options instance.options
+          prefix  (.. "missing " section ".rules." name "[" index "].options.")]
+      (if options.children
+        (when (= options.max-count nil)
+          {:message (.. prefix "max-count")})
+        (or (when (= options.min-count nil)
+              {:message (.. prefix "min-count")})
+            (when (= options.max-count nil)
+              {:message (.. prefix "max-count")})
+            (when (= options.nil-count nil)
+              {:message (.. prefix "nil-count")}))))))
+
+
+
 (defn- canonical-missing-option-error
 
   [section name index instance]
@@ -189,6 +208,7 @@
           {:message (.. path ".options must be a table")})
         (canonical-options-error name instance.options (.. path ".options"))
         (canonical-legacy-selector-error instance (.. path ".options"))
+        (canonical-child-count-option-error section name index instance)
         (canonical-missing-option-error section name index instance)
         (canonical-exclusions-error instance.exclusions (.. path ".exclusions")))))
 
@@ -218,8 +238,9 @@
                             (registry.lint-rule-names))]
             (if (not= (type name) :string)
               {:message (.. "unknown " section " rule: " (tostring name))}
-              (if (not (accumulate [found false _ allowed-name (ipairs allowed)]
-                         (or found (= allowed-name name))))
+              (if (not (or (= name "form-child-count")
+                           (accumulate [found false _ allowed-name (ipairs allowed)]
+                             (or found (= allowed-name name)))))
                 {:message (.. "unknown " section " rule: " name)}
                 (if (not (and (sequence? instances) (> (length instances) 0)))
                   {:message (.. section ".rules." name " must be a non-empty vector")}

@@ -82,3 +82,55 @@
                                    :exclusions []}]}
           result (identities (findings-for "(module app)" "fnl/app.fnl" policy))]
       (is (= [] result)))))
+
+(deftest migrated-child-count
+
+  (testing "canonical child-count preserves named testing child checks"
+    (let [policy {:child-count [{:severity   "error"
+                                 :applies-to {:forms ["testing"]}
+                                 :options    {:children  ["is"]
+                                              :max-count 1}
+                                 :exclusions []}]}
+          result (identities (findings-for "(deftest run (testing \"x\" (is a) (is b)))"
+                                           "fnl/spec/app_spec.fnl"
+                                           policy))]
+      (is (= [["child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             result)))))
+
+(deftest direct-child-arity
+
+  (let [policy  {:child-count [{:severity   "warning"
+                                :applies-to {:forms ["if"]}
+                                :options    {:min-count 2
+                                             :max-count 2
+                                             :nil-count false}
+                                :exclusions []}]}
+        finding (fn [source]
+                  (identities (findings-for source "fnl/app.fnl" policy)))]
+
+    (testing "rejects an if with no else"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok value))"))))
+
+    (testing "rejects an if with a literal nil else"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok value nil))"))))
+
+    (testing "rejects an if with multiple clauses"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok a b c d))"))))
+
+    (testing "rejects a multi-clause if with broad direct bounds"
+      (let [broad-policy  {:child-count [{:severity   "warning"
+                                          :applies-to {:forms ["if"]}
+                                          :options    {:min-count 0
+                                                       :max-count 10
+                                                       :nil-count true}
+                                          :exclusions []}]}
+            broad-finding (fn [source]
+                            (identities (findings-for source "fnl/app.fnl" broad-policy)))]
+        (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+               (broad-finding "(defn run [] (if ok a b c d))")))))
+
+    (testing "allows a normal two-branch if"
+      (is (= [] (finding "(defn run [] (if ok value fallback))"))))))

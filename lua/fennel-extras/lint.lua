@@ -24,7 +24,7 @@ local function normalized_branch_form(finding)
   return form
 end
 local function normalized_form(finding)
-  if (finding.rule == "form-child-count") then
+  if ((finding.rule == "form-child-count") or (finding.rule == "child-count")) then
     return normalized_testing_form(finding)
   else
     return normalized_branch_form(finding)
@@ -155,27 +155,33 @@ local function append_context_rule(result, rule, entries)
     return result
   end
 end
-local function context_lint_value(context)
-  local lint_rules = {}
-  local design_rules
-  do
-    local design = context.design
-    design_rules = ((design and design.rules) or design or {})
-  end
-  for rule, entries in pairs((context.rules or {})) do
-    if (rule == "design") then
-      for design_rule, design_entries in pairs((entries.rules or entries)) do
-        design_rules[design_rule] = design_entries
-      end
+local function context_design_rules(context)
+  local value = context.design
+  local nested = (context.rules and context.rules.design)
+  return ((value and value.rules) or value or (nested and nested.rules) or nested or {})
+end
+local function context_lint_rules(context)
+  local rules0 = core.merge((context.rules or {}))
+  return core.assoc(rules0, "design", nil)
+end
+local function merge_context_rules(rules0, design)
+  local merged = core.merge(rules0)
+  for rule, entries in pairs(design) do
+    if (merged[rule] == nil) then
+      merged[rule] = entries
     else
-      if (registry["rule-domain"](rule) == "design") then
-        design_rules[rule] = entries
-      else
-        lint_rules[rule] = entries
-      end
     end
   end
-  return {rules = lint_rules, design = design_rules}
+  if (merged["form-child-count"] and merged["child-count"]) then
+    return core.assoc(merged, "form-child-count", nil)
+  else
+    return merged
+  end
+end
+local function context_lint_value(context)
+  local rules0 = merge_context_rules(context_lint_rules(context), context_design_rules(context))
+  local design = context_design_rules(context)
+  return {rules = rules0, design = (context.design and {rules = design})}
 end
 local function append_context_exclusions(result, raw_policy)
   for _, item in ipairs(registry.instances(raw_policy)) do
@@ -211,7 +217,7 @@ local function context_matcher_error(context, exclusions)
 end
 local function context_validation_error(context)
   local value = context_lint_value(context)
-  return (config_lint["lint-error"]({rules = value.rules}) or config_lint["design-error"]({rules = value.design}))
+  return config_lint["lint-error"]({rules = value.rules})
 end
 local function context_forms(source, path)
   return identity.forms(source, path)

@@ -339,12 +339,18 @@
 (defn- valid-lint-policy
 
   [cfg]
-  (let [rules  (or (and cfg.lint cfg.lint.rules) {})
+  (let [rules  (core.merge (or (and cfg.lint cfg.lint.rules) {}))
         design (and cfg.design cfg.design.rules)]
-    {:rules      rules
-     :design     design
-     :exclusions (core.concat (canonical-exclusions rules)
-                              (canonical-exclusions (or design {})))}))
+    (each [rule instances (pairs (or design {}))]
+      (when (= (. rules rule) nil)
+        (tset rules rule instances)))
+    (let [normalized (if (and (. rules "form-child-count")
+                              (. rules "child-count"))
+                       (core.assoc rules "form-child-count" nil)
+                       rules)]
+      {:rules      normalized
+       :design     (and cfg.design {:rules design})
+       :exclusions (canonical-exclusions normalized)})))
 
 
 

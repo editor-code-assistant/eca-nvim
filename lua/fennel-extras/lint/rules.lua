@@ -86,6 +86,10 @@ local function evaluate_form(path, form, forms, policy)
     spec_rule["form-child-count-finding"](findings, path, form, policy, node)
   else
   end
+  if enabled_3f(policy, "child-count") then
+    spec_rule["child-count-finding"](findings, path, form, policy, node)
+  else
+  end
   if (enabled_3f(policy, "forbidden-form") and not enabled_3f(policy, "no-mutation")) then
     forbidden_rule.findings(findings, path, form, policy, node, "forbidden-form")
   else

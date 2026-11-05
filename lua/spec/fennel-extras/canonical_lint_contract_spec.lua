@@ -166,4 +166,30 @@ local function _16_()
   end
   return require("plenary.busted").it("module-import non-map options returns a structured validation error", _22_)
 end
-return require("plenary.busted").describe("canonical-module-selector-cardinality", _16_)
+require("plenary.busted").describe("canonical-module-selector-cardinality", _16_)
+local function _23_()
+  local function _24_()
+    for _, rule in ipairs({"child-count", "form-child-count"}) do
+      local rules = {}
+      local _0
+      rules[rule] = {{severity = "error", ["applies-to"] = {forms = {"testing"}}, options = {children = {"is"}, ["max-count"] = 1}, exclusions = {}}}
+      _0 = nil
+      local result = validation({lint = {rules = rules}})
+      local assert_28_auto = require("luassert")
+      local value_29_auto = result.ok
+      assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
+    end
+    return nil
+  end
+  require("plenary.busted").it("child-count is canonical and form-child-count remains an accepted alias", _24_)
+  local function _25_()
+    local instance = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}
+    local result = validation({lint = {rules = {["function-shape"] = {instance}, ["if-branch-call"] = {instance}, ["if-without-else"] = {instance}, ["nested-forms"] = {instance}, ["leading-bindings"] = {instance}, ["no-mutation"] = {instance}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (result.ok and result.value and (nil == result.value.design))
+    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\") (= nil (. result \"value\" \"design\")))")
+    return true
+  end
+  return require("plenary.busted").it("former design rule names validate under lint rules", _25_)
+end
+return require("plenary.busted").describe("migrated-rule-names", _23_)

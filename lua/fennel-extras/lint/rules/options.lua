@@ -6,9 +6,9 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local option_names = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"mode", "modules", "exempt-files", "module", "binding", "forms"}, ["form-child-count"] = {"children", "max-count"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms", "nil-else"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms", "max-depth"}, ["multiline-layout"] = {"clauses", "bindings"}, ["file-size"] = {"max-code-lines"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms", "max-depth"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
-local required_option_names = {["forbidden-form"] = {}, ["required-form"] = {}, ["module-style"] = {}, ["module-import"] = {"mode"}, ["form-child-count"] = {"children", "max-count"}, ["if-branch-call"] = {}, ["if-without-else"] = {}, ["control-layout"] = {}, ["unused-and-or"] = {}, ["function-shape"] = {}, ["multiline-layout"] = {"clauses", "bindings"}, ["file-size"] = {"max-code-lines"}, ["call-data-arg"] = {}, ["nested-forms"] = {}, ["leading-bindings"] = {}, ["no-mutation"] = {}}
-local option_types = {module = "string", mode = "string", modules = "strings", forms = "strings", ["exempt-files"] = "strings", children = "strings", ["max-count"] = "positive-integer", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
+local option_names = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"mode", "modules", "exempt-files", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count"}, ["form-child-count"] = {"children", "max-count"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms", "nil-else"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms", "max-depth"}, ["multiline-layout"] = {"clauses", "bindings"}, ["file-size"] = {"max-code-lines"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms", "max-depth"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
+local required_option_names = {["forbidden-form"] = {}, ["required-form"] = {}, ["module-style"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["if-branch-call"] = {}, ["if-without-else"] = {}, ["control-layout"] = {}, ["unused-and-or"] = {}, ["function-shape"] = {}, ["multiline-layout"] = {"clauses", "bindings"}, ["file-size"] = {"max-code-lines"}, ["call-data-arg"] = {}, ["nested-forms"] = {}, ["leading-bindings"] = {}, ["no-mutation"] = {}}
+local option_types = {module = "string", mode = "string", modules = "strings", forms = "strings", ["exempt-files"] = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
 local schema
 do
   local function schema0(rule)
@@ -51,6 +51,9 @@ end
 local function positive_integer_3f(value)
   return ((type(value) == "number") and (value == math.floor(value)) and (value > 0))
 end
+local function non_negative_integer_3f(value)
+  return ((type(value) == "number") and (value == math.floor(value)) and (value >= 0))
+end
 local function strings_step(value, index)
   if (index > #value) then
     return true
@@ -65,8 +68,8 @@ local validators
 local function _2_(value)
   return (type(value) == "string")
 end
-validators = {string = _2_, strings = strings_3f, ["positive-integer"] = positive_integer_3f, boolean = boolean_3f}
-local type_messages = {strings = " must be a list of strings", ["positive-integer"] = " must be a positive integer", boolean = " must be a boolean", string = " must be a string"}
+validators = {string = _2_, strings = strings_3f, ["positive-integer"] = positive_integer_3f, ["non-negative-integer"] = non_negative_integer_3f, boolean = boolean_3f}
+local type_messages = {strings = " must be a list of strings", ["positive-integer"] = " must be a positive integer", ["non-negative-integer"] = " must be a non-negative integer", boolean = " must be a boolean", string = " must be a string"}
 local function option_type_valid_3f(kind, value)
   local validator = validators[kind]
   if validator then

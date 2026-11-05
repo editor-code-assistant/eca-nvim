@@ -193,3 +193,31 @@
                                                               :exclusions []}]}}})]
       (is (= "lint.rules.module-import[1].options must be a table"
              (error-message result))))))
+
+(deftest migrated-rule-names
+
+  (testing "child-count is canonical and form-child-count remains an accepted alias"
+    (each [_ rule (ipairs ["child-count" "form-child-count"])]
+      (let [rules  {}
+            _      (tset rules rule [{:severity   "error"
+                                      :applies-to {:forms ["testing"]}
+                                      :options    {:children  ["is"]
+                                                   :max-count 1}
+                                      :exclusions []}])
+            result (validation {:lint {:rules rules}})]
+        (is (. result :ok)))))
+
+  (testing "former design rule names validate under lint rules"
+    (let [instance {:severity   "warning"
+                    :applies-to {:forms ["if"]}
+                    :options    {}
+                    :exclusions []}
+          result   (validation {:lint {:rules {:function-shape   [instance]
+                                               :if-branch-call   [instance]
+                                               :if-without-else  [instance]
+                                               :nested-forms     [instance]
+                                               :leading-bindings [instance]
+                                               :no-mutation      [instance]}}})]
+      (is (and (. result :ok)
+               (. result :value)
+               (= nil (. result :value :design)))))))

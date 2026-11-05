@@ -9,6 +9,7 @@
         "required-form"    ["forms"]
         "module-style"     ["module" "forms"]
         "module-import"    ["mode" "modules" "exempt-files" "module" "binding" "forms"]
+        "child-count"      ["children" "max-count" "min-count" "nil-count"]
         "form-child-count" ["children" "max-count"]
         "if-branch-call"   ["forms"]
         "if-without-else"  ["forms" "nil-else"]
@@ -27,6 +28,7 @@
         "required-form"    []
         "module-style"     []
         "module-import"    ["mode"]
+        "child-count"      []
         "form-child-count" ["children" "max-count"]
         "if-branch-call"   []
         "if-without-else"  []
@@ -49,6 +51,8 @@
         "exempt-files"   :strings
         "children"       :strings
         "max-count"      :positive-integer
+        "min-count"      :non-negative-integer
+        "nil-count"      :boolean
         "nil-else"       :boolean
         "clauses"        :strings
         "bindings"       :strings
@@ -103,6 +107,15 @@
 
 
 
+(defn- non-negative-integer?
+
+  [value]
+  (and (= (type value) :number)
+       (= value (math.floor value))
+       (>= value 0)))
+
+
+
 (defn- strings-step
 
   [value index]
@@ -122,18 +135,20 @@
 
 
 (local validators
-       {:string           (fn [value] (= (type value) :string))
+       {:string               (fn [value] (= (type value) :string))
 
 
-        :strings          strings?
-        :positive-integer positive-integer?
-        :boolean          boolean?})
+        :strings              strings?
+        :positive-integer     positive-integer?
+        :non-negative-integer non-negative-integer?
+        :boolean              boolean?})
 
 (local type-messages
-       {:strings          " must be a list of strings"
-        :positive-integer " must be a positive integer"
-        :boolean          " must be a boolean"
-        :string           " must be a string"})
+       {:strings              " must be a list of strings"
+        :positive-integer     " must be a positive integer"
+        :non-negative-integer " must be a non-negative integer"
+        :boolean              " must be a boolean"
+        :string               " must be a string"})
 
 (defn- option-type-valid?
 

@@ -38,7 +38,8 @@
 (defn- normalized-form
 
   [finding]
-  (if (= finding.rule "form-child-count")
+  (if (or (= finding.rule "form-child-count")
+          (= finding.rule "child-count"))
     (normalized-testing-form finding)
     (normalized-branch-form finding)))
 
@@ -229,22 +230,48 @@
 
 
 
+(defn- context-design-rules
+
+  [context]
+  (let [value  (. context :design)
+        nested (and context.rules (. context.rules :design))]
+    (or (and value (. value :rules))
+        value
+        (and nested (. nested :rules))
+        nested
+        {})))
+
+
+
+(defn- context-lint-rules
+
+  [context]
+  (let [rules (core.merge (or (. context :rules) {}))]
+    (core.assoc rules :design nil)))
+
+
+
+(defn- merge-context-rules
+
+  [rules design]
+  (let [merged (core.merge rules)]
+    (each [rule entries (pairs design)]
+      (when (= (. merged rule) nil)
+        (tset merged rule entries)))
+    (if (and (. merged "form-child-count")
+             (. merged "child-count"))
+      (core.assoc merged "form-child-count" nil)
+      merged)))
+
+
+
 (defn- context-lint-value
 
   [context]
-  (let [lint-rules   {}
-        design-rules (let [design (. context :design)]
-                       (or (and design (. design :rules))
-                           design
-                           {}))]
-    (each [rule entries (pairs (or (. context :rules) {}))]
-      (if (= rule "design")
-        (each [design-rule design-entries (pairs (or (. entries :rules) entries))]
-          (tset design-rules design-rule design-entries))
-        (if (= (registry.rule-domain rule) :design)
-          (tset design-rules rule entries)
-          (tset lint-rules rule entries))))
-    {:rules lint-rules :design design-rules}))
+  (let [rules  (merge-context-rules (context-lint-rules context)
+                                    (context-design-rules context))
+        design (context-design-rules context)]
+    {:rules rules :design (and context.design {:rules design})}))
 
 
 
@@ -303,8 +330,7 @@
 
   [context]
   (let [value (context-lint-value context)]
-    (or (config-lint.lint-error {:rules value.rules})
-        (config-lint.design-error {:rules value.design}))))
+    (config-lint.lint-error {:rules value.rules})))
 
 
 

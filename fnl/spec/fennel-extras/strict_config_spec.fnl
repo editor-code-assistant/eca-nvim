@@ -235,15 +235,19 @@
                         "required-form"
                         "module-style"
                         "module-import"
-                        "form-child-count"
+                        "child-count"
                         "control-layout"
                         "unused-and-or"
                         "multiline-layout"
                         "file-size"
-                        "call-data-arg"]
-          design-names ["if-branch-call"
+                        "call-data-arg"
+                        "if-branch-call"
                         "if-without-else"
-                        "function-shape"]]
+                        "function-shape"
+                        "nested-forms"
+                        "leading-bindings"
+                        "no-mutation"]
+          design-names []]
       (is (and loaded
                (. (. loaded :format) :indent-width)
                (. (. loaded :workspace) :extensions)
@@ -253,6 +257,5 @@
                (. (. loaded :format) :parser)
                (. (. loaded :format) :alignment)
                (. loaded :lint)
-               (. loaded :design)
-               (complete-rules? lint-rules lint-names 1)
-               (complete-rules? design-rules design-names 1))))))
+               (= nil (. loaded :design))
+               (complete-rules? lint-rules lint-names 1))))))

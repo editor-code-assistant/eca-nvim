@@ -356,9 +356,21 @@ local function canonical_exclusions(rules)
   return result
 end
 local function valid_lint_policy(cfg)
-  local rules = ((cfg.lint and cfg.lint.rules) or {})
+  local rules = core.merge(((cfg.lint and cfg.lint.rules) or {}))
   local design = (cfg.design and cfg.design.rules)
-  return {rules = rules, design = design, exclusions = core.concat(canonical_exclusions(rules), canonical_exclusions((design or {})))}
+  for rule, instances in pairs((design or {})) do
+    if (rules[rule] == nil) then
+      rules[rule] = instances
+    else
+    end
+  end
+  local normalized
+  if (rules["form-child-count"] and rules["child-count"]) then
+    normalized = core.assoc(rules, "form-child-count", nil)
+  else
+    normalized = rules
+  end
+  return {rules = normalized, design = (cfg.design and {rules = design}), exclusions = canonical_exclusions(normalized)}
 end
 local function lint_policy_valid(valid)
   if ((valid.lint == nil) and (valid.design == nil)) then
@@ -468,10 +480,10 @@ do
       local text = file:read("*a")
       file:close()
       local ok, parsed_or_error
-      local function _54_()
+      local function _56_()
         return parse_string(text)
       end
-      ok, parsed_or_error = pcall(_54_)
+      ok, parsed_or_error = pcall(_56_)
       if not ok then
         return nil, parsed_or_error
       else

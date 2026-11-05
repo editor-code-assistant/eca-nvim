@@ -78,7 +78,7 @@
                        :applies-to {:files ["^fennel-extras/"]}
                        :options    {:max-code-lines 300}
                        :exclusions []}]
-   :form-child-count [{:severity   :error
+   :child-count      [{:severity   :error
                        :applies-to {:files ["^spec/"]
                                     :forms ["testing"]}
                        :options    {:children  ["is"]
@@ -121,10 +121,8 @@
    :unused-and-or    [{:severity   :warning
                        :applies-to {:forms ["and" "or"]}
                        :options    {}
-                       :exclusions []}]}}
- :design
- {:rules
-  {:function-shape   [{:severity   :warning
+                       :exclusions []}]
+   :function-shape   [{:severity   :warning
                        :applies-to {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
                        :options    {}
                        :exclusions []}]

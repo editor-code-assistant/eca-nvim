@@ -35,4 +35,68 @@ do
   _2amodule_2a["form-child-count-finding"] = form_child_count_finding0
   form_child_count_finding = _2amodule_2a["form-child-count-finding"]
 end
+local function nil_literal_3f(node)
+  return (node and (node.kind == "symbol") and (node.text == "nil"))
+end
+local function contains_3f(items, target, index)
+  if (index > #items) then
+    return false
+  else
+    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+  end
+end
+local function if_direct_count(children)
+  if ((#children - 2) > 0) then
+    return (#children - 2)
+  else
+    return 0
+  end
+end
+local function non_if_direct_count(children)
+  if ((#children - 1) > 0) then
+    return (#children - 1)
+  else
+    return 0
+  end
+end
+local function direct_count(node)
+  local children = meaningful_children(node)
+  if (list_head(node) == "if") then
+    return if_direct_count(children)
+  else
+    return non_if_direct_count(children)
+  end
+end
+local function direct_child_valid_3f(node, options)
+  local children = meaningful_children(node)
+  local head = list_head(node)
+  local missing = ((head == "if") and (#children == 3))
+  local multi_clause = ((head == "if") and (#children > 4))
+  local nil_else = ((head == "if") and (#children == 4) and nil_literal_3f(children[4]))
+  local count = direct_count(node)
+  local min = options["min-count"]
+  local max = options["max-count"]
+  return (not missing and not multi_clause and (not nil_else or options["nil-count"]) and (count >= min) and (count <= max))
+end
+local function child_count_invalid_3f(node, options)
+  if options.children then
+    return (count_child_forms(node, options.children, 1, 0) ~= options["max-count"])
+  else
+    return not direct_child_valid_3f(node, options)
+  end
+end
+local child_count_finding
+do
+  local function child_count_finding0(findings, path, form, policy, node)
+    local options = rule_options(policy, "child-count")
+    local form_applies = ((#(options.forms or {}) == 0) or contains_3f(options.forms, list_head(node), 1))
+    if (form_applies and enabled_3f(policy, "child-count") and child_count_invalid_3f(node, options)) then
+      return table.insert(findings, finding(path, form, rule_severity(policy, "child-count"), "child-count", "form has an invalid child count", node))
+    else
+      return nil
+    end
+  end
+  _2amodule_2a["child-count-finding"] = child_count_finding0
+  child_count_finding = _2amodule_2a["child-count-finding"]
+end
 return nil

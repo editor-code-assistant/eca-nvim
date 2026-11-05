@@ -54,17 +54,18 @@
 
 (deftest lint-design-separation
 
-  (testing "structural rule keys are absent from lint rules"
-    (each [name (ipairs ["function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])]
+  (testing "structural rule keys are accepted under lint rules"
+    (each [_ name (ipairs ["function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])]
       (let [instance {:severity   "warning"
-                      :applies-to {}
-                      :options    {:forms ["if"]}
+                      :applies-to {:forms ["if"]}
+                      :options    {}
                       :exclusions []}
             rules    {}
             _        (tset rules name [instance])
             result   (validation {:lint {:rules rules}})]
-        (is (and (not (. result :ok))
-                 (= (.. "unknown lint rule: " name) (error-message result))))))))
+        (is (and (. result :ok)
+                 (. result :value)
+                 (= nil (. result :value :design))))))))
 
 (deftest design-finding-compatibility
 

@@ -54,20 +54,20 @@ end
 require("plenary.busted").describe("design-configuration", _4_)
 local function _7_()
   local function _8_()
-    for name in ipairs({"function-shape", "if-branch-call", "if-without-else", "nested-forms", "leading-bindings", "no-mutation"}) do
-      local instance = {severity = "warning", ["applies-to"] = {}, options = {forms = {"if"}}, exclusions = {}}
+    for _, name in ipairs({"function-shape", "if-branch-call", "if-without-else", "nested-forms", "leading-bindings", "no-mutation"}) do
+      local instance = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}
       local rules0 = {}
-      local _
+      local _0
       rules0[name] = {instance}
-      _ = nil
+      _0 = nil
       local result = validation({lint = {rules = rules0}})
       local assert_28_auto = require("luassert")
-      local value_29_auto = (not result.ok and (("unknown lint rule: " .. name) == error_message(result)))
-      assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= (.. \"unknown lint rule: \" name) (error-message result)))")
+      local value_29_auto = (result.ok and result.value and (nil == result.value.design))
+      assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\") (= nil (. result \"value\" \"design\")))")
     end
     return nil
   end
-  return require("plenary.busted").it("structural rule keys are absent from lint rules", _8_)
+  return require("plenary.busted").it("structural rule keys are accepted under lint rules", _8_)
 end
 require("plenary.busted").describe("lint-design-separation", _7_)
 local function _9_()

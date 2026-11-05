@@ -1545,11 +1545,11 @@
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "if-without-else"]
             ["fnl/fennel-extras/lint/rules/spec.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint.fnl" "function-shape"]
             ["fnl/fennel-extras/lint.fnl" "function-shape"]
             ["fnl/fennel-extras/lint.fnl" "function-shape"]]
            (. (repo-scenario nil) :lint-files))))

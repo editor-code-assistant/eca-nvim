@@ -192,11 +192,11 @@ local function _22_()
     end
     local lint_rules = (loaded and loaded.lint and loaded.lint.rules)
     local design_rules = (loaded and loaded.design and loaded.design.rules)
-    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg"}
-    local design_names = {"if-branch-call", "if-without-else", "function-shape"}
+    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg", "if-branch-call", "if-without-else", "function-shape", "nested-forms", "leading-bindings", "no-mutation"}
+    local design_names = {}
     local assert_28_auto = require("luassert")
-    local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.indents and loaded.format["format-as"] and loaded.format.parser and loaded.format.alignment and loaded.lint and loaded.design and complete_rules_3f(lint_rules, lint_names, 1) and complete_rules_3f(design_rules, design_names, 1))
-    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"indents\") (. (. loaded \"format\") \"format-as\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (. loaded \"design\") (complete-rules? lint-rules lint-names 1) (complete-rules? design-rules design-names 1))")
+    local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.indents and loaded.format["format-as"] and loaded.format.parser and loaded.format.alignment and loaded.lint and (nil == loaded.design) and complete_rules_3f(lint_rules, lint_names, 1))
+    assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"indents\") (. (. loaded \"format\") \"format-as\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (= nil (. loaded \"design\")) (complete-rules? lint-rules lint-names 1))")
     return true
   end
   return require("plenary.busted").it("the repository config loads with complete format and lint settings", _23_)

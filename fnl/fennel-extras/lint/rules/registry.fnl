@@ -3,9 +3,10 @@
 (module fennel-extras.lint.rules.registry)
 
 (local core (require :eca.nfnl.core))
-(local lint-rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg"])
+(local lint-rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg" "function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])
 (local design-rule-name-list ["function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])
-(local rule-name-list (core.concat lint-rule-name-list ["function-shape" "if-branch-call" "if-without-else"]))
+(local rule-name-list lint-rule-name-list)
+(local default-rule-name-list (core.concat ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg"] ["function-shape" "if-branch-call" "if-without-else"]))
 (local ast (require :fennel-extras.lint.rules.ast))
 (local options (require :fennel-extras.lint.rules.options))
 (local rule-properties {:module-style {:scope :file} :required-form {:scope :file} :file-size {:scope :file}})
@@ -16,6 +17,7 @@
         "module-import"    ["module" "modules" "forms"]
         "if-branch-call"   ["forms"]
         "if-without-else"  ["forms"]
+        "child-count"      ["forms"]
         "control-layout"   ["forms"]
         "unused-and-or"    ["forms"]
         "function-shape"   ["forms"]
@@ -40,7 +42,7 @@
 
   []
   (let [result {}]
-    (each [_ rule (ipairs rule-name-list)]
+    (each [_ rule (ipairs default-rule-name-list)]
       (tset result rule "off"))
     result))
 
@@ -70,10 +72,10 @@
 (defn rule-domain
 
   [rule]
-  (if (accumulate [found false _ name (ipairs design-rule-name-list)]
+  (if (accumulate [found false _ name (ipairs lint-rule-name-list)]
         (or found (= name rule)))
-    :design
-    :lint))
+    :lint
+    :design))
 
 
 
@@ -116,20 +118,31 @@
 
 
 
+(defn- append-legacy-child-count
+
+  [result lint-rules]
+  (when (and (. lint-rules "form-child-count")
+             (= (. lint-rules "child-count") nil))
+    (append-instances result "form-child-count" (. lint-rules "form-child-count")))
+  result)
+
+
+
 (defn instances
 
   [policy]
   (let [lint-rules   (or (and policy policy.rules)
                          (and policy (not policy.rules) policy)
                          {})
-        design-rules (or (and policy policy.design)
-                         lint-rules
-                         {})
+        design-rules (or (and policy policy.design) {})
         result       []]
     (each [_ rule (ipairs lint-rule-name-list)]
       (append-instances result rule (or (. lint-rules rule) [])))
     (each [_ rule (ipairs design-rule-name-list)]
-      (append-instances result rule (or (. design-rules rule) [])))
+      (when (and (. design-rules rule)
+                 (= (. lint-rules rule) nil))
+        (append-instances result rule (. design-rules rule))))
+    (append-legacy-child-count result lint-rules)
     result))
 
 

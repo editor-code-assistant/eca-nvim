@@ -169,7 +169,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :exclusions []}]}}}
 ```
 
-The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, `:symlinks`, and `:config`. `:config` defaults to `false`, excluding the discovered `.fnl-extras.fnl` from implicit format and lint scans; set it to `true` to include that discovered file. Explicitly naming the config file always includes it, while naming other files does not add it. `:lint` contains direct policy rules. Structural and idiomatic rules belong under `:design`, using the same rule-instance schema and finding/exclusion pipeline as lint. The moved design rules are `function-shape`, `if-branch-call`, `if-without-else`, and `no-mutation`; generic `nested-forms` and `leading-bindings` evaluators are also available there.
+The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, `:symlinks`, and `:config`. `:config` defaults to `false`, excluding the discovered `.fnl-extras.fnl` from implicit format and lint scans; set it to `true` to include that discovered file. Explicitly naming the config file always includes it, while naming other files does not add it. `:lint :rules` is canonical for all lint, structural, and idiomatic rules. Legacy top-level `:design :rules` remains accepted and is normalized into lint rules; when both sections define a rule, the canonical lint entry wins. The moved design rules are `function-shape`, `if-branch-call`, `if-without-else`, `no-mutation`, `nested-forms`, and `leading-bindings`.
 
 For example:
 
@@ -219,7 +219,7 @@ The lint rules are:
 | `required-form` | `:forms` |
 | `module-style` | `:module`, `:forms` |
 | `module-import` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
-| `form-child-count` | `:children`, `:max-count` |
+| `child-count` | named mode: `:children`, `:max-count`; direct mode: `:min-count`, `:max-count`, `:nil-count` |
 | `control-layout` | `:forms` |
 | `unused-and-or` | `:forms` |
 | `multiline-layout` | `:clauses`, `:bindings` |
@@ -228,7 +228,7 @@ The lint rules are:
 
 #### Design rule options
 
-Design uses the same instance shape. Its structural rules are `function-shape` (`:forms`, optional `:max-depth`), `if-branch-call` (`:forms`), `if-without-else` (`:forms`, `:nil-else`), `no-mutation` (`:forms`), `nested-forms` (`:forms`, `:max-depth`), and `leading-bindings` (`:forms`).
+Legacy design rules use the same instance shape, but canonical configuration places them under `:lint :rules`: `function-shape` (`:forms`, optional `:max-depth`), `if-branch-call` (`:forms`), `if-without-else` (`:forms`, `:nil-else`), `no-mutation` (`:forms`), `nested-forms` (`:forms`, `:max-depth`), and `leading-bindings` (`:forms`). `form-child-count` remains an accepted compatibility alias for `child-count`.
 
 #### Rule options
 

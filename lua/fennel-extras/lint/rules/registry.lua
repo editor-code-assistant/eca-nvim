@@ -6,19 +6,20 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
 local core = require("eca.nfnl.core")
-local lint_rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg"}
+local lint_rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg", "function-shape", "if-branch-call", "if-without-else", "nested-forms", "leading-bindings", "no-mutation"}
 local design_rule_name_list = {"function-shape", "if-branch-call", "if-without-else", "nested-forms", "leading-bindings", "no-mutation"}
-local rule_name_list = core.concat(lint_rule_name_list, {"function-shape", "if-branch-call", "if-without-else"})
+local rule_name_list = lint_rule_name_list
+local default_rule_name_list = core.concat({"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg"}, {"function-shape", "if-branch-call", "if-without-else"})
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
 local rule_properties = {["module-style"] = {scope = "file"}, ["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
-local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"module", "modules", "forms"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
+local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"module", "modules", "forms"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms"}, ["child-count"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
 local required_semantic_applies_to = {["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["if-branch-call"] = {"forms"}, ["if-without-else"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
 local defaults
 do
   local function defaults0()
     local result = {}
-    for _, rule in ipairs(rule_name_list) do
+    for _, rule in ipairs(default_rule_name_list) do
       result[rule] = "off"
     end
     return result
@@ -56,15 +57,15 @@ do
     local _1_
     do
       local found = false
-      for _, name in ipairs(design_rule_name_list) do
+      for _, name in ipairs(lint_rule_name_list) do
         found = (found or (name == rule))
       end
       _1_ = found
     end
     if _1_ then
-      return "design"
-    else
       return "lint"
+    else
+      return "design"
     end
   end
   _2amodule_2a["rule-domain"] = rule_domain0
@@ -109,18 +110,29 @@ local function append_instances(result, rule, instances)
   end
   return result
 end
+local function append_legacy_child_count(result, lint_rules)
+  if (lint_rules["form-child-count"] and (lint_rules["child-count"] == nil)) then
+    append_instances(result, "form-child-count", lint_rules["form-child-count"])
+  else
+  end
+  return result
+end
 local instances
 do
   local function instances0(policy)
     local lint_rules = ((policy and policy.rules) or (policy and not policy.rules and policy) or {})
-    local design_rules = ((policy and policy.design) or lint_rules or {})
+    local design_rules = ((policy and policy.design) or {})
     local result = {}
     for _, rule in ipairs(lint_rule_name_list) do
       append_instances(result, rule, (lint_rules[rule] or {}))
     end
     for _, rule in ipairs(design_rule_name_list) do
-      append_instances(result, rule, (design_rules[rule] or {}))
+      if (design_rules[rule] and (lint_rules[rule] == nil)) then
+        append_instances(result, rule, design_rules[rule])
+      else
+      end
     end
+    append_legacy_child_count(result, lint_rules)
     return result
   end
   _2amodule_2a["instances"] = instances0
@@ -198,15 +210,15 @@ do
   evaluator_policy = _2amodule_2a["evaluator-policy"]
 end
 local function matches_3f(matcher, pattern, value)
-  local and_12_ = pattern and value
-  if and_12_ then
+  local and_14_ = pattern and value
+  if and_14_ then
     if matcher then
-      and_12_ = matcher(pattern, value)
+      and_14_ = matcher(pattern, value)
     else
-      and_12_ = (vim.fn.match(value, pattern) >= 0)
+      and_14_ = (vim.fn.match(value, pattern) >= 0)
     end
   end
-  return and_12_
+  return and_14_
 end
 local function any_match_3f(items, matcher, value)
   local result = false
