@@ -192,7 +192,7 @@ local function _22_()
     end
     local lint_rules = (loaded and loaded.lint and loaded.lint.rules)
     local design_rules = (loaded and loaded.design and loaded.design.rules)
-    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg", "if-branch-call", "if-without-else", "function-shape", "nested-forms", "leading-bindings", "no-mutation"}
+    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg", "if-branch-call", "function-shape", "nested-forms", "leading-bindings", "no-mutation"}
     local design_names = {}
     local assert_28_auto = require("luassert")
     local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.indents and loaded.format["format-as"] and loaded.format.parser and loaded.format.alignment and loaded.lint and (nil == loaded.design) and complete_rules_3f(lint_rules, lint_names, 1))

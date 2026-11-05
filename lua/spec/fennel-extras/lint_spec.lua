@@ -9,14 +9,14 @@ local function load_lint()
     return {["module-missing"] = true}
   end
 end
-local all_severities = {["module-style"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["required-form"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["module-import"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["forbidden-form"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["form-child-count"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["function-shape"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["file-size"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["unused-and-or"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["call-data-arg"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}
+local all_severities = {["module-style"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["required-form"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["module-import"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["forbidden-form"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["form-child-count"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["function-shape"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["file-size"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["unused-and-or"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["call-data-arg"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}
 local matcher = require("fennel-extras.cli.matcher")
 local registry = require("fennel-extras.lint.rules.registry")
 local source_rules = {["module-style"] = true, ["forbidden-form"] = true, ["file-size"] = true, ["call-data-arg"] = true}
 local spec_rules = {["module-import"] = true, ["required-form"] = true, ["forbidden-form"] = true, ["form-child-count"] = true}
-local all_options = {["module-style"] = {module = "eca.nfnl.macros.aniseed", forms = {"module", "def", "defn", "defn-"}}, ["required-form"] = {forms = {"module"}}, ["module-import"] = {mode = "forbid", modules = {"plenary.busted", "luassert"}, ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, ["forbidden-form"] = {forms = {"var", "set", "while"}}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["if-branch-call"] = {forms = {"if"}}, ["if-without-else"] = {forms = {"if"}, ["nil-else"] = true}, ["control-layout"] = {forms = {"if", "when", "and", "or", "case", "match"}}, ["multiline-layout"] = {clauses = {"case", "match", "case-try", "match-try"}, bindings = {"let", "when-let", "if-let", "with-open"}}, ["function-shape"] = {forms = {"defn", "defn-", "fn", "lambda", "\206\187"}}, ["file-size"] = {["max-code-lines"] = 300}, ["unused-and-or"] = {forms = {"and", "or"}}, ["call-data-arg"] = {forms = {}}}
-local canonical_selectors = {["module-style"] = {modules = "eca.nfnl.macros.aniseed", forms = {"module", "def", "defn", "defn-"}}, ["required-form"] = {forms = {"module"}}, ["if-branch-call"] = {forms = {"if"}}, ["if-without-else"] = {forms = {"if"}}, ["control-layout"] = {forms = {"if", "when", "and", "or", "case", "match"}}, ["function-shape"] = {forms = {"defn", "defn-", "fn", "lambda", "\206\187"}}, ["unused-and-or"] = {forms = {"and", "or"}}, ["call-data-arg"] = {forms = {}}}
-local canonical_options = {["if-without-else"] = {["nil-else"] = true}, ["file-size"] = {["max-code-lines"] = 300}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["multiline-layout"] = {clauses = {"case", "match", "case-try", "match-try"}, bindings = {"let", "when-let", "if-let", "with-open"}}}
+local all_options = {["module-style"] = {module = "eca.nfnl.macros.aniseed", forms = {"module", "def", "defn", "defn-"}}, ["required-form"] = {forms = {"module"}}, ["module-import"] = {mode = "forbid", modules = {"plenary.busted", "luassert"}, ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, ["forbidden-form"] = {forms = {"var", "set", "while"}}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["if-branch-call"] = {forms = {"if"}}, ["control-layout"] = {forms = {"if", "when", "and", "or", "case", "match"}}, ["multiline-layout"] = {clauses = {"case", "match", "case-try", "match-try"}, bindings = {"let", "when-let", "if-let", "with-open"}}, ["function-shape"] = {forms = {"defn", "defn-", "fn", "lambda", "\206\187"}}, ["file-size"] = {["max-code-lines"] = 300}, ["unused-and-or"] = {forms = {"and", "or"}}, ["call-data-arg"] = {forms = {}}}
+local canonical_selectors = {["module-style"] = {modules = "eca.nfnl.macros.aniseed", forms = {"module", "def", "defn", "defn-"}}, ["required-form"] = {forms = {"module"}}, ["if-branch-call"] = {forms = {"if"}}, ["control-layout"] = {forms = {"if", "when", "and", "or", "case", "match"}}, ["function-shape"] = {forms = {"defn", "defn-", "fn", "lambda", "\206\187"}}, ["unused-and-or"] = {forms = {"and", "or"}}, ["call-data-arg"] = {forms = {}}}
+local canonical_options = {["file-size"] = {["max-code-lines"] = 300}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["multiline-layout"] = {clauses = {"case", "match", "case-try", "match-try"}, bindings = {"let", "when-let", "if-let", "with-open"}}}
 local function canonical_rule_data(rule, options)
   local clean = vim.deepcopy((options or {}))
   local applies = vim.deepcopy((canonical_selectors[rule] or {}))
@@ -1477,7 +1477,7 @@ local function _184_()
   require("plenary.busted").it("project Fennel files have the approved rule counts", _185_)
   local function _186_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {{"fnl/fennel-extras/lint/exclusion.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "multiline-layout"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "multiline-layout"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "if-without-else"}, {"fnl/fennel-extras/lint/rules/spec.fnl", "multiline-layout"}, {"fnl/fennel-extras/lint/rules.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules.fnl", "function-shape"}, {"fnl/fennel-extras/lint.fnl", "function-shape"}, {"fnl/fennel-extras/lint.fnl", "function-shape"}}
+    local expected_6_auto = {{"fnl/fennel-extras/lint/exclusion.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "multiline-layout"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/module.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "multiline-layout"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/registry.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules/spec.fnl", "multiline-layout"}, {"fnl/fennel-extras/lint/rules.fnl", "function-shape"}, {"fnl/fennel-extras/lint/rules.fnl", "function-shape"}, {"fnl/fennel-extras/lint.fnl", "function-shape"}, {"fnl/fennel-extras/lint.fnl", "function-shape"}}
     local actual_7_auto = repo_scenario(nil)["lint-files"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -1532,7 +1532,7 @@ local function _190_()
   require("plenary.busted").it("lint check reports no findings when rules are omitted", _191_)
   local function _192_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = 13
+    local expected_6_auto = 12
     local actual_7_auto = policy_size(all_enabled_policy())
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -1619,30 +1619,128 @@ local function _200_()
 end
 require("plenary.busted").it("a code exclusion matches text on an interior line of a multiline flagged branch", _200_)
 local function _201_()
-  local function _202_()
+  local source = read_source("fnl/spec/eca/macros.fnlm")
+  local result = check_source_with_matcher(source, "fnl/spec/eca/macros.fnlm", {["child-count"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["nil-count"] = false}, exclusions = {}}}}, {{rule = "child-count", code = "^[(]if has-message", reason = "syntax-quoted AST children are structural data, not semantic if branches"}})
+  local summary
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, finding in ipairs(result) do
+      local val_28_ = {finding.line, finding.code}
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    summary = tbl_26_
+  end
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {}
+  local actual_7_auto
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, finding in ipairs(summary) do
+      local val_28_
+      if (finding[1] == 17) then
+        val_28_ = finding
+      else
+        val_28_ = nil
+      end
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    actual_7_auto = tbl_26_
+  end
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("narrows syntax-quoted if exclusion without hiding executable if findings", _201_)
+local function _205_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {}
+  local actual_7_auto = finding_summary(check_source_with_matcher("(defn run [] (if ok (do a b) c))", "fnl/legacy/a.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["function-shape"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-branch-call", pattern = "^fnl/legacy/"}}))
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("matches an exclusion pattern against the repository-relative path", _205_)
+local function _206_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = 1
+  local actual_7_auto = #check_source_with_matcher("(defn run [] (if one (do a b) c))\n\n(defn run [] (if two (do a b) c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["function-shape"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-branch-call", line = 1}})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("matches a single finding line", _206_)
+local function _207_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = 1
+  local actual_7_auto = #check_source_with_matcher("(defn run [] (if one (do a b) c))\n\n(defn run [] (if two (do a b) c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["function-shape"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-branch-call", lines = {from = 1, to = 2}}})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("matches an intersecting line range", _207_)
+local function _208_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {}
+  local actual_7_auto = finding_summary(check_source_with_matcher("(if ok (do a b) c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["function-shape"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-branch-call", code = "do"}}))
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("matches code in the finding form", _208_)
+local function _209_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {}
+  local actual_7_auto = finding_summary(check_source_with_matcher("(if ok (do a b) c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["function-shape"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-branch-call", pattern = "app[.]fnl", line = 1}}))
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("combines path and line selectors with AND semantics", _209_)
+local function _210_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {}
+  local actual_7_auto = finding_summary(check_source_with_matcher("(if ok (do a b) c)", "fnl/app.fnl", {["module-style"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-branch-call"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{pattern = "app[.]fnl", line = 1}}))
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("a general exclusion without a rule applies to every rule", _210_)
+local function _211_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = 1
+  local actual_7_auto = #check_source_with_matcher("(local value 1)", "fnl/app.fnl", {["module-style"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "module-style", code = "local"}})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("a code selector does not match a file-level finding", _211_)
+local function _212_()
+  local function _213_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = check_context("(if ok (do a b) c)", {path = "fnl/app.fnl", rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, exclusions = {{rule = "if-branch-call", form = "fnl/app.fnl > top#1 > if#1 > then", reason = "intentional"}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("direct lint check suppresses a top-level branch using the printed normalized identity", _202_)
-  local function _203_()
+  require("plenary.busted").it("direct lint check suppresses a top-level branch using the printed normalized identity", _213_)
+  local function _214_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = check_context("(testing \"two\" (is true) (is true))", {path = "fnl/spec/app_spec.fnl", rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["module-import"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, exclusions = {{rule = "form-child-count", form = "fnl/spec/app_spec.fnl > top#1 > testing#1", reason = "intentional"}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("direct lint check suppresses top-level testing using the printed normalized identity", _203_)
+  return require("plenary.busted").it("direct lint check suppresses top-level testing using the printed normalized identity", _214_)
 end
-require("plenary.busted").describe("normalized-exclusion-identities", _201_)
+require("plenary.busted").describe("normalized-exclusion-identities", _212_)
 local function forbidden_form_summary(source, path, rules)
   local result = findings_for_rule(source, path, "forbidden-form", rules)
   if (result["module-missing"] or result["value-nil?"]) then
     return result
   else
-    local _204_
+    local _215_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -1654,9 +1752,9 @@ local function forbidden_form_summary(source, path, rules)
         else
         end
       end
-      _204_ = tbl_26_
+      _215_ = tbl_26_
     end
-    local _206_
+    local _217_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -1668,9 +1766,9 @@ local function forbidden_form_summary(source, path, rules)
         else
         end
       end
-      _206_ = tbl_26_
+      _217_ = tbl_26_
     end
-    return {count = #result, rules = _204_, severities = _206_}
+    return {count = #result, rules = _215_, severities = _217_}
   end
 end
 local function forbidden_form_forms(source, path, rules)
@@ -1696,48 +1794,48 @@ local function forbidden_form_forms(source, path, rules)
     return tbl_26_
   end
 end
-local function _212_()
-  local function _213_()
+local function _223_()
+  local function _224_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 1, rules = {"forbidden-form"}, severities = {"warning"}}
     local actual_7_auto = forbidden_form_summary("(var x 1)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags var in a source file as one warning", _213_)
-  local function _214_()
+  require("plenary.busted").it("flags var in a source file as one warning", _224_)
+  local function _225_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 1, rules = {"forbidden-form"}, severities = {"warning"}}
     local actual_7_auto = forbidden_form_summary("(set x 2)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags set in a source file as one warning", _214_)
-  local function _215_()
+  require("plenary.busted").it("flags set in a source file as one warning", _225_)
+  local function _226_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 1, rules = {"forbidden-form"}, severities = {"warning"}}
     local actual_7_auto = forbidden_form_summary("(set state.x 2)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a field set in a source file as one warning", _215_)
-  local function _216_()
+  require("plenary.busted").it("flags a field set in a source file as one warning", _226_)
+  local function _227_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 1, rules = {"forbidden-form"}, severities = {"warning"}}
     local actual_7_auto = forbidden_form_summary("(while ok (g))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags while in a source file as one warning", _216_)
-  local function _217_()
+  require("plenary.busted").it("flags while in a source file as one warning", _227_)
+  local function _228_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 1, rules = {"forbidden-form"}, severities = {"warning"}}
     local actual_7_auto = forbidden_form_summary("(while ok (set x 1))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags every mutation form in a nested while and set", _217_)
-  local function _218_()
+  require("plenary.busted").it("flags every mutation form in a nested while and set", _228_)
+  local function _229_()
     local forms = forbidden_form_forms("(defn f [] (let [a (set x 1)] (set y 2)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
@@ -1745,8 +1843,8 @@ local function _212_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("gives nested mutation findings distinct form identities", _218_)
-  local function _219_()
+  require("plenary.busted").it("gives nested mutation findings distinct form identities", _229_)
+  local function _230_()
     local source = "(defn f [] (let [a (set x 1)] (set y 2)))"
     local first_forms = forbidden_form_forms(source, "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     local second_forms = forbidden_form_forms(source, "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
@@ -1756,274 +1854,89 @@ local function _212_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("keeps nested mutation form identities stable across repeated linting", _219_)
-  local function _220_()
+  require("plenary.busted").it("keeps nested mutation form identities stable across repeated linting", _230_)
+  local function _231_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #forbidden_form_forms("(macro m [] `(foo ,(set x 1)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("lints mutation in unquoted quasiquote code", _220_)
-  local function _221_()
+  require("plenary.busted").it("lints mutation in unquoted quasiquote code", _231_)
+  local function _232_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #forbidden_form_forms("`(set x ,y)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not lint mutation in quasiquoted data", _221_)
-  local function _222_()
+  require("plenary.busted").it("does not lint mutation in quasiquoted data", _232_)
+  local function _233_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = forbidden_form_summary("(defn f [] `(outer ,(set x 1) `(set y ,(set z 2))))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}).count
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("lints only the outer unquote in nested quasiquote data", _222_)
-  local function _223_()
+  require("plenary.busted").it("lints only the outer unquote in nested quasiquote data", _233_)
+  local function _234_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = forbidden_form_summary("(defn f [] `(a `(b ,,(set x 1))))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}).count
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("lints a double-unquoted mutation at executable depth", _223_)
-  local function _224_()
+  require("plenary.busted").it("lints a double-unquoted mutation at executable depth", _234_)
+  local function _235_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = forbidden_form_summary("(defn f [] '(foo ,(set x 1)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}).count
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not lint mutation inside plain quote", _224_)
-  local function _225_()
+  require("plenary.busted").it("does not lint mutation inside plain quote", _235_)
+  local function _236_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 0, rules = {}, severities = {}}
     local actual_7_auto = forbidden_form_summary("(var x 1) (set x 2) (while ok (g))", "fnl/spec/app_spec.fnl", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag mutations in a spec file", _225_)
-  local function _226_()
+  require("plenary.busted").it("does not flag mutations in a spec file", _236_)
+  local function _237_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 1, rules = {"forbidden-form"}, severities = {"warning"}}
     local actual_7_auto = forbidden_form_summary("(local x 1) (tset t :k v) (table.insert xs 1) '(set x 1) (set-foo 1)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag non-mutation forms or quoted mutation data", _226_)
-  local function _227_()
+  require("plenary.busted").it("does not flag non-mutation forms or quoted mutation data", _237_)
+  local function _238_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 1, rules = {"forbidden-form"}, severities = {"error"}}
     local actual_7_auto = forbidden_form_summary("(var x 1)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["forbidden-form"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses error severity when configured", _227_)
-  local function _228_()
+  require("plenary.busted").it("uses error severity when configured", _238_)
+  local function _239_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {count = 0, rules = {}, severities = {}}
     local actual_7_auto = forbidden_form_summary("(var x 1)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["forbidden-form"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not report when disabled", _228_)
-  local function _229_()
+  require("plenary.busted").it("does not report when disabled", _239_)
+  local function _240_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "forbidden form"
     local actual_7_auto = finding_summary(check_source("(var x 1)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}))[1].message
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("uses the suggested message", _229_)
+  return require("plenary.busted").it("uses the suggested message", _240_)
 end
-require("plenary.busted").describe("forbidden-form", _212_)
-local function if_without_else_findings(source, path, rules)
-  local result = check_source(source, path, rules)
-  if (result["module-missing"] or result["value-nil?"]) then
-    return result
-  else
-    local tbl_26_ = {}
-    local i_27_ = 0
-    for _, finding in ipairs(result) do
-      local val_28_
-      if (finding.rule == "if-without-else") then
-        val_28_ = finding
-      else
-        val_28_ = nil
-      end
-      if (nil ~= val_28_) then
-        i_27_ = (i_27_ + 1)
-        tbl_26_[i_27_] = val_28_
-      else
-      end
-    end
-    return tbl_26_
-  end
-end
-local function _233_()
-  local function _234_()
-    local findings = if_without_else_findings("(defn f [] (if a b))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = {rule = "if-without-else", severity = "warning", message = "if without else; use when"}
-    local actual_7_auto = {rule = findings[1].rule, severity = findings[1].severity, message = findings[1].message}
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("flags a two-argument if with the default warning and message", _234_)
-  local function _235_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #if_without_else_findings("(if a b c) (if a b c d e) (when a b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("does not flag complete or multi-clause if forms or when", _235_)
-  local function _236_()
-    local finding = if_without_else_findings("(defn f\n  [ok resolved]\n  (if ok\n    resolved\n    nil))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1]
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = {rule = "if-without-else", severity = "warning", message = "if without else; use when"}
-    local actual_7_auto = {rule = finding.rule, severity = finding.severity, message = finding.message}
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("flags a single-clause if whose else branch is literal nil", _236_)
-  local function _237_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #if_without_else_findings("(if a b c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("does not flag a single-clause if with a non-nil else branch", _237_)
-  local function _238_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #if_without_else_findings("(if a b c nil)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("does not flag a multi-clause if ending in literal nil", _238_)
-  local function _239_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #if_without_else_findings("(if a nil b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("does not flag an if with a literal nil then branch", _239_)
-  local function _240_()
-    local source = "(defn f [] (do (if x y) (if x y)))"
-    local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
-    local first = if_without_else_findings(source, "fnl/app.fnl", rules)
-    local second = if_without_else_findings(source, "fnl/app.fnl", rules)
-    local assert_28_auto = require("luassert")
-    local value_29_auto
-    local and_241_ = (2 == #first) and (first[1].form ~= first[2].form)
-    if and_241_ then
-      local _242_
-      do
-        local tbl_26_ = {}
-        local i_27_ = 0
-        for _, finding in ipairs(first) do
-          local val_28_ = finding.form
-          if (nil ~= val_28_) then
-            i_27_ = (i_27_ + 1)
-            tbl_26_[i_27_] = val_28_
-          else
-          end
-        end
-        _242_ = tbl_26_
-      end
-      local function _244_()
-        local tbl_26_ = {}
-        local i_27_ = 0
-        for _, finding in ipairs(second) do
-          local val_28_ = finding.form
-          if (nil ~= val_28_) then
-            i_27_ = (i_27_ + 1)
-            tbl_26_[i_27_] = val_28_
-          else
-          end
-        end
-        return tbl_26_
-      end
-      and_241_ = vim.deep_equal(_242_, _244_())
-    end
-    value_29_auto = and_241_
-    assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (length first)) (not= (. first 1 \"form\") (. first 2 \"form\")) (vim.deep_equal (icollect [_ finding (ipairs first)] (. finding \"form\")) (icollect [_ finding (ipairs second)] (. finding \"form\"))))")
-    return true
-  end
-  require("plenary.busted").it("flags two nested if forms with distinct stable identities", _240_)
-  local function _246_()
-    local source = "(defn f [] (do (if x y) (if x y)))"
-    local path = "fnl/app.fnl"
-    local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
-    local baseline = if_without_else_findings(source, path, rules)
-    local form = baseline[1].form
-    local result = check_context(source, {path = path, rules = rules, exclusions = {{rule = "if-without-else", form = form, reason = "intentional"}}})
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 1
-    local actual_7_auto
-    local _247_
-    do
-      local tbl_26_ = {}
-      local i_27_ = 0
-      for _, finding in ipairs(result) do
-        local val_28_
-        if (finding.rule == "if-without-else") then
-          val_28_ = finding
-        else
-          val_28_ = nil
-        end
-        if (nil ~= val_28_) then
-          i_27_ = (i_27_ + 1)
-          tbl_26_[i_27_] = val_28_
-        else
-        end
-      end
-      _247_ = tbl_26_
-    end
-    actual_7_auto = #_247_
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("an exclusion for one nested if leaves the other finding", _246_)
-  local function _250_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 1
-    local actual_7_auto = #if_without_else_findings("(if a b)", "fnl/spec/app_spec.fnl", nil)
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("applies to spec files", _250_)
-  local function _251_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 1
-    local actual_7_auto = #if_without_else_findings("'(if a b) `(if a ,(if b c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("ignores quoted if data and flags only executable unquoted quasiquote code", _251_)
-  local function _252_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = "error"
-    local actual_7_auto = if_without_else_findings("(if a b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1].severity
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("uses error severity when configured", _252_)
-  local function _253_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #if_without_else_findings("(if a b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  return require("plenary.busted").it("does not report when disabled", _253_)
-end
-require("plenary.busted").describe("if-without-else", _233_)
+require("plenary.busted").describe("forbidden-form", _223_)
 local function multiline_layout_findings(source, path, rules)
   local result = check_source(source, path, rules)
   if (result["module-missing"] or result["value-nil?"]) then
@@ -2047,152 +1960,152 @@ local function multiline_layout_findings(source, path, rules)
     return tbl_26_
   end
 end
-local function _257_()
-  local function _258_()
+local function _244_()
+  local function _245_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(defn f\n  [file]\n  (if\n    file\n    (read file)\n    \"\"))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("requires an if test on the head line", _258_)
-  local function _259_()
+  require("plenary.busted").it("requires an if test on the head line", _245_)
+  local function _246_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(defn f\n  [file]\n  (if file\n    (read file)\n    \"\"))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts an if test on the head line", _259_)
-  local function _260_()
+  require("plenary.busted").it("accepts an if test on the head line", _246_)
+  local function _247_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(defn f\n  [file]\n  (and\n    file\n    (close file)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("requires an and argument on the head line", _260_)
-  local function _261_()
+  require("plenary.busted").it("requires an and argument on the head line", _247_)
+  local function _248_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(defn f\n  [file]\n  (and file\n    (close file)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts an and argument on the head line", _261_)
-  local function _262_()
+  require("plenary.busted").it("accepts an and argument on the head line", _248_)
+  local function _249_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(foo\n  a\n  b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("requires a plain call argument on the head line", _262_)
-  local function _263_()
+  require("plenary.busted").it("requires a plain call argument on the head line", _249_)
+  local function _250_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(foo a\n     b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a plain call argument on the head line", _263_)
-  local function _264_()
+  require("plenary.busted").it("accepts a plain call argument on the head line", _250_)
+  local function _251_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(let\n  [x 1]\n  x)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("requires a let binding vector on the head line", _264_)
-  local function _265_()
+  require("plenary.busted").it("requires a let binding vector on the head line", _251_)
+  local function _252_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(do\n  (a)\n  (b))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not require a do body on the head line", _265_)
-  local function _266_()
+  require("plenary.busted").it("does not require a do body on the head line", _252_)
+  local function _253_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(defn f\n  [a]\n  a)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not require a defn name on the next line", _266_)
-  local function _267_()
+  require("plenary.busted").it("does not require a defn name on the next line", _253_)
+  local function _254_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(if\n  (> i n) false\n  (= p x) true\n  (rec))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("requires a multi-clause if test on the head line", _267_)
-  local function _268_()
+  require("plenary.busted").it("requires a multi-clause if test on the head line", _254_)
+  local function _255_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(foo a b\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a list with two items starting on one line", _268_)
-  local function _269_()
+  require("plenary.busted").it("flags a list with two items starting on one line", _255_)
+  local function _256_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(foo a\n  b\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a list with one item starting on each line", _269_)
-  local function _270_()
+  require("plenary.busted").it("accepts a list with one item starting on each line", _256_)
+  local function _257_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(foo a b c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a one-line list", _270_)
-  local function _271_()
+  require("plenary.busted").it("accepts a one-line list", _257_)
+  local function _258_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(\n foo a b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a list whose head starts below its opening paren", _271_)
-  local function _272_()
+  require("plenary.busted").it("flags a list whose head starts below its opening paren", _258_)
+  local function _259_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(defn f\n  []\n  (\n   foo a b))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a list with a delayed head inside a defn", _272_)
-  local function _273_()
+  require("plenary.busted").it("flags a list with a delayed head inside a defn", _259_)
+  local function _260_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = (#multiline_layout_findings("[\n 1\n 2]", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}) + #multiline_layout_findings("{\n :a 1}", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}))
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag vectors or maps whose first item starts below the opener", _273_)
-  local function _274_()
+  require("plenary.busted").it("does not flag vectors or maps whose first item starts below the opener", _260_)
+  local function _261_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(defn f\n  [n]\n  (if (> n 0) 1\n    0))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a single-clause if whose then branch shares the head line", _274_)
-  local function _275_()
+  require("plenary.busted").it("flags a single-clause if whose then branch shares the head line", _261_)
+  local function _262_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(defn f\n  [n]\n  (if (> n 0)\n    1\n    0))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a single-clause if with each branch on its own line", _275_)
-  local function _276_()
+  require("plenary.busted").it("accepts a single-clause if with each branch on its own line", _262_)
+  local function _263_()
     local findings = check_source("(defn f\n  [n]\n  (if (> n 0) 1\n    0))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = {"multiline-layout"}
@@ -2213,88 +2126,88 @@ local function _257_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("reports only multiline-layout for a malformed multi-line control form", _276_)
-  local function _278_()
+  require("plenary.busted").it("reports only multiline-layout for a malformed multi-line control form", _263_)
+  local function _265_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("{:a 1 :b 2\n :c 3}", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a multi-line map with two pairs on one line", _278_)
-  local function _279_()
+  require("plenary.busted").it("flags a multi-line map with two pairs on one line", _265_)
+  local function _266_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("{:a 1\n :b 2\n :c 3}", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a map with one pair starting on each line", _279_)
-  local function _280_()
+  require("plenary.busted").it("accepts a map with one pair starting on each line", _266_)
+  local function _267_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("{:a\n  (long-value)\n :b 2}", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a map whose value starts on the next line", _280_)
-  local function _281_()
+  require("plenary.busted").it("accepts a map whose value starts on the next line", _267_)
+  local function _268_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("[a b\n c]", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a vector with two elements starting on one line", _281_)
-  local function _282_()
+  require("plenary.busted").it("flags a vector with two elements starting on one line", _268_)
+  local function _269_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(foo a ; b\n  \"c\nd\"\n  e)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts comments and multi-line strings between items", _282_)
-  local function _283_()
+  require("plenary.busted").it("accepts comments and multi-line strings between items", _269_)
+  local function _270_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(let [a 1 b 2\n      c 3]\n  a)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a let binding vector with two bindings on one line", _283_)
-  local function _284_()
+  require("plenary.busted").it("flags a let binding vector with two bindings on one line", _270_)
+  local function _271_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(let [a 1\n      b 2]\n  a)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a let binding vector with one binding on each line", _284_)
-  local function _285_()
+  require("plenary.busted").it("accepts a let binding vector with one binding on each line", _271_)
+  local function _272_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(case x\n  1 :a 2 :b\n  _ :c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a case with two clauses starting on one line", _285_)
-  local function _286_()
+  require("plenary.busted").it("flags a case with two clauses starting on one line", _272_)
+  local function _273_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(if (> i n) false\n  (= p x) true\n  (rec))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a multi-clause if with one pair on each line", _286_)
-  local function _287_()
+  require("plenary.busted").it("accepts a multi-clause if with one pair on each line", _273_)
+  local function _274_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(foo (bar\n       x) y)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a unit that starts where the previous unit ends", _287_)
-  local function _288_()
+  require("plenary.busted").it("flags a unit that starts where the previous unit ends", _274_)
+  local function _275_()
     local findings = multiline_layout_findings("(defn f [a] (foo a b\n  c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
@@ -2302,16 +2215,16 @@ local function _257_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("reports one finding for the inner call in a defn body", _288_)
-  local function _289_()
+  require("plenary.busted").it("reports one finding for the inner call in a defn body", _275_)
+  local function _276_()
     local findings = multiline_layout_findings("(defn f [] (foo a b\n  (bar x y\n    z)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = ((2 == #findings) and (findings[1].form ~= findings[2].form))
     assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (length findings)) (not= (. findings 1 \"form\") (. findings 2 \"form\")))")
     return true
   end
-  require("plenary.busted").it("reports one finding per nested offending form with distinct identities", _289_)
-  local function _290_()
+  require("plenary.busted").it("reports one finding per nested offending form with distinct identities", _276_)
+  local function _277_()
     local source = "(defn f [] (foo a b\n  (bar x y\n    z)))"
     local path = "fnl/app.fnl"
     local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
@@ -2321,7 +2234,7 @@ local function _257_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto
-    local _291_
+    local _278_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -2338,30 +2251,30 @@ local function _257_()
         else
         end
       end
-      _291_ = tbl_26_
+      _278_ = tbl_26_
     end
-    actual_7_auto = #_291_
+    actual_7_auto = #_278_
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("an exclusion for one nested form leaves the other finding", _290_)
-  local function _294_()
+  require("plenary.busted").it("an exclusion for one nested form leaves the other finding", _277_)
+  local function _281_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #multiline_layout_findings("(foo a b\n  c)", "fnl/spec/app_spec.fnl", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("applies to spec files", _294_)
-  local function _295_()
+  require("plenary.busted").it("applies to spec files", _281_)
+  local function _282_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("'(a b\n c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("ignores quoted multi-line lists", _295_)
-  local function _296_()
+  require("plenary.busted").it("ignores quoted multi-line lists", _282_)
+  local function _283_()
     local finding = multiline_layout_findings("(foo a b\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1]
     local assert_5_auto = require("luassert")
     local expected_6_auto = {severity = "warning", message = "multi-line form: put each item on its own line"}
@@ -2369,25 +2282,25 @@ local function _257_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses the default warning and prescribed message", _296_)
-  local function _297_()
+  require("plenary.busted").it("uses the default warning and prescribed message", _283_)
+  local function _284_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "error"
     local actual_7_auto = multiline_layout_findings("(foo a b\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1].severity
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses error severity when configured", _297_)
-  local function _298_()
+  require("plenary.busted").it("uses error severity when configured", _284_)
+  local function _285_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #multiline_layout_findings("(foo a b\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("does not report when disabled", _298_)
+  return require("plenary.busted").it("does not report when disabled", _285_)
 end
-require("plenary.busted").describe("multiline-layout", _257_)
+require("plenary.busted").describe("multiline-layout", _244_)
 local function control_layout_findings(source, path, rules)
   local result = check_source(source, path, rules)
   if (result["module-missing"] or result["value-nil?"]) then
@@ -2411,120 +2324,120 @@ local function control_layout_findings(source, path, rules)
     return tbl_26_
   end
 end
-local function _302_()
-  local function _303_()
+local function _289_()
+  local function _290_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #control_layout_findings("(defn f\n  [ok resolved]\n  (if ok resolved nil))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a one-line if in direct function statement position", _303_)
-  local function _304_()
+  require("plenary.busted").it("flags a one-line if in direct function statement position", _290_)
+  local function _291_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f\n  [ok resolved]\n  (if ok\n    resolved\n    nil))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a broken-out if in direct function statement position", _304_)
-  local function _305_()
+  require("plenary.busted").it("accepts a broken-out if in direct function statement position", _291_)
+  local function _292_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #control_layout_findings("(defn f\n  [file]\n  (when (kept? file) file))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a one-line when in direct function statement position", _305_)
-  local function _306_()
+  require("plenary.busted").it("flags a one-line when in direct function statement position", _292_)
+  local function _293_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r (m? e))))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag a one-line or as the last expression of a value-returning loop body", _306_)
-  local function _307_()
+  require("plenary.busted").it("does not flag a one-line or as the last expression of a value-returning loop body", _293_)
+  local function _294_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f\n  [a b]\n  (and a b))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag a one-line and as the returned function expression", _307_)
-  local function _308_()
+  require("plenary.busted").it("does not flag a one-line and as the returned function expression", _294_)
+  local function _295_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #control_layout_findings("(defn f\n  [a b c]\n  (when a\n    (if b c a)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a one-line control form as the sole when body expression", _308_)
-  local function _309_()
+  require("plenary.busted").it("flags a one-line control form as the sole when body expression", _295_)
+  local function _296_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r\n      (m? e))))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a broken-out or in a loop body", _309_)
-  local function _310_()
+  require("plenary.busted").it("accepts a broken-out or in a loop body", _296_)
+  local function _297_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f\n  [x]\n  (do (case x 1 :one _ :other)\n      (match x 1 :one _ :other)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag controls when a do body has other expressions", _310_)
-  local function _311_()
+  require("plenary.busted").it("does not flag controls when a do body has other expressions", _297_)
+  local function _298_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #control_layout_findings("(defn f\n  [ok]\n  (let [x 1]\n    (if ok x 0)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a one-line control form as the sole let body expression", _311_)
-  local function _312_()
+  require("plenary.busted").it("flags a one-line control form as the sole let body expression", _298_)
+  local function _299_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #control_layout_findings("(defn f\n  [xs]\n  (each [_ x (ipairs xs)]\n    (if x x 0)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a one-line control form as the sole each body expression", _312_)
-  local function _313_()
+  require("plenary.busted").it("flags a one-line control form as the sole each body expression", _299_)
+  local function _300_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f\n  [a b c]\n  (let [x (or a b)]\n    {:p (if a b c)\n     :q [(when a b)]}\n    (foo (if a b c))\n    (if a\n      (or b c)\n      c)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not require control forms in value, call, vector, map, or branch positions", _313_)
-  local function _314_()
+  require("plenary.busted").it("does not require control forms in value, call, vector, map, or branch positions", _300_)
+  local function _301_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f\n  []\n  (do (if a b c)\n      (when a b)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag nested controls when a do body has other expressions", _314_)
-  local function _315_()
+  require("plenary.busted").it("does not flag nested controls when a do body has other expressions", _301_)
+  local function _302_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #control_layout_findings("(defn f [] (if a b c))", "fnl/spec/app_spec.fnl", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("applies to spec files", _315_)
-  local function _316_()
+  require("plenary.busted").it("applies to spec files", _302_)
+  local function _303_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("'(if a b c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("ignores quoted control-form data", _316_)
-  local function _317_()
+  require("plenary.busted").it("ignores quoted control-form data", _303_)
+  local function _304_()
     local finding = control_layout_findings("(defn f [] (if a b c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1]
     local assert_5_auto = require("luassert")
     local expected_6_auto = {form = "fnl/app.fnl > defn:f > if#1", severity = "warning", message = "put this control form on several lines"}
@@ -2532,24 +2445,24 @@ local function _302_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses the stable identity, warning severity, and prescribed message", _317_)
-  local function _318_()
+  require("plenary.busted").it("uses the stable identity, warning severity, and prescribed message", _304_)
+  local function _305_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "error"
     local actual_7_auto = control_layout_findings("(defn f [] (if a b c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1].severity
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses error severity when configured", _318_)
-  local function _319_()
+  require("plenary.busted").it("uses error severity when configured", _305_)
+  local function _306_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #control_layout_findings("(defn f [] (if a b c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not report when disabled", _319_)
-  local function _320_()
+  require("plenary.busted").it("does not report when disabled", _306_)
+  local function _307_()
     local source = "(defn f [] (if a b c))\n(defn g [] (when a b))"
     local path = "fnl/app.fnl"
     local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
@@ -2558,7 +2471,7 @@ local function _302_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto
-    local _321_
+    local _308_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -2575,15 +2488,15 @@ local function _302_()
         else
         end
       end
-      _321_ = tbl_26_
+      _308_ = tbl_26_
     end
-    actual_7_auto = #_321_
+    actual_7_auto = #_308_
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exclusion removes only the selected control-layout finding", _320_)
+  return require("plenary.busted").it("an exclusion removes only the selected control-layout finding", _307_)
 end
-require("plenary.busted").describe("control-layout", _302_)
+require("plenary.busted").describe("control-layout", _289_)
 local function unused_and_or_findings(source, path, rules)
   local result = check_source(source, path, rules)
   if (result["module-missing"] or result["value-nil?"]) then
@@ -2607,129 +2520,129 @@ local function unused_and_or_findings(source, path, rules)
     return tbl_26_
   end
 end
-local function _327_()
-  local function _328_()
+local function _314_()
+  local function _315_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f\n  [file]\n  (and file (close file))\n  (out file))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a discarded and before the returned function expression", _328_)
-  local function _329_()
+  require("plenary.busted").it("flags a discarded and before the returned function expression", _315_)
+  local function _316_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #unused_and_or_findings("(defn f\n  [a b]\n  (and a b))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag the last and expression of a value-returning body", _329_)
-  local function _330_()
+  require("plenary.busted").it("does not flag the last and expression of a value-returning body", _316_)
+  local function _317_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f\n  [xs]\n  (each [_ x (ipairs xs)]\n    (or x (warn))))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags or in an each body", _330_)
-  local function _331_()
+  require("plenary.busted").it("flags or in an each body", _317_)
+  local function _318_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #unused_and_or_findings("(defn f\n  [xs]\n  (icollect [_ x (ipairs xs)]\n    (and x (f x))))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag and as the last icollect body expression", _331_)
-  local function _332_()
+  require("plenary.busted").it("does not flag and as the last icollect body expression", _318_)
+  local function _319_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f []\n  (let [x 1]\n    (or x (warn))\n    x))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags or before the returned let expression", _332_)
-  local function _333_()
+  require("plenary.busted").it("flags or before the returned let expression", _319_)
+  local function _320_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f []\n  (when ok\n    (and a (b))\n    c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags and before the returned when expression", _333_)
-  local function _334_()
+  require("plenary.busted").it("flags and before the returned when expression", _320_)
+  local function _321_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f []\n  (do (and a (b)) c))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags and before the returned do expression", _334_)
-  local function _335_()
+  require("plenary.busted").it("flags and before the returned do expression", _321_)
+  local function _322_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #unused_and_or_findings("(defn f []\n  (let [y (and a b)] y)\n  (foo (or a b)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not flag and or in value positions", _335_)
-  local function _336_()
+  require("plenary.busted").it("does not flag and or in value positions", _322_)
+  local function _323_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #unused_and_or_findings("'(and a b) '(or a b)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("ignores quoted and-or data", _336_)
-  local function _337_()
+  require("plenary.busted").it("ignores quoted and-or data", _323_)
+  local function _324_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #unused_and_or_findings("(defn f\n  []\n  (do `(and a b) out))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("ignores and-or data in a quasiquote", _337_)
-  local function _338_()
+  require("plenary.busted").it("ignores and-or data in a quasiquote", _324_)
+  local function _325_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f\n  []\n  `(do ,(do (and a (b)) c) `(do (and x y) z)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("checks only unquoted and-or code through nested quasiquotes", _338_)
-  local function _339_()
+  require("plenary.busted").it("checks only unquoted and-or code through nested quasiquotes", _325_)
+  local function _326_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f\n  []\n  `(foo ,(do (or a (warn)) b)))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("checks and-or code inside an unquote", _339_)
-  local function _340_()
+  require("plenary.busted").it("checks and-or code inside an unquote", _326_)
+  local function _327_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #unused_and_or_findings("(defn f\n  []\n  (do '(and a b) out))", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("ignores plain quoted and-or data in a do body", _340_)
-  local function _341_()
+  require("plenary.busted").it("ignores plain quoted and-or data in a do body", _327_)
+  local function _328_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #unused_and_or_findings("(defn f []\n  (and a b)\n  c)", "fnl/spec/app_spec.fnl", {["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("applies to spec files", _341_)
-  local function _342_()
+  require("plenary.busted").it("applies to spec files", _328_)
+  local function _329_()
     local source = "(defn f []\n  (do (and a b) (or c d) (out)))"
     local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
     local first = unused_and_or_findings(source, "fnl/app.fnl", rules)
     local second = unused_and_or_findings(source, "fnl/app.fnl", rules)
     local assert_28_auto = require("luassert")
     local value_29_auto
-    local and_343_ = (2 == #first) and (first[1].form ~= first[2].form)
-    if and_343_ then
-      local _344_
+    local and_330_ = (2 == #first) and (first[1].form ~= first[2].form)
+    if and_330_ then
+      local _331_
       do
         local tbl_26_ = {}
         local i_27_ = 0
@@ -2741,9 +2654,9 @@ local function _327_()
           else
           end
         end
-        _344_ = tbl_26_
+        _331_ = tbl_26_
       end
-      local function _346_()
+      local function _333_()
         local tbl_26_ = {}
         local i_27_ = 0
         for _, finding in ipairs(second) do
@@ -2756,14 +2669,14 @@ local function _327_()
         end
         return tbl_26_
       end
-      and_343_ = vim.deep_equal(_344_, _346_())
+      and_330_ = vim.deep_equal(_331_, _333_())
     end
-    value_29_auto = and_343_
+    value_29_auto = and_330_
     assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (length first)) (not= (. first 1 \"form\") (. first 2 \"form\")) (vim.deep_equal (icollect [_ finding (ipairs first)] (. finding \"form\")) (icollect [_ finding (ipairs second)] (. finding \"form\"))))")
     return true
   end
-  require("plenary.busted").it("gives nested discarded and-or forms distinct stable identities", _342_)
-  local function _348_()
+  require("plenary.busted").it("gives nested discarded and-or forms distinct stable identities", _329_)
+  local function _335_()
     local finding = unused_and_or_findings("(defn f []\n  (and a b)\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1]
     local assert_5_auto = require("luassert")
     local expected_6_auto = {form = "fnl/app.fnl > defn:f > and#1", severity = "warning", message = "and/or result is unused; use when"}
@@ -2771,24 +2684,24 @@ local function _327_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses the stable identity warning severity and prescribed message", _348_)
-  local function _349_()
+  require("plenary.busted").it("uses the stable identity warning severity and prescribed message", _335_)
+  local function _336_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "error"
     local actual_7_auto = unused_and_or_findings("(defn f []\n  (and a b)\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["unused-and-or"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1].severity
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses error severity when configured", _349_)
-  local function _350_()
+  require("plenary.busted").it("uses error severity when configured", _336_)
+  local function _337_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #unused_and_or_findings("(defn f []\n  (and a b)\n  c)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["unused-and-or"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not report when disabled", _350_)
-  local function _351_()
+  require("plenary.busted").it("does not report when disabled", _337_)
+  local function _338_()
     local source = "(defn f []\n  (do (and a b) (or c d) (out)))"
     local path = "fnl/app.fnl"
     local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["control-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
@@ -2797,7 +2710,7 @@ local function _327_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto
-    local _352_
+    local _339_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -2814,15 +2727,15 @@ local function _327_()
         else
         end
       end
-      _352_ = tbl_26_
+      _339_ = tbl_26_
     end
-    actual_7_auto = #_352_
+    actual_7_auto = #_339_
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exclusion removes only the selected unused-and-or finding", _351_)
+  return require("plenary.busted").it("an exclusion removes only the selected unused-and-or finding", _338_)
 end
-require("plenary.busted").describe("unused-and-or", _327_)
+require("plenary.busted").describe("unused-and-or", _314_)
 local function repeated_code(count)
   return string.rep("(local x 1)\n", count)
 end
@@ -2859,96 +2772,96 @@ local function file_size_findings(source, path, rules, max_code_lines, exclusion
     return tbl_26_
   end
 end
-local function _359_()
-  local function _360_()
+local function _346_()
+  local function _347_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #file_size_findings(repeated_code(301), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, nil, nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("reports one finding for 301 code lines at the default limit", _360_)
-  local function _361_()
+  require("plenary.busted").it("reports one finding for 301 code lines at the default limit", _347_)
+  local function _348_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #file_size_findings(repeated_code(3), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts exactly the configured code-line limit", _361_)
-  local function _362_()
+  require("plenary.busted").it("accepts exactly the configured code-line limit", _348_)
+  local function _349_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #file_size_findings(repeated_code(4), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("reports the first line above the configured code-line limit", _362_)
-  local function _363_()
+  require("plenary.busted").it("reports the first line above the configured code-line limit", _349_)
+  local function _350_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #file_size_findings("(local a 1)\n\n; comment\n  ; indented comment\n(local b 2)\n;; another comment\n", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 2, nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not count blank or comment-only lines", _363_)
-  local function _364_()
+  require("plenary.busted").it("does not count blank or comment-only lines", _350_)
+  local function _351_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #file_size_findings("(local text [[first\nsecond]])", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 1, nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("counts lines inside a multiline string as code", _364_)
-  local function _365_()
+  require("plenary.busted").it("counts lines inside a multiline string as code", _351_)
+  local function _352_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #file_size_findings(repeated_code(4), "fnl/spec/app_spec.fnl", {}, 3, nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not report a spec file", _365_)
-  local function _366_()
+  require("plenary.busted").it("does not report a spec file", _352_)
+  local function _353_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "warning"
     local actual_7_auto = file_size_findings(repeated_code(4), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)[1].severity
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses warning severity by default", _366_)
-  local function _367_()
+  require("plenary.busted").it("uses warning severity by default", _353_)
+  local function _354_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "error"
     local actual_7_auto = file_size_findings(repeated_code(4), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["file-size"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)[1].severity
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses error severity when configured", _367_)
-  local function _368_()
+  require("plenary.busted").it("uses error severity when configured", _354_)
+  local function _355_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #file_size_findings(repeated_code(4), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["file-size"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not report when disabled", _368_)
-  local function _369_()
+  require("plenary.busted").it("does not report when disabled", _355_)
+  local function _356_()
     local message = file_size_findings(repeated_code(4), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)[1].message
     local assert_28_auto = require("luassert")
     local value_29_auto = (string.find(message, "4") and string.find(message, "3"))
     assert_28_auto.is_truthy(value_29_auto, "(and (string.find message \"4\") (string.find message \"3\"))")
     return true
   end
-  require("plenary.busted").it("includes the count and limit in the message", _369_)
-  local function _370_()
+  require("plenary.busted").it("includes the count and limit in the message", _356_)
+  local function _357_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "fnl/app.fnl > file"
     local actual_7_auto = file_size_findings(repeated_code(4), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)[1].form
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses a stable file-level identity", _370_)
-  local function _371_()
+  require("plenary.busted").it("uses a stable file-level identity", _357_)
+  local function _358_()
     local finding = file_size_findings(repeated_code(4), "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}, 3, nil)
     local exclusion0 = {{rule = "file-size", form = finding[1].form, reason = "intentional"}}
     local assert_5_auto = require("luassert")
@@ -2957,11 +2870,11 @@ local function _359_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exact file-size exclusion suppresses the finding", _371_)
+  return require("plenary.busted").it("an exact file-size exclusion suppresses the finding", _358_)
 end
-require("plenary.busted").describe("file-size", _359_)
-local function _372_()
-  local function _373_()
+require("plenary.busted").describe("file-size", _346_)
+local function _359_()
+  local function _360_()
     local source = "(set x 2)"
     local path = "fnl/app.fnl"
     local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
@@ -2973,11 +2886,11 @@ local function _372_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exact forbidden-form rule and form exclusion suppresses the finding", _373_)
+  return require("plenary.busted").it("an exact forbidden-form rule and form exclusion suppresses the finding", _360_)
 end
-require("plenary.busted").describe("forbidden-form-exclusions", _372_)
-local function _374_()
-  local function _375_()
+require("plenary.busted").describe("forbidden-form-exclusions", _359_)
+local function _361_()
+  local function _362_()
     local source = "(defn f [] (let [a (set x 1)] (set y 2)))"
     local path = "fnl/app.fnl"
     local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
@@ -2990,9 +2903,9 @@ local function _374_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exclusion for one nested mutation leaves the other finding", _375_)
+  return require("plenary.busted").it("an exclusion for one nested mutation leaves the other finding", _362_)
 end
-require("plenary.busted").describe("forbidden-form-nested-exclusion", _374_)
+require("plenary.busted").describe("forbidden-form-nested-exclusion", _361_)
 local function findings_for_named_rule(source, path, rule, rules)
   local result = check_source(source, path, rules)
   if (result["module-missing"] or result["value-nil?"]) then
@@ -3018,84 +2931,84 @@ local function findings_for_named_rule(source, path, rule, rules)
 end
 local function safe_findings_for_named_rule(source, path, rule, rules)
   local ok, result
-  local function _379_()
+  local function _366_()
     return findings_for_named_rule(source, path, rule, rules)
   end
-  ok, result = pcall(_379_)
-  local _380_
+  ok, result = pcall(_366_)
+  local _367_
   if ok then
-    _380_ = #result
+    _367_ = #result
   else
-    _380_ = -1
+    _367_ = -1
   end
-  return {ok = ok, count = _380_}
+  return {ok = ok, count = _367_}
 end
-local function _382_()
-  local function _383_()
+local function _369_()
+  local function _370_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #findings_for_named_rule("(foo a {:x 1\n         :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a multiline map literal passed to a plain call", _383_)
-  local function _384_()
+  require("plenary.busted").it("flags a multiline map literal passed to a plain call", _370_)
+  local function _371_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #findings_for_named_rule("(foo a {:x 1 :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a one-line map literal call argument", _384_)
-  local function _385_()
+  require("plenary.busted").it("accepts a one-line map literal call argument", _371_)
+  local function _372_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #findings_for_named_rule("(let [opts {:x 1\n            :y 2}]\n  (foo a opts))", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("accepts a map bound in a let before the call", _385_)
-  local function _386_()
+  require("plenary.busted").it("accepts a map bound in a let before the call", _372_)
+  local function _373_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #findings_for_named_rule("(foo (fn []\n  1))", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("excludes fn arguments from plain call data findings", _386_)
-  local function _387_()
+  require("plenary.busted").it("excludes fn arguments from plain call data findings", _373_)
+  local function _374_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #findings_for_named_rule("(values {:a 1\n         :b 2} nil)", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("treats values as a plain call", _387_)
-  local function _388_()
+  require("plenary.busted").it("treats values as a plain call", _374_)
+  local function _375_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #findings_for_named_rule("(foo [1\n      2])", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("flags a multiline vector literal passed to a plain call", _388_)
-  local function _389_()
+  require("plenary.busted").it("flags a multiline vector literal passed to a plain call", _375_)
+  local function _376_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/spec/app_spec.fnl", "call-data-arg", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not report in spec files", _389_)
-  local function _390_()
+  require("plenary.busted").it("does not report in spec files", _376_)
+  local function _377_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #findings_for_named_rule("'(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("ignores quoted call data", _390_)
-  local function _391_()
+  require("plenary.busted").it("ignores quoted call data", _377_)
+  local function _378_()
     local finding = findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1]
     local assert_5_auto = require("luassert")
     local expected_6_auto = {severity = "warning", message = "move this multi-line map/vector into a let binding so the call fits on one line"}
@@ -3103,24 +3016,24 @@ local function _382_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses the prescribed warning and message", _391_)
-  local function _392_()
+  require("plenary.busted").it("uses the prescribed warning and message", _378_)
+  local function _379_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {"error", 0}
     local actual_7_auto
-    local _393_
+    local _380_
     do
       local finding = findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["call-data-arg"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}})[1]
-      _393_ = finding.severity
+      _380_ = finding.severity
     end
-    actual_7_auto = {_393_, #findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["call-data-arg"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})}
+    actual_7_auto = {_380_, #findings_for_named_rule("(foo {:x 1\n      :y 2})", "fnl/app.fnl", "call-data-arg", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["call-data-arg"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}})}
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("supports error severity and disabling", _392_)
+  return require("plenary.busted").it("supports error severity and disabling", _379_)
 end
-require("plenary.busted").describe("call-data-arg", _382_)
-local function _394_()
+require("plenary.busted").describe("call-data-arg", _369_)
+local function _381_()
   local source = "(foo {:x 1\n      :y 2})"
   local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
   local first = findings_for_named_rule(source, "fnl/app.fnl", "call-data-arg", rules)
@@ -3130,8 +3043,8 @@ local function _394_()
   assert_28_auto.is_truthy(value_29_auto, "(and (not= nil (. first 1 \"form\")) (= (. first 1 \"form\") (. second 1 \"form\")))")
   return true
 end
-require("plenary.busted").it("keeps identities stable across repeated linting", _394_)
-local function _395_()
+require("plenary.busted").it("keeps identities stable across repeated linting", _381_)
+local function _382_()
   local source = "(foo {:x 1\n      :y 2})\n(bar {:a 1\n      :b 2})"
   local path = "fnl/app.fnl"
   local rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["multiline-layout"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}}
@@ -3141,7 +3054,7 @@ local function _395_()
   local assert_5_auto = require("luassert")
   local expected_6_auto = 1
   local actual_7_auto
-  local _396_
+  local _383_
   do
     local tbl_26_ = {}
     local i_27_ = 0
@@ -3158,40 +3071,40 @@ local function _395_()
       else
       end
     end
-    _396_ = tbl_26_
+    _383_ = tbl_26_
   end
-  actual_7_auto = #_396_
+  actual_7_auto = #_383_
   assert_5_auto.same(expected_6_auto, actual_7_auto)
   return true
 end
-require("plenary.busted").it("an exact exclusion suppresses the selected call finding", _395_)
+require("plenary.busted").it("an exact exclusion suppresses the selected call finding", _382_)
 local function option_rule(rule, options)
   local merged = vim.tbl_extend("force", all_options[rule], options)
   local target = options["applies-to"]
   local data = canonical_rule_data(rule, merged)
-  local _399_
+  local _386_
   if target then
     if ((target == "all") or (target == "all")) then
-      _399_ = {}
+      _386_ = {}
     else
-      _399_ = {files = {target}}
+      _386_ = {files = {target}}
     end
   else
     if (source_rules[rule] and spec_rules[rule]) then
-      _399_ = {}
+      _386_ = {}
     else
       if source_rules[rule] then
-        _399_ = {files = {"^fnl/[^s]"}}
+        _386_ = {files = {"^fnl/[^s]"}}
       else
         if spec_rules[rule] then
-          _399_ = {files = {"^fnl/spec/"}}
+          _386_ = {files = {"^fnl/spec/"}}
         else
-          _399_ = {}
+          _386_ = {}
         end
       end
     end
   end
-  return {[rule] = {{severity = "warning", ["applies-to"] = core.merge(_399_, data["applies-to"]), options = data.options, exclusions = {}}}}
+  return {[rule] = {{severity = "warning", ["applies-to"] = core.merge(_386_, data["applies-to"]), options = data.options, exclusions = {}}}}
 end
 local function option_findings_call(lint, source, path, rule, options)
   local context = {path = path, rules = option_rule(rule, options), matcher = matcher["vim-matcher"]()}
@@ -3206,185 +3119,145 @@ local function option_findings(source, path, rule, options)
     return option_findings_call(lint, source, path, rule, options)
   end
 end
-local function _406_()
-  local function _407_()
+local function _393_()
+  local function _394_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(import-macros {: module : def : defn : defn-} :my.macros)\\n(module app)", "fnl/app.fnl", "module-style", {module = "my.macros"})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-style accepts a configured macro module", _407_)
-  local function _408_()
+  require("plenary.busted").it("module-style accepts a configured macro module", _394_)
+  local function _395_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(import-macros {: module : def : defn : defn-} :eca.nfnl.macros.aniseed)\\n(module app)", "fnl/app.fnl", "module-style", {module = "my.macros"})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-style still flags the default macro module when configured away", _408_)
-  local function _409_()
+  require("plenary.busted").it("module-style still flags the default macro module when configured away", _395_)
+  local function _396_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(import-macros {: check : verify} :my.spec.macros)", "fnl/spec/app_spec.fnl", "module-import", {module = "my.spec.macros", forms = {"check", "verify"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import accepts configured macro names and module", _409_)
-  local function _410_()
+  require("plenary.busted").it("module-import accepts configured macro names and module", _396_)
+  local function _397_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(deftest run)", "fnl/spec/app_spec.fnl", "module-import", {["exempt-files"] = {"^fnl/spec/app_spec[.]fnl$"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import accepts configured exempt files", _410_)
-  local function _411_()
+  require("plenary.busted").it("module-import accepts configured exempt files", _397_)
+  local function _398_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(module app)", "fnl/spec/app_spec.fnl", "forbidden-form", {module = "custom-module"})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("forbidden-form accepts a configured module form", _411_)
-  local function _412_()
+  require("plenary.busted").it("forbidden-form accepts a configured module form", _398_)
+  local function _399_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(require :custom.test)", "fnl/spec/app_spec.fnl", "module-import", {mode = "forbid", modules = {"custom.test"}, ["exempt-files"] = {}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import accepts configured forbidden modules", _412_)
-  local function _413_()
+  require("plenary.busted").it("module-import accepts configured forbidden modules", _399_)
+  local function _400_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(require :custom.test)", "fnl/spec/app_spec.fnl", "module-import", {mode = "forbid", modules = {"custom.test"}, ["exempt-files"] = {"^fnl/spec/app_spec[.]fnl$"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import accepts configured exempt files", _413_)
-  local function _414_()
+  require("plenary.busted").it("module-import accepts configured exempt files", _400_)
+  local function _401_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(checking \"one\" (assertion true))", "fnl/spec/app_spec.fnl", "form-child-count", {children = {"assertion"}, ["max-count"] = 1})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("form-child-count accepts configured testing and assertion forms", _414_)
-  local function _415_()
+  require("plenary.busted").it("form-child-count accepts configured testing and assertion forms", _401_)
+  local function _402_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(unless ok (do a b) c)", "fnl/app.fnl", "if-branch-call", {forms = {"unless"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("if-branch-call accepts configured conditional forms", _415_)
-  local function _416_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #option_findings("(unless ok value nil)", "fnl/app.fnl", "if-without-else", {forms = {"unless"}, ["nil-else"] = false})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("if-without-else accepts configured conditional forms and nil policy", _416_)
-  local function _417_()
+  require("plenary.busted").it("if-branch-call accepts configured conditional forms", _402_)
+  local function _403_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(unless ok\\n  a\\n  b)", "fnl/app.fnl", "control-layout", {forms = {"unless"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("control-layout accepts configured control forms", _417_)
-  local function _418_()
+  require("plenary.busted").it("control-layout accepts configured control forms", _403_)
+  local function _404_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(xor a b)", "fnl/app.fnl", "unused-and-or", {forms = {"xor"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("unused-and-or accepts configured forms", _418_)
-  local function _419_()
+  require("plenary.busted").it("unused-and-or accepts configured forms", _404_)
+  local function _405_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(fnx f [] (if a (if b c d) e))", "fnl/app.fnl", "function-shape", {forms = {"fnx"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("function-shape accepts configured function forms", _419_)
-  local function _420_()
+  require("plenary.busted").it("function-shape accepts configured function forms", _405_)
+  local function _406_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(var x 1)", "fnl/spec/app_spec.fnl", "forbidden-form", {["applies-to"] = "all"})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("applies-to all makes forbidden-form inspect spec files", _420_)
-  local function _421_()
+  require("plenary.busted").it("applies-to all makes forbidden-form inspect spec files", _406_)
+  local function _407_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(alter x 1)", "fnl/app.fnl", "forbidden-form", {forms = {"alter"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("forbidden-form accepts configured mutation forms", _421_)
-  local function _422_()
+  require("plenary.busted").it("forbidden-form accepts configured mutation forms", _407_)
+  local function _408_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #option_findings("(branch x\\n  a b) (bind [a 1 b 2] a)", "fnl/app.fnl", "multiline-layout", {clauses = {"branch"}, bindings = {"bind"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("multiline-layout accepts configured clause and binding forms", _422_)
-  local function _423_()
+  require("plenary.busted").it("multiline-layout accepts configured clause and binding forms", _408_)
+  local function _409_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(local c (require :my.core))", "fnl/app.fnl", "module-import", {mode = "require", module = "my.core", binding = "c"})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import accepts configured module and binding", _423_)
-  local function _424_()
+  require("plenary.busted").it("module-import accepts configured module and binding", _409_)
+  local function _410_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(special [1\\n  2])", "fnl/app.fnl", "call-data-arg", {forms = {"special"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("call-data-arg ignores configured call heads", _424_)
-  local function _425_()
-    local function _426_()
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = {}
-      local actual_7_auto = finding_summary(check_source_with_matcher("(if ok then)", "fnl/legacy/a.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-without-else", pattern = "^fnl/legacy/"}}))
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("matches an exclusion pattern against the repository-relative path", _426_)
-    local function _427_()
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = 1
-      local actual_7_auto = #check_source_with_matcher("(if one then)\n\n(if two then)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-without-else", line = 1}})
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("matches a single finding line", _427_)
-    local function _428_()
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = 1
-      local actual_7_auto = #check_source_with_matcher("(if one then)\n\n(if two then)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-without-else", lines = {from = 1, to = 2}}})
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("matches an intersecting line range", _428_)
-    local function _429_()
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = {}
-      local actual_7_auto = finding_summary(check_source_with_matcher("(if ok then)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-without-else", code = "if"}}))
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("matches code in the finding form", _429_)
-    local function _430_()
+  require("plenary.busted").it("call-data-arg ignores configured call heads", _410_)
+  local function _411_()
+    local function _412_()
       local result = check_source_with_matcher("(var baz 1)\n(var foo 2)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["forbidden-form"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "forbidden-form", code = "baz"}})
       local assert_5_auto = require("luassert")
       local expected_6_auto = {{"forbidden-form", "fnl/app.fnl > top#2", "warning"}}
@@ -3392,92 +3265,19 @@ local function _406_()
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("matches code only against the selected finding source", _430_)
-    local function _431_()
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = {}
-      local actual_7_auto = finding_summary(check_source_with_matcher("(if ok then)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "if-without-else", pattern = "app[.]fnl", line = 1}}))
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("combines path and line selectors with AND semantics", _431_)
-    local function _432_()
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = {}
-      local actual_7_auto = finding_summary(check_source_with_matcher("(if ok then)", "fnl/app.fnl", {["module-style"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{pattern = "app[.]fnl", line = 1}}))
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("a general exclusion without a rule applies to every rule", _432_)
-    local function _433_()
-      local result = check_source_with_matcher("(module a)\n(if ok then)", "fnl/app.fnl", {["module-style"] = {{severity = "error", ["applies-to"] = {files = {"^fnl/[^s]"}}, options = all_options["module-style"], exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = all_options["if-without-else"], exclusions = {}}}}, {{rule = "module-style", path = "fnl/app.fnl", reason = "intentional"}})
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = {"if-without-else"}
-      local actual_7_auto
-      do
-        local tbl_26_ = {}
-        local i_27_ = 0
-        for _, finding in ipairs(result) do
-          local val_28_ = finding.rule
-          if (nil ~= val_28_) then
-            i_27_ = (i_27_ + 1)
-            tbl_26_[i_27_] = val_28_
-          else
-          end
-        end
-        actual_7_auto = tbl_26_
-      end
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("a per-rule exclusion applies only to its configured rule", _433_)
-    local function _435_()
+    require("plenary.busted").it("matches code only against the selected finding source", _412_)
+    local function _413_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = 1
       local actual_7_auto = #check_source_with_matcher("(local value 1)", "fnl/app.fnl", {["module-style"] = {{severity = "error", ["applies-to"] = {}, options = {}, exclusions = {}}}}, {{rule = "module-style", code = "local"}})
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("a code selector does not match a file-level finding", _435_)
-    local function _436_()
-      local lint = load_lint()
-      local ok, result, err
-      local function _437_()
-        return lint.check("(if ok then)", {path = "fnl/app.fnl", rules = {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}}, exclusions = {{rule = "if-without-else", pattern = "app[.]fnl"}}})
-      end
-      ok, result, err = pcall(_437_)
-      local assert_28_auto = require("luassert")
-      local value_29_auto = (not lint["module-missing"] and not ok and result and result.message)
-      assert_28_auto.is_truthy(value_29_auto, "(and (not (. lint \"module-missing\")) (not ok) result (. result \"message\"))")
-      return true
-    end
-    return require("plenary.busted").it("a regex exclusion without a matcher returns an error", _436_)
+    return require("plenary.busted").it("a code selector does not match a file-level finding", _413_)
   end
-  require("plenary.busted").describe("selector-exclusions", _425_)
-  local function _438_()
-    local function _439_()
-      local result = check_source_exact("(if ok then)\n(var x 1)", "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["if-without-else"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["nil-else"] = true}, exclusions = {}}}})
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = {"if-without-else"}
-      local actual_7_auto
-      do
-        local tbl_26_ = {}
-        local i_27_ = 0
-        for _, finding in ipairs(result) do
-          local val_28_ = finding.rule
-          if (nil ~= val_28_) then
-            i_27_ = (i_27_ + 1)
-            tbl_26_[i_27_] = val_28_
-          else
-          end
-        end
-        actual_7_auto = tbl_26_
-      end
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-      return true
-    end
-    require("plenary.busted").it("a listed rule leaves unlisted rules disabled", _439_)
-    local function _441_()
+  require("plenary.busted").describe("selector-exclusions", _411_)
+  local function _414_()
+    local function _415_()
       local source = "(module a)\n(local a 1)\n(local b 2)\n(local c 3)\n(local d 4)"
       local result = check_source(source, "fnl/app.fnl", {["module-style"] = {{severity = "off", ["applies-to"] = {}, options = {}, exclusions = {}}}, ["file-size"] = {{severity = "warning", ["applies-to"] = {files = {"^fnl/[^s]"}}, options = {["max-code-lines"] = 3}, exclusions = {}}}})
       local assert_5_auto = require("luassert")
@@ -3499,8 +3299,8 @@ local function _406_()
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
-    require("plenary.busted").it("file-size honors a nested max-code-lines option", _441_)
-    local function _443_()
+    require("plenary.busted").it("file-size honors a nested max-code-lines option", _415_)
+    local function _417_()
       local namespace_result = option_findings("(namespace foo)", "fnl/spec/app_spec.fnl", "forbidden-form", {forms = {"namespace"}})
       local module_result = option_findings("(module foo)", "fnl/spec/app_spec.fnl", "forbidden-form", {forms = {"namespace"}})
       local assert_28_auto = require("luassert")
@@ -3508,13 +3308,13 @@ local function _406_()
       assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (length namespace-result)) (= 0 (length module-result)))")
       return true
     end
-    return require("plenary.busted").it("forbidden-form uses the configured module-form", _443_)
+    return require("plenary.busted").it("forbidden-form uses the configured module-form", _417_)
   end
-  return require("plenary.busted").describe("shipped-bug-regressions", _438_)
+  return require("plenary.busted").describe("shipped-bug-regressions", _414_)
 end
-require("plenary.busted").describe("configurable-rule-options", _406_)
-local function _444_()
-  local function _445_()
+require("plenary.busted").describe("configurable-rule-options", _393_)
+local function _418_()
+  local function _419_()
     local result = check_source_exact("(require :plenary.busted)\n(require :luassert)", "fnl/spec/app_spec.fnl", {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"plenary.busted"}}, options = {mode = "forbid"}, exclusions = {}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = {"module-import"}
@@ -3535,8 +3335,8 @@ local function _444_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("moved module selectors preserve exact, order-sensitive matching", _445_)
-  local function _447_()
+  require("plenary.busted").it("moved module selectors preserve exact, order-sensitive matching", _419_)
+  local function _421_()
     local empty_result = check_source_exact("(var x 1)", "fnl/app.fnl", {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {}}, options = {}, exclusions = {}}}})
     local absent_result = check_source_exact("(var x 1)", "fnl/app.fnl", {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}}})
     local assert_5_auto = require("luassert")
@@ -3545,16 +3345,16 @@ local function _444_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("empty and absent form selectors both mean all forms", _447_)
-  local function _448_()
+  require("plenary.busted").it("empty and absent form selectors both mean all forms", _421_)
+  local function _422_()
     local result = check_source_exact("(module app)\n(local x 1)", "fnl/app.fnl", {["file-size"] = {{severity = "warning", ["applies-to"] = {files = {"^fnl/app[.]fnl$"}}, options = {["max-code-lines"] = 1}, exclusions = {}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = ((1 == #result) and (nil == result[1].node))
     assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (length result)) (= nil (. result 1 \"node\")))")
     return true
   end
-  require("plenary.busted").it("file-level findings retain a nil node with moved file selectors", _448_)
-  local function _449_()
+  require("plenary.busted").it("file-level findings retain a nil node with moved file selectors", _422_)
+  local function _423_()
     local result = check_source_exact("(set state.value 1)", "fnl/app.fnl", {design = {rules = {["no-mutation"] = {{severity = "warning", ["applies-to"] = {forms = {"set"}}, options = {}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = {"no-mutation"}
@@ -3575,11 +3375,11 @@ local function _444_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("the no-mutation alias path reports the moved design rule", _449_)
+  return require("plenary.busted").it("the no-mutation alias path reports the moved design rule", _423_)
 end
-require("plenary.busted").describe("migrated-selector-runtime-contract", _444_)
-local function _451_()
-  local function _452_()
+require("plenary.busted").describe("migrated-selector-runtime-contract", _418_)
+local function _425_()
+  local function _426_()
     local forbidden_source = "(module other)"
     local forbidden_scalar = finding_identities(check_source_exact(forbidden_source, "fnl/app.fnl", {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {modules = "app", forms = {}}, options = {}, exclusions = {}}}}))
     local forbidden_vector = finding_identities(check_source_exact(forbidden_source, "fnl/app.fnl", {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {modules = {"app"}, forms = {}}, options = {}, exclusions = {}}}}))
@@ -3594,25 +3394,25 @@ local function _451_()
     assert_28_auto.is_truthy(value_29_auto, "(and (vim.deep_equal [] forbidden-scalar) (vim.deep_equal forbidden-scalar forbidden-vector) (vim.deep_equal require-scalar require-vector) (vim.deep_equal style-scalar style-vector))")
     return true
   end
-  require("plenary.busted").it("semantic singleton module vectors preserve scalar behavior", _452_)
-  local function _453_()
+  require("plenary.busted").it("semantic singleton module vectors preserve scalar behavior", _426_)
+  local function _427_()
     local finding = {path = "fnl/app.fnl", node = {text = "my.module"}}
     local vim_matcher = matcher["vim-matcher"]()
     local scalar_ok, scalar
-    local function _454_()
+    local function _428_()
       return registry["instance-applies-to?"]("control-layout", {["applies-to"] = {modules = "my.module"}}, finding, vim_matcher)
     end
-    scalar_ok, scalar = pcall(_454_)
+    scalar_ok, scalar = pcall(_428_)
     local vector_ok, vector
-    local function _455_()
+    local function _429_()
       return registry["instance-applies-to?"]("control-layout", {["applies-to"] = {modules = {"my.module"}}}, finding, vim_matcher)
     end
-    vector_ok, vector = pcall(_455_)
+    vector_ok, vector = pcall(_429_)
     local assert_28_auto = require("luassert")
     local value_29_auto = (scalar_ok and vector_ok and (vector == scalar))
     assert_28_auto.is_truthy(value_29_auto, "(and scalar-ok vector-ok (= vector scalar))")
     return true
   end
-  return require("plenary.busted").it("scalar generic module selectors behave as one-item vectors", _453_)
+  return require("plenary.busted").it("scalar generic module selectors behave as one-item vectors", _427_)
 end
-return require("plenary.busted").describe("module-selector-vector-compatibility", _451_)
+return require("plenary.busted").describe("module-selector-vector-compatibility", _425_)

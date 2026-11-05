@@ -113,9 +113,10 @@
 (defn- path-present?
 
   [paths path index]
-  (if (> index (length paths)) false
-    (= path (. paths index)) true
-    (path-present? paths path (+ index 1))))
+  (if (> index (length paths))
+    false
+    (or (= path (. paths index))
+        (path-present? paths path (+ index 1)))))
 
 (defn- changed-file-result
 

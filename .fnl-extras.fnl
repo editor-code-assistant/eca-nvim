@@ -83,7 +83,18 @@
                                     :forms ["testing"]}
                        :options    {:children  ["is"]
                                     :max-count 1}
-                       :exclusions []}]
+                       :exclusions []}
+                      {:severity   :error
+                       :applies-to {:forms ["if"]}
+                       :options    {:min-count 2
+                                    :max-count 2
+                                    :nil-count false}
+                       :exclusions [{:path   "^spec/eca/macros[.]fnlm$"
+                                     :code   "^[(]if has-message"
+                                     :reason "syntax-quoted AST children are structural data, not semantic if branches"}
+                                    {:path   "^spec/eca/macros[.]fnlm$"
+                                     :code   "^[(]if [(][=] op"
+                                     :reason "syntax-quoted AST branches are structural data, not semantic if branches"}]}]
    :module-import    [{:severity   :error
                        :applies-to {:modules ["eca.nfnl.core"]}
                        :options    {:mode    :require
@@ -129,10 +140,6 @@
    :if-branch-call   [{:severity   :warning
                        :applies-to {:forms ["if"]}
                        :options    {}
-                       :exclusions []}]
-   :if-without-else  [{:severity   :warning
-                       :applies-to {:forms ["if"]}
-                       :options    {:nil-else true}
                        :exclusions []}]
    :nested-forms     [{:severity   :off
                        :applies-to {:forms []}

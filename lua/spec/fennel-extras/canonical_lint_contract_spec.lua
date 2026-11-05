@@ -184,12 +184,22 @@ local function _23_()
   require("plenary.busted").it("child-count is canonical and form-child-count remains an accepted alias", _24_)
   local function _25_()
     local instance = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}
-    local result = validation({lint = {rules = {["function-shape"] = {instance}, ["if-branch-call"] = {instance}, ["if-without-else"] = {instance}, ["nested-forms"] = {instance}, ["leading-bindings"] = {instance}, ["no-mutation"] = {instance}}}})
+    local result = validation({lint = {rules = {["function-shape"] = {instance}, ["if-branch-call"] = {instance}, ["nested-forms"] = {instance}, ["leading-bindings"] = {instance}, ["no-mutation"] = {instance}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value and (nil == result.value.design))
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\") (= nil (. result \"value\" \"design\")))")
     return true
   end
-  return require("plenary.busted").it("former design rule names validate under lint rules", _25_)
+  return require("plenary.busted").it("remaining former design rule names validate under lint rules", _25_)
 end
-return require("plenary.busted").describe("migrated-rule-names", _23_)
+require("plenary.busted").describe("migrated-rule-names", _23_)
+local function _26_()
+  local loaded = config.load(".fnl-extras.fnl")
+  local rules = loaded.lint.rules
+  local instance = rules["child-count"][2]
+  local assert_28_auto = require("luassert")
+  local value_29_auto = (instance and vim.deep_equal({forms = {"if"}}, instance["applies-to"]) and (2 == instance.options["min-count"]) and (2 == instance.options["max-count"]) and (false == instance.options["nil-count"]))
+  assert_28_auto.is_truthy(value_29_auto, "(and instance (vim.deep_equal {:forms [\"if\"]} (. instance \"applies-to\")) (= 2 (. instance \"options\" \"min-count\")) (= 2 (. instance \"options\" \"max-count\")) (= false (. instance \"options\" \"nil-count\")))")
+  return true
+end
+return require("plenary.busted").it("canonical config uses direct child-count for if arity", _26_)

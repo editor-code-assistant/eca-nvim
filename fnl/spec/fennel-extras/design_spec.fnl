@@ -46,7 +46,6 @@
                     :exclusions []}
           result   (validation {:design {:rules {:function-shape   [instance]
                                                  :if-branch-call   [instance]
-                                                 :if-without-else  [instance]
                                                  :nested-forms     [instance]
                                                  :leading-bindings [instance]
                                                  :no-mutation      [instance]}}})]
@@ -55,7 +54,7 @@
 (deftest lint-design-separation
 
   (testing "structural rule keys are accepted under lint rules"
-    (each [_ name (ipairs ["function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])]
+    (each [_ name (ipairs ["function-shape" "if-branch-call" "nested-forms" "leading-bindings" "no-mutation"])]
       (let [instance {:severity   "warning"
                       :applies-to {:forms ["if"]}
                       :options    {}
@@ -76,19 +75,12 @@
                                             :applies-to {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
                                             :options    {}
                                             :exclusions []}]}))))
+)
 
-  (testing "design findings preserve if-branch-call identity and severity"
-    (is (= [["if-branch-call" "fnl/app.fnl > defn:run > if#1 > then" "warning"]]
-           (findings-for "(defn run [] (if ok (do a b) c))"
-                         {:if-branch-call [{:severity   "warning"
-                                            :applies-to {:forms ["if"]}
-                                            :options    {}
-                                            :exclusions []}]}))))
-
-  (testing "design findings preserve if-without-else identity and severity"
-    (is (= [["if-without-else" "fnl/app.fnl > defn:run > if#1" "warning"]]
-           (findings-for "(defn run [] (if ok value))"
-                         {:if-without-else [{:severity   "warning"
-                                             :applies-to {:forms ["if"]}
-                                             :options    {:nil-else true}
-                                             :exclusions []}]})))))
+(testing "design findings preserve if-branch-call identity and severity"
+  (is (= [["if-branch-call" "fnl/app.fnl > defn:run > if#1 > then" "warning"]]
+         (findings-for "(defn run [] (if ok (do a b) c))"
+                       {:if-branch-call [{:severity   "warning"
+                                          :applies-to {:forms ["if"]}
+                                          :options    {}
+                                          :exclusions []}]}))))

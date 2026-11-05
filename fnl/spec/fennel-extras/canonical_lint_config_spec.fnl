@@ -23,16 +23,6 @@
 
 
 
-  (testing "rules use keyword keys and non-empty vectors of instances"
-    (let [result (validation {:lint   {:rules {}}
-                              :design {:rules {:if-without-else [{:severity   "warning"
-                                                                  :applies-to {:forms ["if"]}
-                                                                  :options    {:nil-else true}
-                                                                  :exclusions []}]}}})]
-      (is (and (. result :ok) (. result :value)))))
-
-
-
   (testing "a top-level spec-files key is rejected"
     (let [result (validation {:lint {:spec-files ["^spec/"] :rules {}}})]
       (is (and (not (. result :ok))
@@ -60,4 +50,28 @@
                                                                :exclusions []}]}}})]
       (is (and (not (. result :ok))
                (= "unknown applies-to key: contexts"
+                  (error-message result)))))))
+
+(deftest canonical-exclusions
+
+  (testing "path, code, form, and reason selectors are accepted as strings"
+    (let [result (validation {:lint {:rules {:if-branch-call [{:severity   "warning"
+                                                               :applies-to {:forms ["if"]}
+                                                               :options    {}
+                                                               :exclusions [{:path   "^spec/"
+                                                                             :code   "^[(]if"
+                                                                             :form   "spec/app.fnl > if#1"
+                                                                             :reason "intentional"}]}]}}})]
+      (is (and (. result :ok) (. result :value)))))
+
+  (testing "exclusion selectors require string values"
+    (let [result (validation {:lint {:rules {:if-branch-call [{:severity   "warning"
+                                                               :applies-to {:forms ["if"]}
+                                                               :options    {}
+                                                               :exclusions [{:path   ["^spec/"]
+                                                                             :code   true
+                                                                             :form   1
+                                                                             :reason "intentional"}]}]}}})]
+      (is (and (not (. result :ok))
+               (= "lint.rules.if-branch-call[1].exclusions[1] requires string path and reason; optional code and form must be strings"
                   (error-message result)))))))

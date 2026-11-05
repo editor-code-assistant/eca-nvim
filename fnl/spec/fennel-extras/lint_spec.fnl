@@ -21,7 +21,6 @@
         :forbidden-form   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :form-child-count [{:severity "error" :applies-to {} :options {} :exclusions []}]
         :if-branch-call   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
-        :if-without-else  [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :control-layout   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :multiline-layout [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :function-shape   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
@@ -42,7 +41,6 @@
         "forbidden-form"   {:forms ["var" "set" "while"]}
         "form-child-count" {:children ["is"] :max-count 1}
         "if-branch-call"   {:forms ["if"]}
-        "if-without-else"  {:forms ["if"] :nil-else true}
         "control-layout"   {:forms ["if" "when" "and" "or" "case" "match"]}
         "multiline-layout" {:clauses ["case" "match" "case-try" "match-try"] :bindings ["let" "when-let" "if-let" "with-open"]}
         "function-shape"   {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
@@ -51,18 +49,16 @@
         "call-data-arg"    {:forms []}})
 
 (local canonical-selectors
-       {"module-style"    {:modules "eca.nfnl.macros.aniseed" :forms ["module" "def" "defn" "defn-"]}
-        "required-form"   {:forms ["module"]}
-        "if-branch-call"  {:forms ["if"]}
-        "if-without-else" {:forms ["if"]}
-        "control-layout"  {:forms ["if" "when" "and" "or" "case" "match"]}
-        "function-shape"  {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-        "unused-and-or"   {:forms ["and" "or"]}
-        "call-data-arg"   {:forms []}})
+       {"module-style"   {:modules "eca.nfnl.macros.aniseed" :forms ["module" "def" "defn" "defn-"]}
+        "required-form"  {:forms ["module"]}
+        "if-branch-call" {:forms ["if"]}
+        "control-layout" {:forms ["if" "when" "and" "or" "case" "match"]}
+        "function-shape" {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
+        "unused-and-or"  {:forms ["and" "or"]}
+        "call-data-arg"  {:forms []}})
 
 (local canonical-options
-       {"if-without-else"  {:nil-else true}
-        "file-size"        {:max-code-lines 300}
+       {"file-size"        {:max-code-lines 300}
         "form-child-count" {:children ["is"] :max-count 1}
         "multiline-layout" {:clauses ["case" "match" "case-try" "match-try"] :bindings ["let" "when-let" "if-let" "with-open"]}})
 
@@ -1546,7 +1542,6 @@
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/registry.fnl" "if-without-else"]
             ["fnl/fennel-extras/lint/rules/spec.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
@@ -1622,7 +1617,7 @@
 
 
   (testing "the shared compatibility policy enables all approved rules"
-    (is (= 13 (policy-size (all-enabled-policy))))) )
+    (is (= 12 (policy-size (all-enabled-policy))))) )
 
 (defn- first-finding-form
   [findings rule]
@@ -1698,6 +1693,105 @@
                                             :code   "foo"
                                             :reason "intentional"}])]
     (is (= [] (finding-identities result)))))
+
+(testing "narrows syntax-quoted if exclusion without hiding executable if findings"
+  (let [source  (read-source "fnl/spec/eca/macros.fnlm")
+        result  (check-source-with-matcher source
+                                           "fnl/spec/eca/macros.fnlm"
+                                           {:child-count [{:severity   "error"
+                                                           :applies-to {:forms ["if"]}
+                                                           :options    {:min-count 2
+                                                                        :max-count 2
+                                                                        :nil-count false}
+                                                           :exclusions []}]}
+                                           [{:rule   "child-count"
+                                             :code   "^[(]if has-message"
+                                             :reason "syntax-quoted AST children are structural data, not semantic if branches"}])
+        summary (icollect [_ finding (ipairs result)]
+                  [(. finding :line) (. finding :code)])]
+    (is (= []
+           (icollect [_ finding (ipairs summary)]
+             (when (= (. finding 1) 17)
+               finding))))))
+
+(testing "matches an exclusion pattern against the repository-relative path"
+  (is (= []
+         (finding-summary (check-source-with-matcher "(defn run [] (if ok (do a b) c))"
+                                                     "fnl/legacy/a.fnl"
+                                                     {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
+                                                     [{:rule "if-branch-call" :pattern "^fnl/legacy/"}])))))
+
+
+
+(testing "matches a single finding line"
+  (is (= 1
+         (length (check-source-with-matcher "(defn run [] (if one (do a b) c))\n\n(defn run [] (if two (do a b) c))"
+                                            "fnl/app.fnl"
+                                            {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                             :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                             :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                             :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
+                                            [{:rule "if-branch-call" :line 1}])))))
+
+
+
+(testing "matches an intersecting line range"
+  (is (= 1
+         (length (check-source-with-matcher "(defn run [] (if one (do a b) c))\n\n(defn run [] (if two (do a b) c))"
+                                            "fnl/app.fnl"
+                                            {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                             :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                             :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                             :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
+                                            [{:rule "if-branch-call" :lines {:from 1 :to 2}}])))))
+
+
+
+(testing "matches code in the finding form"
+  (is (= []
+         (finding-summary (check-source-with-matcher "(if ok (do a b) c)"
+                                                     "fnl/app.fnl"
+                                                     {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
+                                                     [{:rule "if-branch-call" :code "do"}])))))
+
+
+
+(testing "combines path and line selectors with AND semantics"
+  (is (= []
+         (finding-summary (check-source-with-matcher "(if ok (do a b) c)"
+                                                     "fnl/app.fnl"
+                                                     {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                      :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
+                                                     [{:rule "if-branch-call" :pattern "app[.]fnl" :line 1}])))))
+
+
+
+(testing "a general exclusion without a rule applies to every rule"
+  (is (= []
+         (finding-summary (check-source-with-matcher "(if ok (do a b) c)"
+                                                     "fnl/app.fnl"
+                                                     {:module-style   [{:severity "error" :applies-to {} :options {} :exclusions []}]
+                                                      :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
+                                                     [{:pattern "app[.]fnl" :line 1}])))))
+
+
+
+(testing "a code selector does not match a file-level finding"
+  (is (= 1
+         (length (check-source-with-matcher "(local value 1)"
+                                            "fnl/app.fnl"
+                                            {:module-style [{:severity "error" :applies-to {} :options {} :exclusions []}]}
+                                            [{:rule "module-style" :code "local"}])))))
+
+
 
 (deftest normalized-exclusion-identities
 
@@ -1899,151 +1993,12 @@
               1
               :message)))))
 
-(defn- if-without-else-findings
-  [source path rules]
-  (let [result (check-source source path rules)]
-    (if (or (. result :module-missing) (. result :value-nil?))
-      result
-      (icollect [_ finding (ipairs result)]
-        (when (= (. finding :rule) "if-without-else")
-          finding)))))
 
 
 
 
-(deftest if-without-else
 
 
-
-
-  (testing "flags a two-argument if with the default warning and message"
-    (let [findings (if-without-else-findings "(defn f [] (if a b))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
-      (is (= {:rule "if-without-else" :severity "warning" :message "if without else; use when"}
-             {:rule     (. findings 1 :rule)
-              :severity (. findings 1 :severity)
-              :message  (. findings 1 :message)}))))
-
-
-
-
-  (testing "does not flag complete or multi-clause if forms or when"
-    (is (= 0
-           (length (if-without-else-findings "(if a b c) (if a b c d e) (when a b)"
-                                             "fnl/app.fnl"
-                                             {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a single-clause if whose else branch is literal nil"
-    (let [finding (. (if-without-else-findings "(defn f\n  [ok resolved]\n  (if ok\n    resolved\n    nil))"
-                                               "fnl/app.fnl"
-                                               {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
-                     1)]
-      (is (= {:rule     "if-without-else"
-              :severity "warning"
-              :message  "if without else; use when"}
-             {:rule     (. finding :rule)
-              :severity (. finding :severity)
-              :message  (. finding :message)}))))
-
-
-
-
-  (testing "does not flag a single-clause if with a non-nil else branch"
-    (is (= 0
-           (length (if-without-else-findings "(if a b c)"
-                                             "fnl/app.fnl"
-                                             {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag a multi-clause if ending in literal nil"
-    (is (= 0
-           (length (if-without-else-findings "(if a b c nil)"
-                                             "fnl/app.fnl"
-                                             {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag an if with a literal nil then branch"
-    (is (= 0
-           (length (if-without-else-findings "(if a nil b)"
-                                             "fnl/app.fnl"
-                                             {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags two nested if forms with distinct stable identities"
-    (let [source "(defn f [] (do (if x y) (if x y)))"
-          rules  {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}
-          first  (if-without-else-findings source "fnl/app.fnl" rules)
-          second (if-without-else-findings source "fnl/app.fnl" rules)]
-      (is (and (= 2 (length first))
-               (not= (. first 1 :form) (. first 2 :form))
-               (vim.deep_equal (icollect [_ finding (ipairs first)] (. finding :form))
-                               (icollect [_ finding (ipairs second)] (. finding :form)))))))
-
-
-
-
-  (testing "an exclusion for one nested if leaves the other finding"
-    (let [source   "(defn f [] (do (if x y) (if x y)))"
-          path     "fnl/app.fnl"
-          rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}
-          baseline (if-without-else-findings source path rules)
-          form     (. baseline 1 :form)
-          result   (check-context source
-                                  {:path       path
-                                   :rules      rules
-                                   :exclusions [{:rule   "if-without-else"
-                                                 :form   form
-                                                 :reason "intentional"}]})]
-      (is (= 1
-             (length (icollect [_ finding (ipairs result)]
-                       (when (= (. finding :rule) "if-without-else")
-                         finding)))))))
-
-
-
-
-  (testing "applies to spec files"
-    (is (= 1
-           (length (if-without-else-findings "(if a b)"
-                                             "fnl/spec/app_spec.fnl"
-                                             nil)))))
-
-
-
-
-  (testing "ignores quoted if data and flags only executable unquoted quasiquote code"
-    (is (= 1
-           (length (if-without-else-findings "'(if a b) `(if a ,(if b c))"
-                                             "fnl/app.fnl"
-                                             {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "uses error severity when configured"
-    (is (= "error"
-           (. (if-without-else-findings "(if a b)"
-                                        "fnl/app.fnl"
-                                        {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "error" :applies-to {} :options {} :exclusions []}]})
-              1
-              :severity))))
-
-
-
-
-  (testing "does not report when disabled"
-    (is (= 0
-           (length (if-without-else-findings "(if a b)"
-                                             "fnl/app.fnl"
-                                             {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))))
 
 (defn- multiline-layout-findings
   [source path rules]
@@ -3210,15 +3165,6 @@
 
 
 
-  (testing "if-without-else accepts configured conditional forms and nil policy"
-    (is (= 0
-           (length (option-findings "(unless ok value nil)"
-                                    "fnl/app.fnl"
-                                    "if-without-else"
-                                    {:forms ["unless"] :nil-else false})))))
-
-
-
 
   (testing "control-layout accepts configured control forms"
     (is (= 1
@@ -3301,36 +3247,22 @@
 
 
 
-    (testing "matches an exclusion pattern against the repository-relative path"
-      (is (= []
-             (finding-summary (check-source-with-matcher "(if ok then)" "fnl/legacy/a.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "warning" :applies-to {} :options {} :exclusions []}]} [{:rule "if-without-else" :pattern "^fnl/legacy/"}])))))
 
 
 
 
-    (testing "matches a single finding line"
-      (is (= 1
-             (length (check-source-with-matcher "(if one then)\n\n(if two then)"
-                                                "fnl/app.fnl"
-                                                {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
-                                                [{:rule "if-without-else" :line 1}])))))
 
 
 
 
-    (testing "matches an intersecting line range"
-      (is (= 1
-             (length (check-source-with-matcher "(if one then)\n\n(if two then)"
-                                                "fnl/app.fnl"
-                                                {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
-                                                [{:rule "if-without-else" :lines {:from 1 :to 2}}])))))
 
 
 
 
-    (testing "matches code in the finding form"
-      (is (= []
-             (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "warning" :applies-to {} :options {} :exclusions []}]} [{:rule "if-without-else" :code "if"}])))))
+
+
+
+
 
 
 
@@ -3346,36 +3278,17 @@
 
 
 
-    (testing "combines path and line selectors with AND semantics"
-      (is (= []
-             (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "warning" :applies-to {} :options {} :exclusions []}]} [{:rule "if-without-else" :pattern "app[.]fnl" :line 1}] )))))
 
 
 
 
-    (testing "a general exclusion without a rule applies to every rule"
-      (is (= []
-             (finding-summary (check-source-with-matcher "(if ok then)" "fnl/app.fnl" {:module-style [{:severity "error" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "warning" :applies-to {} :options {} :exclusions []}]} [{:pattern "app[.]fnl" :line 1}])))))
 
 
 
 
-    (testing "a per-rule exclusion applies only to its configured rule"
-      (let [result (check-source-with-matcher "(module a)\n(if ok then)"
-                                              "fnl/app.fnl"
-                                              {:module-style    [{:severity   "error"
-                                                                  :applies-to {:files ["^fnl/[^s]"]}
-                                                                  :options    (. all-options "module-style")
-                                                                  :exclusions []}]
-                                               :if-without-else [{:severity   "warning"
-                                                                  :applies-to {}
-                                                                  :options    (. all-options "if-without-else")
-                                                                  :exclusions []}]}
-                                              [{:rule   "module-style"
-                                                :path   "fnl/app.fnl"
-                                                :reason "intentional"}])]
-        (is (= ["if-without-else"]
-               (icollect [_ finding (ipairs result)] (. finding :rule))))))
+
+
+
 
 
 
@@ -3390,37 +3303,14 @@
 
 
 
-    (testing "a regex exclusion without a matcher returns an error"
-      (let [lint            (load-lint)
-            (ok result err) (pcall (fn []
-                                     (lint.check "(if ok then)"
-                                                 {:path       "fnl/app.fnl"
-                                                  :rules      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :if-without-else [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
-                                                  :exclusions [{:rule    "if-without-else"
-                                                                :pattern "app[.]fnl"}]})))]
-
-
-
-        (is (and (not (. lint :module-missing))
-                 (not ok)
-                 result
-                 (. result :message))))))
+    )
 
   (deftest shipped-bug-regressions
 
 
 
 
-    (testing "a listed rule leaves unlisted rules disabled"
-      (let [result (check-source-exact "(if ok then)\n(var x 1)"
-                                       "fnl/app.fnl"
-                                       {:module-style    [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                        :if-without-else [{:severity   "warning"
-                                                           :applies-to {:forms ["if"]}
-                                                           :options    {:nil-else true}
-                                                           :exclusions []}]})]
-        (is (= ["if-without-else"]
-               (icollect [_ finding (ipairs result)] (. finding :rule))))))
+
 
 
 

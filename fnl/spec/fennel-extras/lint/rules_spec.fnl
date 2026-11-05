@@ -18,8 +18,8 @@
 
 (deftest defaults
 
-  (testing "all thirteen lint rules are off by default"
-    (is (= 13 (length (vim.tbl_keys (rules.defaults)))))))
+  (testing "all twelve lint rules are off by default"
+    (is (= 12 (length (vim.tbl_keys (rules.defaults)))))))
 
 (deftest forbidden-form
 

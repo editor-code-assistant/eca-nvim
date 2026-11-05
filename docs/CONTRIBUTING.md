@@ -169,7 +169,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :exclusions []}]}}}
 ```
 
-The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, `:symlinks`, and `:config`. `:config` defaults to `false`, excluding the discovered `.fnl-extras.fnl` from implicit format and lint scans; set it to `true` to include that discovered file. Explicitly naming the config file always includes it, while naming other files does not add it. `:lint :rules` is canonical for all lint, structural, and idiomatic rules. Legacy top-level `:design :rules` remains accepted and is normalized into lint rules; when both sections define a rule, the canonical lint entry wins. The moved design rules are `function-shape`, `if-branch-call`, `if-without-else`, `no-mutation`, `nested-forms`, and `leading-bindings`.
+The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, `:symlinks`, and `:config`. `:config` defaults to `false`, excluding the discovered `.fnl-extras.fnl` from implicit format and lint scans; set it to `true` to include that discovered file. Explicitly naming the config file always includes it, while naming other files does not add it. `:lint :rules` is canonical for all lint, structural, and idiomatic rules. Legacy top-level `:design :rules` remains accepted and is normalized into lint rules; when both sections define a rule, the canonical lint entry wins. The moved design rules are `function-shape`, `if-branch-call`, `no-mutation`, `nested-forms`, and `leading-bindings`.
 
 For example:
 
@@ -228,7 +228,7 @@ The lint rules are:
 
 #### Design rule options
 
-Legacy design rules use the same instance shape, but canonical configuration places them under `:lint :rules`: `function-shape` (`:forms`, optional `:max-depth`), `if-branch-call` (`:forms`), `if-without-else` (`:forms`, `:nil-else`), `no-mutation` (`:forms`), `nested-forms` (`:forms`, `:max-depth`), and `leading-bindings` (`:forms`). `form-child-count` remains an accepted compatibility alias for `child-count`.
+Legacy design rules use the same instance shape, but canonical configuration places them under `:lint :rules`: `function-shape` (`:forms`, optional `:max-depth`), `if-branch-call` (`:forms`), `no-mutation` (`:forms`), `nested-forms` (`:forms`, `:max-depth`), and `leading-bindings` (`:forms`). `form-child-count` remains an accepted compatibility alias for `child-count`.
 
 #### Rule options
 
@@ -236,7 +236,7 @@ Put each rule's direct, typed options inside its instance. Required values are e
 
 #### Exclusions
 
-Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with a string `:path` and string `:reason`; the path is matched against the workspace-relative path. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
+Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with a string `:path` and string `:reason`; optional `:code` and `:form` selectors must also be strings. The path is matched against the workspace-relative path, `:code` is matched against the flagged form's source, and `:form` is matched literally against the finding identity. All selectors use AND semantics. `:code` is not valid for file-level findings. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
 
 ```fennel
 :rules {:function-shape [{:severity :warning

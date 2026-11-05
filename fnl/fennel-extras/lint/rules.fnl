@@ -13,7 +13,6 @@
 (local layout-rule (require :fennel-extras.lint.rules.layout))
 (local control-rule (require :fennel-extras.lint.rules.control))
 (local discard-rule (require :fennel-extras.lint.rules.discard))
-(local when-rule (require :fennel-extras.lint.rules.when))
 (local call-rule (require :fennel-extras.lint.rules.call))
 (local shape-rule (require :fennel-extras.lint.rules.shape))
 (local shape-leaf (require :fennel-extras.lint.rules.shape.leaf))
@@ -174,15 +173,6 @@
 
 
 
-(defn- append-when-findings
-
-  [findings path forms policy source]
-  (if (enabled? policy "if-without-else")
-    (when-rule.findings findings path forms policy source)
-    findings))
-
-
-
 (defn- append-layout-findings
 
   [findings path forms policy source]
@@ -240,7 +230,6 @@
         findings (append-all findings (module-rule.required-form-finding path source policy))
         findings (append-form-findings findings path forms policy)
         findings (append-shape-findings findings path forms policy source)
-        findings (append-when-findings findings path forms policy source)
         findings (append-layout-findings findings path forms policy source)
         findings (append-control-findings findings path forms policy source)
         findings (append-discard-findings findings path forms policy source)

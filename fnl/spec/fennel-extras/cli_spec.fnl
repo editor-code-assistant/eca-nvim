@@ -1272,7 +1272,6 @@
         "module-import"    ":applies-to {:files [\"^spec/\"] :modules [\"plenary.busted\" \"luassert\"]} :options {:exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
         "form-child-count" ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}"
         "if-branch-call"   ":applies-to {:forms [\"if\"]} :options {}"
-        "if-without-else"  ":applies-to {:forms [\"if\"]} :options {:nil-else true}"
         "control-layout"   ":applies-to {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]} :options {}"
         "function-shape"   ":applies-to {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"λ\"]} :options {}"
         "forbidden-form"   ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}"
@@ -1284,7 +1283,6 @@
 
 (local design-rule-names {"function-shape"   true
                           "if-branch-call"   true
-                          "if-without-else"  true
                           "no-mutation"      true
                           "nested-forms"     true
                           "leading-bindings" true})
@@ -1527,8 +1525,17 @@
   (or (and (= mode :stale)
            "{:lint {:rules {\"module-style\" :off}}
              :design {:rules {:if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
+      (and (= mode :disabled)
+           "{:lint {:rules {\"module-style\" :off}}
+             :design {:rules {:if-branch-call [{:severity :off :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"}]}]}}}")
+      (and (= mode :per-rule)
+           "{:lint {:rules {\"module-style\" :off}}
+             :design {:rules {:if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :code \"do\" :reason \"intentional per-rule exclusion\"}]}]}}}")
+      (and (= mode :general)
+           "{:lint {:rules {\"module-style\" :off}}
+             :design {:rules {:if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"intentional general exclusion\"}]}]}}}")
       "{:lint {:rules {\"module-style\" :off}}
-        :design {:rules {:if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"intentional multi-step branch\"}]}]}}}"))
+        :design {:rules {:if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :code \"do\" :reason \"intentional multi-step branch\"}]}]}}}"))
 
 
 
@@ -1548,21 +1555,11 @@
 
 
 
-(defn- lint-selector-exclusion-config
-  [mode]
-  (or (and (= mode :per-rule)
-           "{:lint {:rules {\"module-style\" :off}}
-             :design {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-rule exclusion\"}]}]}}}")
-      "{:lint {:rules {}}
-        :design {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions [{:path \"a.fnl\" :reason \"intentional per-instance exclusion\"}]}]}}}"))
 
 
 
-(defn- lint-selector-exclusion-scenario
-  [mode]
-  (lint-project (lint-selector-exclusion-config mode)
-                {"a.fnl" "(if ok then)\n"}
-                ["lint" "--all"]))
+
+
 
 
 
@@ -1574,28 +1571,18 @@
 
 
 
-(defn- lint-stale-pattern-scenario
-  []
-  (lint-project "{:lint {:rules {\"module-style\" :off}}
-                :design {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions [{:path \"missing[.]fnl\" :reason \"stale pattern\"]}]}}}"
-                {"a.fnl" "(if ok then)\n"}
-                ["lint" "--all"]))
 
 
 
-(defn- lint-disabled-exclusion-scenario
-  []
-  (lint-project "{:lint {:rules {}}
-                :design {:rules {:if-without-else [{:severity :off :applies-to {} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"]}]}}}"
-                {"a.fnl" "(if ok then)\n"}
-                ["lint" "--all"]))
+
+
 
 
 
 (defn- lint-error-config
   [mode]
   (if (= mode :config)
-    "{:lint {:rules {:if-without-else [{:severity :warning :applies-to {} :options {:nope true} :exclusions []}]}}}"
+    "{:lint {:rules {:module-style [{:severity :warning :applies-to {} :options {:nope true} :exclusions []}]}}}"
     "{:lint {:rules {:module-style [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"))
 
 
@@ -1743,13 +1730,29 @@
 
 
 
-      (testing "suppresses a matching exclusion in all mode"
+      (testing "suppresses a matching path and code exclusion in all mode"
         (is (= 0 (. (lint-exclusion-scenario :matching) :code))))
+
+
+
+      (testing "suppresses a per-rule exclusion in all mode"
+        (is (= 0 (. (lint-exclusion-scenario :per-rule) :code))))
+
+
+
+      (testing "suppresses a general exclusion in all mode"
+        (is (= 0 (. (lint-exclusion-scenario :general) :code))))
 
 
 
       (testing "reports an unmatched exclusion as a stale error in all mode"
         (let [result (lint-exclusion-scenario :stale)]
+          (is (= 1 (. result :code)))))
+
+
+
+      (testing "reports an exclusion on a disabled rule as stale"
+        (let [result (lint-exclusion-scenario :disabled)]
           (is (= 1 (. result :code)))))
 
 
@@ -1760,16 +1763,6 @@
 
 
 
-      (testing "suppresses a per-rule exclusion end to end"
-        (is (= 0 (. (lint-selector-exclusion-scenario :per-rule) :code))))
-
-
-
-      (testing "suppresses a general exclusion end to end"
-        (is (= 0 (. (lint-selector-exclusion-scenario :general) :code))))
-
-
-
       (testing "rejects an invalid regex before scanning source"
         (let [result (lint-invalid-regex-scenario)]
           (is (= 2 (. result :code)))))
@@ -1777,15 +1770,7 @@
 
 
 
-      (testing "reports a stale pattern exclusion"
-        (let [result (lint-stale-pattern-scenario)]
-          (is (= 2 (. result :code)))))
-
-
-
-      (testing "reports a disabled-rule exclusion as stale"
-        (let [result (lint-disabled-exclusion-scenario)]
-          (is (= 2 (. result :code))))) )
+    )
 
     (deftest lint-errors-and-read-only
 
@@ -2030,7 +2015,7 @@
 
   (defn- changed-config
     []
-    "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"if-without-else\" :off \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}")
+    "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}")
 
 
 
@@ -2723,16 +2708,6 @@
                  (= (. result :expected) (. result :content)))))))
 
   (deftest lint-policy-cli-regressions
-
-
-
-    (testing "listing one rule disables unlisted findings"
-      (let [result (lint-project "{:lint {:rules {:if-without-else [{:severity :warning :applies-to {:forms [\"if\"]} :options {:nil-else true} :exclusions []}]}}}"
-                                 {"a.fnl" "(if ok then)\n(var x 1)\n"}
-                                 ["lint" "--all"])]
-        (is (and (= 0 (. result :code))
-                 (= 2 (length (. result :lines)))
-                 (string.match (. result :lines 1) "if%-without%-else")))))
 
 
 

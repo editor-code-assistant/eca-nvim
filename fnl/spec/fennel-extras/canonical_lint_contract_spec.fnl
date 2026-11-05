@@ -207,17 +207,26 @@
             result (validation {:lint {:rules rules}})]
         (is (. result :ok)))))
 
-  (testing "former design rule names validate under lint rules"
+  (testing "remaining former design rule names validate under lint rules"
     (let [instance {:severity   "warning"
                     :applies-to {:forms ["if"]}
                     :options    {}
                     :exclusions []}
           result   (validation {:lint {:rules {:function-shape   [instance]
                                                :if-branch-call   [instance]
-                                               :if-without-else  [instance]
                                                :nested-forms     [instance]
                                                :leading-bindings [instance]
                                                :no-mutation      [instance]}}})]
       (is (and (. result :ok)
                (. result :value)
                (= nil (. result :value :design)))))))
+
+(testing "canonical config uses direct child-count for if arity"
+  (let [loaded   (config.load ".fnl-extras.fnl")
+        rules    (. loaded :lint :rules)
+        instance (. rules :child-count 2)]
+    (is (and instance
+             (vim.deep_equal {:forms ["if"]} (. instance :applies-to))
+             (= 2 (. instance :options :min-count))
+             (= 2 (. instance :options :max-count))
+             (= false (. instance :options :nil-count))))))

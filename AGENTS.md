@@ -4,7 +4,6 @@ Read docs/CONTRIBUTING.md first; its rules apply to you.
 - For behavior-preserving refactors, run `make test` before and after. Existing specs are the safety net. Do not edit them during the refactor.
 - Only touch files in the task's scope. The working tree may contain uncommitted user work: never stash, reset, checkout, or revert it. Do not commit or push unless asked.
 - After any Fennel change, run `make compile`, `make test`, `make lint`, and `make style`; run `make fmt` (or check with `make fmt-check`) too. Keep generated Lua in sync and report lint findings. Never hand-edit `lua/`. Pre-existing findings in untouched files are not your task unless asked, but do not add new ones.
-- The `if-without-else` rule (warning) flags `(if test then)` and `(if test then nil)`; use `when` instead.
 - The `control-layout` rule (warning) requires control forms to span several lines only when they are the sole expression of a body.
 - The `unused-and-or` rule (warning) requires discarded `and`/`or` results in statement bodies to use `when`.
 - The `formatter split-bindings` rule (warning) requires multi-pair `let`/`when-let`/`if-let`/`with-open` bindings to put each pair on its own line.

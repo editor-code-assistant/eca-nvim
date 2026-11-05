@@ -43,7 +43,7 @@ local function _4_()
   require("plenary.busted").it("top-level design accepts the lint vector-instance rule schema", _5_)
   local function _6_()
     local instance = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}
-    local result = validation({design = {rules = {["function-shape"] = {instance}, ["if-branch-call"] = {instance}, ["if-without-else"] = {instance}, ["nested-forms"] = {instance}, ["leading-bindings"] = {instance}, ["no-mutation"] = {instance}}}})
+    local result = validation({design = {rules = {["function-shape"] = {instance}, ["if-branch-call"] = {instance}, ["nested-forms"] = {instance}, ["leading-bindings"] = {instance}, ["no-mutation"] = {instance}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
@@ -54,7 +54,7 @@ end
 require("plenary.busted").describe("design-configuration", _4_)
 local function _7_()
   local function _8_()
-    for _, name in ipairs({"function-shape", "if-branch-call", "if-without-else", "nested-forms", "leading-bindings", "no-mutation"}) do
+    for _, name in ipairs({"function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation"}) do
       local instance = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}
       local rules0 = {}
       local _0
@@ -78,22 +78,14 @@ local function _9_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("design findings preserve function-shape identity and severity", _10_)
-  local function _11_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = {{"if-branch-call", "fnl/app.fnl > defn:run > if#1 > then", "warning"}}
-    local actual_7_auto = findings_for("(defn run [] (if ok (do a b) c))", {["if-branch-call"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("design findings preserve if-branch-call identity and severity", _11_)
-  local function _12_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = {{"if-without-else", "fnl/app.fnl > defn:run > if#1", "warning"}}
-    local actual_7_auto = findings_for("(defn run [] (if ok value))", {["if-without-else"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["nil-else"] = true}, exclusions = {}}}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  return require("plenary.busted").it("design findings preserve if-without-else identity and severity", _12_)
+  return require("plenary.busted").it("design findings preserve function-shape identity and severity", _10_)
 end
-return require("plenary.busted").describe("design-finding-compatibility", _9_)
+require("plenary.busted").describe("design-finding-compatibility", _9_)
+local function _11_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {{"if-branch-call", "fnl/app.fnl > defn:run > if#1 > then", "warning"}}
+  local actual_7_auto = findings_for("(defn run [] (if ok (do a b) c))", {["if-branch-call"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}}})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+return require("plenary.busted").it("design findings preserve if-branch-call identity and severity", _11_)

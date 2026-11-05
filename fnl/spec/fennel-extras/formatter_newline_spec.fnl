@@ -32,7 +32,7 @@
 (defn- formatted
   [source]
   (let [(ok value) (pcall formatted-body format source)]
-    (if ok value nil)))
+    (if ok value (or nil))))
 
 (defn- formatted-split-body
   [formatter source]
@@ -49,7 +49,7 @@
 (defn- formatted-split
   [source]
   (let [(ok value) (pcall formatted-split-body format source)]
-    (if ok value nil)))
+    (if ok value (or nil))))
 
 (deftest formatter-newline-contract
 

@@ -242,7 +242,6 @@
                         "file-size"
                         "call-data-arg"
                         "if-branch-call"
-                        "if-without-else"
                         "function-shape"
                         "nested-forms"
                         "leading-bindings"

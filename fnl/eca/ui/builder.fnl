@@ -270,30 +270,30 @@
           (widgets.steering.is-on-steering-line?)
           (do
             (cancel-steering) (focus-prompt))
-          ;; Cursor on stop → stop everything
-          (is-on-stop-line?)
-          (stop)
-          ;; Normal flow
-          (let [prompt-state (widgets.prompt.get-state)
-                text         (widgets.prompt.get-text)]
-            (if prompt-state.loading?
-              ;; During loading: append to steering queue
-              (when (and text (not= "" text))
-                (table.insert state.steering-queue text)
-                (widgets.prompt.add-to-history text)
-                (with-internal-edit (fn []
-                                      (widgets.prompt.clear)
-                                      (widgets.steering.set-items state.steering-queue)
-                                      (render-prompt-area)))
+          (if ;; Cursor on stop → stop everything
+            (is-on-stop-line?)
+            (stop)
+            ;; Normal flow
+            (let [prompt-state (widgets.prompt.get-state)
+                  text         (widgets.prompt.get-text)]
+              (if prompt-state.loading?
+                ;; During loading: append to steering queue
+                (when (and text (not= "" text))
+                  (table.insert state.steering-queue text)
+                  (widgets.prompt.add-to-history text)
+                  (with-internal-edit (fn []
+                                        (widgets.prompt.clear)
+                                        (widgets.steering.set-items state.steering-queue)
+                                        (render-prompt-area)))
 
-                (focus-prompt))
-              ;; Normal: submit immediately
-              (when (and text (not= "" text))
-                (widgets.prompt.add-to-history text)
-                (with-internal-edit (fn [] (widgets.prompt.clear)))
+                  (focus-prompt))
+                ;; Normal: submit immediately
+                (when (and text (not= "" text))
+                  (widgets.prompt.add-to-history text)
+                  (with-internal-edit (fn [] (widgets.prompt.clear)))
 
-                (focus-prompt)
-                (when on-submit (on-submit text))))))))
+                  (focus-prompt)
+                  (when on-submit (on-submit text)))))))))
 
     ;; Open
 

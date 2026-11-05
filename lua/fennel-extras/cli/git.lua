@@ -117,10 +117,8 @@ end
 local function path_present_3f(paths, path, index)
   if (index > #paths) then
     return false
-  elseif (path == paths[index]) then
-    return true
   else
-    return path_present_3f(paths, path, (index + 1))
+    return ((path == paths[index]) or path_present_3f(paths, path, (index + 1)))
   end
 end
 local function changed_file_result(file, patch, status)

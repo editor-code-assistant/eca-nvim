@@ -3,10 +3,10 @@
 (module fennel-extras.lint.rules.registry)
 
 (local core (require :eca.nfnl.core))
-(local lint-rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg" "function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])
-(local design-rule-name-list ["function-shape" "if-branch-call" "if-without-else" "nested-forms" "leading-bindings" "no-mutation"])
+(local lint-rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg" "function-shape" "if-branch-call" "nested-forms" "leading-bindings" "no-mutation"])
+(local design-rule-name-list ["function-shape" "if-branch-call" "nested-forms" "leading-bindings" "no-mutation"])
 (local rule-name-list lint-rule-name-list)
-(local default-rule-name-list (core.concat ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg"] ["function-shape" "if-branch-call" "if-without-else"]))
+(local default-rule-name-list (core.concat ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "control-layout" "unused-and-or" "multiline-layout" "file-size" "call-data-arg"] ["function-shape" "if-branch-call"]))
 (local ast (require :fennel-extras.lint.rules.ast))
 (local options (require :fennel-extras.lint.rules.options))
 (local rule-properties {:module-style {:scope :file} :required-form {:scope :file} :file-size {:scope :file}})
@@ -16,7 +16,6 @@
         "module-style"     ["module" "forms"]
         "module-import"    ["module" "modules" "forms"]
         "if-branch-call"   ["forms"]
-        "if-without-else"  ["forms"]
         "child-count"      ["forms"]
         "control-layout"   ["forms"]
         "unused-and-or"    ["forms"]
@@ -29,7 +28,6 @@
        {"required-form"    ["forms"]
         "module-style"     ["module" "forms"]
         "if-branch-call"   ["forms"]
-        "if-without-else"  ["forms"]
         "control-layout"   ["forms"]
         "unused-and-or"    ["forms"]
         "function-shape"   ["forms"]
@@ -172,9 +170,8 @@
 
   [applies name singleton]
   (if (= name "module")
-    (if singleton
-      (singleton-module-value (. applies :modules))
-      nil)
+    (when singleton
+      (singleton-module-value (. applies :modules)))
     (if (= name "modules")
       (module-set-value (. applies :modules))
       (. applies :forms))))

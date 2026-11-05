@@ -35,9 +35,8 @@
       (set state.tabs new-tabs)
       (when (= state.active-id id)
         (set state.active-id
-             (if (> (length new-tabs) 0)
-               (. (. new-tabs 1) :id)
-               nil)))))
+             (when (> (length new-tabs) 0)
+               (. (. new-tabs 1) :id))))))
 
   (fn select-tab [id]
     (set state.active-id id))
