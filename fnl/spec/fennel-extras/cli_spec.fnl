@@ -1272,7 +1272,6 @@
         "module-import"    ":applies-to {:files [\"^spec/\"] :modules [\"plenary.busted\" \"luassert\"]} :options {:exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
         "form-child-count" ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}"
         "if-branch-call"   ":applies-to {:forms [\"if\"]} :options {}"
-        "control-layout"   ":applies-to {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]} :options {}"
         "function-shape"   ":applies-to {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"λ\"]} :options {}"
         "forbidden-form"   ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}"
         "file-size"        ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}"
@@ -2015,7 +2014,7 @@
 
   (defn- changed-config
     []
-    "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}")
+    "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}")
 
 
 

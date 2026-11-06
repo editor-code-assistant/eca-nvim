@@ -21,8 +21,6 @@
         :forbidden-form   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :form-child-count [{:severity "error" :applies-to {} :options {} :exclusions []}]
         :if-branch-call   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
-        :control-layout   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
-        :multiline-layout [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :function-shape   [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :file-size        [{:severity "warning" :applies-to {} :options {} :exclusions []}]
         :unused-and-or    [{:severity "warning" :applies-to {} :options {} :exclusions []}]
@@ -41,8 +39,6 @@
         "forbidden-form"   {:forms ["var" "set" "while"]}
         "form-child-count" {:children ["is"] :max-count 1}
         "if-branch-call"   {:forms ["if"]}
-        "control-layout"   {:forms ["if" "when" "and" "or" "case" "match"]}
-        "multiline-layout" {:clauses ["case" "match" "case-try" "match-try"] :bindings ["let" "when-let" "if-let" "with-open"]}
         "function-shape"   {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
         "file-size"        {:max-code-lines 300}
         "unused-and-or"    {:forms ["and" "or"]}
@@ -52,15 +48,13 @@
        {"module-style"   {:modules "eca.nfnl.macros.aniseed" :forms ["module" "def" "defn" "defn-"]}
         "required-form"  {:forms ["module"]}
         "if-branch-call" {:forms ["if"]}
-        "control-layout" {:forms ["if" "when" "and" "or" "case" "match"]}
         "function-shape" {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
         "unused-and-or"  {:forms ["and" "or"]}
         "call-data-arg"  {:forms []}})
 
 (local canonical-options
        {"file-size"        {:max-code-lines 300}
-        "form-child-count" {:children ["is"] :max-count 1}
-        "multiline-layout" {:clauses ["case" "match" "case-try" "match-try"] :bindings ["let" "when-let" "if-let" "with-open"]}})
+        "form-child-count" {:children ["is"] :max-count 1}})
 
 (defn- canonical-rule-data
   [rule options]
@@ -1482,8 +1476,7 @@
 
   (testing "function-shape uses the approved move-to-private-function message"
     (is (= "function body is too deep; move this into a named private function"
-           (. (finding-summary (check-source "(defn run [] (if x (if y a b) c))" "fnl/app.fnl" {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                                                                                :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})) 1 :message))))
+           (. (finding-summary (check-source "(defn run [] (if x (if y a b) c))" "fnl/app.fnl" {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]})) 1 :message))))
 
 
 
@@ -1525,13 +1518,11 @@
 
   (testing "lint implementation files report only the approved canonical findings"
     (is (= [["fnl/fennel-extras/lint/exclusion.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/module.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/module.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/registry.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
@@ -1542,9 +1533,9 @@
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules/registry.fnl" "function-shape"]
-            ["fnl/fennel-extras/lint/rules/spec.fnl" "multiline-layout"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
             ["fnl/fennel-extras/lint/rules.fnl" "function-shape"]
+            ["fnl/fennel-extras/lint.fnl" "function-shape"]
             ["fnl/fennel-extras/lint.fnl" "function-shape"]
             ["fnl/fennel-extras/lint.fnl" "function-shape"]]
            (. (repo-scenario nil) :lint-files))))
@@ -1616,8 +1607,8 @@
 
 
 
-  (testing "the shared compatibility policy enables all approved rules"
-    (is (= 12 (policy-size (all-enabled-policy))))) )
+  (testing "the shared compatibility policy enables all retained rules"
+    (is (= 10 (policy-size (all-enabled-policy))))) )
 
 (defn- first-finding-form
   [findings rule]
@@ -1633,7 +1624,7 @@
 (deftest exclusions
   (let [source   "(defn run [] (if ok (do a b) c))"
         path     "fnl/app.fnl"
-        rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]}
+        rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]}
         baseline (check-context source {:path path :rules rules})
         form     (first-finding-form baseline "if-branch-call")]
 
@@ -1687,8 +1678,7 @@
         result (check-source-with-matcher source
                                           "fnl/app.fnl"
                                           {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                           :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                           :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]}
+                                           :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]}
                                           [{:rule   "if-branch-call"
                                             :code   "foo"
                                             :reason "intentional"}])]
@@ -1720,7 +1710,6 @@
                                                      "fnl/legacy/a.fnl"
                                                      {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                                       :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                                      :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                                       :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
                                                      [{:rule "if-branch-call" :pattern "^fnl/legacy/"}])))))
 
@@ -1732,7 +1721,6 @@
                                             "fnl/app.fnl"
                                             {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                              :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                              :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
                                             [{:rule "if-branch-call" :line 1}])))))
 
@@ -1744,7 +1732,6 @@
                                             "fnl/app.fnl"
                                             {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                              :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                              :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
                                             [{:rule "if-branch-call" :lines {:from 1 :to 2}}])))))
 
@@ -1756,7 +1743,6 @@
                                                      "fnl/app.fnl"
                                                      {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                                       :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                                      :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                                       :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
                                                      [{:rule "if-branch-call" :code "do"}])))))
 
@@ -1768,7 +1754,6 @@
                                                      "fnl/app.fnl"
                                                      {:module-style   [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                                       :function-shape [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                                      :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
                                                       :if-branch-call [{:severity "warning" :applies-to {} :options {} :exclusions []}]}
                                                      [{:rule "if-branch-call" :pattern "app[.]fnl" :line 1}])))))
 
@@ -2000,703 +1985,6 @@
 
 
 
-(defn- multiline-layout-findings
-  [source path rules]
-  (let [result (check-source source path rules)]
-    (if (or (. result :module-missing) (. result :value-nil?))
-      result
-      (icollect [_ finding (ipairs result)]
-        (when (= (. finding :rule) "multiline-layout")
-          finding)))))
-
-
-
-
-(deftest multiline-layout
-
-
-
-
-  (testing "requires an if test on the head line"
-    (is (= 1
-           (length (multiline-layout-findings "(defn f\n  [file]\n  (if\n    file\n    (read file)\n    \"\"))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts an if test on the head line"
-    (is (= 0
-           (length (multiline-layout-findings "(defn f\n  [file]\n  (if file\n    (read file)\n    \"\"))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "requires an and argument on the head line"
-    (is (= 1
-           (length (multiline-layout-findings "(defn f\n  [file]\n  (and\n    file\n    (close file)))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts an and argument on the head line"
-    (is (= 0
-           (length (multiline-layout-findings "(defn f\n  [file]\n  (and file\n    (close file)))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "requires a plain call argument on the head line"
-    (is (= 1 (length (multiline-layout-findings "(foo\n  a\n  b)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a plain call argument on the head line"
-    (is (= 0 (length (multiline-layout-findings "(foo a\n     b)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "requires a let binding vector on the head line"
-    (is (= 1 (length (multiline-layout-findings "(let\n  [x 1]\n  x)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not require a do body on the head line"
-    (is (= 0 (length (multiline-layout-findings "(do\n  (a)\n  (b))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not require a defn name on the next line"
-    (is (= 0 (length (multiline-layout-findings "(defn f\n  [a]\n  a)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "requires a multi-clause if test on the head line"
-    (is (= 1
-           (length (multiline-layout-findings "(if\n  (> i n) false\n  (= p x) true\n  (rec))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a list with two items starting on one line"
-    (is (= 1 (length (multiline-layout-findings "(foo a b\n  c)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a list with one item starting on each line"
-    (is (= 0 (length (multiline-layout-findings "(foo a\n  b\n  c)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a one-line list"
-    (is (= 0 (length (multiline-layout-findings "(foo a b c)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a list whose head starts below its opening paren"
-    (is (= 1
-           (length (multiline-layout-findings "(\n foo a b)"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a list with a delayed head inside a defn"
-    (is (= 1
-           (length (multiline-layout-findings "(defn f\n  []\n  (\n   foo a b))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag vectors or maps whose first item starts below the opener"
-    (is (= 0
-           (+ (length (multiline-layout-findings "[\n 1\n 2]" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))
-              (length (multiline-layout-findings "{\n :a 1}" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))))
-
-
-
-
-  (testing "flags a single-clause if whose then branch shares the head line"
-    (is (= 1
-           (length (multiline-layout-findings "(defn f\n  [n]\n  (if (> n 0) 1\n    0))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a single-clause if with each branch on its own line"
-    (is (= 0
-           (length (multiline-layout-findings "(defn f\n  [n]\n  (if (> n 0)\n    1\n    0))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "reports only multiline-layout for a malformed multi-line control form"
-    (let [findings (check-source "(defn f\n  [n]\n  (if (> n 0) 1\n    0))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
-      (is (= ["multiline-layout"]
-             (icollect [_ finding (ipairs findings)] (. finding :rule))))))
-
-
-
-
-  (testing "flags a multi-line map with two pairs on one line"
-    (is (= 1 (length (multiline-layout-findings "{:a 1 :b 2\n :c 3}" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a map with one pair starting on each line"
-    (is (= 0 (length (multiline-layout-findings "{:a 1\n :b 2\n :c 3}" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a map whose value starts on the next line"
-    (is (= 0 (length (multiline-layout-findings "{:a\n  (long-value)\n :b 2}" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a vector with two elements starting on one line"
-    (is (= 1 (length (multiline-layout-findings "[a b\n c]" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts comments and multi-line strings between items"
-    (is (= 0 (length (multiline-layout-findings "(foo a ; b\n  \"c\nd\"\n  e)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a let binding vector with two bindings on one line"
-    (is (= 1 (length (multiline-layout-findings "(let [a 1 b 2\n      c 3]\n  a)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a let binding vector with one binding on each line"
-    (is (= 0 (length (multiline-layout-findings "(let [a 1\n      b 2]\n  a)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a case with two clauses starting on one line"
-    (is (= 1 (length (multiline-layout-findings "(case x\n  1 :a 2 :b\n  _ :c)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a multi-clause if with one pair on each line"
-    (is (= 0 (length (multiline-layout-findings "(if (> i n) false\n  (= p x) true\n  (rec))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a unit that starts where the previous unit ends"
-    (is (= 1 (length (multiline-layout-findings "(foo (bar\n       x) y)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "reports one finding for the inner call in a defn body"
-    (let [findings (multiline-layout-findings "(defn f [a] (foo a b\n  c))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
-      (is (= 1 (length findings)))))
-
-
-
-
-  (testing "reports one finding per nested offending form with distinct identities"
-    (let [findings (multiline-layout-findings "(defn f [] (foo a b\n  (bar x y\n    z)))" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})]
-      (is (and (= 2 (length findings))
-               (not= (. findings 1 :form) (. findings 2 :form))))))
-
-
-
-
-  (testing "an exclusion for one nested form leaves the other finding"
-    (let [source   "(defn f [] (foo a b\n  (bar x y\n    z)))"
-          path     "fnl/app.fnl"
-          rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}
-          baseline (multiline-layout-findings source path rules)
-          excluded (. baseline 1 :form)
-          result   (check-context source
-                                  {:path       path
-                                   :rules      rules
-                                   :exclusions [{:rule   "multiline-layout"
-                                                 :form   excluded
-                                                 :reason "intentional"}]})]
-      (is (= 1
-             (length (icollect [_ finding (ipairs result)]
-                       (when (= (. finding :rule) "multiline-layout")
-                         finding)))))))
-
-
-
-
-  (testing "applies to spec files"
-    (is (= 1 (length (multiline-layout-findings "(foo a b\n  c)" "fnl/spec/app_spec.fnl" nil)))))
-
-
-
-
-  (testing "ignores quoted multi-line lists"
-    (is (= 0 (length (multiline-layout-findings "'(a b\n c)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "uses the default warning and prescribed message"
-    (let [finding (. (multiline-layout-findings "(foo a b\n  c)" "fnl/app.fnl" {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}) 1)]
-      (is (= {:severity "warning"
-              :message  "multi-line form: put each item on its own line"}
-             {:severity (. finding :severity)
-              :message  (. finding :message)}))))
-
-
-
-
-  (testing "uses error severity when configured"
-    (is (= "error"
-           (. (multiline-layout-findings "(foo a b\n  c)"
-                                         "fnl/app.fnl"
-                                         {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :multiline-layout [{:severity "error" :applies-to {} :options {} :exclusions []}]})
-              1
-              :severity))))
-
-
-
-
-  (testing "does not report when disabled"
-    (is (= 0
-           (length (multiline-layout-findings "(foo a b\n  c)"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]}))))))
-
-(defn- control-layout-findings
-  [source path rules]
-  (let [result (check-source source path rules)]
-    (if (or (. result :module-missing) (. result :value-nil?))
-      result
-      (icollect [_ finding (ipairs result)]
-        (when (= (. finding :rule) "control-layout")
-          finding)))))
-
-
-
-
-(deftest control-layout
-
-
-
-
-  (testing "flags a one-line if in direct function statement position"
-    (is (= 1
-           (length (control-layout-findings "(defn f\n  [ok resolved]\n  (if ok resolved nil))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a broken-out if in direct function statement position"
-    (is (= 0
-           (length (control-layout-findings "(defn f\n  [ok resolved]\n  (if ok\n    resolved\n    nil))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a one-line when in direct function statement position"
-    (is (= 1
-           (length (control-layout-findings "(defn f\n  [file]\n  (when (kept? file) file))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag a one-line or as the last expression of a value-returning loop body"
-    (is (= 0
-           (length (control-layout-findings "(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r (m? e))))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag a one-line and as the returned function expression"
-    (is (= 0
-           (length (control-layout-findings "(defn f\n  [a b]\n  (and a b))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a one-line control form as the sole when body expression"
-    (is (= 1
-           (length (control-layout-findings "(defn f\n  [a b c]\n  (when a\n    (if b c a)))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "accepts a broken-out or in a loop body"
-    (is (= 0
-           (length (control-layout-findings "(defn f\n  [es]\n  (accumulate [r false _ e (ipairs es)]\n    (or r\n      (m? e))))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag controls when a do body has other expressions"
-    (is (= 0
-           (length (control-layout-findings "(defn f\n  [x]\n  (do (case x 1 :one _ :other)\n      (match x 1 :one _ :other)))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a one-line control form as the sole let body expression"
-    (is (= 1
-           (length (control-layout-findings "(defn f\n  [ok]\n  (let [x 1]\n    (if ok x 0)))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags a one-line control form as the sole each body expression"
-    (is (= 1
-           (length (control-layout-findings "(defn f\n  [xs]\n  (each [_ x (ipairs xs)]\n    (if x x 0)))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not require control forms in value, call, vector, map, or branch positions"
-    (is (= 0
-           (length (control-layout-findings "(defn f\n  [a b c]\n  (let [x (or a b)]\n    {:p (if a b c)\n     :q [(when a b)]}\n    (foo (if a b c))\n    (if a\n      (or b c)\n      c)))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag nested controls when a do body has other expressions"
-    (is (= 0
-           (length (control-layout-findings "(defn f\n  []\n  (do (if a b c)\n      (when a b)))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "applies to spec files"
-    (is (= 1
-           (length (control-layout-findings "(defn f [] (if a b c))"
-                                            "fnl/spec/app_spec.fnl"
-                                            nil)))))
-
-
-
-
-  (testing "ignores quoted control-form data"
-    (is (= 0
-           (length (control-layout-findings "'(if a b c)"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "uses the stable identity, warning severity, and prescribed message"
-    (let [finding (. (control-layout-findings "(defn f [] (if a b c))"
-                                              "fnl/app.fnl"
-                                              {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]})
-                     1)]
-      (is (= {:form     "fnl/app.fnl > defn:f > if#1"
-              :severity "warning"
-              :message  "put this control form on several lines"}
-             {:form     (. finding :form)
-              :severity (. finding :severity)
-              :message  (. finding :message)}))))
-
-
-
-
-  (testing "uses error severity when configured"
-    (is (= "error"
-           (. (control-layout-findings "(defn f [] (if a b c))"
-                                       "fnl/app.fnl"
-                                       {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "error" :applies-to {} :options {} :exclusions []}]})
-              1
-              :severity))))
-
-
-
-
-  (testing "does not report when disabled"
-    (is (= 0
-           (length (control-layout-findings "(defn f [] (if a b c))"
-                                            "fnl/app.fnl"
-                                            {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "an exclusion removes only the selected control-layout finding"
-    (let [source   "(defn f [] (if a b c))\n(defn g [] (when a b))"
-          path     "fnl/app.fnl"
-          rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}]}
-          baseline (control-layout-findings source path rules)
-          result   (check-context source
-                                  {:path       path
-                                   :rules      rules
-                                   :exclusions [{:rule   "control-layout"
-                                                 :form   (. baseline 1 :form)
-                                                 :reason "intentional"}]})]
-      (is (= 1
-             (length (icollect [_ finding (ipairs result)]
-                       (when (= (. finding :rule) "control-layout")
-                         finding))))))))
-
-(defn- unused-and-or-findings
-  [source path rules]
-  (let [result (check-source source path rules)]
-    (if (or (. result :module-missing) (. result :value-nil?))
-      result
-      (icollect [_ finding (ipairs result)]
-        (when (= (. finding :rule) "unused-and-or")
-          finding)))))
-
-
-
-
-(deftest unused-and-or
-
-
-
-
-  (testing "flags a discarded and before the returned function expression"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f\n  [file]\n  (and file (close file))\n  (out file))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag the last and expression of a value-returning body"
-    (is (= 0
-           (length (unused-and-or-findings "(defn f\n  [a b]\n  (and a b))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags or in an each body"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f\n  [xs]\n  (each [_ x (ipairs xs)]\n    (or x (warn))))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag and as the last icollect body expression"
-    (is (= 0
-           (length (unused-and-or-findings "(defn f\n  [xs]\n  (icollect [_ x (ipairs xs)]\n    (and x (f x))))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags or before the returned let expression"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f []\n  (let [x 1]\n    (or x (warn))\n    x))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags and before the returned when expression"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f []\n  (when ok\n    (and a (b))\n    c))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "flags and before the returned do expression"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f []\n  (do (and a (b)) c))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "does not flag and or in value positions"
-    (is (= 0
-           (length (unused-and-or-findings "(defn f []\n  (let [y (and a b)] y)\n  (foo (or a b)))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "ignores quoted and-or data"
-    (is (= 0
-           (length (unused-and-or-findings "'(and a b) '(or a b)"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "ignores and-or data in a quasiquote"
-    (is (= 0
-           (length (unused-and-or-findings "(defn f\n  []\n  (do `(and a b) out))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "checks only unquoted and-or code through nested quasiquotes"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f\n  []\n  `(do ,(do (and a (b)) c) `(do (and x y) z)))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "checks and-or code inside an unquote"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f\n  []\n  `(foo ,(do (or a (warn)) b)))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "ignores plain quoted and-or data in a do body"
-    (is (= 0
-           (length (unused-and-or-findings "(defn f\n  []\n  (do '(and a b) out))"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "applies to spec files"
-    (is (= 1
-           (length (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
-                                           "fnl/spec/app_spec.fnl"
-                                           {:control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "gives nested discarded and-or forms distinct stable identities"
-    (let [source "(defn f []\n  (do (and a b) (or c d) (out)))"
-          rules  {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]}
-          first  (unused-and-or-findings source "fnl/app.fnl" rules)
-          second (unused-and-or-findings source "fnl/app.fnl" rules)]
-      (is (and (= 2 (length first))
-               (not= (. first 1 :form) (. first 2 :form))
-               (vim.deep_equal (icollect [_ finding (ipairs first)] (. finding :form))
-                               (icollect [_ finding (ipairs second)] (. finding :form)))))))
-
-
-
-
-  (testing "uses the stable identity warning severity and prescribed message"
-    (let [finding (. (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
-                                             "fnl/app.fnl"
-                                             {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})
-                      1)]
-      (is (= {:form     "fnl/app.fnl > defn:f > and#1"
-              :severity "warning"
-              :message  "and/or result is unused; use when"}
-             {:form     (. finding :form)
-              :severity (. finding :severity)
-              :message  (. finding :message)}))))
-
-
-
-
-  (testing "uses error severity when configured"
-    (is (= "error"
-           (. (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
-                                      "fnl/app.fnl"
-                                      {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}] :unused-and-or [{:severity "error" :applies-to {} :options {} :exclusions []}]})
-              1
-              :severity))))
-
-
-
-
-  (testing "does not report when disabled"
-    (is (= 0
-           (length (unused-and-or-findings "(defn f []\n  (and a b)\n  c)"
-                                           "fnl/app.fnl"
-                                           {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}] :unused-and-or [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
-
-
-
-
-  (testing "an exclusion removes only the selected unused-and-or finding"
-    (let [source   "(defn f []\n  (do (and a b) (or c d) (out)))"
-          path     "fnl/app.fnl"
-          rules    {:module-style [{:severity "off" :applies-to {} :options {} :exclusions []}] :control-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]}
-          baseline (unused-and-or-findings source path rules)
-          result   (check-context source
-                                  {:path       path
-                                   :rules      rules
-                                   :exclusions [{:rule   "unused-and-or"
-                                                 :form   (. baseline 1 :form)
-                                                 :reason "intentional"}]})]
-      (is (= 1
-             (length (icollect [_ finding (ipairs result)]
-                       (when (= (. finding :rule) "unused-and-or")
-                         finding))))))))
-
 (defn- repeated-code
   [count]
   (string.rep "(local x 1)\n"
@@ -2889,8 +2177,7 @@
            (length (findings-for-named-rule "(foo a {:x 1\n         :y 2})"
                                             "fnl/app.fnl"
                                             "call-data-arg"
-                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
+                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
 
 
 
@@ -2910,8 +2197,7 @@
            (length (findings-for-named-rule "(let [opts {:x 1\n            :y 2}]\n  (foo a opts))"
                                             "fnl/app.fnl"
                                             "call-data-arg"
-                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
+                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
 
 
 
@@ -2931,8 +2217,7 @@
            (length (findings-for-named-rule "(values {:a 1\n         :b 2} nil)"
                                             "fnl/app.fnl"
                                             "call-data-arg"
-                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
+                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
 
 
 
@@ -2942,8 +2227,7 @@
            (length (findings-for-named-rule "(foo [1\n      2])"
                                             "fnl/app.fnl"
                                             "call-data-arg"
-                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                             :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
+                                            {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]})))))
 
 
 
@@ -2972,8 +2256,7 @@
     (let [finding (. (findings-for-named-rule "(foo {:x 1\n      :y 2})"
                                               "fnl/app.fnl"
                                               "call-data-arg"
-                                              {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                               :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]})
+                                              {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]})
                      1)]
       (is (= {:severity "warning"
               :message  "move this multi-line map/vector into a let binding so the call fits on one line"}
@@ -2988,25 +2271,22 @@
            [(let [finding (. (findings-for-named-rule "(foo {:x 1\n      :y 2})"
                                                       "fnl/app.fnl"
                                                       "call-data-arg"
-                                                      {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                                       :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                                       :call-data-arg    [{:severity "error" :applies-to {} :options {} :exclusions []}]})
+                                                      {:module-style  [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                                       :call-data-arg [{:severity "error" :applies-to {} :options {} :exclusions []}]})
                               1)]
               (. finding :severity))
             (length (findings-for-named-rule "(foo {:x 1\n      :y 2})"
                                              "fnl/app.fnl"
                                              "call-data-arg"
-                                             {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                              :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                                              :call-data-arg    [{:severity "off" :applies-to {} :options {} :exclusions []}]}))]))))
+                                             {:module-style  [{:severity "off" :applies-to {} :options {} :exclusions []}]
+                                              :call-data-arg [{:severity "off" :applies-to {} :options {} :exclusions []}]}))]))))
 
 
 
 
 (testing "keeps identities stable across repeated linting"
   (let [source "(foo {:x 1\n      :y 2})"
-        rules  {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]}
+        rules  {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]}
         first  (findings-for-named-rule source "fnl/app.fnl" "call-data-arg" rules)
         second (findings-for-named-rule source "fnl/app.fnl" "call-data-arg" rules)]
     (is (and (not= nil (. first 1 :form))
@@ -3018,8 +2298,7 @@
 (testing "an exact exclusion suppresses the selected call finding"
   (let [source   "(foo {:x 1\n      :y 2})\n(bar {:a 1\n      :b 2})"
         path     "fnl/app.fnl"
-        rules    {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]
-                  :multiline-layout [{:severity "off" :applies-to {} :options {} :exclusions []}]}
+        rules    {:module-style     [{:severity "off" :applies-to {} :options {} :exclusions []}]}
         baseline (findings-for-named-rule source path "call-data-arg" rules)
         context  {:path       path
                   :rules      rules
@@ -3166,16 +2445,6 @@
 
 
 
-  (testing "control-layout accepts configured control forms"
-    (is (= 1
-           (length (option-findings "(unless ok\\n  a\\n  b)"
-                                    "fnl/app.fnl"
-                                    "control-layout"
-                                    {:forms ["unless"]})))))
-
-
-
-
   (testing "unused-and-or accepts configured forms"
     (is (= 1
            (length (option-findings "(xor a b)"
@@ -3212,16 +2481,6 @@
                                     "fnl/app.fnl"
                                     "forbidden-form"
                                     {:forms ["alter"]})))))
-
-
-
-
-  (testing "multiline-layout accepts configured clause and binding forms"
-    (is (= 1
-           (length (option-findings "(branch x\\n  a b) (bind [a 1 b 2] a)"
-                                    "fnl/app.fnl"
-                                    "multiline-layout"
-                                    {:clauses ["branch"] :bindings ["bind"]})))))
 
 
 
@@ -3391,6 +2650,46 @@
       (is (= ["no-mutation"]
              (icollect [_ finding (ipairs result)] (. finding :rule)))))))
 
+(deftest removed-layout-rules-runtime
+
+  (testing "unknown control-layout runtime keys produce no findings"
+    (is (= []
+           (check-source-exact "(defn f [] (if a b c))"
+                               "fnl/app.fnl"
+                               {:control-layout [{:severity   "warning"
+                                                  :applies-to {:forms ["if"]}
+                                                  :options    {}
+                                                  :exclusions []}]}))))
+
+  (testing "unknown multiline-layout runtime keys produce no findings"
+    (is (= []
+           (check-source-exact "(let\n  [x 1]\n  x)"
+                               "fnl/app.fnl"
+                               {:multiline-layout [{:severity   "warning"
+                                                    :applies-to {}
+                                                    :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                                                                 :bindings ["let" "when-let" "if-let" "with-open"]}
+                                                    :exclusions []}]}))))
+
+  (testing "retained runtime rules still report alongside unknown removed keys"
+    (let [result (check-source-exact "(if ok (do a b) c)"
+                                     "fnl/app.fnl"
+                                     {:control-layout   [{:severity   "warning"
+                                                          :applies-to {:forms ["if"]}
+                                                          :options    {}
+                                                          :exclusions []}]
+                                      :multiline-layout [{:severity   "warning"
+                                                          :applies-to {}
+                                                          :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                                                                       :bindings ["let" "when-let" "if-let" "with-open"]}
+                                                          :exclusions []}]
+                                      :if-branch-call   [{:severity   "warning"
+                                                          :applies-to {:forms ["if"]}
+                                                          :options    {}
+                                                          :exclusions []}]})]
+      (is (= ["if-branch-call"]
+             (icollect [_ finding (ipairs result)] (. finding :rule)))))))
+
 (deftest module-selector-vector-compatibility
 
   (testing "semantic singleton module vectors preserve scalar behavior"
@@ -3455,14 +2754,14 @@
           vim-matcher (matcher.vim-matcher)
           (scalar-ok scalar)
           (pcall (fn []
-                   (registry.instance-applies-to? "control-layout"
+                   (registry.instance-applies-to? "if-branch-call"
                                                   {:applies-to {:modules "my.module"}}
                                                   finding
                                                   vim-matcher)))
 
           (vector-ok vector)
           (pcall (fn []
-                   (registry.instance-applies-to? "control-layout"
+                   (registry.instance-applies-to? "if-branch-call"
                                                   {:applies-to {:modules ["my.module"]}}
                                                   finding
                                                   vim-matcher)))]

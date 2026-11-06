@@ -1079,7 +1079,7 @@ local function lint_git_commit(root)
   lint_git_command(root, {"commit", "-qm", "base"})
   return root
 end
-local lint_rule_options = {["module-style"] = ":applies-to {:files [\"^[^s]\"] :modules \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]} :options {}", ["module-import"] = ":applies-to {:modules \"eca.nfnl.core\"} :options {:binding \"core\"}", ["forbidden-form"] = ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}", ["form-child-count"] = ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}", ["if-branch-call"] = ":applies-to {:forms [\"if\"]} :options {}", ["control-layout"] = ":applies-to {:forms [\"if\" \"when\" \"and\" \"or\" \"case\" \"match\"]} :options {}", ["function-shape"] = ":applies-to {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"\206\187\"]} :options {}", ["file-size"] = ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}", ["unused-and-or"] = ":applies-to {:forms [\"and\" \"or\"]} :options {}", ["split-bindings"] = ":applies-to {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]} :options {}", ["call-data-arg"] = ":applies-to {:files [\"^[^s]\"] :forms []} :options {}"}
+local lint_rule_options = {["module-style"] = ":applies-to {:files [\"^[^s]\"] :modules \"eca.nfnl.macros.aniseed\" :forms [\"module\" \"def\" \"defn\" \"defn-\"]} :options {}", ["module-import"] = ":applies-to {:modules \"eca.nfnl.core\"} :options {:binding \"core\"}", ["forbidden-form"] = ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}", ["form-child-count"] = ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}", ["if-branch-call"] = ":applies-to {:forms [\"if\"]} :options {}", ["function-shape"] = ":applies-to {:forms [\"defn\" \"defn-\" \"fn\" \"lambda\" \"\206\187\"]} :options {}", ["file-size"] = ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}", ["unused-and-or"] = ":applies-to {:forms [\"and\" \"or\"]} :options {}", ["split-bindings"] = ":applies-to {:forms [\"let\" \"when-let\" \"if-let\" \"with-open\"]} :options {}", ["call-data-arg"] = ":applies-to {:files [\"^[^s]\"] :forms []} :options {}"}
 local design_rule_names = {["function-shape"] = true, ["if-branch-call"] = true, ["no-mutation"] = true, ["nested-forms"] = true, ["leading-bindings"] = true}
 local function lint_config_rule(normalized, rule, options)
   local escaped_rule = string.gsub(rule, "-", "%%-")
@@ -1730,7 +1730,7 @@ local function _132_()
     return with_cleanup(_180_, _181_)
   end
   local function changed_config()
-    return "{:lint {:rules {\"module-import\" :off \"function-shape\" :off \"control-layout\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+    return "{:lint {:rules {\"module-import\" :off \"function-shape\" :off :if-branch-call [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"module-style\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
   end
   local function changed_source(which)
     if (which == "changed") then

@@ -215,9 +215,26 @@ end
 local function context_matcher_error(context, exclusions)
   return regex_exclusion_error(exclusions, context.matcher, 1)
 end
+local function known_rule_3f(name)
+  local found = false
+  for _, rule in ipairs(registry["rule-names"]()) do
+    found = (found or (rule == name))
+  end
+  return found
+end
+local function known_rules(rules0)
+  local result = {}
+  for name, value in pairs(rules0) do
+    if known_rule_3f(name) then
+      result[name] = value
+    else
+    end
+  end
+  return result
+end
 local function context_validation_error(context)
   local value = context_lint_value(context)
-  return config_lint["lint-error"]({rules = value.rules})
+  return config_lint["lint-error"]({rules = known_rules(value.rules)})
 end
 local function context_forms(source, path)
   return identity.forms(source, path)

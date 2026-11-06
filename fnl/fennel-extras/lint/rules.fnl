@@ -10,8 +10,6 @@
 (local forbidden-rule (require :fennel-extras.lint.rules.forbidden))
 (local branch-rule (require :fennel-extras.lint.rules.branch))
 (local size-rule (require :fennel-extras.lint.rules.size))
-(local layout-rule (require :fennel-extras.lint.rules.layout))
-(local control-rule (require :fennel-extras.lint.rules.control))
 (local discard-rule (require :fennel-extras.lint.rules.discard))
 (local call-rule (require :fennel-extras.lint.rules.call))
 (local shape-rule (require :fennel-extras.lint.rules.shape))
@@ -173,25 +171,6 @@
 
 
 
-(defn- append-layout-findings
-
-  [findings path forms policy source]
-  (if (or (enabled? policy "multiline-layout")
-          (enabled? policy "if-branch-call"))
-    (layout-rule.findings findings path forms policy source)
-    findings))
-
-
-
-(defn- append-control-findings
-
-  [findings path forms policy source]
-  (if (enabled? policy "control-layout")
-    (control-rule.findings findings path forms policy source)
-    findings))
-
-
-
 (defn- append-discard-findings
 
   [findings path forms policy source]
@@ -230,8 +209,6 @@
         findings (append-all findings (module-rule.required-form-finding path source policy))
         findings (append-form-findings findings path forms policy)
         findings (append-shape-findings findings path forms policy source)
-        findings (append-layout-findings findings path forms policy source)
-        findings (append-control-findings findings path forms policy source)
         findings (append-discard-findings findings path forms policy source)
         findings (append-call-findings findings path forms policy source)
         findings (append-generic-findings findings path forms policy source)]

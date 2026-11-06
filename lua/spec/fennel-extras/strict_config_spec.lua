@@ -192,7 +192,7 @@ local function _22_()
     end
     local lint_rules = (loaded and loaded.lint and loaded.lint.rules)
     local design_rules = (loaded and loaded.design and loaded.design.rules)
-    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg", "if-branch-call", "function-shape", "nested-forms", "leading-bindings", "no-mutation"}
+    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "unused-and-or", "file-size", "call-data-arg", "if-branch-call", "function-shape", "nested-forms", "leading-bindings", "no-mutation"}
     local design_names = {}
     local assert_28_auto = require("luassert")
     local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.indents and loaded.format["format-as"] and loaded.format.parser and loaded.format.alignment and loaded.lint and (nil == loaded.design) and complete_rules_3f(lint_rules, lint_names, 1))
@@ -201,4 +201,25 @@ local function _22_()
   end
   return require("plenary.busted").it("the repository config loads with complete format and lint settings", _23_)
 end
-return require("plenary.busted").describe("strict-config-property", _22_)
+require("plenary.busted").describe("strict-config-property", _22_)
+local function _25_()
+  local function _26_()
+    local result = config_error({lint = {rules = {["control-layout"] = {{severity = "warning", ["applies-to"] = {forms = {"if", "when", "and", "or", "case", "match"}}, options = {}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "unknown lint rule: control-layout"
+    local actual_7_auto = result.message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("strict config rejects removed control-layout", _26_)
+  local function _27_()
+    local result = config_error({lint = {rules = {["multiline-layout"] = {{severity = "warning", ["applies-to"] = {}, options = {clauses = {"case", "match", "case-try", "match-try"}, bindings = {"let", "when-let", "if-let", "with-open"}}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "unknown lint rule: multiline-layout"
+    local actual_7_auto = result.message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("strict config rejects removed multiline-layout", _27_)
+end
+return require("plenary.busted").describe("removed-layout-rule-config-errors", _25_)

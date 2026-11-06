@@ -6,15 +6,15 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
 local core = require("eca.nfnl.core")
-local lint_rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg", "function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation"}
+local lint_rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "unused-and-or", "file-size", "call-data-arg", "function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation"}
 local design_rule_name_list = {"function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation"}
 local rule_name_list = lint_rule_name_list
-local default_rule_name_list = core.concat({"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "control-layout", "unused-and-or", "multiline-layout", "file-size", "call-data-arg"}, {"function-shape", "if-branch-call"})
+local default_rule_name_list = core.concat({"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "unused-and-or", "file-size", "call-data-arg"}, {"function-shape", "if-branch-call"})
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
 local rule_properties = {["module-style"] = {scope = "file"}, ["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
-local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"module", "modules", "forms"}, ["if-branch-call"] = {"forms"}, ["child-count"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
-local required_semantic_applies_to = {["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["if-branch-call"] = {"forms"}, ["control-layout"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
+local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"module", "modules", "forms"}, ["if-branch-call"] = {"forms"}, ["child-count"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
+local required_semantic_applies_to = {["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["if-branch-call"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
 local defaults
 do
   local function defaults0()

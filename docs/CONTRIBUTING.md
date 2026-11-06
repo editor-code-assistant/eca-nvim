@@ -108,11 +108,6 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :applies-to {:files ["^fennel-extras/"]}
      :options    {:forms []}
      :exclusions []}]
-   :control-layout
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:forms ["if" "when" "and" "or" "case" "match"]}
-     :exclusions []}]
    :file-size
    [{:severity   :warning
      :applies-to {:files ["^fennel-extras/"]}
@@ -150,12 +145,6 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :applies-to {:files ["^fennel-extras/"]}
      :options    {:module "eca.nfnl.macros.aniseed"
                   :forms  ["module" "def" "defn" "defn-"]}
-     :exclusions []}]
-   :multiline-layout
-   [{:severity   :warning
-     :applies-to {}
-     :options    {:clauses  ["case" "match" "case-try" "match-try"]
-                  :bindings ["let" "when-let" "if-let" "with-open"]}
      :exclusions []}]
    :required-form
    [{:severity   :error
@@ -220,9 +209,7 @@ The lint rules are:
 | `module-style` | `:module`, `:forms` |
 | `module-import` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
 | `child-count` | named mode: `:children`, `:max-count`; direct mode: `:min-count`, `:max-count`, `:nil-count` |
-| `control-layout` | `:forms` |
 | `unused-and-or` | `:forms` |
-| `multiline-layout` | `:clauses`, `:bindings` |
 | `file-size` | `:max-code-lines` |
 | `call-data-arg` | `:forms` |
 

@@ -13,8 +13,6 @@ local spec_rule = require("fennel-extras.lint.rules.spec")
 local forbidden_rule = require("fennel-extras.lint.rules.forbidden")
 local branch_rule = require("fennel-extras.lint.rules.branch")
 local size_rule = require("fennel-extras.lint.rules.size")
-local layout_rule = require("fennel-extras.lint.rules.layout")
-local control_rule = require("fennel-extras.lint.rules.control")
 local discard_rule = require("fennel-extras.lint.rules.discard")
 local call_rule = require("fennel-extras.lint.rules.call")
 local shape_rule = require("fennel-extras.lint.rules.shape")
@@ -144,20 +142,6 @@ local function append_shape_findings(findings, path, forms, policy, source)
     return findings
   end
 end
-local function append_layout_findings(findings, path, forms, policy, source)
-  if (enabled_3f(policy, "multiline-layout") or enabled_3f(policy, "if-branch-call")) then
-    return layout_rule.findings(findings, path, forms, policy, source)
-  else
-    return findings
-  end
-end
-local function append_control_findings(findings, path, forms, policy, source)
-  if enabled_3f(policy, "control-layout") then
-    return control_rule.findings(findings, path, forms, policy, source)
-  else
-    return findings
-  end
-end
 local function append_discard_findings(findings, path, forms, policy, source)
   if enabled_3f(policy, "unused-and-or") then
     return discard_rule.findings(findings, path, forms, policy, source)
@@ -191,12 +175,10 @@ local function check_result(path, forms, policy, source, state)
   local findings1 = append_all(findings0, module_rule["required-form-finding"](path, source, policy))
   local findings2 = append_form_findings(findings1, path, forms, policy)
   local findings3 = append_shape_findings(findings2, path, forms, policy, source)
-  local findings4 = append_layout_findings(findings3, path, forms, policy, source)
-  local findings5 = append_control_findings(findings4, path, forms, policy, source)
-  local findings6 = append_discard_findings(findings5, path, forms, policy, source)
-  local findings7 = append_call_findings(findings6, path, forms, policy, source)
-  local findings8 = append_generic_findings(findings7, path, forms, policy, source)
-  return remove_contained_function_findings(findings8)
+  local findings4 = append_discard_findings(findings3, path, forms, policy, source)
+  local findings5 = append_call_findings(findings4, path, forms, policy, source)
+  local findings6 = append_generic_findings(findings5, path, forms, policy, source)
+  return remove_contained_function_findings(findings6)
 end
 local function check_instance(path, forms, policy, source, instance)
   local instance_policy = registry["evaluator-policy"](policy, instance.rule, instance.value)

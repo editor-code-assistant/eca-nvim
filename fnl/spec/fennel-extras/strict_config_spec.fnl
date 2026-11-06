@@ -236,9 +236,7 @@
                         "module-style"
                         "module-import"
                         "child-count"
-                        "control-layout"
                         "unused-and-or"
-                        "multiline-layout"
                         "file-size"
                         "call-data-arg"
                         "if-branch-call"
@@ -258,3 +256,20 @@
                (. loaded :lint)
                (= nil (. loaded :design))
                (complete-rules? lint-rules lint-names 1))))))
+
+(deftest removed-layout-rule-config-errors
+
+  (testing "strict config rejects removed control-layout"
+    (let [result (config-error {:lint {:rules {"control-layout" [{:severity   "warning"
+                                                                  :applies-to {:forms ["if" "when" "and" "or" "case" "match"]}
+                                                                  :options    {}
+                                                                  :exclusions []}]}}})]
+      (is (= "unknown lint rule: control-layout" (. result :message)))))
+
+  (testing "strict config rejects removed multiline-layout"
+    (let [result (config-error {:lint {:rules {"multiline-layout" [{:severity   "warning"
+                                                                    :applies-to {}
+                                                                    :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                                                                                 :bindings ["let" "when-let" "if-let" "with-open"]}
+                                                                    :exclusions []}]}}})]
+      (is (= "unknown lint rule: multiline-layout" (. result :message))))))

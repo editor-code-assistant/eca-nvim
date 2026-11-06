@@ -326,11 +326,30 @@
 
 
 
+(defn- known-rule?
+
+  [name]
+  (accumulate [found false _ rule (ipairs (registry.rule-names))]
+    (or found (= rule name))))
+
+
+
+(defn- known-rules
+
+  [rules]
+  (let [result {}]
+    (each [name value (pairs rules)]
+      (when (known-rule? name)
+        (tset result name value)))
+    result))
+
+
+
 (defn- context-validation-error
 
   [context]
   (let [value (context-lint-value context)]
-    (config-lint.lint-error {:rules value.rules})))
+    (config-lint.lint-error {:rules (known-rules value.rules)})))
 
 
 

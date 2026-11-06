@@ -70,10 +70,6 @@
                                     :forms []}
                        :options    {}
                        :exclusions []}]
-   :control-layout   [{:severity   :warning
-                       :applies-to {:forms ["if" "when" "and" "or" "case" "match"]}
-                       :options    {}
-                       :exclusions []}]
    :file-size        [{:severity   :warning
                        :applies-to {:files ["^fennel-extras/"]}
                        :options    {:max-code-lines 300}
@@ -118,11 +114,6 @@
                                     :forms   ["module" "def" "defn" "defn-"]
                                     :modules ["eca.nfnl.macros.aniseed"]}
                        :options    {}
-                       :exclusions []}]
-   :multiline-layout [{:severity   :warning
-                       :applies-to {}
-                       :options    {:clauses  ["case" "match" "case-try" "match-try"]
-                                    :bindings ["let" "when-let" "if-let" "with-open"]}
                        :exclusions []}]
    :required-form    [{:severity   :error
                        :applies-to {:files ["^fennel-extras/"]
