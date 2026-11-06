@@ -131,6 +131,12 @@
              (string.find source ":forbidden%-form%s+%[%{")
              (not (string.find source ":forbidden%-form%s+%[%{:%s*severity%s+:%s*off%s+%}%]"))))))
 
+(testing "the canonical source has no trailing blank lines"
+  (let [file   (assert (io.open ".fnl-extras.fnl" :r))
+        source (file:read "*a")]
+    (file:close)
+    (is (not (string.find source "\n\n$")))))
+
 (deftest canonical-module-selectors-are-vectors
   (let [loaded (config.load ".fnl-extras.fnl")
         rules  (. loaded :lint :rules)]
