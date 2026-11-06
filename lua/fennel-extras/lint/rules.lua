@@ -104,7 +104,12 @@ local function check_instance(path, forms, policy, source, instance)
   for _, finding0 in ipairs(result) do
     local val_28_
     if registry["instance-applies-to?"](instance.rule, instance.value, finding0, policy.matcher) then
-      val_28_ = core.assoc(finding0, "instance", instance.index)
+      local with_instance = core.assoc(finding0, "instance", instance.index)
+      if instance.value.description then
+        val_28_ = core.assoc(with_instance, "description", instance.value.description)
+      else
+        val_28_ = with_instance
+      end
     else
       val_28_ = nil
     end

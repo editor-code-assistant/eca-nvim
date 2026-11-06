@@ -125,7 +125,10 @@
         result          (check-result path forms instance-policy source state)]
     (icollect [_ finding (ipairs result)]
       (when (registry.instance-applies-to? instance.rule instance.value finding policy.matcher)
-        (core.assoc finding :instance instance.index)))))
+        (let [with-instance (core.assoc finding :instance instance.index)]
+          (if instance.value.description
+            (core.assoc with-instance :description instance.value.description)
+            with-instance))))))
 
 
 

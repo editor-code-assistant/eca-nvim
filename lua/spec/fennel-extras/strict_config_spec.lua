@@ -183,6 +183,35 @@ end
 require("plenary.busted").describe("strict-lint-options", _18_)
 local function _22_()
   local function _23_()
+    local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = "explain this rule", ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = result.ok
+    assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
+    return true
+  end
+  require("plenary.busted").it("accepts a non-empty string description", _23_)
+  local function _24_()
+    local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = 42, ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.forbidden-form[1].description must be a non-empty string"
+    local actual_7_auto = result.message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("rejects a non-string description", _24_)
+  local function _25_()
+    local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = "", ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.forbidden-form[1].description must be a non-empty string"
+    local actual_7_auto = result.message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("rejects an empty description", _25_)
+end
+require("plenary.busted").describe("rule-instance-description-validation", _22_)
+local function _26_()
+  local function _27_()
     local config = load_module("fennel-extras.config")
     local loaded
     if config["module-missing"] then
@@ -199,11 +228,11 @@ local function _22_()
     assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"indents\") (. (. loaded \"format\") \"format-as\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (= nil (. loaded \"design\")) (complete-rules? lint-rules lint-names 1))")
     return true
   end
-  return require("plenary.busted").it("the repository config loads with complete format and lint settings", _23_)
+  return require("plenary.busted").it("the repository config loads with complete format and lint settings", _27_)
 end
-require("plenary.busted").describe("strict-config-property", _22_)
-local function _25_()
-  local function _26_()
+require("plenary.busted").describe("strict-config-property", _26_)
+local function _29_()
+  local function _30_()
     local result = config_error({lint = {rules = {["control-layout"] = {{severity = "warning", ["applies-to"] = {forms = {"if", "when", "and", "or", "case", "match"}}, options = {}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown lint rule: control-layout"
@@ -211,8 +240,8 @@ local function _25_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("strict config rejects removed control-layout", _26_)
-  local function _27_()
+  require("plenary.busted").it("strict config rejects removed control-layout", _30_)
+  local function _31_()
     local result = config_error({lint = {rules = {["multiline-layout"] = {{severity = "warning", ["applies-to"] = {}, options = {clauses = {"case", "match", "case-try", "match-try"}, bindings = {"let", "when-let", "if-let", "with-open"}}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown lint rule: multiline-layout"
@@ -220,6 +249,6 @@ local function _25_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("strict config rejects removed multiline-layout", _27_)
+  return require("plenary.busted").it("strict config rejects removed multiline-layout", _31_)
 end
-return require("plenary.busted").describe("removed-layout-rule-config-errors", _25_)
+return require("plenary.busted").describe("removed-layout-rule-config-errors", _29_)

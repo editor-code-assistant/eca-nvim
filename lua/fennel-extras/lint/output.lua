@@ -135,6 +135,10 @@ local function text_line(finding)
 end
 local function append_text(lines, finding)
   table.insert(lines, text_line(finding))
+  if ((finding.kind == "finding") and finding.description) then
+    table.insert(lines, ("  description: " .. finding.description))
+  else
+  end
   if (finding.kind == "finding") then
     table.insert(lines, exclusion_line(finding))
   else
@@ -164,6 +168,10 @@ local function json_string_field(name, value)
 end
 local function finding_json(finding)
   local fields = {json_string_field("kind", finding.kind), json_string_field("path", finding.path), json_field("line", tostring(finding.line)), json_field("col", tostring(finding.col)), json_field("end-line", tostring(finding["end-line"])), json_field("end-col", tostring(finding["end-col"])), json_string_field("severity", finding.severity), json_string_field("rule", finding.rule), json_string_field("form", finding.form), json_string_field("message", finding.message)}
+  if finding.description then
+    table.insert(fields, json_string_field("description", finding.description))
+  else
+  end
   return table.concat(fields, ",")
 end
 local function stale_json(finding)

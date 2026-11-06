@@ -198,6 +198,8 @@
 
   [lines finding]
   (table.insert lines (text-line finding))
+  (when (and (= finding.kind "finding") finding.description)
+    (table.insert lines (.. "  description: " finding.description)))
   (when (= finding.kind "finding")
     (table.insert lines (exclusion-line finding)))
   lines)
@@ -237,6 +239,8 @@
                 (json-string-field "rule" finding.rule)
                 (json-string-field "form" finding.form)
                 (json-string-field "message" finding.message)]]
+    (when finding.description
+      (table.insert fields (json-string-field "description" finding.description)))
     (table.concat fields ",")))
 
 (defn- stale-json

@@ -250,7 +250,14 @@ local function canonical_instance_error(section, name, index, instance)
   else
     _46_ = nil
   end
-  local or_48_ = _46_ or canonical_map_keys_error(instance, path, {severity = true, ["applies-to"] = true, options = true, exclusions = true})
+  local or_48_ = _46_ or canonical_map_keys_error(instance, path, {severity = true, description = true, ["applies-to"] = true, options = true, exclusions = true})
+  if not or_48_ then
+    if not ((instance.description == nil) or ((type(instance.description) == "string") and (#instance.description > 0))) then
+      or_48_ = {message = (path .. ".description must be a non-empty string")}
+    else
+      or_48_ = nil
+    end
+  end
   if not or_48_ then
     if not ((instance.severity == "error") or (instance.severity == "warning") or (instance.severity == "off")) then
       or_48_ = {message = (path .. ".severity must be error, warning, or off")}
@@ -276,14 +283,14 @@ local function canonical_rule_error_step(rules, key, candidate)
   end
 end
 local function canonical_rules_error(section, rules)
-  local _52_
+  local _53_
   if (type(rules) ~= "table") then
-    _52_ = {message = (section .. ".rules must be a table")}
+    _53_ = {message = (section .. ".rules must be a table")}
   else
-    _52_ = nil
+    _53_ = nil
   end
-  local or_54_ = _52_
-  if not or_54_ then
+  local or_55_ = _53_
+  if not or_55_ then
     local name
     do
       local candidate = nil
@@ -301,21 +308,21 @@ local function canonical_rules_error(section, rules)
         allowed = registry["lint-rule-names"]()
       end
       if (type(name) ~= "string") then
-        or_54_ = {message = ("unknown " .. section .. " rule: " .. tostring(name))}
+        or_55_ = {message = ("unknown " .. section .. " rule: " .. tostring(name))}
       else
-        local or_58_ = (name == "form-child-count")
-        if not or_58_ then
+        local or_59_ = (name == "form-child-count")
+        if not or_59_ then
           local found = false
           for _, allowed_name in ipairs(allowed) do
             found = (found or (allowed_name == name))
           end
-          or_58_ = found
+          or_59_ = found
         end
-        if not or_58_ then
-          or_54_ = {message = ("unknown " .. section .. " rule: " .. name)}
+        if not or_59_ then
+          or_55_ = {message = ("unknown " .. section .. " rule: " .. name)}
         else
           if not (sequence_3f(instances) and (#instances > 0)) then
-            or_54_ = {message = (section .. ".rules." .. name .. " must be a non-empty vector")}
+            or_55_ = {message = (section .. ".rules." .. name .. " must be a non-empty vector")}
           else
             local failure = nil
             for index, instance in ipairs(instances) do
@@ -324,24 +331,24 @@ local function canonical_rules_error(section, rules)
               else
               end
             end
-            or_54_ = failure
+            or_55_ = failure
           end
         end
       end
     else
-      or_54_ = nil
+      or_55_ = nil
     end
   end
-  return or_54_
+  return or_55_
 end
 local function canonical_section_error(section, value)
-  local _65_
+  local _66_
   if (type(value) ~= "table") then
-    _65_ = {message = (section .. " must be a table")}
+    _66_ = {message = (section .. " must be a table")}
   else
-    _65_ = nil
+    _66_ = nil
   end
-  return (_65_ or canonical_contract_key_error(value, {rules = true}, ("unknown " .. section .. " key: ")) or canonical_rules_error(section, value.rules))
+  return (_66_ or canonical_contract_key_error(value, {rules = true}, ("unknown " .. section .. " key: ")) or canonical_rules_error(section, value.rules))
 end
 local lint_error
 do

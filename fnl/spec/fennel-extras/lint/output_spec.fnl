@@ -129,6 +129,14 @@
 
 
 
+  (testing "renders a separate description line only when configured"
+    (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
+            "  description: explain this rule"
+            "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
+           (text-lines [(finding {:description "explain this rule"})]))))
+
+
+
   (testing "escapes a quote and backslash in the text exclusion snippet"
     (is (= ["fnl/quote.fnl:1:1: error custom: bad form"
             "  exclusion: {:rule \"custom\\\"rule\" :form \"fnl/quote.fnl > top#1\\\\ > \\\"quoted\\\"\" :reason \"explain why this is intentional\"}"]
@@ -143,7 +151,13 @@
 
   (testing "renders a stale exclusion without a snippet"
     (is (= [".fnl-extras.fnl:7:9: error forbidden-form: exclusion does not match any finding"]
-           (text-lines [(stale-exclusion {})])))))
+           (text-lines [(stale-exclusion {})]))))
+
+
+
+  (testing "does not render a description for a stale exclusion"
+    (is (= [".fnl-extras.fnl:7:9: error forbidden-form: exclusion does not match any finding"]
+           (text-lines [(stale-exclusion {:description "explain this rule"})])))))
 
 (deftest json-output
 
@@ -158,6 +172,12 @@
   (testing "omits end-line and end-col from stale exclusion JSON"
     (is (= ["{\"kind\":\"stale-exclusion\",\"path\":\".fnl-extras.fnl\",\"line\":7,\"col\":9,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"exclusion does not match any finding\"}"]
            (json-lines [(stale-exclusion {})]))))
+
+
+
+  (testing "includes an optional description only when configured"
+    (is (= ["{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"forbidden form\",\"description\":\"explain this rule\"}"]
+           (json-lines [(finding {:description "explain this rule"})]))))
 
 
 

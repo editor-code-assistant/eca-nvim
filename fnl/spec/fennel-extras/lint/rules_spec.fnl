@@ -41,6 +41,25 @@
           result (identities (findings-for "(var x 1)" "fnl/app.fnl" policy))]
       (is (= [["forbidden-form" "fnl/app.fnl > top#1" "warning"]] result)))))
 
+(deftest rule-instance-description
+
+  (testing "propagates description without changing rule form or instance identity"
+    (let [policy  {:forbidden-form [{:severity    "warning"
+                                     :description "explain this rule"
+                                     :applies-to  {:forms ["var"]}
+                                     :options     {}
+                                     :exclusions  []}]}
+          result  (findings-for "(var x 1)" "fnl/app.fnl" policy)
+          finding (. result 1)]
+      (is (= {:description "explain this rule"
+              :rule        "forbidden-form"
+              :form        "fnl/app.fnl > top#1"
+              :instance    1}
+             {:description finding.description
+              :rule        finding.rule
+              :form        finding.form
+              :instance    finding.instance})))))
+
 (deftest module-import
 
   (testing "requires the canonical core binding"

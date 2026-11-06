@@ -220,6 +220,34 @@
                                                    :exclusions []}]}})]
       (is (and (. result :ok) (= 0 (length (. result :findings))))))))
 
+(deftest rule-instance-description-validation
+
+  (testing "accepts a non-empty string description"
+    (let [result (config-error {:lint {:rules {:forbidden-form [{:severity    "warning"
+                                                                 :description "explain this rule"
+                                                                 :applies-to  {}
+                                                                 :options     {}
+                                                                 :exclusions  []}]}}})]
+      (is (. result :ok))))
+
+  (testing "rejects a non-string description"
+    (let [result (config-error {:lint {:rules {:forbidden-form [{:severity    "warning"
+                                                                 :description 42
+                                                                 :applies-to  {}
+                                                                 :options     {}
+                                                                 :exclusions  []}]}}})]
+      (is (= "lint.rules.forbidden-form[1].description must be a non-empty string"
+             (. result :message)))))
+
+  (testing "rejects an empty description"
+    (let [result (config-error {:lint {:rules {:forbidden-form [{:severity    "warning"
+                                                                 :description ""
+                                                                 :applies-to  {}
+                                                                 :options     {}
+                                                                 :exclusions  []}]}}})]
+      (is (= "lint.rules.forbidden-form[1].description must be a non-empty string"
+             (. result :message))))))
+
 (deftest strict-config-property
 
 

@@ -200,7 +200,11 @@
   (let [path (.. section ".rules." name "[" index "]")]
     (or (when (not= (type instance) :table)
           {:message (.. path " must be a table")})
-        (canonical-map-keys-error instance path {:severity true :applies-to true :options true :exclusions true})
+        (canonical-map-keys-error instance path {:severity true :description true :applies-to true :options true :exclusions true})
+        (when (not (or (= instance.description nil)
+                       (and (= (type instance.description) :string)
+                            (> (length instance.description) 0))))
+          {:message (.. path ".description must be a non-empty string")})
         (when (not (or (= instance.severity "error") (= instance.severity "warning") (= instance.severity "off")))
           {:message (.. path ".severity must be error, warning, or off")})
         (canonical-applies-to-error instance.applies-to (.. path ".applies-to"))
