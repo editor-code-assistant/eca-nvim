@@ -103,11 +103,6 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :applies-to {:files ["^fennel-extras/"]}
      :options    {:forms ["var" "set" "while"]}
      :exclusions []}]
-   :call-data-arg
-   [{:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:forms []}
-     :exclusions []}]
    :file-size
    [{:severity   :warning
      :applies-to {:files ["^fennel-extras/"]}
@@ -140,34 +135,18 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                   :modules      ["plenary.busted" "luassert"]
                   :exempt-files ["^spec/eca/macros[.]fnlm$"]}
      :exclusions []}]
-   :module-style
-   [{:severity   :error
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:module "eca.nfnl.macros.aniseed"
-                  :forms  ["module" "def" "defn" "defn-"]}
-     :exclusions []}]
    :required-form
    [{:severity   :error
      :applies-to {:files ["^fennel-extras/"]}
      :options    {:forms ["module"]}
      :exclusions []}]
-   :unused-and-or
    [{:severity   :warning
      :applies-to {}
      :options    {:forms ["and" "or"]}
      :exclusions []}]}}}
 ```
 
-The configuration has four root sections: `:workspace`, `:format`, `:lint`, and `:design`. Workspace scan settings belong under `:workspace`: `:paths`, `:exclude`, `:extensions`, `:dotfiles`, `:symlinks`, and `:config`. `:config` defaults to `false`, excluding the discovered `.fnl-extras.fnl` from implicit format and lint scans; set it to `true` to include that discovered file. Explicitly naming the config file always includes it, while naming other files does not add it. `:lint :rules` is canonical for all lint, structural, and idiomatic rules. Legacy top-level `:design :rules` remains accepted and is normalized into lint rules; when both sections define a rule, the canonical lint entry wins. The moved design rules are `function-shape`, `if-branch-call`, `no-mutation`, `nested-forms`, and `leading-bindings`.
-
-For example:
-
-```fennel
-:design {:rules {:function-shape [{:severity :warning
-                                    :applies-to {}
-                                    :options {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-                                    :exclusions []}]}}
-``` The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > exact `:format-as` alias > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one exact form name to another for indentation only. Aliases do not add alignment or newline membership. There are no builtin, prefix, or pattern fallbacks. `:indent-width` and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
+The configuration has four root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`. `:lint :rules` is canonical for the supported lint and structural rules. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > exact `:format-as` alias > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one exact form name to another for indentation only. Aliases do not add alignment or newline membership. There are no builtin, prefix, or pattern fallbacks. `:indent-width` and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
 
 By default, formatting changes leading indentation only. Alignment is separate and must be configured under `:alignment`; there is no legacy `:align-bindings` compatibility key. In this repository, the `if` rule gives bodies regular 2-space indentation; multiline `and`/`or` forms remain aligned under their first argument.
 
@@ -206,16 +185,9 @@ The lint rules are:
 | --- | --- |
 | `forbidden-form` | `:module`, `:forms` |
 | `required-form` | `:forms` |
-| `module-style` | `:module`, `:forms` |
 | `module-import` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
 | `child-count` | named mode: `:children`, `:max-count`; direct mode: `:min-count`, `:max-count`, `:nil-count` |
-| `unused-and-or` | `:forms` |
 | `file-size` | `:max-code-lines` |
-| `call-data-arg` | `:forms` |
-
-#### Design rule options
-
-Legacy design rules use the same instance shape, but canonical configuration places them under `:lint :rules`: `function-shape` (`:forms`, optional `:max-depth`), `if-branch-call` (`:forms`), `no-mutation` (`:forms`), `nested-forms` (`:forms`, `:max-depth`), and `leading-bindings` (`:forms`). `form-child-count` remains an accepted compatibility alias for `child-count`.
 
 #### Rule options
 
@@ -225,14 +197,6 @@ Put each rule's direct, typed options inside its instance. Required values are e
 
 Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with a string `:path` and string `:reason`; optional `:code` and `:form` selectors must also be strings. The path is matched against the workspace-relative path, `:code` is matched against the flagged form's source, and `:form` is matched literally against the finding identity. All selectors use AND semantics. `:code` is not valid for file-level findings. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
 
-```fennel
-:rules {:function-shape [{:severity :warning
-                          :applies-to {:files ["^legacy/"]}
-                          :options {:forms ["defn" "defn-" "fn" "lambda" "λ"]
-                                    :max-depth 2}
-                          :exclusions [{:path "^legacy/"
-                                        :reason "migration in progress"}]}]}
-```
 
 #### `:path` matching
 
@@ -279,7 +243,6 @@ The boolean switches are `:bindings`, `:maps`, `:clauses`, `:split-bindings`, an
            :options {:before 1}}]
 ```
 
-`module-style` is a convert-on-touch rule. `--all` reports remaining legacy files.
 
 Exit code 0 means no errors, 1 means an error or stale exclusion, and 2 means a command, configuration, Git, read, parse, or internal failure. The default and `--all` modes do not require Git; `--changed` and `--base` require a valid full Git clone and report Git errors with exit 2. Findings are written to stdout. CI runs `make style` on pull requests to `main`.
 

@@ -44,7 +44,7 @@ end
 require("plenary.busted").describe("canonical-applies-to", _4_)
 local function _7_()
   local function _8_()
-    local result = validation({lint = {rules = {["if-branch-call"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = "^spec/", code = "^[(]if", form = "spec/app.fnl > if#1", reason = "intentional"}}}}}}})
+    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = "^spec/", code = "^[(]if", form = "spec/app.fnl > if#1", reason = "intentional"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
@@ -52,10 +52,10 @@ local function _7_()
   end
   require("plenary.busted").it("path, code, form, and reason selectors are accepted as strings", _8_)
   local function _9_()
-    local result = validation({lint = {rules = {["if-branch-call"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = {"^spec/"}, code = true, form = 1, reason = "intentional"}}}}}}})
+    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = {"^spec/"}, code = true, form = 1, reason = "intentional"}}}}}}})
     local assert_28_auto = require("luassert")
-    local value_29_auto = (not result.ok and ("lint.rules.if-branch-call[1].exclusions[1] requires string path and reason; optional code and form must be strings" == error_message(result)))
-    assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= \"lint.rules.if-branch-call[1].exclusions[1] requires string path and reason; optional code and form must be strings\" (error-message result)))")
+    local value_29_auto = (not result.ok and ("lint.rules.forbidden-form[1].exclusions[1] requires string path and reason; optional code and form must be strings" == error_message(result)))
+    assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= \"lint.rules.forbidden-form[1].exclusions[1] requires string path and reason; optional code and form must be strings\" (error-message result)))")
     return true
   end
   return require("plenary.busted").it("exclusion selectors require string values", _9_)

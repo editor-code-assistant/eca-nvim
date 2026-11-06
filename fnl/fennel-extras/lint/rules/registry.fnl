@@ -3,36 +3,20 @@
 (module fennel-extras.lint.rules.registry)
 
 (local core (require :eca.nfnl.core))
-(local lint-rule-name-list ["forbidden-form" "required-form" "module-style" "module-import" "child-count" "unused-and-or" "file-size" "call-data-arg" "function-shape" "if-branch-call" "nested-forms" "leading-bindings" "no-mutation"])
-(local design-rule-name-list ["function-shape" "if-branch-call" "nested-forms" "leading-bindings" "no-mutation"])
+(local lint-rule-name-list ["forbidden-form" "required-form" "module-import" "child-count" "file-size"])
+(local design-rule-name-list [])
 (local rule-name-list lint-rule-name-list)
-(local default-rule-name-list (core.concat ["forbidden-form" "required-form" "module-style" "module-import" "form-child-count" "unused-and-or" "file-size" "call-data-arg"] ["function-shape" "if-branch-call"]))
+(local default-rule-name-list ["forbidden-form" "required-form" "module-import" "form-child-count" "file-size"])
 (local ast (require :fennel-extras.lint.rules.ast))
 (local options (require :fennel-extras.lint.rules.options))
-(local rule-properties {:module-style {:scope :file} :required-form {:scope :file} :file-size {:scope :file}})
+(local rule-properties {:required-form {:scope :file} :file-size {:scope :file}})
 (local semantic-applies-to
-       {"forbidden-form"   ["module" "forms"]
-        "required-form"    ["forms"]
-        "module-style"     ["module" "forms"]
-        "module-import"    ["module" "modules" "forms"]
-        "if-branch-call"   ["forms"]
-        "child-count"      ["forms"]
-        "unused-and-or"    ["forms"]
-        "function-shape"   ["forms"]
-        "call-data-arg"    ["forms"]
-        "nested-forms"     ["forms"]
-        "leading-bindings" ["forms"]
-        "no-mutation"      ["forms"]})
+       {"forbidden-form" ["module" "forms"]
+        "required-form"  ["forms"]
+        "module-import"  ["module" "modules" "forms"]
+        "child-count"    ["forms"]})
 (local required-semantic-applies-to
-       {"required-form"    ["forms"]
-        "module-style"     ["module" "forms"]
-        "if-branch-call"   ["forms"]
-        "unused-and-or"    ["forms"]
-        "function-shape"   ["forms"]
-        "call-data-arg"    ["forms"]
-        "nested-forms"     ["forms"]
-        "leading-bindings" ["forms"]
-        "no-mutation"      ["forms"]})
+       {"required-form"    ["forms"]})
 
 (defn defaults
 
@@ -182,7 +166,6 @@
   (let [options   (core.merge (or instance.options {}))
         applies   (or instance.applies-to {})
         singleton (or (= rule "forbidden-form")
-                      (= rule "module-style")
                       (and (= rule "module-import")
                            (= options.mode "require")))]
     (accumulate [result options _ name (ipairs (or (. semantic-applies-to rule) []))]
@@ -201,11 +184,7 @@
 
   [policy rule instance]
   (let [base-result  (core.assoc (defaults) rule instance.severity)
-        result       (if (= rule "no-mutation")
-                       (core.assoc (core.assoc base-result "forbidden-form" instance.severity)
-                                   "no-mutation"
-                                   instance.severity)
-                       base-result)
+        result       base-result
         raw-options  (normalized-options rule instance)
         normalized   (if (and (= rule "module-import")
                               raw-options.module

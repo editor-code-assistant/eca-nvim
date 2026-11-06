@@ -143,7 +143,7 @@ local function canonical_legacy_selector_error(instance, path)
 end
 local function canonical_singleton_module_error(name, instance, path)
   local modules = ((type(instance["applies-to"]) == "table") and instance["applies-to"].modules)
-  local singular = ((name == "forbidden-form") or (name == "module-style") or ((name == "module-import") and (type(instance.options) == "table") and (instance.options.mode == "require")))
+  local singular = ((name == "forbidden-form") or ((name == "module-import") and (type(instance.options) == "table") and (instance.options.mode == "require")))
   if (singular and sequence_3f(modules) and (#modules > 1)) then
     return {message = (path .. ".modules must contain at most one module")}
   else
@@ -233,12 +233,7 @@ local function canonical_missing_option_error(section, name, index, instance)
     else
       local or_42_ = canonical_missing_option_step(section, name, index, instance.options, registry["required-option-names"](name), 1)
       if not or_42_ then
-        local names
-        if (name == "module-style") then
-          names = {"module"}
-        else
-          names = registry["applies-to-required-names"](name)
-        end
+        local names = registry["applies-to-required-names"](name)
         or_42_ = (names and canonical_missing_applies_step(section, name, index, instance["applies-to"], instance.options, names, 1))
       end
       return or_42_
@@ -249,29 +244,29 @@ local function canonical_missing_option_error(section, name, index, instance)
 end
 local function canonical_instance_error(section, name, index, instance)
   local path = (section .. ".rules." .. name .. "[" .. index .. "]")
-  local _47_
+  local _46_
   if (type(instance) ~= "table") then
-    _47_ = {message = (path .. " must be a table")}
+    _46_ = {message = (path .. " must be a table")}
   else
-    _47_ = nil
+    _46_ = nil
   end
-  local or_49_ = _47_ or canonical_map_keys_error(instance, path, {severity = true, ["applies-to"] = true, options = true, exclusions = true})
-  if not or_49_ then
+  local or_48_ = _46_ or canonical_map_keys_error(instance, path, {severity = true, ["applies-to"] = true, options = true, exclusions = true})
+  if not or_48_ then
     if not ((instance.severity == "error") or (instance.severity == "warning") or (instance.severity == "off")) then
-      or_49_ = {message = (path .. ".severity must be error, warning, or off")}
+      or_48_ = {message = (path .. ".severity must be error, warning, or off")}
     else
-      or_49_ = nil
+      or_48_ = nil
     end
   end
-  or_49_ = or_49_ or canonical_applies_to_error(instance["applies-to"], (path .. ".applies-to")) or canonical_singleton_module_error(name, instance, (path .. ".applies-to"))
-  if not or_49_ then
+  or_48_ = or_48_ or canonical_applies_to_error(instance["applies-to"], (path .. ".applies-to")) or canonical_singleton_module_error(name, instance, (path .. ".applies-to"))
+  if not or_48_ then
     if (type(instance.options) ~= "table") then
-      or_49_ = {message = (path .. ".options must be a table")}
+      or_48_ = {message = (path .. ".options must be a table")}
     else
-      or_49_ = nil
+      or_48_ = nil
     end
   end
-  return (or_49_ or canonical_options_error(name, instance.options, (path .. ".options")) or canonical_legacy_selector_error(instance, (path .. ".options")) or canonical_child_count_option_error(section, name, index, instance) or canonical_missing_option_error(section, name, index, instance) or canonical_exclusions_error(instance.exclusions, (path .. ".exclusions")))
+  return (or_48_ or canonical_options_error(name, instance.options, (path .. ".options")) or canonical_legacy_selector_error(instance, (path .. ".options")) or canonical_child_count_option_error(section, name, index, instance) or canonical_missing_option_error(section, name, index, instance) or canonical_exclusions_error(instance.exclusions, (path .. ".exclusions")))
 end
 local function canonical_rule_error_step(rules, key, candidate)
   if ((candidate == nil) or (tostring(key) < tostring(candidate))) then
@@ -281,14 +276,14 @@ local function canonical_rule_error_step(rules, key, candidate)
   end
 end
 local function canonical_rules_error(section, rules)
-  local _53_
+  local _52_
   if (type(rules) ~= "table") then
-    _53_ = {message = (section .. ".rules must be a table")}
+    _52_ = {message = (section .. ".rules must be a table")}
   else
-    _53_ = nil
+    _52_ = nil
   end
-  local or_55_ = _53_
-  if not or_55_ then
+  local or_54_ = _52_
+  if not or_54_ then
     local name
     do
       local candidate = nil
@@ -306,21 +301,21 @@ local function canonical_rules_error(section, rules)
         allowed = registry["lint-rule-names"]()
       end
       if (type(name) ~= "string") then
-        or_55_ = {message = ("unknown " .. section .. " rule: " .. tostring(name))}
+        or_54_ = {message = ("unknown " .. section .. " rule: " .. tostring(name))}
       else
-        local or_59_ = (name == "form-child-count")
-        if not or_59_ then
+        local or_58_ = (name == "form-child-count")
+        if not or_58_ then
           local found = false
           for _, allowed_name in ipairs(allowed) do
             found = (found or (allowed_name == name))
           end
-          or_59_ = found
+          or_58_ = found
         end
-        if not or_59_ then
-          or_55_ = {message = ("unknown " .. section .. " rule: " .. name)}
+        if not or_58_ then
+          or_54_ = {message = ("unknown " .. section .. " rule: " .. name)}
         else
           if not (sequence_3f(instances) and (#instances > 0)) then
-            or_55_ = {message = (section .. ".rules." .. name .. " must be a non-empty vector")}
+            or_54_ = {message = (section .. ".rules." .. name .. " must be a non-empty vector")}
           else
             local failure = nil
             for index, instance in ipairs(instances) do
@@ -329,24 +324,24 @@ local function canonical_rules_error(section, rules)
               else
               end
             end
-            or_55_ = failure
+            or_54_ = failure
           end
         end
       end
     else
-      or_55_ = nil
+      or_54_ = nil
     end
   end
-  return or_55_
+  return or_54_
 end
 local function canonical_section_error(section, value)
-  local _66_
+  local _65_
   if (type(value) ~= "table") then
-    _66_ = {message = (section .. " must be a table")}
+    _65_ = {message = (section .. " must be a table")}
   else
-    _66_ = nil
+    _65_ = nil
   end
-  return (_66_ or canonical_contract_key_error(value, {rules = true}, ("unknown " .. section .. " key: ")) or canonical_rules_error(section, value.rules))
+  return (_65_ or canonical_contract_key_error(value, {rules = true}, ("unknown " .. section .. " key: ")) or canonical_rules_error(section, value.rules))
 end
 local lint_error
 do

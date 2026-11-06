@@ -121,7 +121,6 @@
   (let [modules  (and (= (type instance.applies-to) :table)
                       instance.applies-to.modules)
         singular (or (= name "forbidden-form")
-                     (= name "module-style")
                      (and (= name "module-import")
                           (= (type instance.options) :table)
                           (= instance.options.mode "require")))]
@@ -189,7 +188,7 @@
                   (canonical-missing-option-step section name index instance.options ["binding"] 1)))
             (canonical-missing-applies-step section name index instance.applies-to instance.options ["modules"] 1)))
       (or (canonical-missing-option-step section name index instance.options (registry.required-option-names name) 1)
-          (let [names (if (= name "module-style") ["module"] (registry.applies-to-required-names name))]
+          (let [names (registry.applies-to-required-names name)]
             (and names
                  (canonical-missing-applies-step section name index instance.applies-to instance.options names 1)))))))
 

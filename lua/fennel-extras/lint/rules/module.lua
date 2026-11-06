@@ -43,18 +43,6 @@ do
   _2amodule_2a["required-form-finding"] = required_form_finding0
   required_form_finding = _2amodule_2a["required-form-finding"]
 end
-local module_finding
-do
-  local function module_finding0(path, forms, policy, module_ok)
-    if (enabled_3f(policy, "module-style") and not module_ok) then
-      return {{kind = "finding", path = path, line = 1, col = 1, ["end-line"] = 1, ["end-col"] = 1, severity = rule_severity(policy, "module-style"), rule = "module-style", form = (path .. " > file"), message = "file must use the module style", node = nil}}
-    else
-      return {}
-    end
-  end
-  _2amodule_2a["module-finding"] = module_finding0
-  module_finding = _2amodule_2a["module-finding"]
-end
 local function contains_3f(items, target, index)
   if (index > #items) then
     return false
@@ -113,23 +101,23 @@ do
     local binding = (options.binding or "core")
     local forbidden = ((options.mode == "forbid") and not (target == options.module) and not exempt_file_3f(path, policy, options) and target and contains_3f(modules, target, 1))
     local required
-    local and_9_ = (options.mode == "require") and not exempt_file_3f(path, policy, options) and (target == options.module)
-    if and_9_ then
+    local and_8_ = (options.mode == "require") and not exempt_file_3f(path, policy, options) and (target == options.module)
+    if and_8_ then
       if import_info then
-        and_9_ = not has_all_3f(import_info.names, (options.forms or {}))
+        and_8_ = not has_all_3f(import_info.names, (options.forms or {}))
       else
-        and_9_ = not canonical_require_3f(head, children, req_children, binding)
+        and_8_ = not canonical_require_3f(head, children, req_children, binding)
       end
     end
-    required = and_9_
+    required = and_8_
     if (enabled_3f(policy, "module-import") and (forbidden or required)) then
-      local _11_
+      local _10_
       if forbidden then
-        _11_ = "forbidden module import"
+        _10_ = "forbidden module import"
       else
-        _11_ = "bind the required module canonically"
+        _10_ = "bind the required module canonically"
       end
-      return table.insert(findings, finding(path, finding_form(path, form, head, children), rule_severity(policy, "module-import"), "module-import", _11_, node))
+      return table.insert(findings, finding(path, finding_form(path, form, head, children), rule_severity(policy, "module-import"), "module-import", _10_, node))
     else
       return nil
     end

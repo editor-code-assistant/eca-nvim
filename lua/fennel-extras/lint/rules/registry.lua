@@ -6,15 +6,15 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
 local core = require("eca.nfnl.core")
-local lint_rule_name_list = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "unused-and-or", "file-size", "call-data-arg", "function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation"}
-local design_rule_name_list = {"function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation"}
+local lint_rule_name_list = {"forbidden-form", "required-form", "module-import", "child-count", "file-size"}
+local design_rule_name_list = {}
 local rule_name_list = lint_rule_name_list
-local default_rule_name_list = core.concat({"forbidden-form", "required-form", "module-style", "module-import", "form-child-count", "unused-and-or", "file-size", "call-data-arg"}, {"function-shape", "if-branch-call"})
+local default_rule_name_list = {"forbidden-form", "required-form", "module-import", "form-child-count", "file-size"}
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
-local rule_properties = {["module-style"] = {scope = "file"}, ["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
-local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["module-import"] = {"module", "modules", "forms"}, ["if-branch-call"] = {"forms"}, ["child-count"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
-local required_semantic_applies_to = {["required-form"] = {"forms"}, ["module-style"] = {"module", "forms"}, ["if-branch-call"] = {"forms"}, ["unused-and-or"] = {"forms"}, ["function-shape"] = {"forms"}, ["call-data-arg"] = {"forms"}, ["nested-forms"] = {"forms"}, ["leading-bindings"] = {"forms"}, ["no-mutation"] = {"forms"}}
+local rule_properties = {["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
+local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-import"] = {"module", "modules", "forms"}, ["child-count"] = {"forms"}}
+local required_semantic_applies_to = {["required-form"] = {"forms"}}
 local defaults
 do
   local function defaults0()
@@ -174,7 +174,7 @@ end
 local function normalized_options(rule, instance)
   local options0 = core.merge((instance.options or {}))
   local applies = (instance["applies-to"] or {})
-  local singleton = ((rule == "forbidden-form") or (rule == "module-style") or ((rule == "module-import") and (options0.mode == "require")))
+  local singleton = ((rule == "forbidden-form") or ((rule == "module-import") and (options0.mode == "require")))
   local result = options0
   for _, name in ipairs((semantic_applies_to[rule] or {})) do
     local value = semantic_option_value(applies, name, singleton)
@@ -190,12 +190,7 @@ local evaluator_policy
 do
   local function evaluator_policy0(policy, rule, instance)
     local base_result = core.assoc(defaults(), rule, instance.severity)
-    local result
-    if (rule == "no-mutation") then
-      result = core.assoc(core.assoc(base_result, "forbidden-form", instance.severity), "no-mutation", instance.severity)
-    else
-      result = base_result
-    end
+    local result = base_result
     local raw_options = normalized_options(rule, instance)
     local normalized
     if ((rule == "module-import") and raw_options.module and (raw_options.mode == "forbid")) then
@@ -210,15 +205,15 @@ do
   evaluator_policy = _2amodule_2a["evaluator-policy"]
 end
 local function matches_3f(matcher, pattern, value)
-  local and_14_ = pattern and value
-  if and_14_ then
+  local and_13_ = pattern and value
+  if and_13_ then
     if matcher then
-      and_14_ = matcher(pattern, value)
+      and_13_ = matcher(pattern, value)
     else
-      and_14_ = (vim.fn.match(value, pattern) >= 0)
+      and_13_ = (vim.fn.match(value, pattern) >= 0)
     end
   end
-  return and_14_
+  return and_13_
 end
 local function any_match_3f(items, matcher, value)
   local result = false

@@ -156,9 +156,9 @@ end
 require("plenary.busted").describe("strict-config-shape", _12_)
 local function _18_()
   local function _19_()
-    local result = lint_error("(module a)", {path = "fnl/a.fnl", rules = {["module-style"] = {{severity = "warning", options = {}, exclusions = {}}}}})
+    local result = lint_error("(module a)", {path = "fnl/a.fnl", rules = {["forbidden-form"] = {{severity = "warning", options = {}, exclusions = {}}}}})
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "lint.rules.module-style[1].applies-to must be a table"
+    local expected_6_auto = "lint.rules.forbidden-form[1].applies-to must be a table"
     local actual_7_auto = result.message
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -192,7 +192,7 @@ local function _22_()
     end
     local lint_rules = (loaded and loaded.lint and loaded.lint.rules)
     local design_rules = (loaded and loaded.design and loaded.design.rules)
-    local lint_names = {"forbidden-form", "required-form", "module-style", "module-import", "child-count", "unused-and-or", "file-size", "call-data-arg", "if-branch-call", "function-shape", "nested-forms", "leading-bindings", "no-mutation"}
+    local lint_names = {"forbidden-form", "required-form", "module-import", "child-count", "file-size"}
     local design_names = {}
     local assert_28_auto = require("luassert")
     local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.indents and loaded.format["format-as"] and loaded.format.parser and loaded.format.alignment and loaded.lint and (nil == loaded.design) and complete_rules_3f(lint_rules, lint_names, 1))

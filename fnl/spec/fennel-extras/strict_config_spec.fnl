@@ -193,10 +193,10 @@
   (testing "an enabled rule reports the canonical applies-to path"
     (let [result (lint-error "(module a)"
                              {:path  "fnl/a.fnl"
-                              :rules {:module-style [{:severity   "warning"
-                                                      :options    {}
-                                                      :exclusions []}]}})]
-      (is (= "lint.rules.module-style[1].applies-to must be a table"
+                              :rules {:forbidden-form [{:severity   "warning"
+                                                        :options    {}
+                                                        :exclusions []}]}})]
+      (is (= "lint.rules.forbidden-form[1].applies-to must be a table"
              (. result :message)))))
 
 
@@ -233,17 +233,10 @@
           design-rules (and loaded (. loaded :design) (. (. loaded :design) :rules))
           lint-names   ["forbidden-form"
                         "required-form"
-                        "module-style"
                         "module-import"
                         "child-count"
-                        "unused-and-or"
                         "file-size"
-                        "call-data-arg"
-                        "if-branch-call"
-                        "function-shape"
-                        "nested-forms"
-                        "leading-bindings"
-                        "no-mutation"]
+                        ]
           design-names []]
       (is (and loaded
                (. (. loaded :format) :indent-width)

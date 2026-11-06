@@ -55,92 +55,65 @@
                   :options    {:before 1}}]}
  :lint
  {:rules
-  {:forbidden-form   [{:severity   :error
-                       :applies-to {:files   ["^spec/"]
-                                    :modules ["module"]}
-                       :options    {}
-                       :exclusions []}
-                      {:severity   :warning
-                       :applies-to {:files ["^fennel-extras/"]
-                                    :forms ["var" "set" "while"]}
-                       :options    {}
-                       :exclusions []}]
-   :call-data-arg    [{:severity   :warning
-                       :applies-to {:files ["^fennel-extras/"]
-                                    :forms []}
-                       :options    {}
-                       :exclusions []}]
-   :file-size        [{:severity   :warning
-                       :applies-to {:files ["^fennel-extras/"]}
-                       :options    {:max-code-lines 300}
-                       :exclusions []}]
-   :child-count      [{:severity   :error
-                       :applies-to {:files ["^spec/"]
-                                    :forms ["testing"]}
-                       :options    {:children  ["is"]
-                                    :max-count 1}
-                       :exclusions []}
-                      {:severity   :error
-                       :applies-to {:forms ["if"]}
-                       :options    {:min-count 2
-                                    :max-count 2
-                                    :nil-count false}
-                       :exclusions [{:path   "^spec/eca/macros[.]fnlm$"
-                                     :code   "^[(]if has-message"
-                                     :reason "syntax-quoted AST children are structural data, not semantic if branches"}
-                                    {:path   "^spec/eca/macros[.]fnlm$"
-                                     :code   "^[(]if [(][=] op"
-                                     :reason "syntax-quoted AST branches are structural data, not semantic if branches"}]}]
-   :module-import    [{:severity   :error
-                       :applies-to {:modules ["eca.nfnl.core"]}
-                       :options    {:mode    :require
-                                    :binding "core"}
-                       :exclusions []}
-                      {:severity   :error
-                       :applies-to {:files   ["^spec/"]
-                                    :forms   ["deftest" "testing" "is"]
-                                    :modules ["spec.eca.macros"]}
-                       :options    {:mode         :require
-                                    :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                       :exclusions []}
-                      {:severity   :error
-                       :applies-to {:files   ["^spec/"]
-                                    :modules ["plenary.busted" "luassert"]}
-                       :options    {:mode         :forbid
-                                    :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                       :exclusions []}]
-   :module-style     [{:severity   :error
-                       :applies-to {:files   ["^fennel-extras/"]
-                                    :forms   ["module" "def" "defn" "defn-"]
-                                    :modules ["eca.nfnl.macros.aniseed"]}
-                       :options    {}
-                       :exclusions []}]
-   :required-form    [{:severity   :error
-                       :applies-to {:files ["^fennel-extras/"]
-                                    :forms ["module"]}
-                       :options    {}
-                       :exclusions []}]
-   :unused-and-or    [{:severity   :warning
-                       :applies-to {:forms ["and" "or"]}
-                       :options    {}
-                       :exclusions []}]
-   :function-shape   [{:severity   :warning
-                       :applies-to {:forms ["defn" "defn-" "fn" "lambda" "λ"]}
-                       :options    {}
-                       :exclusions []}]
-   :if-branch-call   [{:severity   :warning
-                       :applies-to {:forms ["if"]}
-                       :options    {}
-                       :exclusions []}]
-   :nested-forms     [{:severity   :off
-                       :applies-to {:forms []}
-                       :options    {:max-depth 1}
-                       :exclusions []}]
-   :leading-bindings [{:severity   :off
-                       :applies-to {:forms []}
-                       :options    {}
-                       :exclusions []}]
-   :no-mutation      [{:severity   :off
-                       :applies-to {:forms ["var" "set" "while"]}
-                       :options    {}
-                       :exclusions []}]}}}
+  {:forbidden-form [{:severity   :error
+                     :applies-to {:files   ["^spec/"]
+                                  :modules ["module"]}
+                     :options    {}
+                     :exclusions []}
+                    {:severity   :warning
+                     :applies-to {:files ["^fennel-extras/"]
+                                  :forms ["var" "set" "while"]}
+                     :options    {}
+                     :exclusions []}]
+
+   :file-size      [{:severity   :warning
+                     :applies-to {:files ["^fennel-extras/"]}
+                     :options    {:max-code-lines 300}
+                     :exclusions []}]
+   :child-count    [{:severity   :error
+                     :applies-to {:files ["^spec/"]
+                                  :forms ["testing"]}
+                     :options    {:children  ["is"]
+                                  :max-count 1}
+                     :exclusions []}
+                    {:severity   :error
+                     :applies-to {:forms ["if"]}
+                     :options    {:min-count 2
+                                  :max-count 2
+                                  :nil-count false}
+                     :exclusions [{:path   "^spec/eca/macros[.]fnlm$"
+                                   :code   "^[(]if has-message"
+                                   :reason "syntax-quoted AST children are structural data, not semantic if branches"}
+                                  {:path   "^spec/eca/macros[.]fnlm$"
+                                   :code   "^[(]if [(][=] op"
+                                   :reason "syntax-quoted AST branches are structural data, not semantic if branches"}]}]
+   :module-import  [{:severity   :error
+                     :applies-to {:modules ["eca.nfnl.core"]}
+                     :options    {:mode    :require
+                                  :binding "core"}
+                     :exclusions []}
+                    {:severity   :error
+                     :applies-to {:files   ["^spec/"]
+                                  :forms   ["deftest" "testing" "is"]
+                                  :modules ["spec.eca.macros"]}
+                     :options    {:mode         :require
+                                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+                     :exclusions []}
+                    {:severity   :error
+                     :applies-to {:files   ["^spec/"]
+                                  :modules ["plenary.busted" "luassert"]}
+                     :options    {:mode         :forbid
+                                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+                     :exclusions []}]
+
+   :required-form  [{:severity   :error
+                     :applies-to {:files ["^fennel-extras/"]
+                                  :forms ["module"]}
+                     :options    {}
+                     :exclusions []}]
+
+
+
+
+
+  }}}

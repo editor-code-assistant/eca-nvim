@@ -2,6 +2,7 @@
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local config (require :fennel-extras.config))
+(local registry (require :fennel-extras.lint.rules.registry))
 
 (defn- validation
   [value]
@@ -141,8 +142,7 @@
                              (. rules :module-import 2 :applies-to :modules))
              (vim.deep_equal ["plenary.busted" "luassert"]
                              (. rules :module-import 3 :applies-to :modules))
-             (vim.deep_equal ["eca.nfnl.macros.aniseed"]
-                             (. rules :module-style 1 :applies-to :modules))))))
+             true))))
 
 (deftest canonical-module-selector-cardinality
 
@@ -152,14 +152,6 @@
                                                                :options    {}
                                                                :exclusions []}]}}})]
       (is (= "lint.rules.forbidden-form[1].applies-to.modules must contain at most one module"
-             (error-message result)))))
-
-  (testing "module-style rejects multiple semantic singleton modules"
-    (let [result (validation {:lint {:rules {:module-style [{:severity   "warning"
-                                                             :applies-to {:modules ["one" "two"]}
-                                                             :options    {}
-                                                             :exclusions []}]}}})]
-      (is (= "lint.rules.module-style[1].applies-to.modules must contain at most one module"
              (error-message result)))))
 
   (testing "module-import require rejects multiple semantic singleton modules"
@@ -207,19 +199,7 @@
             result (validation {:lint {:rules rules}})]
         (is (. result :ok)))))
 
-  (testing "remaining former design rule names validate under lint rules"
-    (let [instance {:severity   "warning"
-                    :applies-to {:forms ["if"]}
-                    :options    {}
-                    :exclusions []}
-          result   (validation {:lint {:rules {:function-shape   [instance]
-                                               :if-branch-call   [instance]
-                                               :nested-forms     [instance]
-                                               :leading-bindings [instance]
-                                               :no-mutation      [instance]}}})]
-      (is (and (. result :ok)
-               (. result :value)
-               (= nil (. result :value :design)))))))
+)
 
 (testing "canonical config uses direct child-count for if arity"
   (let [loaded   (config.load ".fnl-extras.fnl")
@@ -230,3 +210,68 @@
              (= 2 (. instance :options :min-count))
              (= 2 (. instance :options :max-count))
              (= false (. instance :options :nil-count))))))
+
+(local removed-rules ["call-data-arg"
+                      "module-style"
+                      "unused-and-or"
+                      "function-shape"
+                      "if-branch-call"
+                      "nested-forms"
+                      "leading-bindings"
+                      "no-mutation"])
+
+(local retained-rules ["forbidden-form"
+                       "child-count"
+                       "module-import"
+                       "required-form"
+                       "file-size"])
+
+(defn- removed-rule-instance
+  []
+  {:severity   "warning"
+   :applies-to {}
+   :options    {}
+   :exclusions []})
+
+(deftest canonical-config-removed-rules
+
+  (testing "canonical config omits every removed rule"
+    (let [rules (. (config.load ".fnl-extras.fnl") :lint :rules)]
+      (is (accumulate [absent true _ rule (ipairs removed-rules)]
+            (and absent (= nil (. rules rule))))))))
+
+(deftest lint-validation-removed-rules
+
+  (testing "canonical lint config rejects every removed rule name"
+    (is (accumulate [valid true _ rule (ipairs removed-rules)]
+          (let [rules  {}
+                _      (tset rules rule [(removed-rule-instance)])
+                result (validation {:lint {:rules rules}})]
+            (and valid
+                 (not (. result :ok))
+                 (= (.. "unknown lint rule: " rule)
+                    (error-message result))))))))
+
+(deftest design-validation-removed-rules
+
+  (testing "canonical design config rejects every removed rule name"
+    (is (accumulate [valid true _ rule (ipairs removed-rules)]
+          (let [rules  {}
+                _      (tset rules rule [(removed-rule-instance)])
+                result (validation {:design {:rules rules}})]
+            (and valid
+                 (not (. result :ok))
+                 (= (.. "unknown design rule: " rule)
+                    (error-message result))))))))
+
+(deftest runtime-registry-removed-rules
+
+  (testing "the runtime registry omits removed rules and retains supported rules"
+    (let [names    (registry.rule-names)
+          defaults (registry.defaults)]
+      (is (and (accumulate [absent true _ rule (ipairs removed-rules)]
+                 (and absent
+                      (= nil (. defaults rule))
+                      (not (vim.tbl_contains names rule))))
+               (accumulate [present true _ rule (ipairs retained-rules)]
+                 (and present (vim.tbl_contains names rule))))))))

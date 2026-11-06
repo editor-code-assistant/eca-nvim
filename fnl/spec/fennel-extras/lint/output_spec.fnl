@@ -71,9 +71,9 @@
               :end-line 12
               :end-col  18
               :severity "error"
-              :rule     "if-branch-call"
+              :rule     "forbidden-form"
               :form     "fnl/app.fnl > module:app > defn:run > if#1 > then"
-              :message  "if branch contains multiple expressions; move them to a named helper"}]
+              :message  "forbidden form"}]
     (each [key value (pairs overrides)]
       (tset base key value))
     base))
@@ -94,7 +94,7 @@
               :line     7
               :col      9
               :severity "error"
-              :rule     "if-branch-call"
+              :rule     "forbidden-form"
               :form     "fnl/app.fnl > module:app > defn:run > if#1 > then"
               :message  "exclusion does not match any finding"}]
     (each [key value (pairs overrides)]
@@ -108,8 +108,8 @@
 
 
   (testing "renders an error finding and its valid copyable exclusion suggestion"
-    (is (= ["fnl/app.fnl:12:5: error if-branch-call: if branch contains multiple expressions; move them to a named helper"
-            "  exclusion: {:rule \"if-branch-call\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
+    (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
+            "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
            (text-lines [(finding {})]))))
 
 
@@ -142,7 +142,7 @@
 
 
   (testing "renders a stale exclusion without a snippet"
-    (is (= [".fnl-extras.fnl:7:9: error if-branch-call: exclusion does not match any finding"]
+    (is (= [".fnl-extras.fnl:7:9: error forbidden-form: exclusion does not match any finding"]
            (text-lines [(stale-exclusion {})])))))
 
 (deftest json-output
@@ -150,13 +150,13 @@
 
 
   (testing "renders a finding as one exact ordered JSON object"
-    (is (= ["{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"if branch contains multiple expressions; move them to a named helper\"}"]
+    (is (= ["{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"forbidden form\"}"]
            (json-lines [(finding {})]))))
 
 
 
   (testing "omits end-line and end-col from stale exclusion JSON"
-    (is (= ["{\"kind\":\"stale-exclusion\",\"path\":\".fnl-extras.fnl\",\"line\":7,\"col\":9,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"exclusion does not match any finding\"}"]
+    (is (= ["{\"kind\":\"stale-exclusion\",\"path\":\".fnl-extras.fnl\",\"line\":7,\"col\":9,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"exclusion does not match any finding\"}"]
            (json-lines [(stale-exclusion {})]))))
 
 
@@ -180,7 +180,7 @@
 
   (testing "replaces an invalid UTF-8 byte with U+FFFD in JSON"
     (let [message  (.. "a" (string.char 255) "b")
-          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"a" (string.char 239) (string.char 191) (string.char 189) "b\"}")]
+          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"a" (string.char 239) (string.char 191) (string.char 189) "b\"}")]
       (is (= [expected]
              (json-lines [(finding {:message message})])))))
 
@@ -188,7 +188,7 @@
 
   (testing "replaces a truncated UTF-8 sequence with U+FFFD in JSON"
     (let [message  (string.char 195)
-          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" (string.char 239) (string.char 191) (string.char 189) "\"}")]
+          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" (string.char 239) (string.char 191) (string.char 189) "\"}")]
       (is (= [expected]
              (json-lines [(finding {:message message})])))))
 
@@ -196,7 +196,7 @@
 
   (testing "preserves DEL as a raw byte in JSON"
     (let [message  (string.char 127)
-          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" (string.char 127) "\"}")]
+          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" (string.char 127) "\"}")]
       (is (= [expected]
              (json-lines [(finding {:message message})])))))
 
@@ -204,7 +204,7 @@
 
   (testing "preserves valid UTF-8 in JSON"
     (let [message  "é😀"
-          expected "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"é😀\"}"]
+          expected "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"é😀\"}"]
       (is (= [expected]
              (json-lines [(finding {:message message})])))))
 
@@ -212,7 +212,7 @@
 
   (testing "preserves U+E000 bytes in JSON"
     (let [message  (.. (string.char 238) (string.char 128) (string.char 128))
-          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
+          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
       (is (= [expected]
              (json-lines [(finding {:message message})])))))
 
@@ -220,7 +220,7 @@
 
   (testing "preserves U+FFFD bytes in JSON"
     (let [message  (.. (string.char 239) (string.char 191) (string.char 189))
-          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
+          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
       (is (= [expected]
              (json-lines [(finding {:message message})])))))
 
@@ -228,7 +228,7 @@
 
   (testing "preserves U+FFFF bytes in JSON"
     (let [message  (.. (string.char 239) (string.char 191) (string.char 191))
-          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
+          expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
       (is (= [expected]
              (json-lines [(finding {:message message})])))))
 
@@ -236,7 +236,7 @@
 
   (testing "handles UTF-8 boundary bytes and invalid sequences in JSON"
     (let [replacement (.. (string.char 239) (string.char 191) (string.char 189))
-          prefix      "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\""
+          prefix      "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\""
           suffix      "\"}"
           cases       {:u007f          (string.char 127)
                        :u0080          (.. (string.char 194) (string.char 128))
@@ -269,8 +269,8 @@
 
   (testing "preserves invalid UTF-8 bytes in text output"
     (let [message (.. "a" (string.char 255) "b")]
-      (is (= [(.. "fnl/app.fnl:12:5: error if-branch-call: " message)
-              "  exclusion: {:rule \"if-branch-call\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
+      (is (= [(.. "fnl/app.fnl:12:5: error forbidden-form: " message)
+              "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
              (text-lines [(finding {:message message})])))))
 
 

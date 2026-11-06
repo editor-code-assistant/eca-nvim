@@ -1,5 +1,6 @@
 -- [nfnl] fnl/spec/fennel-extras/canonical_lint_contract_spec.fnl
 local config = require("fennel-extras.config")
+local registry = require("fennel-extras.lint.rules.registry")
 local function validation(value)
   local ok, result, error = pcall(config.validate, value)
   return {ok = (ok and result), value = result, error = error}
@@ -106,8 +107,8 @@ local function _15_()
   local loaded = config.load(".fnl-extras.fnl")
   local rules = loaded.lint.rules
   local assert_28_auto = require("luassert")
-  local value_29_auto = (vim.deep_equal({"module"}, rules["forbidden-form"][1]["applies-to"].modules) and vim.deep_equal({"eca.nfnl.core"}, rules["module-import"][1]["applies-to"].modules) and vim.deep_equal({"spec.eca.macros"}, rules["module-import"][2]["applies-to"].modules) and vim.deep_equal({"plenary.busted", "luassert"}, rules["module-import"][3]["applies-to"].modules) and vim.deep_equal({"eca.nfnl.macros.aniseed"}, rules["module-style"][1]["applies-to"].modules))
-  assert_28_auto.is_truthy(value_29_auto, "(and (vim.deep_equal [\"module\"] (. rules \"forbidden-form\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"eca.nfnl.core\"] (. rules \"module-import\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"spec.eca.macros\"] (. rules \"module-import\" 2 \"applies-to\" \"modules\")) (vim.deep_equal [\"plenary.busted\" \"luassert\"] (. rules \"module-import\" 3 \"applies-to\" \"modules\")) (vim.deep_equal [\"eca.nfnl.macros.aniseed\"] (. rules \"module-style\" 1 \"applies-to\" \"modules\")))")
+  local value_29_auto = (vim.deep_equal({"module"}, rules["forbidden-form"][1]["applies-to"].modules) and vim.deep_equal({"eca.nfnl.core"}, rules["module-import"][1]["applies-to"].modules) and vim.deep_equal({"spec.eca.macros"}, rules["module-import"][2]["applies-to"].modules) and vim.deep_equal({"plenary.busted", "luassert"}, rules["module-import"][3]["applies-to"].modules) and true)
+  assert_28_auto.is_truthy(value_29_auto, "(and (vim.deep_equal [\"module\"] (. rules \"forbidden-form\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"eca.nfnl.core\"] (. rules \"module-import\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"spec.eca.macros\"] (. rules \"module-import\" 2 \"applies-to\" \"modules\")) (vim.deep_equal [\"plenary.busted\" \"luassert\"] (. rules \"module-import\" 3 \"applies-to\" \"modules\")) true)")
   return true
 end
 require("plenary.busted").describe("canonical-module-selectors-are-vectors", _15_)
@@ -122,15 +123,6 @@ local function _16_()
   end
   require("plenary.busted").it("forbidden-form rejects multiple semantic singleton modules", _17_)
   local function _18_()
-    local result = validation({lint = {rules = {["module-style"] = {{severity = "warning", ["applies-to"] = {modules = {"one", "two"}}, options = {}, exclusions = {}}}}}})
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = "lint.rules.module-style[1].applies-to.modules must contain at most one module"
-    local actual_7_auto = error_message(result)
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("module-style rejects multiple semantic singleton modules", _18_)
-  local function _19_()
     local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = {mode = "require", binding = "one"}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint.rules.module-import[1].applies-to.modules must contain at most one module"
@@ -138,16 +130,16 @@ local function _16_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import require rejects multiple semantic singleton modules", _19_)
-  local function _20_()
+  require("plenary.busted").it("module-import require rejects multiple semantic singleton modules", _18_)
+  local function _19_()
     local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = {mode = "forbid", ["exempt-files"] = {}}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = result.ok
     assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
     return true
   end
-  require("plenary.busted").it("module-import forbid accepts multiple module selectors", _20_)
-  local function _21_()
+  require("plenary.busted").it("module-import forbid accepts multiple module selectors", _19_)
+  local function _20_()
     local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint.rules.module-import[1].options must be a table"
@@ -155,8 +147,8 @@ local function _16_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import missing options returns a structured validation error", _21_)
-  local function _22_()
+  require("plenary.busted").it("module-import missing options returns a structured validation error", _20_)
+  local function _21_()
     local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = "require", exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint.rules.module-import[1].options must be a table"
@@ -164,11 +156,11 @@ local function _16_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("module-import non-map options returns a structured validation error", _22_)
+  return require("plenary.busted").it("module-import non-map options returns a structured validation error", _21_)
 end
 require("plenary.busted").describe("canonical-module-selector-cardinality", _16_)
-local function _23_()
-  local function _24_()
+local function _22_()
+  local function _23_()
     for _, rule in ipairs({"child-count", "form-child-count"}) do
       local rules = {}
       local _0
@@ -181,19 +173,10 @@ local function _23_()
     end
     return nil
   end
-  require("plenary.busted").it("child-count is canonical and form-child-count remains an accepted alias", _24_)
-  local function _25_()
-    local instance = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {}}
-    local result = validation({lint = {rules = {["function-shape"] = {instance}, ["if-branch-call"] = {instance}, ["nested-forms"] = {instance}, ["leading-bindings"] = {instance}, ["no-mutation"] = {instance}}}})
-    local assert_28_auto = require("luassert")
-    local value_29_auto = (result.ok and result.value and (nil == result.value.design))
-    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\") (= nil (. result \"value\" \"design\")))")
-    return true
-  end
-  return require("plenary.busted").it("remaining former design rule names validate under lint rules", _25_)
+  return require("plenary.busted").it("child-count is canonical and form-child-count remains an accepted alias", _23_)
 end
-require("plenary.busted").describe("migrated-rule-names", _23_)
-local function _26_()
+require("plenary.busted").describe("migrated-rule-names", _22_)
+local function _24_()
   local loaded = config.load(".fnl-extras.fnl")
   local rules = loaded.lint.rules
   local instance = rules["child-count"][2]
@@ -202,4 +185,100 @@ local function _26_()
   assert_28_auto.is_truthy(value_29_auto, "(and instance (vim.deep_equal {:forms [\"if\"]} (. instance \"applies-to\")) (= 2 (. instance \"options\" \"min-count\")) (= 2 (. instance \"options\" \"max-count\")) (= false (. instance \"options\" \"nil-count\")))")
   return true
 end
-return require("plenary.busted").it("canonical config uses direct child-count for if arity", _26_)
+require("plenary.busted").it("canonical config uses direct child-count for if arity", _24_)
+local removed_rules = {"call-data-arg", "module-style", "unused-and-or", "function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation"}
+local retained_rules = {"forbidden-form", "child-count", "module-import", "required-form", "file-size"}
+local function removed_rule_instance()
+  return {severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}
+end
+local function _25_()
+  local function _26_()
+    local rules = config.load(".fnl-extras.fnl").lint.rules
+    local assert_28_auto = require("luassert")
+    local value_29_auto
+    do
+      local absent = true
+      for _, rule in ipairs(removed_rules) do
+        absent = (absent and (nil == rules[rule]))
+      end
+      value_29_auto = absent
+    end
+    assert_28_auto.is_truthy(value_29_auto, "(accumulate [absent true _ rule (ipairs removed-rules)] (and absent (= nil (. rules rule))))")
+    return true
+  end
+  return require("plenary.busted").it("canonical config omits every removed rule", _26_)
+end
+require("plenary.busted").describe("canonical-config-removed-rules", _25_)
+local function _27_()
+  local function _28_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto
+    do
+      local valid = true
+      for _, rule in ipairs(removed_rules) do
+        local rules = {}
+        local _0
+        rules[rule] = {removed_rule_instance()}
+        _0 = nil
+        local result = validation({lint = {rules = rules}})
+        valid = (valid and not result.ok and (("unknown lint rule: " .. rule) == error_message(result)))
+      end
+      value_29_auto = valid
+    end
+    assert_28_auto.is_truthy(value_29_auto, "(accumulate [valid true _ rule (ipairs removed-rules)] (let [rules\n {}\n _\n (tset rules rule [(removed-rule-instance)])\n result\n (validation {:lint {:rules rules}})] (and valid (not (. result \"ok\")) (= (.. \"unknown lint rule: \" rule) (error-message result)))))")
+    return true
+  end
+  return require("plenary.busted").it("canonical lint config rejects every removed rule name", _28_)
+end
+require("plenary.busted").describe("lint-validation-removed-rules", _27_)
+local function _29_()
+  local function _30_()
+    local assert_28_auto = require("luassert")
+    local value_29_auto
+    do
+      local valid = true
+      for _, rule in ipairs(removed_rules) do
+        local rules = {}
+        local _0
+        rules[rule] = {removed_rule_instance()}
+        _0 = nil
+        local result = validation({design = {rules = rules}})
+        valid = (valid and not result.ok and (("unknown design rule: " .. rule) == error_message(result)))
+      end
+      value_29_auto = valid
+    end
+    assert_28_auto.is_truthy(value_29_auto, "(accumulate [valid true _ rule (ipairs removed-rules)] (let [rules\n {}\n _\n (tset rules rule [(removed-rule-instance)])\n result\n (validation {:design {:rules rules}})] (and valid (not (. result \"ok\")) (= (.. \"unknown design rule: \" rule) (error-message result)))))")
+    return true
+  end
+  return require("plenary.busted").it("canonical design config rejects every removed rule name", _30_)
+end
+require("plenary.busted").describe("design-validation-removed-rules", _29_)
+local function _31_()
+  local function _32_()
+    local names = registry["rule-names"]()
+    local defaults = registry.defaults()
+    local assert_28_auto = require("luassert")
+    local value_29_auto
+    local _33_
+    do
+      local absent = true
+      for _, rule in ipairs(removed_rules) do
+        absent = (absent and (nil == defaults[rule]) and not vim.tbl_contains(names, rule))
+      end
+      _33_ = absent
+    end
+    local and_34_ = _33_
+    if and_34_ then
+      local present = true
+      for _, rule in ipairs(retained_rules) do
+        present = (present and vim.tbl_contains(names, rule))
+      end
+      and_34_ = present
+    end
+    value_29_auto = and_34_
+    assert_28_auto.is_truthy(value_29_auto, "(and (accumulate [absent true _ rule (ipairs removed-rules)] (and absent (= nil (. defaults rule)) (not (vim.tbl_contains names rule)))) (accumulate [present true _ rule (ipairs retained-rules)] (and present (vim.tbl_contains names rule))))")
+    return true
+  end
+  return require("plenary.busted").it("the runtime registry omits removed rules and retains supported rules", _32_)
+end
+return require("plenary.busted").describe("runtime-registry-removed-rules", _31_)

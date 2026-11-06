@@ -7,34 +7,18 @@
 (local option-names
        {"forbidden-form"   ["module" "forms"]
         "required-form"    ["forms"]
-        "module-style"     ["module" "forms"]
         "module-import"    ["mode" "modules" "exempt-files" "module" "binding" "forms"]
         "child-count"      ["children" "max-count" "min-count" "nil-count"]
         "form-child-count" ["children" "max-count"]
-        "if-branch-call"   ["forms"]
-        "unused-and-or"    ["forms"]
-        "function-shape"   ["forms" "max-depth"]
-        "file-size"        ["max-code-lines"]
-        "call-data-arg"    ["forms"]
-        "nested-forms"     ["forms" "max-depth"]
-        "leading-bindings" ["forms"]
-        "no-mutation"      ["forms"]})
+        "file-size"        ["max-code-lines"]})
 
 (local required-option-names
        {"forbidden-form"   []
         "required-form"    []
-        "module-style"     []
         "module-import"    ["mode"]
         "child-count"      []
         "form-child-count" ["children" "max-count"]
-        "if-branch-call"   []
-        "unused-and-or"    []
-        "function-shape"   []
-        "file-size"        ["max-code-lines"]
-        "call-data-arg"    []
-        "nested-forms"     []
-        "leading-bindings" []
-        "no-mutation"      []})
+        "file-size"        ["max-code-lines"]})
 
 (local option-types
        {

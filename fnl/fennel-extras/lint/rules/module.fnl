@@ -28,14 +28,6 @@
         []))
     []))
 
-(defn module-finding
-
-  [path forms policy module-ok]
-  (if (and (enabled? policy "module-style")
-           (not module-ok))
-    [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1 :severity (rule-severity policy "module-style") :rule "module-style" :form (.. path " > file") :message "file must use the module style" :node nil}]
-    []))
-
 
 (defn- contains?
 

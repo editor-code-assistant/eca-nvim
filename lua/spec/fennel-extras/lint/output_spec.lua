@@ -39,7 +39,7 @@ local function diagnostic_signatures(diagnostics)
   return table.concat(signatures, "\n")
 end
 local function finding(overrides)
-  local base = {kind = "finding", path = "fnl/app.fnl", line = 12, col = 5, ["end-line"] = 12, ["end-col"] = 18, severity = "error", rule = "if-branch-call", form = "fnl/app.fnl > module:app > defn:run > if#1 > then", message = "if branch contains multiple expressions; move them to a named helper"}
+  local base = {kind = "finding", path = "fnl/app.fnl", line = 12, col = 5, ["end-line"] = 12, ["end-col"] = 18, severity = "error", rule = "forbidden-form", form = "fnl/app.fnl > module:app > defn:run > if#1 > then", message = "forbidden form"}
   for key, value in pairs(overrides) do
     base[key] = value
   end
@@ -49,7 +49,7 @@ local function json_case(message)
   return {message = message, json = json_lines({finding({message = message})})}
 end
 local function stale_exclusion(overrides)
-  local base = {kind = "stale-exclusion", path = ".fnl-extras.fnl", line = 7, col = 9, severity = "error", rule = "if-branch-call", form = "fnl/app.fnl > module:app > defn:run > if#1 > then", message = "exclusion does not match any finding"}
+  local base = {kind = "stale-exclusion", path = ".fnl-extras.fnl", line = 7, col = 9, severity = "error", rule = "forbidden-form", form = "fnl/app.fnl > module:app > defn:run > if#1 > then", message = "exclusion does not match any finding"}
   for key, value in pairs(overrides) do
     base[key] = value
   end
@@ -58,7 +58,7 @@ end
 local function _5_()
   local function _6_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"fnl/app.fnl:12:5: error if-branch-call: if branch contains multiple expressions; move them to a named helper", "  exclusion: {:rule \"if-branch-call\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"}
+    local expected_6_auto = {"fnl/app.fnl:12:5: error forbidden-form: forbidden form", "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"}
     local actual_7_auto = text_lines({finding({})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -82,7 +82,7 @@ local function _5_()
   require("plenary.busted").it("escapes a quote and backslash in the text exclusion snippet", _8_)
   local function _9_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {".fnl-extras.fnl:7:9: error if-branch-call: exclusion does not match any finding"}
+    local expected_6_auto = {".fnl-extras.fnl:7:9: error forbidden-form: exclusion does not match any finding"}
     local actual_7_auto = text_lines({stale_exclusion({})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -93,7 +93,7 @@ require("plenary.busted").describe("text-output", _5_)
 local function _10_()
   local function _11_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"if branch contains multiple expressions; move them to a named helper\"}"}
+    local expected_6_auto = {"{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"forbidden form\"}"}
     local actual_7_auto = json_lines({finding({})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -101,7 +101,7 @@ local function _10_()
   require("plenary.busted").it("renders a finding as one exact ordered JSON object", _11_)
   local function _12_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"{\"kind\":\"stale-exclusion\",\"path\":\".fnl-extras.fnl\",\"line\":7,\"col\":9,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"exclusion does not match any finding\"}"}
+    local expected_6_auto = {"{\"kind\":\"stale-exclusion\",\"path\":\".fnl-extras.fnl\",\"line\":7,\"col\":9,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"exclusion does not match any finding\"}"}
     local actual_7_auto = json_lines({stale_exclusion({})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -121,7 +121,7 @@ local function _10_()
   require("plenary.busted").it("escapes quote backslash newline tab carriage return controls and preserves UTF-8", _13_)
   local function _14_()
     local message = ("a" .. string.char(255) .. "b")
-    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"a" .. string.char(239) .. string.char(191) .. string.char(189) .. "b\"}")
+    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"a" .. string.char(239) .. string.char(191) .. string.char(189) .. "b\"}")
     local assert_5_auto = require("luassert")
     local expected_6_auto = {expected}
     local actual_7_auto = json_lines({finding({message = message})})
@@ -131,7 +131,7 @@ local function _10_()
   require("plenary.busted").it("replaces an invalid UTF-8 byte with U+FFFD in JSON", _14_)
   local function _15_()
     local message = string.char(195)
-    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. string.char(239) .. string.char(191) .. string.char(189) .. "\"}")
+    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. string.char(239) .. string.char(191) .. string.char(189) .. "\"}")
     local assert_5_auto = require("luassert")
     local expected_6_auto = {expected}
     local actual_7_auto = json_lines({finding({message = message})})
@@ -141,7 +141,7 @@ local function _10_()
   require("plenary.busted").it("replaces a truncated UTF-8 sequence with U+FFFD in JSON", _15_)
   local function _16_()
     local message = string.char(127)
-    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. string.char(127) .. "\"}")
+    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. string.char(127) .. "\"}")
     local assert_5_auto = require("luassert")
     local expected_6_auto = {expected}
     local actual_7_auto = json_lines({finding({message = message})})
@@ -151,7 +151,7 @@ local function _10_()
   require("plenary.busted").it("preserves DEL as a raw byte in JSON", _16_)
   local function _17_()
     local message = "\195\169\240\159\152\128"
-    local expected = "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"\195\169\240\159\152\128\"}"
+    local expected = "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"\195\169\240\159\152\128\"}"
     local assert_5_auto = require("luassert")
     local expected_6_auto = {expected}
     local actual_7_auto = json_lines({finding({message = message})})
@@ -161,7 +161,7 @@ local function _10_()
   require("plenary.busted").it("preserves valid UTF-8 in JSON", _17_)
   local function _18_()
     local message = (string.char(238) .. string.char(128) .. string.char(128))
-    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. message .. "\"}")
+    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. message .. "\"}")
     local assert_5_auto = require("luassert")
     local expected_6_auto = {expected}
     local actual_7_auto = json_lines({finding({message = message})})
@@ -171,7 +171,7 @@ local function _10_()
   require("plenary.busted").it("preserves U+E000 bytes in JSON", _18_)
   local function _19_()
     local message = (string.char(239) .. string.char(191) .. string.char(189))
-    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. message .. "\"}")
+    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. message .. "\"}")
     local assert_5_auto = require("luassert")
     local expected_6_auto = {expected}
     local actual_7_auto = json_lines({finding({message = message})})
@@ -181,7 +181,7 @@ local function _10_()
   require("plenary.busted").it("preserves U+FFFD bytes in JSON", _19_)
   local function _20_()
     local message = (string.char(239) .. string.char(191) .. string.char(191))
-    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. message .. "\"}")
+    local expected = ("{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" .. message .. "\"}")
     local assert_5_auto = require("luassert")
     local expected_6_auto = {expected}
     local actual_7_auto = json_lines({finding({message = message})})
@@ -191,7 +191,7 @@ local function _10_()
   require("plenary.busted").it("preserves U+FFFF bytes in JSON", _20_)
   local function _21_()
     local replacement = (string.char(239) .. string.char(191) .. string.char(189))
-    local prefix = "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"if-branch-call\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\""
+    local prefix = "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\""
     local suffix = "\"}"
     local cases = {u007f = string.char(127), u0080 = (string.char(194) .. string.char(128)), u07ff = (string.char(223) .. string.char(191)), u0800 = (string.char(224) .. string.char(160) .. string.char(128)), uD7FF = (string.char(237) .. string.char(159) .. string.char(191)), u10000 = (string.char(240) .. string.char(144) .. string.char(128) .. string.char(128)), u10FFFF = (string.char(244) .. string.char(143) .. string.char(191) .. string.char(191)), surrogate = (string.char(237) .. string.char(160) .. string.char(128)), ["above-u10FFFF"] = (string.char(244) .. string.char(144) .. string.char(128) .. string.char(128)), ["overlong-two"] = (string.char(192) .. string.char(128)), ["overlong-three"] = (string.char(224) .. string.char(128) .. string.char(128))}
     local actual = {}
@@ -209,7 +209,7 @@ local function _10_()
   local function _22_()
     local message = ("a" .. string.char(255) .. "b")
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {("fnl/app.fnl:12:5: error if-branch-call: " .. message), "  exclusion: {:rule \"if-branch-call\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"}
+    local expected_6_auto = {("fnl/app.fnl:12:5: error forbidden-form: " .. message), "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"}
     local actual_7_auto = text_lines({finding({message = message})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

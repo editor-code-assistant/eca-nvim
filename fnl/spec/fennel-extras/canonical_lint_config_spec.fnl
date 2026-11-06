@@ -55,7 +55,7 @@
 (deftest canonical-exclusions
 
   (testing "path, code, form, and reason selectors are accepted as strings"
-    (let [result (validation {:lint {:rules {:if-branch-call [{:severity   "warning"
+    (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
                                                                :applies-to {:forms ["if"]}
                                                                :options    {}
                                                                :exclusions [{:path   "^spec/"
@@ -65,7 +65,7 @@
       (is (and (. result :ok) (. result :value)))))
 
   (testing "exclusion selectors require string values"
-    (let [result (validation {:lint {:rules {:if-branch-call [{:severity   "warning"
+    (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
                                                                :applies-to {:forms ["if"]}
                                                                :options    {}
                                                                :exclusions [{:path   ["^spec/"]
@@ -73,5 +73,5 @@
                                                                              :form   1
                                                                              :reason "intentional"}]}]}}})]
       (is (and (not (. result :ok))
-               (= "lint.rules.if-branch-call[1].exclusions[1] requires string path and reason; optional code and form must be strings"
+               (= "lint.rules.forbidden-form[1].exclusions[1] requires string path and reason; optional code and form must be strings"
                   (error-message result)))))))
