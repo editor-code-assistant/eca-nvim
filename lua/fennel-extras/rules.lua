@@ -7,6 +7,7 @@ do
 end
 local alignment = require("fennel-extras.indent.settings")
 local allowed_keys = {indents = true, ["format-as"] = true, ["indent-width"] = true, alignment = true}
+local default_rules = {def = {{"inner", 0}}, ["def-"] = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}
 local resolve_name = nil
 local alias_rule = nil
 local function error(message)
@@ -99,12 +100,16 @@ local function _14_(config, name, seen)
     if aliases[name] then
       return alias_rule(config, name, seen)
     else
-      return nil, nil, false
+      if default_rules[name] then
+        return default_rules[name], nil, true
+      else
+        return nil, nil, false
+      end
     end
   end
 end
 resolve_name = _14_
-local function _17_(config, name, seen)
+local function _18_(config, name, seen)
   if seen[name] then
     return nil, error("format-as alias cycle")
   else
@@ -123,7 +128,7 @@ local function _17_(config, name, seen)
     end
   end
 end
-alias_rule = _17_
+alias_rule = _18_
 local function validate_alignment(config)
   return alignment.validate(config.alignment)
 end

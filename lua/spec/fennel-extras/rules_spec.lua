@@ -118,9 +118,9 @@ end
 require("plenary.busted").describe("rule-semantics", _9_)
 local function _15_()
   local function _16_()
-    local outputs = {exact_output_for("(when x\ny)", {}), exact_output_for("(defn f\n[x]\nx)", {}), exact_output_for("(with-foo x\ny)", {})}
+    local outputs = {exact_output_for("(when x\ny)", {}), exact_output_for("(with-foo x\ny)", {})}
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"(when x\n      y)", "(defn f\n      [x]\n      x)", "(with-foo x\n          y)"}
+    local expected_6_auto = {"(when x\n      y)", "(with-foo x\n          y)"}
     local actual_7_auto = outputs
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

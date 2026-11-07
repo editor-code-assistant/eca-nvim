@@ -9,10 +9,6 @@
  {:indent-width 2
   :parser       "eca.nfnl.fennel"
   :indents      {"fn" [[:inner 0]]}
-  :format-as    {"def"   "fn"
-                 "def-"  "fn"
-                 "defn"  "fn"
-                 "defn-" "fn"}
   :alignment    {:bindings         true
                  :maps             true
                  :clauses          true

@@ -44,10 +44,6 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
  {:indent-width 2
   :parser "eca.nfnl.fennel"
   :indents {"fn" [[:inner 0]]}
-  :format-as {"def" "fn"
-              "def-" "fn"
-              "defn" "fn"
-              "defn-" "fn"}
   :alignment        {:bindings         true
                      :maps             true
                      :clauses          true
@@ -116,7 +112,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :exclusions []}]}}}
 ```
 
-The configuration has four root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`. `:lint :rules` is canonical for the supported lint and structural rules. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > exact `:format-as` alias > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one exact form name to another for indentation only. The canonical configuration uses only `fn` as a declaration base rule, with `def`, `def-`, `defn`, and `defn-` as exact aliases to it; other forms use generic `:indent-width` behavior unless explicitly configured. Aliases do not add alignment or newline membership. There are no builtin, prefix, or pattern fallbacks. `:indent-width` and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
+The configuration has four root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`. `:lint :rules` is canonical for the supported lint and structural rules. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > exact `:format-as` alias > internal declaration default > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one exact form name to another for indentation only. The canonical configuration uses only `fn` as an explicit indentation rule. The declaration heads `def`, `def-`, `defn`, and `defn-` have internal `[:inner 0]` defaults when they are not configured, while other forms use generic `:indent-width` behavior unless explicitly configured. Aliases do not add alignment or newline membership. There are no other builtin, prefix, or pattern fallbacks. `:indent-width` and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
 
 By default, formatting changes leading indentation only. Alignment is separate and must be configured under `:alignment`; there is no legacy `:align-bindings` compatibility key. In this repository, the `if` rule gives bodies regular 2-space indentation; multiline `and`/`or` forms remain aligned under their first argument.
 

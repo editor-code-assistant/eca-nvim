@@ -6,6 +6,11 @@
 
 (local allowed-keys
        {:indents true :format-as true :indent-width true :alignment true})
+(local default-rules
+       {"def"   [[:inner 0]]
+        "def-"  [[:inner 0]]
+        "defn"  [[:inner 0]]
+        "defn-" [[:inner 0]]})
 (var resolve-name nil)
 (var alias-rule nil)
 
@@ -84,7 +89,9 @@
            (values (. indents name) nil true)
            (if (. aliases name)
              (alias-rule config name seen)
-             (values nil nil false))))))
+             (if (. default-rules name)
+               (values (. default-rules name) nil true)
+               (values nil nil false)))))))
 
 (set alias-rule
      (fn [config name seen]

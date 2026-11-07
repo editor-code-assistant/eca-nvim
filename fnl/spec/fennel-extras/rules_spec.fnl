@@ -113,10 +113,8 @@
 
          (testing "uses generic indentation for an undeclared builtin, prefix, or pattern form"
                   (let [outputs [(exact-output-for "(when x\ny)" {})
-                                 (exact-output-for "(defn f\n[x]\nx)" {})
                                  (exact-output-for "(with-foo x\ny)" {})]]
                     (is (= ["(when x\n      y)"
-                            "(defn f\n      [x]\n      x)"
                             "(with-foo x\n          y)"]
                            outputs))))
 
