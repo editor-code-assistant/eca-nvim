@@ -271,6 +271,7 @@
                              (. (. loaded :workspace) :extensions)
                              (. (. loaded :workspace) :paths)
                              (. (. loaded :format) :indents)
+                             (. (. loaded :format) :format-as)
                              (. (. loaded :format) :parser)
                              (. (. loaded :format) :alignment)
                              (. loaded :lint)

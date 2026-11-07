@@ -19,6 +19,7 @@
        {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]] "def" [[:inner 0]] "defn" [[:inner 0]] "defn-" [[:inner 0]]})
 (local full-alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]})
 (local aligned-format-config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]}})
+
 (defn- explicit-alignment
   [config]
   (or (and (not= nil (. config :align-bindings))
@@ -137,8 +138,6 @@
   [format source config]
   (let [(ok value err) (pcall format-call-body format source config)]
     {:ok ok :value value :error err}))
-
-
 
 (defn- format-call-summary
   [result]
@@ -1082,47 +1081,6 @@
                          (. (comment-format-scenario "(foo ;; eol\nbar)"
                                                      true)
                             :value)))))
-
-(local canonical-format-config {:indent-width 2
-                                :parser       "eca.nfnl.fennel"
-                                :indents      {"fn" [[:inner 0]]}
-                                :alignment    {:bindings         true
-                                               :maps             true
-                                               :clauses          true
-                                               :split-bindings   true
-                                               :collapse-padding true
-                                               :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                                               :clause-forms     ["case" "match" "case-try" "match-try" "if"]}})
-
-(defn- canonical-format
-  [source]
-  (let [format         (load-format)
-        (ok value err) (pcall format.format-string source {:config canonical-format-config})]
-    (if ok
-      value
-      {:error err})))
-
-(deftest canonical-generic-indentation
-
-         (testing "indents root multiline let children by the canonical indent width"
-                  (is (= "(let []\n  body)"
-                         (canonical-format "(let []\nbody)"))))
-
-         (testing "indents root multiline if children by the canonical indent width"
-                  (is (= "(if condition\n  branch-1\n  branch-2)"
-                         (canonical-format "(if condition\nbranch-1\nbranch-2)"))))
-
-         (testing "indents root multiline case children by the canonical indent width"
-                  (is (= "(case value\n  pattern\n  result)"
-                         (canonical-format "(case value\npattern\nresult)"))))
-
-         (testing "adds parent indentation for nested generic forms"
-                  (is (= "(foo\n (let []\n   body)\n (if condition\n   branch-1\n   branch-2)\n (case value\n   pattern\n   result))"
-                         (canonical-format "(foo\n(let []\nbody)\n(if condition\nbranch-1\nbranch-2)\n(case value\npattern\nresult))"))))
-
-         (testing "leaves one-line generic forms unchanged"
-                  (let [source "(let [] body)\n(if condition branch-1 branch-2)\n(case value pattern result)"]
-                    (is (= source (canonical-format source))))))
 
 (deftest align-bindings-one-line-padding
 

@@ -772,11 +772,11 @@ local function _108_()
     local config = assert(load_config())
     local format = assert(config.load(".fnl-extras.fnl")).format
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {indents = {fn = {{"inner", 0}}}, ["format-as"] = nil}
+    local expected_6_auto = {indents = {fn = {{"inner", 0}}}, ["format-as"] = {def = "fn", ["def-"] = "fn", defn = "fn", ["defn-"] = "fn"}}
     local actual_7_auto = {indents = format.indents, ["format-as"] = format["format-as"]}
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("canonical indents contain only the explicit fn base rule", _109_)
+  return require("plenary.busted").it("canonical indents contain only fn and definition forms alias it exactly", _109_)
 end
 return require("plenary.busted").describe("canonical-format-aliases", _108_)

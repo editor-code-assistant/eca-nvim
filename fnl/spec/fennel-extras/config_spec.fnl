@@ -545,9 +545,12 @@
 
 (deftest canonical-format-aliases
 
-         (testing "canonical indents contain only the explicit fn base rule"
+         (testing "canonical indents contain only fn and definition forms alias it exactly"
                   (let [config (assert (load-config))
                         format (. (assert (config.load ".fnl-extras.fnl")) :format)]
                     (is (= {:indents   {"fn" [[:inner 0]]}
-                            :format-as nil}
+                            :format-as {"def"   "fn"
+                                        "def-"  "fn"
+                                        "defn"  "fn"
+                                        "defn-" "fn"}}
                            {:indents (. format :indents) :format-as (. format :format-as)})))))

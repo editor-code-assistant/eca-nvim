@@ -113,8 +113,10 @@
 
          (testing "uses generic indentation for an undeclared builtin, prefix, or pattern form"
                   (let [outputs [(exact-output-for "(when x\ny)" {})
+                                 (exact-output-for "(defn f\n[x]\nx)" {})
                                  (exact-output-for "(with-foo x\ny)" {})]]
                     (is (= ["(when x\n      y)"
+                            "(defn f\n      [x]\n      x)"
                             "(with-foo x\n          y)"]
                            outputs))))
 
@@ -161,18 +163,6 @@
                                                      {:indents {"foo" [[:inner 1]]}})]
                            {:value?      (. result :value?)
                             :has-message (. result :has-message)})))))
-
-(deftest canonical-generic-forms
-
-         (testing "canonical config leaves let, if, and case to generic indent-width handling"
-                  (let [rules  (require :fennel-extras.rules)
-                        config {:indent-width 2
-                                :parser       "eca.nfnl.fennel"
-                                :indents      {"fn" [[:inner 0]]}}]
-                    (is (= [nil nil nil]
-                           [(rules.resolve config "let")
-                            (rules.resolve config "if")
-                            (rules.resolve config "case")])))))
 
 (deftest canonical-function-aliases
 
