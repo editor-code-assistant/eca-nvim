@@ -198,6 +198,19 @@ require("plenary.busted").describe("format-as-and-config-errors", _18_)
 local function _24_()
   local function _25_()
     local rules = require("fennel-extras.rules")
+    local config = {["indent-width"] = 2, parser = "eca.nfnl.fennel", indents = {fn = {{"inner", 0}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {nil, nil, nil}
+    local actual_7_auto = {rules.resolve(config, "let"), rules.resolve(config, "if"), rules.resolve(config, "case")}
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("canonical config leaves let, if, and case to generic indent-width handling", _25_)
+end
+require("plenary.busted").describe("canonical-generic-forms", _24_)
+local function _26_()
+  local function _27_()
+    local rules = require("fennel-extras.rules")
     local config = {indents = {fn = {{"inner", 0}}}, ["format-as"] = {def = "fn", ["def-"] = "fn", defn = "fn", ["defn-"] = "fn"}}
     config.indents["fn"] = {{"block", 1}}
     local assert_5_auto = require("luassert")
@@ -206,6 +219,6 @@ local function _24_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("def aliases resolve through fn so changing fn changes every definition form", _25_)
+  return require("plenary.busted").it("def aliases resolve through fn so changing fn changes every definition form", _27_)
 end
-return require("plenary.busted").describe("canonical-function-aliases", _24_)
+return require("plenary.busted").describe("canonical-function-aliases", _26_)

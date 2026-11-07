@@ -162,6 +162,18 @@
                            {:value?      (. result :value?)
                             :has-message (. result :has-message)})))))
 
+(deftest canonical-generic-forms
+
+         (testing "canonical config leaves let, if, and case to generic indent-width handling"
+                  (let [rules  (require :fennel-extras.rules)
+                        config {:indent-width 2
+                                :parser       "eca.nfnl.fennel"
+                                :indents      {"fn" [[:inner 0]]}}]
+                    (is (= [nil nil nil]
+                           [(rules.resolve config "let")
+                            (rules.resolve config "if")
+                            (rules.resolve config "case")])))))
+
 (deftest canonical-function-aliases
 
          (testing "def aliases resolve through fn so changing fn changes every definition form"
