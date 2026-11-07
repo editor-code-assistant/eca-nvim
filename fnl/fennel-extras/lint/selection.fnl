@@ -35,7 +35,7 @@
 
   [rename first-path]
   (when rename
-    first-path))
+        first-path))
 
 (defn- status-offset
 
@@ -130,7 +130,7 @@
 
   [text]
   (icollect [_ line (ipairs (split-lines text))]
-    (hunk-line line)))
+            (hunk-line line)))
 
 (defn- overlaps-step
 
@@ -238,19 +238,19 @@
 
   [initial records]
   (accumulate [state initial _ record (ipairs records)]
-    (add-record state record)))
+              (add-record state record)))
 
 (defn- add-old-paths
 
   [initial records]
   (accumulate [state initial _ record (ipairs records)]
-    (add-old-path state record)))
+              (add-old-path state record)))
 
 (defn- add-untracked-paths
 
   [initial untracked]
   (accumulate [state initial _ path (ipairs untracked)]
-    (add-untracked-path state path)))
+              (add-untracked-path state path)))
 
 (defn- plan-state
 

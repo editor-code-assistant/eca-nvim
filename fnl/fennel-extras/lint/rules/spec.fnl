@@ -27,8 +27,8 @@
         count   (count-child-forms node options.children 1 0)]
     (when (and (enabled? policy "form-child-count")
                (not= count options.max-count))
-      (table.insert findings
-                    (finding path form (rule-severity policy "form-child-count") "form-child-count" "each testing form must contain exactly one is" node)))))
+          (table.insert findings
+                        (finding path form (rule-severity policy "form-child-count") "form-child-count" "each testing form must contain exactly one is" node)))))
 
 
 
@@ -116,5 +116,5 @@
     (when (and form-applies
                (enabled? policy "child-count")
                (child-count-invalid? node options))
-      (table.insert findings
-                    (finding path form (rule-severity policy "child-count") "child-count" "form has an invalid child count" node)))))
+          (table.insert findings
+                        (finding path form (rule-severity policy "child-count") "child-count" "form has an invalid child count" node)))))

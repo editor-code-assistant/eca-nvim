@@ -19,27 +19,27 @@
 
   [result child]
   (when (not (trivia? child))
-    (table.insert result child)))
+        (table.insert result child)))
 
 (defn- collect-meaningful-children
 
   [children result]
   (each [_ child (ipairs children)]
-    (collect-meaningful-child result child)))
+        (collect-meaningful-child result child)))
 
 (defn meaningful-children
 
   [node]
   (let [result []]
     (when (and node node.children)
-      (collect-meaningful-children node.children result))
+          (collect-meaningful-children node.children result))
     result))
 
 (defn symbol-text
 
   [node]
   (when (and node (= node.kind :symbol))
-    node.text))
+        node.text))
 
 (defn list-head
 
@@ -78,26 +78,26 @@
   (when (and (= token.kind :string)
              (< token.line line)
              (<= line (+ token.line (newline-count token.text 1 0))))
-    token))
+        token))
 
 (defn- string-token-on-line?
 
   [tokens line]
   (accumulate [result false _ token (ipairs tokens)]
-    (or result (string-token-on-line-value token line))))
+              (or result (string-token-on-line-value token line))))
 
 (defn- first-token-on-line-value
 
   [token line]
   (when (and (= token.line line)
              (not (or (= token.kind :whitespace) (= token.kind :newline))))
-    token))
+        token))
 
 (defn- first-token-on-line
 
   [tokens line]
   (accumulate [result nil _ token (ipairs tokens)]
-    (or result (first-token-on-line-value token line))))
+              (or result (first-token-on-line-value token line))))
 
 (defn- code-line?
 
@@ -156,7 +156,7 @@
         bindings (. children 2)
         target   (literal-text (. children 3))]
     (when (= (list-head node) "import-macros")
-      (import-macros-data bindings target))))
+          (import-macros-data bindings target))))
 
 (defn- has-all-step
 
@@ -231,13 +231,13 @@
 
   [root forms index child]
   (when (root-form? root index child)
-    (table.insert forms child)))
+        (table.insert forms child)))
 
 (defn- collect-root-forms
 
   [root forms]
   (each [index child (ipairs root.children)]
-    (collect-root-form root forms index child)))
+        (collect-root-form root forms index child)))
 
 (defn root-forms
 
@@ -245,7 +245,7 @@
   (let [root  (reader.parse source)
         forms []]
     (when root
-      (collect-root-forms root forms))
+          (collect-root-forms root forms))
     forms))
 
 (defn require-node?
@@ -293,20 +293,20 @@
 
   [target nodes]
   (each [_ node (ipairs nodes)]
-    (table.insert target node))
+        (table.insert target node))
   target)
 
 (defn- skip-first-form-step
 
   [index value]
   (when (> index 1)
-    value))
+        value))
 
 (defn- forms-without-first
 
   [forms]
   (icollect [index value (ipairs forms)]
-    (skip-first-form-step index value)))
+            (skip-first-form-step index value)))
 
 (defn- form-for-node-step
 
@@ -365,4 +365,4 @@
 
   [forms node]
   (accumulate [current nil _ form (ipairs forms)]
-    (nearest-form-step current form node)))
+              (nearest-form-step current form node)))

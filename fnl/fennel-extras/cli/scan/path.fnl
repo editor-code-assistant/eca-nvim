@@ -76,8 +76,8 @@
 
   [path extensions]
   (accumulate [result false _ extension (ipairs extensions)]
-    (or result
-        (extension-matches? path extension))))
+              (or result
+                  (extension-matches? path extension))))
 
 (defn fnl-file?
 
@@ -129,7 +129,7 @@
   [uv path]
   (let [(ok resolved) (pcall uv.fs_realpath path)]
     (when ok
-      resolved)))
+          resolved)))
 
 (defn walk-prefix
 

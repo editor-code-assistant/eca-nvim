@@ -54,7 +54,7 @@
 
   [target items]
   (each [_ value (ipairs (or items []))]
-    (table.insert target value))
+        (table.insert target value))
   target)
 
 
@@ -76,13 +76,13 @@
         head     (list-head node)
         findings []]
     (when (enabled? policy "form-child-count")
-      (spec-rule.form-child-count-finding findings path form policy node))
+          (spec-rule.form-child-count-finding findings path form policy node))
     (when (enabled? policy "child-count")
-      (spec-rule.child-count-finding findings path form policy node))
+          (spec-rule.child-count-finding findings path form policy node))
     (when (enabled? policy "forbidden-form")
-      (forbidden-rule.findings findings path form policy node "forbidden-form"))
+          (forbidden-rule.findings findings path form policy node "forbidden-form"))
     (when (and node (enabled? policy "module-import"))
-      (module-rule.module-import-finding findings path form head node policy))
+          (module-rule.module-import-finding findings path form head node policy))
     findings))
 
 
@@ -91,7 +91,7 @@
 
   [all path forms policy]
   (each [_ form (ipairs forms)]
-    (append-all all (evaluate-form path form forms policy)))
+        (append-all all (evaluate-form path form forms policy)))
   all)
 
 
@@ -124,11 +124,11 @@
         state           (check-state (root-forms source) 1 {:module-import false} instance-policy)
         result          (check-result path forms instance-policy source state)]
     (icollect [_ finding (ipairs result)]
-      (when (registry.instance-applies-to? instance.rule instance.value finding policy.matcher)
-        (let [with-instance (core.assoc finding :instance instance.index)]
-          (if instance.value.description
-            (core.assoc with-instance :description instance.value.description)
-            with-instance))))))
+              (when (registry.instance-applies-to? instance.rule instance.value finding policy.matcher)
+                    (let [with-instance (core.assoc finding :instance instance.index)]
+                      (if instance.value.description
+                        (core.assoc with-instance :description instance.value.description)
+                        with-instance))))))
 
 
 
@@ -136,7 +136,7 @@
 
   [result path forms policy source instance]
   (each [_ finding (ipairs (check-instance path forms policy source instance))]
-    (table.insert result finding))
+        (table.insert result finding))
   result)
 
 
@@ -145,4 +145,4 @@
 
   [path forms policy source]
   (accumulate [result [] _ instance (ipairs (registry.instances policy))]
-    (append-instance-findings result path forms policy source instance)))
+              (append-instance-findings result path forms policy source instance)))

@@ -38,7 +38,7 @@
 
   [node result mode recurse predicate]
   (accumulate [state result index child (ipairs (or node.children []))]
-    (append-executable-child node state index child mode recurse predicate)))
+              (append-executable-child node state index child mode recurse predicate)))
 
 (defn- executable-node-result
 

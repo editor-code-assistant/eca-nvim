@@ -20,7 +20,7 @@
 
   [child]
   (when (not (trivia? child))
-    child))
+        child))
 
 (defn container?
 
@@ -33,13 +33,13 @@
 
   [node]
   (icollect [_ child (ipairs node.children)]
-    (meaningful-child child)))
+            (meaningful-child child)))
 
 (defn- symbol-text
 
   [node]
   (when (and node (= node.kind :symbol))
-    node.text))
+        node.text))
 
 (defn- head-name
 
@@ -80,7 +80,7 @@
 
   [head name node]
   (when (and (= head "local") (local-fn? node))
-    (.. "local:" name)))
+        (.. "local:" name)))
 
 (defn- declaration-segment
 
@@ -94,7 +94,7 @@
   [node]
   (let [(head name) (head-name node)]
     (when (and head name)
-      (declaration-segment head name node))))
+          (declaration-segment head name node))))
 
 (defn- anonymous-list-kind
 
@@ -163,7 +163,7 @@
 
   [children child-index]
   (accumulate [state {:ordinal 0 :result nil} index child (ipairs children)]
-    (meaningful-index-state state child-index index child)))
+              (meaningful-index-state state child-index index child)))
 
 (defn- meaningful-index
 
@@ -176,7 +176,7 @@
   [branch-index]
   (when (and (> branch-index 3)
              (= (% branch-index 2) 1))
-    (.. "then#" (+ 1 (/ (- branch-index 3) 2)))))
+        (.. "then#" (+ 1 (/ (- branch-index 3) 2)))))
 
 (defn- branch-kind-after-then
 

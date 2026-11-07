@@ -24,7 +24,7 @@
   [state new-items]
   (core.assoc state :items new-items)
   (when (core.get state :active)
-    (apply (core.get state :items))))
+        (apply (core.get state :items))))
 
 (defn- get-state [state]
   (core.get state :items))
@@ -35,9 +35,9 @@
     (vim.api.nvim_create_autocmd [:WinEnter :ColorScheme]
                                  {:callback (fn []
                                               (when (core.get state :active)
-                                                (vim.defer_fn (fn []
-                                                                (apply (core.get state
-                                                                                 :items)))
+                                                    (vim.defer_fn (fn []
+                                                                    (apply (core.get state
+                                                                                     :items)))
 
                                                   10)))})
 

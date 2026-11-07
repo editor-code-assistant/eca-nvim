@@ -41,8 +41,8 @@
   [value]
   (var failure nil)
   (each [_ rule (ipairs value)]
-    (when (= failure nil)
-      (set failure (validate-rule rule))))
+        (when (= failure nil)
+              (set failure (validate-rule rule))))
   failure)
 
 (defn- validate-rule-list
@@ -57,13 +57,13 @@
   [items rules?]
   (var failure nil)
   (each [name value (pairs items)]
-    (when (= failure nil)
-      (if (not= (type name) :string)
-        (set failure (error "indentation names must be strings"))
-        (if rules?
-          (set failure (validate-rule-list value))
-          (when (not= (type value) :string)
-            (set failure (error "format-as targets must be strings")))))))
+        (when (= failure nil)
+              (if (not= (type name) :string)
+                (set failure (error "indentation names must be strings"))
+                (if rules?
+                  (set failure (validate-rule-list value))
+                  (when (not= (type value) :string)
+                        (set failure (error "format-as targets must be strings")))))))
   failure)
 
 (defn- validate-map
@@ -111,28 +111,28 @@
   [config]
   (var failure nil)
   (each [key _ (pairs config)]
-    (when (and (= failure nil) (not (. allowed-keys key)))
-      (set failure (error "unknown indentation configuration key"))))
+        (when (and (= failure nil) (not (. allowed-keys key)))
+              (set failure (error "unknown indentation configuration key"))))
   (when (= failure nil)
-    (set failure (validate-map (. config :indents) true)))
+        (set failure (validate-map (. config :indents) true)))
   (when (= failure nil)
-    (set failure (validate-map (. config :format-as) false)))
+        (set failure (validate-map (. config :format-as) false)))
   (when (= failure nil)
-    (let [width (. config :indent-width)]
-      (when (and (not= width nil) (not (and (integer? width) (> width 0))))
-        (set failure (error "indent-width must be a positive integer")))))
+        (let [width (. config :indent-width)]
+          (when (and (not= width nil) (not (and (integer? width) (> width 0))))
+                (set failure (error "indent-width must be a positive integer")))))
   (when (= failure nil)
-    (set failure (validate-alignment config)))
+        (set failure (validate-alignment config)))
   (when (= failure nil)
-    (each [name _ (pairs (or (. config :format-as) {}))]
-      (when (= failure nil)
-        (let [(_ err) (resolve-name config name {})]
-          (when err
-            (set failure err))))))
+        (each [name _ (pairs (or (. config :format-as) {}))]
+              (when (= failure nil)
+                    (let [(_ err) (resolve-name config name {})]
+                      (when err
+                            (set failure err))))))
   (when (= failure nil)
-    (each [name _ (pairs (or config.indents {}))]
-      (when (and (= failure nil) (. (or (. config :format-as) {}) name))
-        (set failure (error "name has both indent and format-as rule")))))
+        (each [name _ (pairs (or config.indents {}))]
+              (when (and (= failure nil) (. (or (. config :format-as) {}) name))
+                    (set failure (error "name has both indent and format-as rule")))))
   failure)
 
 (defn validate
@@ -149,4 +149,4 @@
   [config name]
   (let [(rule _ found) (resolve-name (or config {}) name {})]
     (when found
-      rule)))
+          rule)))

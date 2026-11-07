@@ -7,7 +7,7 @@
   [original changes]
   (let [result {}]
     (each [key value (pairs original)]
-      (tset result key value))
+          (tset result key value))
     (each [key value (pairs changes)]
-      (tset result key value))
+          (tset result key value))
     result))

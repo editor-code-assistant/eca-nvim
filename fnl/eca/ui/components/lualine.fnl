@@ -12,7 +12,7 @@
   []
   (let [(ok lualine) (pcall require :lualine)]
     (when ok
-      lualine)))
+          lualine)))
 
 (defn- text
   [item]

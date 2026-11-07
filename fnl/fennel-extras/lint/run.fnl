@@ -37,7 +37,7 @@
 
   [result exclusion findings config-path matcher policy]
   (when (not (matching-exclusion? exclusion findings matcher 1))
-    (table.insert result (stale-exclusion exclusion config-path policy)))
+        (table.insert result (stale-exclusion exclusion config-path policy)))
   result)
 
 (defn- append-stale-step
@@ -91,7 +91,7 @@
 
   [result findings]
   (each [_ finding (ipairs findings)]
-    (table.insert result finding))
+        (table.insert result finding))
   result)
 
 (defn- lint-files-at-step
@@ -126,7 +126,7 @@
 
   [result exclusion paths matcher]
   (when (or (= paths nil) (path-in-scope? paths (exclusion-path exclusion) matcher 1))
-    (table.insert result exclusion))
+        (table.insert result exclusion))
   result)
 
 (defn- scoped-exclusions-step
@@ -146,7 +146,7 @@
 
   [result finding]
   (when (not (= finding.severity "warning"))
-    (table.insert result finding))
+        (table.insert result finding))
   result)
 
 (defn- keep-non-warning-step
@@ -174,7 +174,7 @@
 
   [source stale]
   (each [_ finding (ipairs stale)]
-    (table.insert source finding))
+        (table.insert source finding))
   source)
 
 (defn- diagnostics

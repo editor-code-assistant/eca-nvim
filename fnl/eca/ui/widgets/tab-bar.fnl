@@ -13,10 +13,10 @@
   (fn build-tabline []
     (let [parts []]
       (each [_ tab (ipairs state.tabs)]
-        (let [is-active (= tab.id state.active-id)
-              hl        (or tab.hl-group (if is-active :EcaTabActive :EcaTabInactive))]
-          (table.insert parts
-                        (.. "%#" hl "# " (or tab.label (tostring tab.id)) " "))))
+            (let [is-active (= tab.id state.active-id)
+                  hl        (or tab.hl-group (if is-active :EcaTabActive :EcaTabInactive))]
+              (table.insert parts
+                            (.. "%#" hl "# " (or tab.label (tostring tab.id)) " "))))
       (table.concat parts "%#Normal#│")))
 
   (fn render []
@@ -27,25 +27,25 @@
   (fn add-tab [tab]
     (table.insert state.tabs tab)
     (when (= nil state.active-id)
-      (set state.active-id tab.id)))
+          (set state.active-id tab.id)))
 
   (fn remove-tab [id]
     (let [new-tabs (icollect [_ tab (ipairs state.tabs)]
-                     (when (not= tab.id id) tab))]
+                             (when (not= tab.id id) tab))]
       (set state.tabs new-tabs)
       (when (= state.active-id id)
-        (set state.active-id
-             (when (> (length new-tabs) 0)
-               (. (. new-tabs 1) :id))))))
+            (set state.active-id
+                 (when (> (length new-tabs) 0)
+                       (. (. new-tabs 1) :id))))))
 
   (fn select-tab [id]
     (set state.active-id id))
 
   (fn update-tab [id new-data]
     (each [_ tab (ipairs state.tabs)]
-      (when (= tab.id id)
-        (each [k v (pairs new-data)]
-          (tset tab k v)))))
+          (when (= tab.id id)
+                (each [k v (pairs new-data)]
+                      (tset tab k v)))))
 
   (fn get-state []
     state)

@@ -24,9 +24,9 @@
       (var valid true)
       (var index 1)
       (while (and valid (not= (. value index) nil))
-        (when (not= (type (. value index)) :string)
-          (set valid false))
-        (set index (+ index 1)))
+             (when (not= (type (. value index)) :string)
+                   (set valid false))
+             (set index (+ index 1)))
       valid)))
 
 
@@ -63,8 +63,8 @@
     (let []
       (var valid true)
       (each [_ rule (ipairs value)]
-        (when (not (valid-rule? rule))
-          (set valid false)))
+            (when (not (valid-rule? rule))
+                  (set valid false)))
       valid)
     false))
 
@@ -77,9 +77,9 @@
     (let []
       (var failure nil)
       (each [name rule (pairs value)]
-        (when (= failure nil)
-          (when (not (valid-rule-list? rule))
-            (set failure {:message (.. prefix name ": invalid indentation rule")}))))
+            (when (= failure nil)
+                  (when (not (valid-rule-list? rule))
+                        (set failure {:message (.. prefix name ": invalid indentation rule")}))))
       failure)
     {:message (.. prefix ": invalid indentation rule")}))
 
@@ -92,9 +92,9 @@
     (let []
       (var valid true)
       (each [_ extension (ipairs value)]
-        (when (or (not= (type extension) :string)
-                  (not (= (string.sub extension 1 1) ".")))
-          (set valid false)))
+            (when (or (not= (type extension) :string)
+                      (not (= (string.sub extension 1 1) ".")))
+                  (set valid false)))
       valid)
     false))
 
@@ -123,15 +123,15 @@
 
   [workspace]
   (when (= (type workspace) :table)
-    (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}
-          key     (accumulate [candidate nil name _ (pairs workspace)]
-                    (if (and (not (. allowed name))
-                             (or (= candidate nil)
-                                 (< (tostring name) (tostring candidate))))
-                      name
-                      candidate))]
-      (when key
-        {:message (.. "unknown workspace key: " key)}))))
+        (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}
+              key     (accumulate [candidate nil name _ (pairs workspace)]
+                                  (if (and (not (. allowed name))
+                                           (or (= candidate nil)
+                                               (< (tostring name) (tostring candidate))))
+                                    name
+                                    candidate))]
+          (when key
+                {:message (.. "unknown workspace key: " key)}))))
 
 
 
@@ -140,26 +140,26 @@
   [tbl]
   (let [workspace (. tbl :workspace)]
     (or (when (and workspace (not= (type workspace) :table))
-          {:message "workspace must be a table"})
+              {:message "workspace must be a table"})
         (workspace-key-error workspace)
         (when (and workspace workspace.paths (not (array-of-strings? workspace.paths)))
-          {:message "workspace.paths must be an array of strings"})
+              {:message "workspace.paths must be an array of strings"})
         (when (and workspace workspace.exclude (not (array-of-strings? workspace.exclude)))
-          {:message "workspace.exclude must be an array of strings"})
+              {:message "workspace.exclude must be an array of strings"})
         (when (and workspace workspace.extensions (not (extensions? workspace.extensions)))
-          {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
+              {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
         (when (and workspace
                    (not= workspace.dotfiles nil)
                    (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
-          {:message "workspace.dotfiles must be a boolean"})
+              {:message "workspace.dotfiles must be a boolean"})
         (when (and workspace
                    (not= workspace.symlinks nil)
                    (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
-          {:message "workspace.symlinks must be a boolean"})
+              {:message "workspace.symlinks must be a boolean"})
         (when (and workspace
                    (not= workspace.config nil)
                    (not (or (= workspace.config true) (= workspace.config false))))
-          {:message "workspace.config must be a boolean"}))))
+              {:message "workspace.config must be a boolean"}))))
 
 
 
@@ -174,25 +174,25 @@
 
   [workspace require-paths?]
   (or (when (not= (type workspace) :table)
-        {:message "workspace must be a table"})
+            {:message "workspace must be a table"})
       (workspace-key-error workspace)
       (when (and require-paths? (= workspace.paths nil))
-        {:message "missing workspace.paths"})
+            {:message "missing workspace.paths"})
       (when (and workspace.paths (not (array-of-strings? workspace.paths)))
-        {:message "workspace.paths must be an array of strings"})
+            {:message "workspace.paths must be an array of strings"})
       (when (and workspace.exclude (not (array-of-strings? workspace.exclude)))
-        {:message "workspace.exclude must be an array of strings"})
+            {:message "workspace.exclude must be an array of strings"})
       (when (and workspace.extensions (not (extensions? workspace.extensions)))
-        {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
+            {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
       (when (and (not= workspace.dotfiles nil)
                  (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
-        {:message "workspace.dotfiles must be a boolean"})
+            {:message "workspace.dotfiles must be a boolean"})
       (when (and (not= workspace.symlinks nil)
                  (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
-        {:message "workspace.symlinks must be a boolean"})
+            {:message "workspace.symlinks must be a boolean"})
       (when (and (not= workspace.config nil)
                  (not (or (= workspace.config true) (= workspace.config false))))
-        {:message "workspace.config must be a boolean"})))
+            {:message "workspace.config must be a boolean"})))
 
 
 
@@ -225,11 +225,11 @@
   [tbl]
   (let [allowed {:workspace true :format true :lint true :design true}]
     (accumulate [candidate nil key _ (pairs tbl)]
-      (if (and (not (. allowed key))
-               (or (= candidate nil)
-                   (< (tostring key) (tostring candidate))))
-        key
-        candidate))))
+                (if (and (not (. allowed key))
+                         (or (= candidate nil)
+                             (< (tostring key) (tostring candidate))))
+                  key
+                  candidate))))
 
 
 
@@ -238,7 +238,7 @@
   [tbl]
   (let [key (unknown-config-key tbl)]
     (when key
-      {:message (.. "unknown configuration key: " key)})))
+          {:message (.. "unknown configuration key: " key)})))
 
 
 
@@ -259,11 +259,11 @@
 
   [tbl]
   (accumulate [candidate nil key _ (pairs tbl)]
-    (if (and (not (format-fragment-key? key))
-             (or (= candidate nil)
-                 (< (tostring key) (tostring candidate))))
-      key
-      candidate)))
+              (if (and (not (format-fragment-key? key))
+                       (or (= candidate nil)
+                           (< (tostring key) (tostring candidate))))
+                key
+                candidate)))
 
 
 
@@ -309,10 +309,10 @@
 
   [result rule index instance]
   (each [_ exclusion (ipairs (or instance.exclusions []))]
-    (let [copy {}]
-      (each [key value (pairs exclusion)]
-        (tset copy key value))
-      (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index))))
+        (let [copy {}]
+          (each [key value (pairs exclusion)]
+                (tset copy key value))
+          (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index))))
   result)
 
 
@@ -321,7 +321,7 @@
 
   [result rule instances]
   (each [index instance (ipairs (or instances []))]
-    (append-canonical-instance-exclusions result rule index instance))
+        (append-canonical-instance-exclusions result rule index instance))
   result)
 
 
@@ -331,7 +331,7 @@
   [rules]
   (let [result []]
     (each [rule instances (pairs rules)]
-      (append-canonical-rule-exclusions result rule instances))
+          (append-canonical-rule-exclusions result rule instances))
     result))
 
 
@@ -342,8 +342,8 @@
   (let [rules  (core.merge (or (and cfg.lint cfg.lint.rules) {}))
         design (and cfg.design cfg.design.rules)]
     (each [rule instances (pairs (or design {}))]
-      (when (= (. rules rule) nil)
-        (tset rules rule instances)))
+          (when (= (. rules rule) nil)
+                (tset rules rule instances)))
     (let [normalized (if (and (. rules "form-child-count")
                               (. rules "child-count"))
                        (core.assoc rules "form-child-count" nil)
@@ -419,9 +419,9 @@
                   dir)
         parent  (string.match trimmed "^(.*)/[^/]+$")]
     (when parent
-      (if (= parent "")
-        "/"
-        parent))))
+          (if (= parent "")
+            "/"
+            parent))))
 
 
 
@@ -439,17 +439,17 @@
   (var result nil)
   (var searching true)
   (while searching
-    (let [candidate (join-path dir ".fnl-extras.fnl")]
-      (if (exists? candidate)
-        (let [(new-result new-searching) (found-config candidate)]
-          (set result new-result)
-          (set searching new-searching))
-        (if (git-marker? dir)
-          (set searching false)
-          (let [parent (parent-dir dir)]
-            (if parent
-              (set dir parent)
-              (set searching false)))))))
+         (let [candidate (join-path dir ".fnl-extras.fnl")]
+           (if (exists? candidate)
+             (let [(new-result new-searching) (found-config candidate)]
+               (set result new-result)
+               (set searching new-searching))
+             (if (git-marker? dir)
+               (set searching false)
+               (let [parent (parent-dir dir)]
+                 (if parent
+                   (set dir parent)
+                   (set searching false)))))))
   result)
 
 

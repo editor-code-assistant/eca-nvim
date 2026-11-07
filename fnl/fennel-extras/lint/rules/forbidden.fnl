@@ -26,7 +26,7 @@
   (let [head     (list-head node)
         children (meaningful-children node)]
     (when (or (= head "require") (= head "import") (= head "module"))
-      (literal-text (. children 2)))))
+          (literal-text (. children 2)))))
 
 (defn- finding-node
 
@@ -56,11 +56,11 @@
                (= node.kind :list)
                (list-head node)
                (form-forbidden? node (registry.rule-options policy "forbidden-form")))
-      (table.insert result
-                    (finding path
-                             form
-                             (rule-severity policy rule)
-                             rule
-                             "forbidden form"
-                             (finding-node node))))
+          (table.insert result
+                        (finding path
+                                 form
+                                 (rule-severity policy rule)
+                                 rule
+                                 "forbidden form"
+                                 (finding-node node))))
     result))

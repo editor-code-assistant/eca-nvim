@@ -35,7 +35,7 @@
 
   [name-start value-end]
   (when (and name-start value-end (= name-start.line value-end.line))
-    {:line name-start.line :column name-start.col}))
+        {:line name-start.line :column name-start.col}))
 
 (defn- pair-edit
 
@@ -62,7 +62,7 @@
 
   [vector]
   (accumulate [edits [] _ pair (ipairs (bindings.pairs vector))]
-    (pair-edit-result edits pair)))
+              (pair-edit-result edits pair)))
 
 (defn- vector-edits
 
@@ -82,7 +82,7 @@
 
   [left right]
   (accumulate [result left _ edit (ipairs right)]
-    (append-edits-step result edit)))
+              (append-edits-step result edit)))
 
 (defn- walk-text-child
 
@@ -119,7 +119,7 @@
                _
                child
                (ipairs (or node.children []))]
-    (walk-child recur state child quoted alignment)))
+              (walk-child recur state child quoted alignment)))
 
 (defn- walk-node
 

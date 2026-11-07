@@ -15,8 +15,8 @@
        (let []
          (var valid true)
          (each [_ item (ipairs value)]
-           (when (not= (type item) :string)
-             (set valid false)))
+               (when (not= (type item) :string)
+                     (set valid false)))
          valid)))
 
 
@@ -25,11 +25,11 @@
 
   [value allowed]
   (accumulate [candidate nil key _ (pairs value)]
-    (if (and (not (. allowed key))
-             (or (= candidate nil)
-                 (< (tostring key) (tostring candidate))))
-      key
-      candidate)))
+              (if (and (not (. allowed key))
+                       (or (= candidate nil)
+                           (< (tostring key) (tostring candidate))))
+                key
+                candidate)))
 
 
 
@@ -37,9 +37,9 @@
 
   [value path allowed]
   (when (= (type value) :table)
-    (let [key (sorted-unknown-key value allowed)]
-      (when key
-        {:message (.. path "." (tostring key) ": unknown key")}))))
+        (let [key (sorted-unknown-key value allowed)]
+          (when key
+                {:message (.. path "." (tostring key) ": unknown key")}))))
 
 
 
@@ -47,9 +47,9 @@
 
   [value allowed prefix]
   (when (= (type value) :table)
-    (let [key (sorted-unknown-key value allowed)]
-      (when key
-        {:message (.. prefix (tostring key))}))))
+        (let [key (sorted-unknown-key value allowed)]
+          (when key
+                {:message (.. prefix (tostring key))}))))
 
 
 
@@ -57,16 +57,16 @@
 
   [value path]
   (or (when (not= (type value) :table)
-        {:message (.. path " must be a table")})
+            {:message (.. path " must be a table")})
       (canonical-contract-key-error value {:files true :forms true :modules true} "unknown applies-to key: ")
       (when (and value.files (not (canonical-sequence-of-strings? value.files)))
-        {:message (.. path ".files must be a list of strings")})
+            {:message (.. path ".files must be a list of strings")})
       (when (and value.forms (not (canonical-sequence-of-strings? value.forms)))
-        {:message (.. path ".forms must be a list of strings")})
+            {:message (.. path ".forms must be a list of strings")})
       (when (and value.modules
                  (not (or (= (type value.modules) :string)
                           (canonical-sequence-of-strings? value.modules))))
-        {:message (.. path ".modules must be a string or list of strings")})))
+            {:message (.. path ".modules must be a string or list of strings")})))
 
 
 
@@ -74,18 +74,18 @@
 
   [value path]
   (or (when (not (sequence? value))
-        {:message (.. path " must be a list")})
+            {:message (.. path " must be a list")})
       (let []
         (var failure nil)
         (each [index exclusion (ipairs value)]
-          (when (= failure nil)
-            (if (not= (type exclusion) :table)
-              (set failure {:message (.. path "[" index "] must be a table")})
-              (let [unknown (canonical-map-keys-error exclusion (.. path "[" index "]") {:path true})]
-                (if unknown
-                  (set failure unknown)
-                  (when (not= (type exclusion.path) :string)
-                    (set failure {:message (.. path "[" index "] requires string path")})))))))
+              (when (= failure nil)
+                    (if (not= (type exclusion) :table)
+                      (set failure {:message (.. path "[" index "] must be a table")})
+                      (let [unknown (canonical-map-keys-error exclusion (.. path "[" index "]") {:path true})]
+                        (if unknown
+                          (set failure unknown)
+                          (when (not= (type exclusion.path) :string)
+                                (set failure {:message (.. path "[" index "] requires string path")})))))))
         failure)))
 
 
@@ -94,9 +94,9 @@
 
   [name option-values path]
   (when (= (type option-values) :table)
-    (let [error (options.validate name option-values)]
-      (when error
-        {:message (.. path ": " error.message)}))))
+        (let [error (options.validate name option-values)]
+          (when error
+                {:message (.. path ": " error.message)}))))
 
 
 
@@ -108,7 +108,7 @@
                (or (not= options.forms nil)
                    (not= options.module nil)
                    (not= options.modules nil)))
-      {:message (.. path ": forms, module, and modules must be under applies-to")})))
+          {:message (.. path ": forms, module, and modules must be under applies-to")})))
 
 
 
@@ -124,7 +124,7 @@
     (when (and singular
                (sequence? modules)
                (> (length modules) 1))
-      {:message (.. path ".modules must contain at most one module")})))
+          {:message (.. path ".modules must contain at most one module")})))
 
 
 
@@ -158,17 +158,17 @@
   [section name index instance]
   (when (and (= name "child-count")
              (not= instance.severity "off"))
-    (let [options instance.options
-          prefix  (.. "missing " section ".rules." name "[" index "].options.")]
-      (if options.children
-        (when (= options.max-count nil)
-          {:message (.. prefix "max-count")})
-        (or (when (= options.min-count nil)
-              {:message (.. prefix "min-count")})
+        (let [options instance.options
+              prefix  (.. "missing " section ".rules." name "[" index "].options.")]
+          (if options.children
             (when (= options.max-count nil)
-              {:message (.. prefix "max-count")})
-            (when (= options.nil-count nil)
-              {:message (.. prefix "nil-count")}))))))
+                  {:message (.. prefix "max-count")})
+            (or (when (= options.min-count nil)
+                      {:message (.. prefix "min-count")})
+                (when (= options.max-count nil)
+                      {:message (.. prefix "max-count")})
+                (when (= options.nil-count nil)
+                      {:message (.. prefix "nil-count")}))))))
 
 
 
@@ -176,18 +176,18 @@
 
   [section name index instance]
   (when (not= instance.severity "off")
-    (if (= name "module-import")
-      (or (canonical-missing-option-step section name index instance.options ["mode"] 1)
-          (if (= instance.options.mode "require")
-            (if instance.applies-to.forms
-              (canonical-missing-applies-step section name index instance.applies-to instance.options ["module"] 1)
-              (or (canonical-missing-applies-step section name index instance.applies-to instance.options ["module"] 1)
-                  (canonical-missing-option-step section name index instance.options ["binding"] 1)))
-            (canonical-missing-applies-step section name index instance.applies-to instance.options ["modules"] 1)))
-      (or (canonical-missing-option-step section name index instance.options (registry.required-option-names name) 1)
-          (let [names (registry.applies-to-required-names name)]
-            (and names
-                 (canonical-missing-applies-step section name index instance.applies-to instance.options names 1)))))))
+        (if (= name "module-import")
+          (or (canonical-missing-option-step section name index instance.options ["mode"] 1)
+              (if (= instance.options.mode "require")
+                (if instance.applies-to.forms
+                  (canonical-missing-applies-step section name index instance.applies-to instance.options ["module"] 1)
+                  (or (canonical-missing-applies-step section name index instance.applies-to instance.options ["module"] 1)
+                      (canonical-missing-option-step section name index instance.options ["binding"] 1)))
+                (canonical-missing-applies-step section name index instance.applies-to instance.options ["modules"] 1)))
+          (or (canonical-missing-option-step section name index instance.options (registry.required-option-names name) 1)
+              (let [names (registry.applies-to-required-names name)]
+                (and names
+                     (canonical-missing-applies-step section name index instance.applies-to instance.options names 1)))))))
 
 
 
@@ -196,18 +196,18 @@
   [section name index instance]
   (let [path (.. section ".rules." name "[" index "]")]
     (or (when (not= (type instance) :table)
-          {:message (.. path " must be a table")})
+              {:message (.. path " must be a table")})
         (canonical-map-keys-error instance path {:severity true :description true :applies-to true :options true :exclusions true})
         (when (not (or (= instance.description nil)
                        (and (= (type instance.description) :string)
                             (> (length instance.description) 0))))
-          {:message (.. path ".description must be a non-empty string")})
+              {:message (.. path ".description must be a non-empty string")})
         (when (not (or (= instance.severity "error") (= instance.severity "warning") (= instance.severity "off")))
-          {:message (.. path ".severity must be error, warning, or off")})
+              {:message (.. path ".severity must be error, warning, or off")})
         (canonical-applies-to-error instance.applies-to (.. path ".applies-to"))
         (canonical-singleton-module-error name instance (.. path ".applies-to"))
         (when (not= (type instance.options) :table)
-          {:message (.. path ".options must be a table")})
+              {:message (.. path ".options must be a table")})
         (canonical-options-error name instance.options (.. path ".options"))
         (canonical-legacy-selector-error instance (.. path ".options"))
         (canonical-child-count-option-error section name index instance)
@@ -230,28 +230,28 @@
 
   [section rules]
   (or (when (not= (type rules) :table)
-        {:message (.. section ".rules must be a table")})
+            {:message (.. section ".rules must be a table")})
       (let [name (accumulate [candidate nil key _ (pairs rules)]
-                   (canonical-rule-error-step rules key candidate))]
+                             (canonical-rule-error-step rules key candidate))]
         (when name
-          (let [instances (. rules name)
-                allowed   (if (= section "design")
-                            (registry.design-rule-names)
-                            (registry.lint-rule-names))]
-            (if (not= (type name) :string)
-              {:message (.. "unknown " section " rule: " (tostring name))}
-              (if (not (or (= name "form-child-count")
-                           (accumulate [found false _ allowed-name (ipairs allowed)]
-                             (or found (= allowed-name name)))))
-                {:message (.. "unknown " section " rule: " name)}
-                (if (not (and (sequence? instances) (> (length instances) 0)))
-                  {:message (.. section ".rules." name " must be a non-empty vector")}
-                  (let []
-                    (var failure nil)
-                    (each [index instance (ipairs instances)]
-                      (when (= failure nil)
-                        (set failure (canonical-instance-error section name index instance))))
-                    failure)))))))))
+              (let [instances (. rules name)
+                    allowed   (if (= section "design")
+                                (registry.design-rule-names)
+                                (registry.lint-rule-names))]
+                (if (not= (type name) :string)
+                  {:message (.. "unknown " section " rule: " (tostring name))}
+                  (if (not (or (= name "form-child-count")
+                               (accumulate [found false _ allowed-name (ipairs allowed)]
+                                           (or found (= allowed-name name)))))
+                    {:message (.. "unknown " section " rule: " name)}
+                    (if (not (and (sequence? instances) (> (length instances) 0)))
+                      {:message (.. section ".rules." name " must be a non-empty vector")}
+                      (let []
+                        (var failure nil)
+                        (each [index instance (ipairs instances)]
+                              (when (= failure nil)
+                                    (set failure (canonical-instance-error section name index instance))))
+                        failure)))))))))
 
 
 
@@ -259,7 +259,7 @@
 
   [section value]
   (or (when (not= (type value) :table)
-        {:message (.. section " must be a table")})
+            {:message (.. section " must be a table")})
       (canonical-contract-key-error value {:rules true} (.. "unknown " section " key: "))
       (canonical-rules-error section value.rules)))
 

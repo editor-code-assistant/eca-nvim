@@ -48,20 +48,20 @@
     (var closed false)
     (var error nil)
     (while (and (<= j n) (not closed) (not error))
-      (let [c (string.sub source j j)]
-        (if (= c "\\")
-          (if (= j n)
-            (set error {:message "unterminated string" :line nil :col nil})
-            (if (= (string.sub source (+ j 1) (+ j 1)) "\r")
-              (set error {:message "carriage return is not allowed" :offset (+ j 1)})
-              (set j (+ j 2))))
-          (if (= c "\"")
-            (let [(new-closed new-j) (close-string j)]
-              (set closed new-closed)
-              (set j new-j))
-            (if (= c "\r")
-              (set error {:message "carriage return is not allowed" :offset j})
-              (set j (+ j 1)))))))
+           (let [c (string.sub source j j)]
+             (if (= c "\\")
+               (if (= j n)
+                 (set error {:message "unterminated string" :line nil :col nil})
+                 (if (= (string.sub source (+ j 1) (+ j 1)) "\r")
+                   (set error {:message "carriage return is not allowed" :offset (+ j 1)})
+                   (set j (+ j 2))))
+               (if (= c "\"")
+                 (let [(new-closed new-j) (close-string j)]
+                   (set closed new-closed)
+                   (set j new-j))
+                 (if (= c "\r")
+                   (set error {:message "carriage return is not allowed" :offset j})
+                   (set j (+ j 1)))))))
     (if error
       (values nil error)
       (if closed
@@ -123,12 +123,12 @@
   (var current-col col)
   (let [n (string.len text)]
     (while (<= j n)
-      (if (= (string.sub text j j) "\n")
-        (let [(new-line new-col) (advance-line current-line current-col)]
-          (set current-line new-line)
-          (set current-col new-col))
-        (set current-col (+ current-col 1)))
-      (set j (+ j 1))))
+           (if (= (string.sub text j j) "\n")
+             (let [(new-line new-col) (advance-line current-line current-col)]
+               (set current-line new-line)
+               (set current-col new-col))
+             (set current-col (+ current-col 1)))
+           (set j (+ j 1))))
   (values current-line current-col))
 
 (defn- next-token
@@ -200,16 +200,16 @@
     (var col 1)
     (var error nil)
     (while (and (<= i n) (not error))
-      (let [old-i              i
-            (tok end-or-error) (next-token source i line col)]
-        (if tok
-          (if (<= end-or-error old-i)
-            (set error {:message "tokenizer made no progress" :line line :col col})
-            (let [(new-line new-col) (advance-token tokens tok line col)]
-              (set line new-line)
-              (set col new-col)
-              (set i end-or-error)))
-          (set error end-or-error))))
+           (let [old-i              i
+                 (tok end-or-error) (next-token source i line col)]
+             (if tok
+               (if (<= end-or-error old-i)
+                 (set error {:message "tokenizer made no progress" :line line :col col})
+                 (let [(new-line new-col) (advance-token tokens tok line col)]
+                   (set line new-line)
+                   (set col new-col)
+                   (set i end-or-error)))
+               (set error end-or-error))))
     (if error
       (values nil error)
       tokens)))
@@ -240,19 +240,19 @@
             stack [{:node root :open nil}]]
         (var failure nil)
         (each [_ tok (ipairs tokens)]
-          (when (not failure)
-            (let [frame (. stack (length stack))
-                  node  frame.node]
-              (if (= tok.kind :open)
-                (push-open-node node stack tok)
-                (if (= tok.kind :close)
-                  (if (= (length stack) 1)
-                    (set failure {:message "unexpected closing delimiter" :line tok.line :col tok.col})
-                    (let [top (. stack (length stack))]
-                      (if (= tok.text (matching-close top.open.text))
-                        (close-matching-node stack tok)
-                        (set failure {:message "mismatched closing delimiter" :line tok.line :col tok.col}))))
-                  (table.insert node.children tok))))))
+              (when (not failure)
+                    (let [frame (. stack (length stack))
+                          node  frame.node]
+                      (if (= tok.kind :open)
+                        (push-open-node node stack tok)
+                        (if (= tok.kind :close)
+                          (if (= (length stack) 1)
+                            (set failure {:message "unexpected closing delimiter" :line tok.line :col tok.col})
+                            (let [top (. stack (length stack))]
+                              (if (= tok.text (matching-close top.open.text))
+                                (close-matching-node stack tok)
+                                (set failure {:message "mismatched closing delimiter" :line tok.line :col tok.col}))))
+                          (table.insert node.children tok))))))
         (if failure
           (values nil failure)
           (if (> (length stack) 1)
@@ -265,7 +265,7 @@
   [stringify node buffer]
   (table.insert buffer node.open.text)
   (each [_ child (ipairs node.children)]
-    (stringify child buffer))
+        (stringify child buffer))
   (table.insert buffer node.close.text))
 
 (defn- stringify
@@ -273,7 +273,7 @@
   [node buffer]
   (if (= node.kind :root)
     (each [_ child (ipairs node.children)]
-      (stringify child buffer))
+          (stringify child buffer))
     (if node.text
       (table.insert buffer node.text)
       (stringify-container stringify node buffer))))

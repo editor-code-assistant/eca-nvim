@@ -31,7 +31,7 @@
   [paths path]
   (let [result []]
     (each [_ value (ipairs paths)]
-      (table.insert result value))
+          (table.insert result value))
     (table.insert result path)
     result))
 

@@ -43,39 +43,11 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
  :format
  {:indent-width 2
   :parser "eca.nfnl.fennel"
-  :indents {"fn" [[:inner 0]]
-            "lambda" [[:inner 0]]
-            "macro" [[:inner 0]]
-            "let" [[:block 1]]
-            "when" [[:block 1]]
-            "when-let" [[:block 1]]
-            "if-let" [[:block 1]]
-            "each" [[:block 1]]
-            "for" [[:block 1]]
-            "icollect" [[:block 1]]
-            "collect" [[:block 1]]
-            "accumulate" [[:block 1]]
-            "case" [[:block 1]]
-            "match" [[:block 1]]
-            "case-try" [[:block 1]]
-            "match-try" [[:block 1]]
-            "while" [[:block 1]]
-            "with-open" [[:block 1]]
-            "do" [[:block 0]]}
-  :format-as        {"def"                 "fn"
-                    "def-"               "fn"
-                    "defn"               "fn"
-                    "defn-"              "fn"
-                    "deftest"            "when"
-                    "testing"            "when"
-                    "if"                 "when"
-                    "with-internal-edit" "with-open"
-                    "with-cleanup"       "with-open"
-                    "with-api-stub"      "with-open"
-                    "with-api-stubs"     "with-open"
-                    "with-footer-bar"    "with-open"
-                    "with-lualine-plugin" "with-open"
-                    "with-message-list"  "with-open"}
+  :indents {"fn" [[:inner 0]]}
+  :format-as {"def" "fn"
+              "def-" "fn"
+              "defn" "fn"
+              "defn-" "fn"}
   :alignment        {:bindings         true
                      :maps             true
                      :clauses          true
@@ -144,7 +116,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :exclusions []}]}}}
 ```
 
-The configuration has four root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`. `:lint :rules` is canonical for the supported lint and structural rules. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > exact `:format-as` alias > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one exact form name to another for indentation only. Aliases do not add alignment or newline membership. There are no builtin, prefix, or pattern fallbacks. `:indent-width` and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
+The configuration has four root sections: `:workspace`, `:format`, and `:lint`. Workspace scan settings belong under `:workspace`. `:lint :rules` is canonical for the supported lint and structural rules. The old root-level `:skip-dotfiles` and `:follow-symlinks` aliases are not accepted. Paths in lint rule `:applies-to :files` selectors and exclusions are relative to the workspace path. The formatter's indentation rules are selected in this order: exact `:indents` > exact `:format-as` alias > no special rule. `:indents` maps exact form names to rules such as `[:block n]` or `[:inner 0 i]`; `:format-as` maps one exact form name to another for indentation only. The canonical configuration uses only `fn` as a declaration base rule, with `def`, `def-`, `defn`, and `defn-` as exact aliases to it; other forms use generic `:indent-width` behavior unless explicitly configured. Aliases do not add alignment or newline membership. There are no builtin, prefix, or pattern fallbacks. `:indent-width` and `:parser` are required configuration values under `:format`. Use `--parser` to override the configured parser.
 
 By default, formatting changes leading indentation only. Alignment is separate and must be configured under `:alignment`; there is no legacy `:align-bindings` compatibility key. In this repository, the `if` rule gives bodies regular 2-space indentation; multiline `and`/`or` forms remain aligned under their first argument.
 

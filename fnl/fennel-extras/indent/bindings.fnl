@@ -27,7 +27,7 @@
 
   [node]
   (accumulate [result [] _ child (ipairs (or node.children []))]
-    (meaningful-child-result result child)))
+              (meaningful-child-result result child)))
 
 (defn- append-pair
 

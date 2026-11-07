@@ -131,7 +131,7 @@
 
   [config key path]
   (when (= (. config key) nil)
-    (missing path)))
+        (missing path)))
 
 
 
@@ -193,7 +193,7 @@
   [value]
   (when (and (or (. value :bindings) (. value :split-bindings))
              (= (. value :binding-forms) nil))
-    (missing "alignment.binding-forms")))
+        (missing "alignment.binding-forms")))
 
 
 
@@ -202,7 +202,7 @@
   [value]
   (when (and (. value :clauses)
              (= (. value :clause-forms) nil))
-    (missing "alignment.clause-forms")))
+        (missing "alignment.clause-forms")))
 
 
 
@@ -243,7 +243,7 @@
     (when (and (not= value nil)
                (not (and (= (type value) :table)
                          (every-ipairs? newline-instance? value 1))))
-      {:message "newline must be a list of instances"})))
+          {:message "newline must be a list of instances"})))
 
 
 

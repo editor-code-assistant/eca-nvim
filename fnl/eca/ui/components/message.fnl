@@ -7,7 +7,7 @@
     (if (or (= nil text) (= "" text))
       (table.insert lines "")
       (each [line (text:gmatch "([^\n]*)\n?")]
-        (table.insert lines line)))
+            (table.insert lines line)))
     lines))
 
 (fn render [{: content : prefix : hl-group : collapsed? : collapse-prefix}]
@@ -35,16 +35,16 @@
         (table.insert lines ""))
       ;; Expanded: full content with prefix
       (do
-        (each [i line (ipairs content-lines)]
-          (let [full (if (= i 1) (.. pfx line) line)]
-            (table.insert lines full)
-            (when hl
-              (table.insert highlights
-                            {:line-idx  (- (length lines) 1)
-                             :hl-group  hl
-                             :col-start 0
-                             :col-end   (length full)}))))
-        (table.insert lines "")))
+       (each [i line (ipairs content-lines)]
+             (let [full (if (= i 1) (.. pfx line) line)]
+               (table.insert lines full)
+               (when hl
+                     (table.insert highlights
+                                   {:line-idx  (- (length lines) 1)
+                                    :hl-group  hl
+                                    :col-start 0
+                                    :col-end   (length full)}))))
+       (table.insert lines "")))
     {: lines : highlights}))
 
 {: render}

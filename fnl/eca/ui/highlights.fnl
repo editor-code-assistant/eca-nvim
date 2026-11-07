@@ -39,6 +39,6 @@
 
 (fn setup []
   (each [group opts (pairs groups)]
-    (nvim.nvim_set_hl 0 group opts)))
+        (nvim.nvim_set_hl 0 group opts)))
 
 {: groups : setup}

@@ -12,7 +12,7 @@
 
   (fn build-section [items]
     (let [parts (icollect [_ item (ipairs items)]
-                  (.. "%#" (or item.hl-group "Normal") "# " item.text " "))]
+                          (.. "%#" (or item.hl-group "Normal") "# " item.text " "))]
       (table.concat parts "")))
 
   (fn build-statusline []
@@ -27,11 +27,11 @@
 
   (fn update [new-sections]
     (when new-sections.left
-      (set state.left new-sections.left))
+          (set state.left new-sections.left))
     (when new-sections.center
-      (set state.center new-sections.center))
+          (set state.center new-sections.center))
     (when new-sections.right
-      (set state.right new-sections.right))
+          (set state.right new-sections.right))
     (render))
 
   (fn get-state []

@@ -219,7 +219,7 @@
 
   [ctx acc entry target-stat]
   (when (= target-stat.type "directory")
-    (walk ctx acc (followed-link-entry entry))))
+        (walk ctx acc (followed-link-entry entry))))
 
 (defn- followed-link-result
 

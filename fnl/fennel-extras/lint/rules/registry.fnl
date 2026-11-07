@@ -23,7 +23,7 @@
   []
   (let [result {}]
     (each [_ rule (ipairs default-rule-name-list)]
-      (tset result rule "off"))
+          (tset result rule "off"))
     result))
 
 
@@ -53,7 +53,7 @@
 
   [rule]
   (if (accumulate [found false _ name (ipairs lint-rule-name-list)]
-        (or found (= name rule)))
+                  (or found (= name rule)))
     :lint
     :design))
 
@@ -93,7 +93,7 @@
 
   [result rule instances]
   (each [index instance (ipairs instances)]
-    (table.insert result {:rule rule :index index :value instance}))
+        (table.insert result {:rule rule :index index :value instance}))
   result)
 
 
@@ -103,7 +103,7 @@
   [result lint-rules]
   (when (and (. lint-rules "form-child-count")
              (= (. lint-rules "child-count") nil))
-    (append-instances result "form-child-count" (. lint-rules "form-child-count")))
+        (append-instances result "form-child-count" (. lint-rules "form-child-count")))
   result)
 
 
@@ -117,11 +117,11 @@
         design-rules (or (and policy policy.design) {})
         result       []]
     (each [_ rule (ipairs lint-rule-name-list)]
-      (append-instances result rule (or (. lint-rules rule) [])))
+          (append-instances result rule (or (. lint-rules rule) [])))
     (each [_ rule (ipairs design-rule-name-list)]
-      (when (and (. design-rules rule)
-                 (= (. lint-rules rule) nil))
-        (append-instances result rule (. design-rules rule))))
+          (when (and (. design-rules rule)
+                     (= (. lint-rules rule) nil))
+                (append-instances result rule (. design-rules rule))))
     (append-legacy-child-count result lint-rules)
     result))
 
@@ -153,7 +153,7 @@
   [applies name singleton]
   (if (= name "module")
     (when singleton
-      (singleton-module-value (. applies :modules)))
+          (singleton-module-value (. applies :modules)))
     (if (= name "modules")
       (module-set-value (. applies :modules))
       (. applies :forms))))
@@ -169,14 +169,14 @@
                       (and (= rule "module-import")
                            (= options.mode "require")))]
     (accumulate [result options _ name (ipairs (or (. semantic-applies-to rule) []))]
-      (let [value (semantic-option-value applies name singleton)]
-        (if (or (= value nil)
-                (and (= rule "module-import")
-                     (= name "modules")
-                     (= (type applies.modules) :string)
-                     options.modules))
-          result
-          (core.assoc result name value))))))
+                (let [value (semantic-option-value applies name singleton)]
+                  (if (or (= value nil)
+                          (and (= rule "module-import")
+                               (= name "modules")
+                               (= (type applies.modules) :string)
+                               options.modules))
+                    result
+                    (core.assoc result name value))))))
 
 
 
@@ -211,7 +211,7 @@
 
   [items matcher value]
   (accumulate [result false _ pattern (ipairs items)]
-    (or result (matches? matcher pattern value))))
+              (or result (matches? matcher pattern value))))
 
 
 
@@ -251,7 +251,7 @@
 
   [rule name]
   (accumulate [found false _ candidate (ipairs (or (. semantic-applies-to rule) []))]
-    (or found (= candidate name))))
+              (or found (= candidate name))))
 
 
 
@@ -260,11 +260,11 @@
   [rule applies]
   (let [result {}]
     (each [_ name (ipairs ["files" "forms" "modules"])]
-      (when (and (. applies name)
-                 (not (or (semantic-name? rule name)
-                          (and (= name "modules") (semantic-name? rule "module")))))
-        (tset result name (or (and (= name "modules") (module-set-value (. applies name)))
-                              (. applies name)))))
+          (when (and (. applies name)
+                     (not (or (semantic-name? rule name)
+                              (and (= name "modules") (semantic-name? rule "module")))))
+                (tset result name (or (and (= name "modules") (module-set-value (. applies name)))
+                                      (. applies name)))))
     result))
 
 

@@ -58,9 +58,9 @@
   (and config-path
        (= (length paths) 1)
        (accumulate [result false _ input (ipairs paths)]
-         (or result
-             (same-path? (scan-path.absolute root input)
-                         config-path)))))
+                   (or result
+                       (same-path? (scan-path.absolute root input)
+                                   config-path)))))
 
 
 
@@ -75,7 +75,7 @@
 
   [file config-path]
   (when (config-file-kept? file config-path)
-    file))
+        file))
 
 
 
@@ -83,7 +83,7 @@
 
   [files config-path]
   (icollect [_ file (ipairs files)]
-    (without-config-file-item file config-path)))
+            (without-config-file-item file config-path)))
 
 
 
@@ -120,7 +120,7 @@
   [inputs config-path]
   (let [result []]
     (each [_ input (ipairs inputs)]
-      (append-config-input result input))
+          (append-config-input result input))
     (append-config-input result config-path)))
 
 (defn discovery-inputs
@@ -141,7 +141,7 @@
   [state file source output]
   (table.insert state.formatted {:path file.absolute :relative file.relative :source source :text output})
   (when (not= source output)
-    (table.insert state.changed file.relative))
+        (table.insert state.changed file.relative))
   state)
 
 
@@ -178,7 +178,7 @@
   [item]
   (let [(ok renamed error) (pcall os.rename item.temp item.path)]
     (when (or (not ok) (not renamed))
-      {:path item.relative :error (or error "could not rename temporary file")})))
+          {:path item.relative :error (or error "could not rename temporary file")})))
 
 
 
@@ -268,7 +268,7 @@
   [state item]
   (table.insert state.formatted item)
   (when (not= item.source item.text)
-    (table.insert state.changed item.relative))
+        (table.insert state.changed item.relative))
   state)
 
 

@@ -24,7 +24,7 @@
   [line]
   (let [text (string.gsub line "\n+$" "")]
     (each [part (string.gmatch text "[^\n]+")]
-      (default-print-line part))))
+          (default-print-line part))))
 
 (defn- config-default
 
@@ -51,7 +51,7 @@
 
   [name]
   (when name
-    (load-parser-result-call name)))
+        (load-parser-result-call name)))
 
 (defn- config-load-error
 
@@ -173,18 +173,18 @@
 
   [entry]
   (when entry.path
-    (matcher.compile-pattern entry.path))
+        (matcher.compile-pattern entry.path))
   (when entry.pattern
-    (matcher.compile-pattern entry.pattern))
+        (matcher.compile-pattern entry.pattern))
   (when entry.code
-    (matcher.compile-pattern entry.code)))
+        (matcher.compile-pattern entry.code)))
 
 (defn- compile-exclusion-patterns-step
 
   [exclusions index recurse]
   (when (<= index (length exclusions))
-    (compile-exclusion-entry (. exclusions index))
-    (recurse exclusions (+ index 1) recurse)))
+        (compile-exclusion-entry (. exclusions index))
+        (recurse exclusions (+ index 1) recurse)))
 
 (defn- compile-exclusion-patterns
 

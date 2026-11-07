@@ -63,7 +63,7 @@
 
   [node]
   (accumulate [children [] _ child (ipairs node.children)]
-    (append-nontrivia-child children child)))
+              (append-nontrivia-child children child)))
 
 (defn child-start
 

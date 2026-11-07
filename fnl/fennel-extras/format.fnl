@@ -36,7 +36,7 @@
   [forms head]
   (or (= forms nil)
       (accumulate [result false _ value (ipairs forms)]
-        (or result (= value head)))))
+                  (or result (= value head)))))
 
 
 
@@ -47,7 +47,7 @@
       (and path
            matcher
            (accumulate [result false _ pattern (ipairs files)]
-             (or result (matcher pattern path))))))
+                       (or result (matcher pattern path))))))
 
 
 
@@ -85,17 +85,17 @@
         stack          []
         result         []]
     (when (not error)
-      (each [index token (ipairs tokens)]
-        (if (= token.kind :open)
-          (table.insert stack {:start token.line :head nil})
-          (if (= token.kind :symbol)
-            (let [top (. stack (length stack))]
-              (when (and top (= top.head nil))
-                (set top.head token.text)))
-            (when (= token.kind :close)
-              (let [top (table.remove stack)]
-                (when (and top top.head)
-                  (table.insert result {:head top.head :start top.start :end token.line}))))))))
+          (each [index token (ipairs tokens)]
+                (if (= token.kind :open)
+                  (table.insert stack {:start token.line :head nil})
+                  (if (= token.kind :symbol)
+                    (let [top (. stack (length stack))]
+                      (when (and top (= top.head nil))
+                            (set top.head token.text)))
+                    (when (= token.kind :close)
+                          (let [top (table.remove stack)]
+                            (when (and top top.head)
+                                  (table.insert result {:head top.head :start top.start :end token.line}))))))))
     (table.sort result (fn [left right] (> left.start right.start)))
 
 
@@ -107,7 +107,7 @@
 
   [breaks index count]
   (when (> count (or (. breaks index) 0))
-    (tset breaks index count)))
+        (tset breaks index count)))
 
 (defn- blank-run-after
 
@@ -131,31 +131,31 @@
         spans  (form-spans source)
         breaks {}]
     (each [_ rule (ipairs (newline-rules config))]
-      (let [before       (or (. rule :options :before) 0)
-            after        (or (. rule :options :after) 0)
-            after-header (or (. rule :options :after-header) 0)]
-        (each [_ span (ipairs spans)]
-          (when (rule-selected? rule path matcher span.head)
-            (max-break breaks (preceding-break-index lines (- span.start 1)) before)
-            (when (< span.end (length lines))
-              (max-break breaks span.end after))
-            (let [header-line (form-header-line lines span)]
-              (when (and header-line (< header-line span.end))
-                (max-break breaks header-line after-header)))))))
+          (let [before       (or (. rule :options :before) 0)
+                after        (or (. rule :options :after) 0)
+                after-header (or (. rule :options :after-header) 0)]
+            (each [_ span (ipairs spans)]
+                  (when (rule-selected? rule path matcher span.head)
+                        (max-break breaks (preceding-break-index lines (- span.start 1)) before)
+                        (when (< span.end (length lines))
+                              (max-break breaks span.end after))
+                        (let [header-line (form-header-line lines span)]
+                          (when (and header-line (< header-line span.end))
+                                (max-break breaks header-line after-header)))))))
     (let [output []
           limit  (if (and (> (length lines) 1)
                           (= (. lines (length lines)) ""))
                    (+ 1 (preceding-break-index lines (- (length lines) 1)))
                    (preceding-break-index lines (length lines)))]
       (each [index line (ipairs lines)]
-        (when (<= index limit)
-          (table.insert output line)
-          (let [count    (or (. breaks index) 0)
-                existing (blank-run-after lines index)
-                needed   (- count existing)]
-            (when (> needed 0)
-              (for [_ 1 needed]
-                (table.insert output ""))))))
+            (when (<= index limit)
+                  (table.insert output line)
+                  (let [count    (or (. breaks index) 0)
+                        existing (blank-run-after lines index)
+                        needed   (- count existing)]
+                    (when (> needed 0)
+                          (for [_ 1 needed]
+                               (table.insert output ""))))))
       (table.concat output "\n"))))
 
 
@@ -172,13 +172,13 @@
   [left right]
   (var same true)
   (each [i line (ipairs left)]
-    (let [other  (. right i)
-          body   (string.sub line (+ (leading-spaces line) 1))
-          spaces (string.sub other 1 (leading-spaces other))]
-      (when (not (or (= line other)
-                     (= other (.. spaces body))
-                     (and (= other "") (spaces-only? line))))
-        (set same false))))
+        (let [other  (. right i)
+              body   (string.sub line (+ (leading-spaces line) 1))
+              spaces (string.sub other 1 (leading-spaces other))]
+          (when (not (or (= line other)
+                         (= other (.. spaces body))
+                         (and (= other "") (spaces-only? line))))
+                (set same false))))
   same)
 
 
@@ -235,11 +235,11 @@
   [left right index]
   (and (= (length left) (length right))
        (accumulate [result true offset (ipairs left)]
-         (let [token (. left offset)
-               other (. right offset)]
-           (and result
-                (token-kind-equal? token other)
-                (token-text-equal? token other))))))
+                   (let [token (. left offset)
+                         other (. right offset)]
+                     (and result
+                          (token-kind-equal? token other)
+                          (token-text-equal? token other))))))
 
 
 
@@ -311,7 +311,7 @@
   [tokens]
   (let [result []]
     (each [_ token (ipairs tokens)]
-      (merge-whitespace-token result token))
+          (merge-whitespace-token result token))
     result))
 
 
@@ -387,8 +387,8 @@
   [value]
   (let [result []]
     (each [key item (pairs value)]
-      (when (not (ignored? key))
-        (table.insert result {:key key :value item})))
+          (when (not (ignored? key))
+                (table.insert result {:key key :value item})))
     result))
 
 
@@ -398,10 +398,10 @@
   [equal parser entry right]
   (var found-index nil)
   (each [index candidate (ipairs right)]
-    (when (and (= found-index nil)
-               (equal-key? (. entry :key) (. candidate :key))
-               (equal parser (. entry :value) (. candidate :value)))
-      (set found-index index)))
+        (when (and (= found-index nil)
+                   (equal-key? (. entry :key) (. candidate :key))
+                   (equal parser (. entry :value) (. candidate :value)))
+              (set found-index index)))
   found-index)
 
 
@@ -464,10 +464,10 @@
         forms    []]
     (var done false)
     (while (not done)
-      (let [(ok form) (iterator)]
-        (if ok
-          (table.insert forms form)
-          (set done true))))
+           (let [(ok form) (iterator)]
+             (if ok
+               (table.insert forms form)
+               (set done true))))
     forms))
 
 
@@ -477,8 +477,8 @@
   [parser left right]
   (var same true)
   (each [i form (ipairs left)]
-    (when (not (equal-value parser form (. right i)))
-      (set same false)))
+        (when (not (equal-value parser form (. right i)))
+              (set same false)))
   same)
 
 
@@ -525,7 +525,7 @@
   [source alignment out config]
   (when (not (or (indent-only? source out (alignment-enabled? alignment))
                  (. config :newline)))
-    {:message "formatter changed more than indentation"}))
+        {:message "formatter changed more than indentation"}))
 
 
 
@@ -533,7 +533,7 @@
 
   [source parser out]
   (when (and parser (not (ast-equal? parser source out)))
-    {:message "formatter changed the parsed form"}))
+        {:message "formatter changed the parsed form"}))
 
 
 

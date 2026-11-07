@@ -43,7 +43,7 @@
   (nvim.nvim_create_user_command "EcaChatSetModel"
                                  (fn [cmd]
                                    (when (and cmd.args (not= "" cmd.args))
-                                     (api.chat-set-model cmd.args)))
+                                         (api.chat-set-model cmd.args)))
 
                                  {:desc "Set the model" :nargs 1}))
 

@@ -12,7 +12,7 @@
 
   (fn ensure-ns []
     (when (= nil state.ns-id)
-      (set state.ns-id (nvim.nvim_create_namespace "eca-steering-area")))
+          (set state.ns-id (nvim.nvim_create_namespace "eca-steering-area")))
     state.ns-id)
 
   (fn has-items? []
@@ -46,19 +46,19 @@
       (if (not (has-items?))
         (do (set state.end-line start-line) 0)
         (do
-          (nvim.nvim_buf_set_lines buf-id start-line start-line false ["-"])
-          (set state.end-line (+ start-line 1))
-          (apply-virt-text start-line)
-          1))))
+         (nvim.nvim_buf_set_lines buf-id start-line start-line false ["-"])
+         (set state.end-line (+ start-line 1))
+         (apply-virt-text start-line)
+         1))))
 
   (fn render-highlights [line-num]
     "Apply highlights to a steering line already written in the buffer."
     (set state.start-line line-num)
     (set state.end-line (+ line-num 1))
     (when (has-items?)
-      (let [ns (ensure-ns)]
-        (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
-        (apply-virt-text line-num))))
+          (let [ns (ensure-ns)]
+            (nvim.nvim_buf_clear_namespace buf-id ns 0 -1)
+            (apply-virt-text line-num))))
 
   (fn set-items [items]
     (set state.items (or items [])))

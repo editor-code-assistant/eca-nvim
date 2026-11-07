@@ -42,7 +42,7 @@
   [rule]
   (let [result {}]
     (each [_ name (ipairs (or (. option-names rule) []))]
-      (tset result name (. option-types name)))
+          (tset result name (. option-types name)))
     result))
 
 

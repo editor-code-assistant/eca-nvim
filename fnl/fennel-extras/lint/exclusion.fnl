@@ -12,7 +12,7 @@
 
   [finding exclusion matcher index matched]
   (when (matches? exclusion finding nil matcher)
-    (tset matched index true))
+        (tset matched index true))
   matched)
 
 (defn- mark-matches-step
@@ -63,5 +63,5 @@
   [findings exclusions _source matcher]
   (let [matched {}]
     (each [index _ (ipairs exclusions)]
-      (tset matched index false))
+          (tset matched index false))
     (apply-findings findings exclusions matcher 1 [] matched apply-findings)))

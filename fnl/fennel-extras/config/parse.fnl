@@ -80,14 +80,14 @@
 
   [result child]
   (when (not (trivia? child))
-    (table.insert result child)))
+        (table.insert result child)))
 
 (defn- meaningful-children
 
   [children]
   (let [result []]
     (each [_ child (ipairs children)]
-      (append-meaningful-child result child))
+          (append-meaningful-child result child))
     result))
 
 (defn- append-decoded-char
@@ -132,21 +132,21 @@
         result []]
     (var i 2)
     (while (< i n)
-      (let [c (string.sub text i i)]
-        (if (= c "\\")
-          (let [escaped (string.sub text (+ i 1) (+ i 1))]
-            (if (= escaped "\"")
-              (table.insert result "\"")
-              (if (= escaped "\\")
-                (table.insert result "\\")
-                (if (= escaped "n")
-                  (table.insert result "\n")
-                  (if (= escaped "t")
-                    (table.insert result "\t")
-                    (append-unsupported-escape result escaped)))))
-            (set i (+ i 2)))
-          (let [_ (append-decoded-char result c)]
-            (set i (+ i 1))))))
+           (let [c (string.sub text i i)]
+             (if (= c "\\")
+               (let [escaped (string.sub text (+ i 1) (+ i 1))]
+                 (if (= escaped "\"")
+                   (table.insert result "\"")
+                   (if (= escaped "\\")
+                     (table.insert result "\\")
+                     (if (= escaped "n")
+                       (table.insert result "\n")
+                       (if (= escaped "t")
+                         (table.insert result "\t")
+                         (append-unsupported-escape result escaped)))))
+                 (set i (+ i 2)))
+               (let [_ (append-decoded-char result c)]
+                 (set i (+ i 1))))))
     (table.concat result)))
 
 (defn- convert-symbol
@@ -169,14 +169,14 @@
   (var i 1)
   (var failure nil)
   (while (and (<= i (length children)) (not failure))
-    (let [(key key-error)     (convert-fn (. children i))
-          (value value-error) (convert-fn (rawget children (+ i 1)))]
-      (if key-error
-        (set failure key-error)
-        (if value-error
-          (set failure value-error)
-          (tset result key value))))
-    (set i (+ i 2)))
+         (let [(key key-error)     (convert-fn (. children i))
+               (value value-error) (convert-fn (rawget children (+ i 1)))]
+           (if key-error
+             (set failure key-error)
+             (if value-error
+               (set failure value-error)
+               (tset result key value))))
+         (set i (+ i 2)))
   failure)
 
 (defn- convert
@@ -195,11 +195,11 @@
       (let [result []]
         (var failure nil)
         (each [_ child (ipairs (meaningful-children node.children))]
-          (when (not failure)
-            (let [(value error) (convert child)]
-              (if error
-                (set failure error)
-                (table.insert result value)))))
+              (when (not failure)
+                    (let [(value error) (convert child)]
+                      (if error
+                        (set failure error)
+                        (table.insert result value)))))
         (if failure
           (error failure 0)
           (marked-sequence result)))
@@ -228,10 +228,10 @@
     (var index 1)
     (var result nil)
     (while (and (<= index (length children)) (= result nil))
-      (when (and (= (node-key (. children index)) key-text)
-                 (< index (length children)))
-        (set result (. children (+ index 1))))
-      (set index (+ index 2)))
+           (when (and (= (node-key (. children index)) key-text)
+                      (< index (length children)))
+                 (set result (. children (+ index 1))))
+           (set index (+ index 2)))
     result))
 
 (defn- source-keyword-node-error
@@ -240,39 +240,39 @@
   (when (or (not node)
             (not= node.kind :symbol)
             (not= (string.sub node.text 1 1) ":"))
-    {:message (.. path " must be a keyword")
-     :line    (and node node.line)
-     :col     (and node node.col)}))
+        {:message (.. path " must be a keyword")
+         :line    (and node node.line)
+         :col     (and node node.col)}))
 
 (defn- source-keyword-sequence-error
 
   [node path]
   (when (and node (= node.kind :sequence))
-    (let [children (meaningful-children node.children)]
-      (var failure nil)
-      (var index 1)
-      (while (and (<= index (length children)) (= failure nil))
-        (set failure (source-keyword-node-error (. children index) (.. path "[" index "]")))
-        (set index (+ index 1)))
-      failure)))
+        (let [children (meaningful-children node.children)]
+          (var failure nil)
+          (var index 1)
+          (while (and (<= index (length children)) (= failure nil))
+                 (set failure (source-keyword-node-error (. children index) (.. path "[" index "]")))
+                 (set index (+ index 1)))
+          failure)))
 
 (defn- source-rule-instance-error
 
   [node path]
   (when (and node (= node.kind :table))
-    (or (source-keyword-node-error (source-entry node ":severity") (.. path ".severity"))
-        (let [exclusions (source-entry node ":exclusions")]
-          (when (and exclusions (= exclusions.kind :sequence))
-            (let [children (meaningful-children exclusions.children)]
-              (var index 1)
-              (var failure nil)
-              (while (and (<= index (length children)) (= failure nil))
-                (let [exclusion (. children index)]
-                  (set failure (when (= exclusion.kind :table)
-                                 (source-entry exclusion ":path"))))
-                (set index (+ index 1)))
-              (when failure
-                nil)))))))
+        (or (source-keyword-node-error (source-entry node ":severity") (.. path ".severity"))
+            (let [exclusions (source-entry node ":exclusions")]
+              (when (and exclusions (= exclusions.kind :sequence))
+                    (let [children (meaningful-children exclusions.children)]
+                      (var index 1)
+                      (var failure nil)
+                      (while (and (<= index (length children)) (= failure nil))
+                             (let [exclusion (. children index)]
+                               (set failure (when (= exclusion.kind :table)
+                                                  (source-entry exclusion ":path"))))
+                             (set index (+ index 1)))
+                      (when failure
+                            nil)))))))
 
 (defn- canonical-source-error
 
@@ -281,23 +281,23 @@
         lint  (and top (= top.kind :table) (source-entry top ":lint"))
         rules (and lint (= lint.kind :table) (source-entry lint ":rules"))]
     (when (and rules (= rules.kind :table))
-      (let [children (meaningful-children rules.children)]
-        (var index 1)
-        (var failure nil)
-        (while (and (<= index (length children)) (= failure nil))
-          (let [rule      (. children index)
-                instances (. children (+ index 1))
-                rule-path (.. "lint.rules[" index "]")]
-            (set failure (source-keyword-node-error rule rule-path))
-            (when (and (= failure nil) instances (= instances.kind :sequence))
-              (let [instance-children (meaningful-children instances.children)]
-                (var instance-index 1)
-                (while (and (<= instance-index (length instance-children)) (= failure nil))
-                  (set failure (source-rule-instance-error (. instance-children instance-index)
-                                                           (.. rule-path "[" instance-index "]")))
-                  (set instance-index (+ instance-index 1))))))
-          (set index (+ index 2)))
-        failure))))
+          (let [children (meaningful-children rules.children)]
+            (var index 1)
+            (var failure nil)
+            (while (and (<= index (length children)) (= failure nil))
+                   (let [rule      (. children index)
+                         instances (. children (+ index 1))
+                         rule-path (.. "lint.rules[" index "]")]
+                     (set failure (source-keyword-node-error rule rule-path))
+                     (when (and (= failure nil) instances (= instances.kind :sequence))
+                           (let [instance-children (meaningful-children instances.children)]
+                             (var instance-index 1)
+                             (while (and (<= instance-index (length instance-children)) (= failure nil))
+                                    (set failure (source-rule-instance-error (. instance-children instance-index)
+                                                                             (.. rule-path "[" instance-index "]")))
+                                    (set instance-index (+ instance-index 1))))))
+                   (set index (+ index 2)))
+            failure))))
 
 (defn parse-string
 

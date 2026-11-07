@@ -62,13 +62,13 @@
 
   [key value]
   (when (not (boolean? value))
-    (key-error " must be a boolean" key)))
+        (key-error " must be a boolean" key)))
 
 (defn- validate-list
 
   [key value]
   (when (not (string-list? value))
-    (key-error " must be a list of strings" key)))
+        (key-error " must be a list of strings" key)))
 
 (defn- validate-known-entry
 
@@ -97,7 +97,7 @@
 
   [value]
   (when (= (type value) :table)
-    (validate-entries value nil)))
+        (validate-entries value nil)))
 
 (defn validate
 

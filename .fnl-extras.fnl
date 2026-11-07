@@ -8,39 +8,11 @@
  :format
  {:indent-width 2
   :parser       "eca.nfnl.fennel"
-  :indents      {"fn"         [[:inner 0]]
-                 "lambda"     [[:inner 0]]
-                 "macro"      [[:inner 0]]
-                 "let"        [[:block 1]]
-                 "when"       [[:block 1]]
-                 "when-let"   [[:block 1]]
-                 "if-let"     [[:block 1]]
-                 "each"       [[:block 1]]
-                 "for"        [[:block 1]]
-                 "icollect"   [[:block 1]]
-                 "collect"    [[:block 1]]
-                 "accumulate" [[:block 1]]
-                 "case"       [[:block 1]]
-                 "match"      [[:block 1]]
-                 "case-try"   [[:block 1]]
-                 "match-try"  [[:block 1]]
-                 "while"      [[:block 1]]
-                 "with-open"  [[:block 1]]
-                 "do"         [[:block 0]]}
-  :format-as    {"def"                 "fn"
-                 "def-"                "fn"
-                 "defn"                "fn"
-                 "defn-"               "fn"
-                 "deftest"             "when"
-                 "testing"             "when"
-                 "if"                  "when"
-                 "with-internal-edit"  "with-open"
-                 "with-cleanup"        "with-open"
-                 "with-api-stub"       "with-open"
-                 "with-api-stubs"      "with-open"
-                 "with-footer-bar"     "with-open"
-                 "with-lualine-plugin" "with-open"
-                 "with-message-list"   "with-open"}
+  :indents      {"fn" [[:inner 0]]}
+  :format-as    {"def"   "fn"
+                 "def-"  "fn"
+                 "defn"  "fn"
+                 "defn-" "fn"}
   :alignment    {:bindings         true
                  :maps             true
                  :clauses          true

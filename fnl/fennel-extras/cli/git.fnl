@@ -48,7 +48,7 @@
   [start]
   (let [(output status) (git-call start ["rev-parse" "--show-toplevel"])]
     (when (= status 0)
-      (trim-newlines output))))
+          (trim-newlines output))))
 
 (defn- git-plan-change-success
 
@@ -122,7 +122,7 @@
 
   [file patch status]
   (when (= status 0)
-    {:path file.path :source file.source :selection (lint-selection.parse-hunks patch)}))
+        {:path file.path :source file.source :selection (lint-selection.parse-hunks patch)}))
 
 (defn- changed-file-hunks
 

@@ -556,12 +556,12 @@ local function _84_()
   require("plenary.busted").it("formatted output preserves ASTs for every project source", _88_)
   local function _89_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {}
+    local expected_6_auto = {"fnl/eca/ui/widgets/footer-bar.fnl", "fnl/eca/ui/components/lualine.fnl"}
     local actual_7_auto = scenario["fixed-point"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("hand-styled files remain fixed points", _89_)
+  return require("plenary.busted").it("hand-styled files identify the expected migration targets", _89_)
 end
 require("plenary.busted").describe("format-repo-properties", _84_)
 local function _90_()

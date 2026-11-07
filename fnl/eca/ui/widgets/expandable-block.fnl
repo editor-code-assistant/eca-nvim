@@ -18,8 +18,8 @@
 
   (fn ensure-ns []
     (when (= nil state.ns-id)
-      (set state.ns-id (canvas:create-namespace
-                        (.. "eca-expandable-" (or state.id "unknown")))))
+          (set state.ns-id (canvas:create-namespace
+                            (.. "eca-expandable-" (or state.id "unknown")))))
     state.ns-id)
 
   (fn build-label []
@@ -33,8 +33,8 @@
           label-line (build-label)
           lines      [label-line]]
       (when state.expanded?
-        (each [_ line (ipairs state.content)]
-          (table.insert lines (.. "  " line))))
+            (each [_ line (ipairs state.content)]
+                  (table.insert lines (.. "  " line))))
       (canvas:set-lines start-line start-line lines)
       (canvas:add-extmark ns start-line 0
                           {:end_col  (length label-line)

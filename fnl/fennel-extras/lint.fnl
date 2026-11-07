@@ -135,7 +135,7 @@
   (let [normalized (normalize-finding finding)]
     (when (and (selected? finding forms scope)
                (not (excluded? exclusions normalized source matcher 1)))
-      (table.insert result normalized)))
+          (table.insert result normalized)))
   result)
 
 
@@ -189,7 +189,7 @@
   [rule index value]
   (let [copy {}]
     (each [key item (pairs value)]
-      (tset copy key item))
+          (tset copy key item))
     (core.assoc copy :rule rule :instance index)))
 
 
@@ -198,7 +198,7 @@
 
   [result rule index entries]
   (each [_ value (ipairs entries)]
-    (table.insert result (copy-context-exclusion rule index value)))
+        (table.insert result (copy-context-exclusion rule index value)))
   result)
 
 
@@ -216,7 +216,7 @@
 
   [result rule entries]
   (each [index entry (ipairs entries)]
-    (append-context-entry result rule index entry))
+        (append-context-entry result rule index entry))
   result)
 
 
@@ -256,8 +256,8 @@
   [rules design]
   (let [merged (core.merge rules)]
     (each [rule entries (pairs design)]
-      (when (= (. merged rule) nil)
-        (tset merged rule entries)))
+          (when (= (. merged rule) nil)
+                (tset merged rule entries)))
     (if (and (. merged "form-child-count")
              (. merged "child-count"))
       (core.assoc merged "form-child-count" nil)
@@ -279,8 +279,8 @@
 
   [result raw-policy]
   (each [_ item (ipairs (registry.instances raw-policy))]
-    (each [_ exclusion (ipairs (or item.value.exclusions []))]
-      (table.insert result (copy-context-exclusion item.rule item.index exclusion))))
+        (each [_ exclusion (ipairs (or item.value.exclusions []))]
+              (table.insert result (copy-context-exclusion item.rule item.index exclusion))))
   result)
 
 
@@ -296,7 +296,7 @@
 
   [entry matcher index]
   (when (and (or entry.pattern entry.code) (= matcher nil))
-    {:message (.. "lint exclusion " index ": regex selectors require a matcher")}))
+        {:message (.. "lint exclusion " index ": regex selectors require a matcher")}))
 
 
 
@@ -330,7 +330,7 @@
 
   [name]
   (accumulate [found false _ rule (ipairs (registry.rule-names))]
-    (or found (= rule name))))
+              (or found (= rule name))))
 
 
 
@@ -339,8 +339,8 @@
   [rules]
   (let [result {}]
     (each [name value (pairs rules)]
-      (when (known-rule? name)
-        (tset result name value)))
+          (when (known-rule? name)
+                (tset result name value)))
     result))
 
 

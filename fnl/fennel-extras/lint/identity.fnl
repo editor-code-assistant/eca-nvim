@@ -60,13 +60,13 @@
 
   [walker node state]
   (accumulate [next-state state fn-index fn-child (ipairs node.children)]
-    (walk-local-fn-child walker node fn-child next-state fn-index)))
+              (walk-local-fn-child walker node fn-child next-state fn-index)))
 
 (defn- regular-child-branch
 
   [node index]
   (when (= (naming.list-head node) "if")
-    (naming.branch-kind node index)))
+        (naming.branch-kind node index)))
 
 (defn- walk-regular-child
 
@@ -94,7 +94,7 @@
   (let [next-state (child-state state final-path segmented?)
         local-fn   (and (= head "local") (naming.local-fn? node))]
     (accumulate [current next-state index child (ipairs node.children)]
-      (walk-child-step walker node local-fn current index child))))
+                (walk-child-step walker node local-fn current index child))))
 
 (defn- walk-children
 
@@ -182,7 +182,7 @@
 
   [root path state]
   (accumulate [current state index child (ipairs root.children)]
-    (walk-root-container-child root path current index child)))
+              (walk-root-container-child root path current index child)))
 
 (defn- walk-root
 
