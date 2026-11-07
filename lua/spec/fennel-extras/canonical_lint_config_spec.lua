@@ -44,20 +44,59 @@ end
 require("plenary.busted").describe("canonical-applies-to", _4_)
 local function _7_()
   local function _8_()
-    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = "^spec/", code = "^[(]if", form = "spec/app.fnl > if#1", reason = "intentional"}}}}}}})
+    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = "^spec/"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
     return true
   end
-  require("plenary.busted").it("path, code, form, and reason selectors are accepted as strings", _8_)
+  require("plenary.busted").it("path-only exclusions are accepted", _8_)
   local function _9_()
-    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = {"^spec/"}, code = true, form = 1, reason = "intentional"}}}}}}})
-    local assert_28_auto = require("luassert")
-    local value_29_auto = (not result.ok and ("lint.rules.forbidden-form[1].exclusions[1] requires string path and reason; optional code and form must be strings" == error_message(result)))
-    assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= \"lint.rules.forbidden-form[1].exclusions[1] requires string path and reason; optional code and form must be strings\" (error-message result)))")
+    local base = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}}
+    local keys = {"reason", "code", "form"}
+    local rejected
+    do
+      local tbl_26_ = {}
+      local i_27_ = 0
+      for _, key in ipairs(keys) do
+        local val_28_
+        do
+          local exclusion = {path = "^spec/"}
+          exclusion[key] = "old contract"
+          local result = validation({lint = {rules = {["forbidden-form"] = {{severity = base.severity, ["applies-to"] = base["applies-to"], options = base.options, exclusions = {exclusion}}}}}})
+          val_28_ = (not result.ok and error_message(result))
+        end
+        if (nil ~= val_28_) then
+          i_27_ = (i_27_ + 1)
+          tbl_26_[i_27_] = val_28_
+        else
+        end
+      end
+      rejected = tbl_26_
+    end
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 3
+    local actual_7_auto = #rejected
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("exclusion selectors require string values", _9_)
+  require("plenary.busted").it("old exclusion keys are rejected", _9_)
+  local function _11_()
+    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = {"^spec/"}}}}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = not result.ok
+    assert_28_auto.is_truthy(value_29_auto, "(not (. result \"ok\"))")
+    return true
+  end
+  require("plenary.busted").it("non-string path values are rejected", _11_)
+  local function _12_()
+    local old_result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"spec.eca.macros"}}, options = {mode = "require", binding = "macros", ["exempt-files"] = {"^spec/"}}, exclusions = {}}}}}})
+    local new_result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"spec.eca.macros"}}, options = {mode = "require", binding = "macros"}, exclusions = {{path = "^spec/eca/macros[.]fnlm$"}}}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (not old_result.ok and new_result.ok and new_result.value)
+    assert_28_auto.is_truthy(value_29_auto, "(and (not (. old-result \"ok\")) (. new-result \"ok\") (. new-result \"value\"))")
+    return true
+  end
+  return require("plenary.busted").it("module-import rejects exempt-files and accepts a path-only exclusion", _12_)
 end
 return require("plenary.busted").describe("canonical-exclusions", _7_)

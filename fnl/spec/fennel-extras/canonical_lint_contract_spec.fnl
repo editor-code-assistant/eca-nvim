@@ -21,9 +21,8 @@
                                         :applies-to {:files   ["^spec/"]
                                                      :forms   ["require"]
                                                      :modules ["plenary.busted"]}
-                                        :options    {:mode         "forbid"
-                                                     :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                                        :exclusions []}]}}})
+                                        :options    {:mode "forbid"}
+                                        :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}]}}})
 
 (deftest canonical-applies-to-contract
 
@@ -35,10 +34,9 @@
   (testing "contexts is rejected as an unknown applies-to key"
     (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
                                                               :applies-to {:contexts ["spec"]}
-                                                              :options    {:mode         "forbid"
-                                                                           :modules      ["plenary.busted"]
-                                                                           :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                                                              :exclusions []}]}}})]
+                                                              :options    {:mode    "forbid"
+                                                                           :modules ["plenary.busted"]}
+                                                              :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}]}}})]
       (is (and (not (. result :ok))
                (= nil (. result :value))
                (= "unknown applies-to key: contexts" (error-message result)))))))
@@ -71,7 +69,7 @@
                                                                  :applies-to {:files   ["^spec/"]
                                                                               :modules ["plenary.busted" "luassert"]}
                                                                  :options    {:mode         "forbid"
-                                                                              :exempt-files ["^spec/eca/macros[.]fnlm$"]}
+                                                                              }
                                                                  :exclusions []}
                                                                 {:severity   "error"
                                                                  :applies-to {:modules "eca.nfnl.core"}
@@ -105,9 +103,8 @@
     (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
                                                               :applies-to {:forms   ["require"]
                                                                            :modules ["plenary.busted"]}
-                                                              :options    {:mode         "forbid"
-                                                                           :exempt-files ["^spec/"]}
-                                                              :exclusions []}]}}})]
+                                                              :options    {:mode "forbid"}
+                                                              :exclusions [{:path "^spec/"}]}]}}})]
       (is (and (. result :ok)
                (vim.deep_equal ["require"] (. result :value :lint :rules :module-import 1 :applies-to :forms))
                (vim.deep_equal ["plenary.busted"] (. result :value :lint :rules :module-import 1 :applies-to :modules))
@@ -172,8 +169,7 @@
   (testing "module-import forbid accepts multiple module selectors"
     (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
                                                               :applies-to {:modules ["one" "two"]}
-                                                              :options    {:mode         "forbid"
-                                                                           :exempt-files []}
+                                                              :options    {:mode "forbid"}
                                                               :exclusions []}]}}})]
       (is (. result :ok))))
 

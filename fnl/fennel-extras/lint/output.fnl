@@ -182,7 +182,7 @@
 (defn- exclusion-line
 
   [finding]
-  (.. "  exclusion: {:rule " (json-string finding.rule) " :form " (json-string finding.form) " :reason \"explain why this is intentional\"}"))
+  (.. "  exclusion: {:path " (json-string finding.path) "}"))
 
 (defn- text-rule
 

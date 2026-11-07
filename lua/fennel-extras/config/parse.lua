@@ -305,7 +305,7 @@ local function source_rule_instance_error(node, path)
           do
             local exclusion = children[index]
             if (exclusion.kind == "table") then
-              failure = (source_entry(exclusion, ":path") or source_entry(exclusion, ":reason"))
+              failure = source_entry(exclusion, ":path")
             else
               failure = nil
             end

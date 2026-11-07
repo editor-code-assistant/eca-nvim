@@ -1266,9 +1266,9 @@
 
 
 (local lint-rule-options
-       {"module-import"    ":applies-to {:files [\"^spec/\"] :modules \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"]} :options {:exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
+       {"module-import"    ":applies-to {:files [\"^spec/\"] :modules \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"]} :options {:mode \"require\"}"
         "forbidden-form"   ":applies-to {:files [\"^spec/\"] :modules \"module\"} :options {}"
-        "module-import"    ":applies-to {:files [\"^spec/\"] :modules [\"plenary.busted\" \"luassert\"]} :options {:exempt-files [\"^spec/eca/macros[.]fnlm$\"]}"
+        "module-import"    ":applies-to {:files [\"^spec/\"] :modules [\"plenary.busted\" \"luassert\"]} :options {:mode \"forbid\"}"
         "form-child-count" ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}"
         "forbidden-form"   ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}"
         "file-size"        ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}"
@@ -1671,7 +1671,7 @@
       (let [result (lint-config-discovery-scenario :mixed)]
         (is (= {:code            1
                 :lines           ["a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules"
-                                  "  exclusion: {:rule \"file-size\" :form \"a.fnl > file\" :reason \"explain why this is intentional\"}"]
+                                  "  exclusion: {:path \"a.fnl\"}"]
                 :mentions-config false}
                {:code            (. result :code)
                 :lines           (. result :lines)
@@ -2163,7 +2163,7 @@
     (let [root           (vim.fn.tempname)
           changed-path   (.. root "/changed.fnl")
           unchanged-path (.. root "/unchanged.fnl")
-          config         "{:lint {:rules {\"module-import\" :off :file-size [{:severity :warning :applies-to {:files [\"^changed[.]fnl$\"]} :options { :max-code-lines 2} :exclusions []}] \"child-count\" :off \"child-count\" :off \"forbidden-form\" :off \"forbidden-form\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+          config         "{:lint {:rules {:file-size [{:severity :warning :applies-to {:files [\"changed[.]fnl\"]} :options {:max-code-lines 2} :exclusions [{:path \"changed[.]fnl\"}]}]}}}"
           base-source    "(local a 1)\n(local b 2)\n(local c 3)\n"
           changed-source "(local a 9)\n(local b 2)\n(local c 3)\n"]
       (vim.fn.mkdir root "p")
@@ -2536,5 +2536,13 @@
       (let [result (missing-config-cli-scenario "lint")]
         (is (and (= 2 (. result :code))
                  (string.match (or (. result :lines 1) "") "missing .fnl%-extras%.fnl"))))))
+
+  (deftest changed-scope-exclusion-path-regex
+
+    (testing "changed scope applies path-only exclusions with regex path semantics"
+      (let [result (file-size-changed-mode-scenario)]
+        (is (and (= 0 (. result :code))
+                 (= 0 (. result :changed-file-size))
+                 (= 0 (. result :unchanged-file-size)))))))
 
 )

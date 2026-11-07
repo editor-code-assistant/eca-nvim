@@ -294,3 +294,29 @@
                                                                                  :bindings ["let" "when-let" "if-let" "with-open"]}
                                                                     :exclusions []}]}}})]
       (is (= "unknown lint rule: multiline-layout" (. result :message))))))
+
+(deftest repository-exclusion-contract
+
+  (testing "child-count macro exclusions consolidate to one path-only entry"
+    (let [config     (load-module :fennel-extras.config)
+          loaded     (if (. config :module-missing)
+                       nil
+                       (config.load ".fnl-extras.fnl"))
+          instances  (and loaded (. (. (. loaded :lint) :rules) :child-count))
+          exclusions (and instances (. (. instances 2) :exclusions))]
+      (is (and (= 1 (length exclusions))
+               (= "^spec/eca/macros[.]fnlm$" (. (. exclusions 1) :path))))))
+
+  (testing "module-import uses exclusions for the macro file and has no exempt-files option"
+    (let [config    (load-module :fennel-extras.config)
+          loaded    (if (. config :module-missing)
+                      nil
+                      (config.load ".fnl-extras.fnl"))
+          instances (and loaded (. (. (. loaded :lint) :rules) :module-import))]
+      (is (and instances
+               (= nil (. (. instances 2) :options :exempt-files))
+               (= "^spec/eca/macros[.]fnlm$"
+                  (. (. (. instances 2) :exclusions 1) :path))
+               (= nil (. (. instances 3) :options :exempt-files))
+               (= "^spec/eca/macros[.]fnlm$"
+                  (. (. (. instances 3) :exclusions 1) :path)))))))

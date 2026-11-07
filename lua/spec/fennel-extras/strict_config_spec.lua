@@ -251,4 +251,38 @@ local function _29_()
   end
   return require("plenary.busted").it("strict config rejects removed multiline-layout", _31_)
 end
-return require("plenary.busted").describe("removed-layout-rule-config-errors", _29_)
+require("plenary.busted").describe("removed-layout-rule-config-errors", _29_)
+local function _32_()
+  local function _33_()
+    local config = load_module("fennel-extras.config")
+    local loaded
+    if config["module-missing"] then
+      loaded = nil
+    else
+      loaded = config.load(".fnl-extras.fnl")
+    end
+    local instances = (loaded and loaded.lint.rules["child-count"])
+    local exclusions = (instances and instances[2].exclusions)
+    local assert_28_auto = require("luassert")
+    local value_29_auto = ((1 == #exclusions) and ("^spec/eca/macros[.]fnlm$" == exclusions[1].path))
+    assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (length exclusions)) (= \"^spec/eca/macros[.]fnlm$\" (. (. exclusions 1) \"path\")))")
+    return true
+  end
+  require("plenary.busted").it("child-count macro exclusions consolidate to one path-only entry", _33_)
+  local function _35_()
+    local config = load_module("fennel-extras.config")
+    local loaded
+    if config["module-missing"] then
+      loaded = nil
+    else
+      loaded = config.load(".fnl-extras.fnl")
+    end
+    local instances = (loaded and loaded.lint.rules["module-import"])
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (instances and (nil == instances[2].options["exempt-files"]) and ("^spec/eca/macros[.]fnlm$" == instances[2].exclusions[1].path) and (nil == instances[3].options["exempt-files"]) and ("^spec/eca/macros[.]fnlm$" == instances[3].exclusions[1].path))
+    assert_28_auto.is_truthy(value_29_auto, "(and instances (= nil (. (. instances 2) \"options\" \"exempt-files\")) (= \"^spec/eca/macros[.]fnlm$\" (. (. (. instances 2) \"exclusions\" 1) \"path\")) (= nil (. (. instances 3) \"options\" \"exempt-files\")) (= \"^spec/eca/macros[.]fnlm$\" (. (. (. instances 3) \"exclusions\" 1) \"path\")))")
+    return true
+  end
+  return require("plenary.busted").it("module-import uses exclusions for the macro file and has no exempt-files option", _35_)
+end
+return require("plenary.busted").describe("repository-exclusion-contract", _32_)

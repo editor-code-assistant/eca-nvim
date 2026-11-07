@@ -124,17 +124,15 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
      :exclusions []}
     {:severity   :error
      :applies-to {:files ["^spec/"]}
-     :options    {:mode         :require
-                  :module       "spec.eca.macros"
-                  :forms        ["deftest" "testing" "is"]
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}
+     :options    {:mode   :require
+                  :module "spec.eca.macros"
+                  :forms  ["deftest" "testing" "is"]}
+     :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}
     {:severity   :error
      :applies-to {:files ["^spec/"]}
-     :options    {:mode         :forbid
-                  :modules      ["plenary.busted" "luassert"]
-                  :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-     :exclusions []}]
+     :options    {:mode    :forbid
+                  :modules ["plenary.busted" "luassert"]}
+     :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}]
    :required-form
    [{:severity   :error
      :applies-to {:files ["^fennel-extras/"]}
@@ -177,7 +175,7 @@ The root `.fnl-extras.fnl` is the canonical configuration example. Its entries u
                             :exclusions []}]}}
 ```
 
-`:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, reasons, and module names; use the value types required by each option for other fields. Rule-specific `:forms`, `:module`, and `:modules` values belong under `:applies-to`: use vectors for module selectors, with one-item vectors for semantic singleton modules and multi-item vectors for module sets. Legacy scalar module selectors remain accepted for compatibility and are normalized according to the rule's semantics. These semantic selectors are matched literally and in list order; generic `:applies-to` selectors continue to use file/form/module matcher behavior. For example: `{:applies-to {:forms ["var" "set"] :modules ["my.module"]} :options {}}`. Old selector values under `:options` are rejected by configuration validation.
+`:applies-to` is a positive selector map. It may contain only `:files`, `:forms`, and `:modules`; each selected collection narrows where that instance applies. Spec-only rules use explicit file selectors such as `{:files ["^spec/"]}`. Options are direct typed keys under `:options`. Do not add a nested `:flags` map or move option keys to the rule instance. Keep strings for paths, regular expressions, and module names; use the value types required by each option for other fields. Rule-specific `:forms`, `:module`, and `:modules` values belong under `:applies-to`: use vectors for module selectors, with one-item vectors for semantic singleton modules and multi-item vectors for module sets. Legacy scalar module selectors remain accepted for compatibility and are normalized according to the rule's semantics. These semantic selectors are matched literally and in list order; generic `:applies-to` selectors continue to use file/form/module matcher behavior. For example: `{:applies-to {:forms ["var" "set"] :modules ["my.module"]} :options {}}`. Old selector values under `:options` are rejected by configuration validation.
 
 The lint rules are:
 
@@ -185,7 +183,7 @@ The lint rules are:
 | --- | --- |
 | `forbidden-form` | `:module`, `:forms` |
 | `required-form` | `:forms` |
-| `module-import` | `:mode` plus `:modules`, `:exempt-files` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
+| `module-import` | `:mode` plus `:modules` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
 | `child-count` | named mode: `:children`, `:max-count`; direct mode: `:min-count`, `:max-count`, `:nil-count` |
 | `file-size` | `:max-code-lines` |
 
@@ -195,16 +193,15 @@ Put each rule's direct, typed options inside its instance. Required values are e
 
 #### Exclusions
 
-Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with a string `:path` and string `:reason`; optional `:code` and `:form` selectors must also be strings. The path is matched against the workspace-relative path, `:code` is matched against the flagged form's source, and `:form` is matched literally against the finding identity. All selectors use AND semantics. `:code` is not valid for file-level findings. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
+Exclusions are per instance, under that instance's `:exclusions` key. There is no top-level or global lint exclusion list. Each exclusion is a map with only a string `:path`. The path is matched as a Vim regular expression against the workspace-relative path. An exclusion must match at least one finding in its instance's scope; otherwise it is stale and the command fails in that scope.
 
 
 #### `:path` matching
 
-`:path` is a Vim regular expression searched against the workspace-relative path; it is not full-string matching. `:code` uses the same Vim regex semantics against the flagged form's source and is not valid for file-level findings. In Fennel config strings, double backslashes, for example `"\\d\\+"` for Vim's digit-plus pattern.
+`:path` is a Vim regular expression searched against the workspace-relative path; it is not full-string matching. In Fennel config strings, double backslashes, for example `"\\d\\+"` for Vim's digit-plus pattern.
 
 ```fennel
-{:path "^spec/"
- :reason "spec path"}
+{:path "^spec/"}
 ```
 
 #### File selectors

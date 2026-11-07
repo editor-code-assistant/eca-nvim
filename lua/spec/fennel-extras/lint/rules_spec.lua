@@ -82,7 +82,7 @@ local function _10_()
   end
   require("plenary.busted").it("requires the canonical core binding", _11_)
   local function _12_()
-    local policy = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"plenary.busted"}}, options = {mode = "forbid", ["exempt-files"] = {}}, exclusions = {}}}}
+    local policy = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"plenary.busted"}}, options = {mode = "forbid"}, exclusions = {{path = "^fnl/spec/"}}}}}
     local result = identities(findings_for("(require :plenary.busted)", "fnl/spec/app_spec.fnl", policy))
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1", "error"}}

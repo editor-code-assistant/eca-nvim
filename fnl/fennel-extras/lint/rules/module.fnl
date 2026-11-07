@@ -65,14 +65,6 @@
            (= (length require-children) 2))
       (and (= head "require") (= (length children) 2))))
 
-(defn- exempt-file?
-
-  [path policy options]
-  (let [patterns (or options.exempt-files [])]
-    (accumulate [result false _ pattern (ipairs patterns)]
-      (or result
-          (and policy.matcher (policy.matcher pattern path))))))
-
 (defn module-import-finding
 
   [findings path form head node policy]
@@ -86,11 +78,9 @@
         binding      (or options.binding "core")
         forbidden    (and (= options.mode "forbid")
                           (not (= target options.module))
-                          (not (exempt-file? path policy options))
                           target
                           (contains? modules target 1))
         required     (and (= options.mode "require")
-                          (not (exempt-file? path policy options))
                           (= target options.module)
                           (if import-info
                             (not (has-all? import-info.names (or options.forms [])))

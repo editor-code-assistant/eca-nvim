@@ -76,9 +76,8 @@
   (testing "forbids direct test-library requires"
     (let [policy {:module-import [{:severity   "error"
                                    :applies-to {:modules ["plenary.busted"]}
-                                   :options    {:mode         "forbid"
-                                                :exempt-files []}
-                                   :exclusions []}]}
+                                   :options    {:mode "forbid"}
+                                   :exclusions [{:path "^fnl/spec/"}]}]}
           result (identities (findings-for "(require :plenary.busted)"
                                            "fnl/spec/app_spec.fnl"
                                            policy))]

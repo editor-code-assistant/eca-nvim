@@ -269,8 +269,7 @@
               (while (and (<= index (length children)) (= failure nil))
                 (let [exclusion (. children index)]
                   (set failure (when (= exclusion.kind :table)
-                                 (or (source-entry exclusion ":path")
-                                     (source-entry exclusion ":reason")))))
+                                 (source-entry exclusion ":path"))))
                 (set index (+ index 1)))
               (when failure
                 nil)))))))

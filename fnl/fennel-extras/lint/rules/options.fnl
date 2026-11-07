@@ -7,7 +7,7 @@
 (local option-names
        {"forbidden-form"   ["module" "forms"]
         "required-form"    ["forms"]
-        "module-import"    ["mode" "modules" "exempt-files" "module" "binding" "forms"]
+        "module-import"    ["mode" "modules" "module" "binding" "forms"]
         "child-count"      ["children" "max-count" "min-count" "nil-count"]
         "form-child-count" ["children" "max-count"]
         "file-size"        ["max-code-lines"]})
@@ -26,7 +26,6 @@
         "mode"           :string
         "modules"        :strings
         "forms"          :strings
-        "exempt-files"   :strings
         "children"       :strings
         "max-count"      :positive-integer
         "min-count"      :non-negative-integer

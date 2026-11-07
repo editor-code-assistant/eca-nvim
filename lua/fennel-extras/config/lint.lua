@@ -104,12 +104,12 @@ local function canonical_exclusions_error(value, path)
         if (type(exclusion) ~= "table") then
           failure = {message = (path .. "[" .. index .. "] must be a table")}
         else
-          local unknown = canonical_map_keys_error(exclusion, (path .. "[" .. index .. "]"), {path = true, code = true, form = true, reason = true})
+          local unknown = canonical_map_keys_error(exclusion, (path .. "[" .. index .. "]"), {path = true})
           if unknown then
             failure = unknown
           else
-            if ((type(exclusion.path) ~= "string") or (exclusion.code and (type(exclusion.code) ~= "string")) or (exclusion.form and (type(exclusion.form) ~= "string")) or (type(exclusion.reason) ~= "string")) then
-              failure = {message = (path .. "[" .. index .. "] requires string path and reason; optional code and form must be strings")}
+            if (type(exclusion.path) ~= "string") then
+              failure = {message = (path .. "[" .. index .. "] requires string path")}
             else
             end
           end

@@ -35,7 +35,7 @@
 (local all-options
        {"forbidden-form"   {:module "eca.nfnl.macros.aniseed" :forms ["module" "def" "defn" "defn-"]}
         "required-form"    {:forms ["module"]}
-        "module-import"    {:mode "forbid" :modules ["plenary.busted" "luassert"] :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]}
+        "module-import"    {:mode "forbid" :modules ["plenary.busted" "luassert"] :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
         "forbidden-form"   {:forms ["var" "set" "while"]}
         "form-child-count" {:children ["is"] :max-count 1}
         "forbidden-form"   {:forms ["if"]}
@@ -79,8 +79,8 @@
       (let [scope    (if (= rule "form-child-count") {:files ["^fnl/spec/"] :forms ["testing"]} (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
             severity (. (. instances 1) :severity)]
         (if (= rule "module-import")
-          (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :forms ["deftest" "testing" "is"] :modules "spec.eca.macros"} :options {:mode "require" :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]} :exclusions []}
-                             {:severity "error" :applies-to {:files ["^fnl/spec/"] :modules ["plenary.busted" "luassert"]} :options {:mode "forbid" :exempt-files ["^fnl/spec/eca/macros[.]fnlm$"]} :exclusions []}
+          (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :forms ["deftest" "testing" "is"] :modules "spec.eca.macros"} :options {:mode "require"} :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
+                             {:severity "error" :applies-to {:files ["^fnl/spec/"] :modules ["plenary.busted" "luassert"]} :options {:mode "forbid"} :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
                              {:severity "error" :applies-to {:modules "eca.nfnl.core"} :options {:mode "require" :binding "core"} :exclusions []}])
           (if (= rule "forbidden-form")
             (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :modules "module"} :options {} :exclusions []}
@@ -1121,6 +1121,7 @@
 (defn- option-rule
   [rule options]
   (let [merged (vim.tbl_extend "force" (. all-options rule) options)
+        _      (set merged.exclusions nil)
         target options.applies-to
         data   (canonical-rule-data rule merged)]
     {rule [{:severity   "warning"
@@ -1137,9 +1138,14 @@
 
 (defn- option-findings-call
   [lint source path rule options]
-  (let [context {:path    path
-                 :rules   (option-rule rule options)
-                 :matcher (matcher.vim-matcher)}]
+  (let [clean   (vim.deepcopy options)
+        _       (set clean.exclusions nil)
+        context {:path             path
+                 :rules            (option-rule rule clean)
+                 :matcher          (matcher.vim-matcher)
+                 :defer-exclusions true}]
+    (tset context :rules rule (icollect [index instance (ipairs (. context :rules rule))]
+                                (core.assoc instance :exclusions (or options.exclusions []))))
     (lint.check source context)))
 
 
@@ -1181,16 +1187,6 @@
 
 
 
-  (testing "module-import accepts configured exempt files"
-    (is (= 0
-           (length (option-findings "(deftest run)"
-                                    "fnl/spec/app_spec.fnl"
-                                    "module-import"
-                                    {:exempt-files ["^fnl/spec/app_spec[.]fnl$"]})))))
-
-
-
-
   (testing "forbidden-form accepts a configured module form"
     (is (= 0
            (length (option-findings "(module app)"
@@ -1206,17 +1202,8 @@
            (length (option-findings "(require :custom.test)"
                                     "fnl/spec/app_spec.fnl"
                                     "module-import"
-                                    {:mode "forbid" :modules ["custom.test"] :exempt-files []})))))
+                                    {:mode "forbid" :modules ["custom.test"] :exclusions []})))))
 
-
-
-
-  (testing "module-import accepts configured exempt files"
-    (is (= 0
-           (length (option-findings "(require :custom.test)"
-                                    "fnl/spec/app_spec.fnl"
-                                    "module-import"
-                                    {:mode "forbid" :modules ["custom.test"] :exempt-files ["^fnl/spec/app_spec[.]fnl$"]})))))
 
 
 

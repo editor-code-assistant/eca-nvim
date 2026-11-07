@@ -109,14 +109,14 @@
 
   (testing "renders an error finding and its valid copyable exclusion suggestion"
     (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
-            "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
+            "  exclusion: {:path \"fnl/app.fnl\"}"]
            (text-lines [(finding {})]))))
 
 
 
   (testing "renders a warning finding with the same text contract"
     (is (= ["fnl/lib.fnl:3:2: warning module-import: use the target-style core binding"
-            "  exclusion: {:rule \"module-import\" :form \"fnl/lib.fnl > top#1\" :reason \"explain why this is intentional\"}"]
+            "  exclusion: {:path \"fnl/lib.fnl\"}"]
            (text-lines [(finding {:path     "fnl/lib.fnl"
                                   :line     3
                                   :col      2
@@ -132,14 +132,14 @@
   (testing "renders a separate description line only when configured"
     (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
             "  description: explain this rule"
-            "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
+            "  exclusion: {:path \"fnl/app.fnl\"}"]
            (text-lines [(finding {:description "explain this rule"})]))))
 
 
 
   (testing "escapes a quote and backslash in the text exclusion snippet"
     (is (= ["fnl/quote.fnl:1:1: error custom: bad form"
-            "  exclusion: {:rule \"custom\\\"rule\" :form \"fnl/quote.fnl > top#1\\\\ > \\\"quoted\\\"\" :reason \"explain why this is intentional\"}"]
+            "  exclusion: {:path \"fnl/quote.fnl\"}"]
            (text-lines [(finding {:path    "fnl/quote.fnl"
                                   :line    1
                                   :col     1
@@ -290,7 +290,7 @@
   (testing "preserves invalid UTF-8 bytes in text output"
     (let [message (.. "a" (string.char 255) "b")]
       (is (= [(.. "fnl/app.fnl:12:5: error forbidden-form: " message)
-              "  exclusion: {:rule \"forbidden-form\" :form \"fnl/app.fnl > module:app > defn:run > if#1 > then\" :reason \"explain why this is intentional\"}"]
+              "  exclusion: {:path \"fnl/app.fnl\"}"]
              (text-lines [(finding {:message message})])))))
 
 

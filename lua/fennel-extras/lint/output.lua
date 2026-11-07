@@ -125,7 +125,7 @@ local function json_string(value)
   return (double_quote .. string.gsub(normalize_utf8(value), "[%z\1-\31\\\"]", escape_control) .. double_quote)
 end
 local function exclusion_line(finding)
-  return ("  exclusion: {:rule " .. json_string(finding.rule) .. " :form " .. json_string(finding.form) .. " :reason \"explain why this is intentional\"}")
+  return ("  exclusion: {:path " .. json_string(finding.path) .. "}")
 end
 local function text_rule(finding)
   return string.match(finding.rule, "^[^\\\"]+")

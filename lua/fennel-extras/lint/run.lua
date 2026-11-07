@@ -9,34 +9,6 @@ local core = require("eca.nfnl.core")
 local lint = require("fennel-extras.lint")
 local output = require("fennel-extras.lint.output")
 local exclusion_matcher = require("fennel-extras.lint.exclusion")
-local function exclusion_match_3f(exclusion, finding)
-  return ((exclusion.rule == finding.rule) and (exclusion.form == finding.form))
-end
-local function excluded_3f(exclusions, finding, index)
-  if (index > #exclusions) then
-    return false
-  else
-    return (exclusion_match_3f(exclusions[index], finding) or excluded_3f(exclusions, finding, (index + 1)))
-  end
-end
-local function append_kept_finding(result, finding, exclusions)
-  if not excluded_3f(exclusions, finding, 1) then
-    table.insert(result, finding)
-  else
-  end
-  return result
-end
-local function keep_finding_step(findings, exclusions, index, result, recurse)
-  local finding = findings[index]
-  return recurse(findings, exclusions, (index + 1), append_kept_finding(result, finding, exclusions))
-end
-local function keep_finding(findings, exclusions, index, result)
-  if (index > #findings) then
-    return result
-  else
-    return keep_finding_step(findings, exclusions, index, result, keep_finding)
-  end
-end
 local function matching_exclusion_3f(exclusion, findings, matcher, index)
   if (index > #findings) then
     return false
@@ -50,13 +22,13 @@ local function stale_message(exclusion, policy)
   if ((instance and (instance.severity == "off")) or ((instance == nil) and (instances == nil))) then
     return ("stale exclusion: rule " .. exclusion.rule .. " is not enabled")
   else
-    return ("stale exclusion: " .. (exclusion.path or exclusion.form or exclusion.pattern or exclusion.code or "selector"))
+    return ("stale exclusion: " .. exclusion.path)
   end
 end
 local function stale_exclusion(exclusion, config_path, policy)
   local rule = (exclusion.rule or "lint")
   local message = stale_message(exclusion, policy)
-  return {kind = "stale-exclusion", path = config_path, line = 1, col = 1, severity = "error", rule = rule, form = (exclusion.path or exclusion.form or exclusion.pattern or exclusion.code or "selector"), message = message}
+  return {kind = "stale-exclusion", path = config_path, line = 1, col = 1, severity = "error", rule = rule, form = exclusion.path, message = message}
 end
 local function append_stale_item(result, exclusion, findings, config_path, matcher, policy)
   if not matching_exclusion_3f(exclusion, findings, matcher, 1) then
@@ -124,29 +96,29 @@ end
 local function exclusion_path(exclusion)
   return exclusion.path
 end
-local function path_in_scope_3f(paths, path, index)
+local function path_in_scope_3f(paths, path, matcher, index)
   if (index > #paths) then
     return false
   else
-    return ((path == paths[index]) or path_in_scope_3f(paths, path, (index + 1)))
+    return (matcher(paths[index], path) or path_in_scope_3f(paths, path, matcher, (index + 1)))
   end
 end
-local function append_scoped_exclusion(result, exclusion, paths)
-  if ((paths == nil) or path_in_scope_3f(paths, exclusion_path(exclusion), 1)) then
+local function append_scoped_exclusion(result, exclusion, paths, matcher)
+  if ((paths == nil) or path_in_scope_3f(paths, exclusion_path(exclusion), matcher, 1)) then
     table.insert(result, exclusion)
   else
   end
   return result
 end
-local function scoped_exclusions_step(exclusions, paths, index, result, recurse)
+local function scoped_exclusions_step(exclusions, paths, matcher, index, result, recurse)
   local exclusion = exclusions[index]
-  return recurse(exclusions, paths, (index + 1), append_scoped_exclusion(result, exclusion, paths))
+  return recurse(exclusions, paths, matcher, (index + 1), append_scoped_exclusion(result, exclusion, paths, matcher))
 end
-local function scoped_exclusions(exclusions, paths, index, result)
+local function scoped_exclusions(exclusions, paths, matcher, index, result)
   if (index > #exclusions) then
     return result
   else
-    return scoped_exclusions_step(exclusions, paths, index, result, scoped_exclusions)
+    return scoped_exclusions_step(exclusions, paths, matcher, index, result, scoped_exclusions)
   end
 end
 local function append_non_warning(result, finding)
@@ -181,7 +153,7 @@ local function append_stale_findings(source, stale)
   return source
 end
 local function diagnostics(findings, policy, config_path, scope_paths)
-  local exclusions = scoped_exclusions(policy.exclusions, scope_paths, 1, {})
+  local exclusions = scoped_exclusions(policy.exclusions, scope_paths, policy.matcher, 1, {})
   local filtered, _ = exclusion_matcher.apply(findings, exclusions, nil, policy.matcher)
   local stale = append_stale(exclusions, findings, config_path, policy.matcher, policy, 1, {})
   local source = diagnostic_source(filtered, policy, stale, scope_paths)

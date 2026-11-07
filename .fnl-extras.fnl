@@ -86,12 +86,7 @@
                      :options     {:min-count 2
                                    :max-count 2
                                    :nil-count false}
-                     :exclusions  [{:path   "^spec/eca/macros[.]fnlm$"
-                                    :code   "^[(]if has-message"
-                                    :reason "syntax-quoted AST children are structural data, not semantic if branches"}
-                                   {:path   "^spec/eca/macros[.]fnlm$"
-                                    :code   "^[(]if [(][=] op"
-                                    :reason "syntax-quoted AST branches are structural data, not semantic if branches"}]}]
+                     :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}]
    :module-import  [{:severity    :error
                      :description "require eca.nfnl.core as core"
                      :applies-to  {:modules ["eca.nfnl.core"]}
@@ -103,16 +98,14 @@
                      :applies-to  {:files   ["^spec/"]
                                    :forms   ["deftest" "testing" "is"]
                                    :modules ["spec.eca.macros"]}
-                     :options     {:mode         :require
-                                   :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                     :exclusions  []}
+                     :options     {:mode :require}
+                     :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}
                     {:severity    :error
                      :description "forbid plenary.busted and luassert in spec files"
                      :applies-to  {:files   ["^spec/"]
                                    :modules ["plenary.busted" "luassert"]}
-                     :options     {:mode         :forbid
-                                   :exempt-files ["^spec/eca/macros[.]fnlm$"]}
-                     :exclusions  []}]
+                     :options     {:mode :forbid}
+                     :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}]
 
    :required-form  [{:severity    :error
                      :description "require a top-level module form in fennel-extras files"

@@ -13,7 +13,7 @@ local function error_message(result)
     return error
   end
 end
-local canonical_rule = {lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {mode = "forbid", ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}}
+local canonical_rule = {lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {mode = "forbid"}, exclusions = {{path = "^spec/eca/macros[.]fnlm$"}}}}}}}
 local function _2_()
   local function _3_()
     local result = validation(canonical_rule)
@@ -24,7 +24,7 @@ local function _2_()
   end
   require("plenary.busted").it("rule instances with files, forms, and modules validate", _3_)
   local function _4_()
-    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {mode = "forbid", modules = {"plenary.busted"}, ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {mode = "forbid", modules = {"plenary.busted"}}, exclusions = {{path = "^spec/eca/macros[.]fnlm$"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and (nil == result.value) and ("unknown applies-to key: contexts" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= nil (. result \"value\")) (= \"unknown applies-to key: contexts\" (error-message result)))")
@@ -55,7 +55,7 @@ end
 require("plenary.busted").describe("canonical-spec-file-contract", _5_)
 local function _8_()
   local function _9_()
-    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}}, options = {}, exclusions = {}}}, ["module-import"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, modules = {"plenary.busted", "luassert"}}, options = {mode = "forbid", ["exempt-files"] = {"^spec/eca/macros[.]fnlm$"}}, exclusions = {}}, {severity = "error", ["applies-to"] = {modules = "eca.nfnl.core"}, options = {mode = "require", binding = "core"}, exclusions = {}}}, ["required-form"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"module"}}, options = {}, exclusions = {}}}, ["form-child-count"] = {{severity = "error", ["applies-to"] = {forms = {"testing"}}, options = {children = {"is"}, ["max-count"] = 1}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}}, options = {}, exclusions = {}}}, ["module-import"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, modules = {"plenary.busted", "luassert"}}, options = {mode = "forbid"}, exclusions = {}}, {severity = "error", ["applies-to"] = {modules = "eca.nfnl.core"}, options = {mode = "require", binding = "core"}, exclusions = {}}}, ["required-form"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"module"}}, options = {}, exclusions = {}}}, ["form-child-count"] = {{severity = "error", ["applies-to"] = {forms = {"testing"}}, options = {children = {"is"}, ["max-count"] = 1}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
@@ -74,7 +74,7 @@ end
 require("plenary.busted").describe("generic-rule-contract", _8_)
 local function _11_()
   local function _12_()
-    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {forms = {"require"}, modules = {"plenary.busted"}}, options = {mode = "forbid", ["exempt-files"] = {"^spec/"}}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {forms = {"require"}, modules = {"plenary.busted"}}, options = {mode = "forbid"}, exclusions = {{path = "^spec/"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and vim.deep_equal({"require"}, result.value.lint.rules["module-import"][1]["applies-to"].forms) and vim.deep_equal({"plenary.busted"}, result.value.lint.rules["module-import"][1]["applies-to"].modules) and (nil == result.value.lint.rules["module-import"][1].options.forms) and (nil == result.value.lint.rules["module-import"][1].options.modules))
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (vim.deep_equal [\"require\"] (. result \"value\" \"lint\" \"rules\" \"module-import\" 1 \"applies-to\" \"forms\")) (vim.deep_equal [\"plenary.busted\"] (. result \"value\" \"lint\" \"rules\" \"module-import\" 1 \"applies-to\" \"modules\")) (= nil (. result \"value\" \"lint\" \"rules\" \"module-import\" 1 \"options\" \"forms\")) (= nil (. result \"value\" \"lint\" \"rules\" \"module-import\" 1 \"options\" \"modules\")))")
@@ -142,7 +142,7 @@ local function _17_()
   end
   require("plenary.busted").it("module-import require rejects multiple semantic singleton modules", _19_)
   local function _20_()
-    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = {mode = "forbid", ["exempt-files"] = {}}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"one", "two"}}, options = {mode = "forbid"}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = result.ok
     assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")

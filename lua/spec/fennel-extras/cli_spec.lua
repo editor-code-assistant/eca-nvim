@@ -1405,7 +1405,7 @@ local function _132_()
     local function _147_()
       local result = lint_config_discovery_scenario("mixed")
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {code = 1, lines = {"a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules", "  exclusion: {:rule \"file-size\" :form \"a.fnl > file\" :reason \"explain why this is intentional\"}"}, ["mentions-config"] = false}
+      local expected_6_auto = {code = 1, lines = {"a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules", "  exclusion: {:path \"a.fnl\"}"}, ["mentions-config"] = false}
       local actual_7_auto = {code = result.code, lines = result.lines, ["mentions-config"] = result["mentions-config"]}
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -1765,7 +1765,7 @@ local function _132_()
     local root = vim.fn.tempname()
     local changed_path = (root .. "/changed.fnl")
     local unchanged_path = (root .. "/unchanged.fnl")
-    local config = "{:lint {:rules {\"module-import\" :off :file-size [{:severity :warning :applies-to {:files [\"^changed[.]fnl$\"]} :options { :max-code-lines 2} :exclusions []}] \"child-count\" :off \"child-count\" :off \"forbidden-form\" :off \"forbidden-form\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+    local config = "{:lint {:rules {:file-size [{:severity :warning :applies-to {:files [\"changed[.]fnl\"]} :options {:max-code-lines 2} :exclusions [{:path \"changed[.]fnl\"}]}]}}}"
     local base_source = "(local a 1)\n(local b 2)\n(local c 3)\n"
     local changed_source0 = "(local a 9)\n(local b 2)\n(local c 3)\n"
     vim.fn.mkdir(root, "p")
@@ -2026,6 +2026,17 @@ local function _132_()
     end
     return require("plenary.busted").it("lint exits 2 with a clear missing config message", _202_)
   end
-  return require("plenary.busted").describe("strict-cli-errors", _200_)
+  require("plenary.busted").describe("strict-cli-errors", _200_)
+  local function _203_()
+    local function _204_()
+      local result = file_size_changed_mode_scenario()
+      local assert_28_auto = require("luassert")
+      local value_29_auto = ((0 == result.code) and (0 == result["changed-file-size"]) and (0 == result["unchanged-file-size"]))
+      assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 0 (. result \"changed-file-size\")) (= 0 (. result \"unchanged-file-size\")))")
+      return true
+    end
+    return require("plenary.busted").it("changed scope applies path-only exclusions with regex path semantics", _204_)
+  end
+  return require("plenary.busted").describe("changed-scope-exclusion-path-regex", _203_)
 end
 return require("plenary.busted").describe("lint-grammar", _132_)

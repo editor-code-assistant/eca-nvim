@@ -81,14 +81,11 @@
           (when (= failure nil)
             (if (not= (type exclusion) :table)
               (set failure {:message (.. path "[" index "] must be a table")})
-              (let [unknown (canonical-map-keys-error exclusion (.. path "[" index "]") {:path true :code true :form true :reason true})]
+              (let [unknown (canonical-map-keys-error exclusion (.. path "[" index "]") {:path true})]
                 (if unknown
                   (set failure unknown)
-                  (when (or (not= (type exclusion.path) :string)
-                            (and exclusion.code (not= (type exclusion.code) :string))
-                            (and exclusion.form (not= (type exclusion.form) :string))
-                            (not= (type exclusion.reason) :string))
-                    (set failure {:message (.. path "[" index "] requires string path and reason; optional code and form must be strings")})))))))
+                  (when (not= (type exclusion.path) :string)
+                    (set failure {:message (.. path "[" index "] requires string path")})))))))
         failure)))
 
 

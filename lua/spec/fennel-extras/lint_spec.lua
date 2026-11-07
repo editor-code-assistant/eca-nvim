@@ -14,7 +14,7 @@ local matcher = require("fennel-extras.cli.matcher")
 local registry = require("fennel-extras.lint.rules.registry")
 local source_rules = {["forbidden-form"] = true, ["file-size"] = true}
 local spec_rules = {["module-import"] = true, ["required-form"] = true, ["forbidden-form"] = true, ["form-child-count"] = true}
-local all_options = {["forbidden-form"] = {forms = {}}, ["required-form"] = {forms = {"module"}}, ["module-import"] = {mode = "forbid", modules = {"plenary.busted", "luassert"}, ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["file-size"] = {["max-code-lines"] = 300}}
+local all_options = {["forbidden-form"] = {forms = {}}, ["required-form"] = {forms = {"module"}}, ["module-import"] = {mode = "forbid", modules = {"plenary.busted", "luassert"}, exclusions = {{path = "^fnl/spec/eca/macros[.]fnlm$"}}}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["file-size"] = {["max-code-lines"] = 300}}
 local canonical_selectors = {["forbidden-form"] = {forms = {}}, ["required-form"] = {forms = {"module"}}}
 local canonical_options = {["file-size"] = {["max-code-lines"] = 300}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}}
 local function canonical_rule_data(rule, options)
@@ -58,7 +58,7 @@ local function all_enabled_policy()
     end
     local severity = instances[1].severity
     if (rule == "module-import") then
-      policy[rule] = {{severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, forms = {"deftest", "testing", "is"}, modules = "spec.eca.macros"}, options = {mode = "require", ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, exclusions = {}}, {severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, modules = {"plenary.busted", "luassert"}}, options = {mode = "forbid", ["exempt-files"] = {"^fnl/spec/eca/macros[.]fnlm$"}}, exclusions = {}}, {severity = "error", ["applies-to"] = {modules = "eca.nfnl.core"}, options = {mode = "require", binding = "core"}, exclusions = {}}}
+      policy[rule] = {{severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, forms = {"deftest", "testing", "is"}, modules = "spec.eca.macros"}, options = {mode = "require"}, exclusions = {{path = "^fnl/spec/eca/macros[.]fnlm$"}}}, {severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, modules = {"plenary.busted", "luassert"}}, options = {mode = "forbid"}, exclusions = {{path = "^fnl/spec/eca/macros[.]fnlm$"}}}, {severity = "error", ["applies-to"] = {modules = "eca.nfnl.core"}, options = {mode = "require", binding = "core"}, exclusions = {}}}
     else
       if (rule == "forbidden-form") then
         policy[rule] = {{severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, modules = "module"}, options = {}, exclusions = {}}, {severity = severity, ["applies-to"] = {files = {"^fnl/[^s]"}, forms = {"var", "set", "while"}}, options = {}, exclusions = {}}}
@@ -896,6 +896,9 @@ local function safe_findings_for_named_rule(source, path, rule, rules)
 end
 local function option_rule(rule, options)
   local merged = vim.tbl_extend("force", all_options[rule], options)
+  local _
+  merged.exclusions = nil
+  _ = nil
   local target = options["applies-to"]
   local data = canonical_rule_data(rule, merged)
   local _113_
@@ -923,7 +926,26 @@ local function option_rule(rule, options)
   return {[rule] = {{severity = "warning", ["applies-to"] = core.merge(_113_, data["applies-to"]), options = data.options, exclusions = {}}}}
 end
 local function option_findings_call(lint, source, path, rule, options)
-  local context = {path = path, rules = option_rule(rule, options), matcher = matcher["vim-matcher"]()}
+  local clean = vim.deepcopy(options)
+  local _
+  clean.exclusions = nil
+  _ = nil
+  local context = {path = path, rules = option_rule(rule, clean), matcher = matcher["vim-matcher"](), ["defer-exclusions"] = true}
+  local _119_
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for index, instance in ipairs(context.rules[rule]) do
+      local val_28_ = core.assoc(instance, "exclusions", (options.exclusions or {}))
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    _119_ = tbl_26_
+  end
+  context["rules"][rule] = _119_
   return lint.check(source, context)
 end
 local function option_findings(source, path, rule, options)
@@ -935,47 +957,31 @@ local function option_findings(source, path, rule, options)
     return option_findings_call(lint, source, path, rule, options)
   end
 end
-local function _120_()
-  local function _121_()
+local function _122_()
+  local function _123_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(import-macros {: check : verify} :my.spec.macros)", "fnl/spec/app_spec.fnl", "module-import", {module = "my.spec.macros", forms = {"check", "verify"}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import accepts configured macro names and module", _121_)
-  local function _122_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #option_findings("(deftest run)", "fnl/spec/app_spec.fnl", "module-import", {["exempt-files"] = {"^fnl/spec/app_spec[.]fnl$"}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("module-import accepts configured exempt files", _122_)
-  local function _123_()
+  require("plenary.busted").it("module-import accepts configured macro names and module", _123_)
+  local function _124_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
     local actual_7_auto = #option_findings("(module app)", "fnl/spec/app_spec.fnl", "forbidden-form", {module = "custom-module"})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("forbidden-form accepts a configured module form", _123_)
-  local function _124_()
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 1
-    local actual_7_auto = #option_findings("(require :custom.test)", "fnl/spec/app_spec.fnl", "module-import", {mode = "forbid", modules = {"custom.test"}, ["exempt-files"] = {}})
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("module-import accepts configured forbidden modules", _124_)
+  require("plenary.busted").it("forbidden-form accepts a configured module form", _124_)
   local function _125_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #option_findings("(require :custom.test)", "fnl/spec/app_spec.fnl", "module-import", {mode = "forbid", modules = {"custom.test"}, ["exempt-files"] = {"^fnl/spec/app_spec[.]fnl$"}})
+    local expected_6_auto = 1
+    local actual_7_auto = #option_findings("(require :custom.test)", "fnl/spec/app_spec.fnl", "module-import", {mode = "forbid", modules = {"custom.test"}, exclusions = {}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("module-import accepts configured exempt files", _125_)
+  require("plenary.busted").it("module-import accepts configured forbidden modules", _125_)
   local function _126_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 0
@@ -1024,7 +1030,7 @@ local function _120_()
   end
   return require("plenary.busted").describe("shipped-bug-regressions", _131_)
 end
-require("plenary.busted").describe("configurable-rule-options", _120_)
+require("plenary.busted").describe("configurable-rule-options", _122_)
 local function _133_()
   local function _134_()
     local result = check_source_exact("(require :plenary.busted)\n(require :luassert)", "fnl/spec/app_spec.fnl", {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"plenary.busted"}}, options = {mode = "forbid"}, exclusions = {}}}})

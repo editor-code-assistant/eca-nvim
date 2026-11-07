@@ -75,14 +75,6 @@ end
 local function canonical_require_3f(head, children, require_children, binding)
   return (((head == "local") and (#children == 3) and (symbol_text(children[2]) == binding) and (#require_children == 2)) or ((head == "require") and (#children == 2)))
 end
-local function exempt_file_3f(path, policy, options)
-  local patterns = (options["exempt-files"] or {})
-  local result = false
-  for _, pattern in ipairs(patterns) do
-    result = (result or (policy.matcher and policy.matcher(pattern, path)))
-  end
-  return result
-end
 local module_import_finding
 do
   local function module_import_finding0(findings, path, form, head, node, policy)
@@ -99,9 +91,9 @@ do
     local import_info = import_macros_3f(node)
     local modules = (options.modules or {})
     local binding = (options.binding or "core")
-    local forbidden = ((options.mode == "forbid") and not (target == options.module) and not exempt_file_3f(path, policy, options) and target and contains_3f(modules, target, 1))
+    local forbidden = ((options.mode == "forbid") and not (target == options.module) and target and contains_3f(modules, target, 1))
     local required
-    local and_8_ = (options.mode == "require") and not exempt_file_3f(path, policy, options) and (target == options.module)
+    local and_8_ = (options.mode == "require") and (target == options.module)
     if and_8_ then
       if import_info then
         and_8_ = not has_all_3f(import_info.names, (options.forms or {}))

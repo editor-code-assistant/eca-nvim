@@ -6,9 +6,9 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local option_names = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "exempt-files", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}}
+local option_names = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}}
 local required_option_names = {["forbidden-form"] = {}, ["required-form"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}}
-local option_types = {module = "string", mode = "string", modules = "strings", forms = "strings", ["exempt-files"] = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
+local option_types = {module = "string", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
 local schema
 do
   local function schema0(rule)
