@@ -9,8 +9,6 @@
   (and (= (type value) :number)
        (= value (math.floor value))))
 
-
-
 (defn- every-ipairs?
   [predicate value index]
   (let [item (. value index)]
@@ -19,19 +17,13 @@
       (and (predicate item)
            (every-ipairs? predicate value (+ index 1))))))
 
-
-
 (defn- string?
   [value]
   (= (type value) :string))
 
-
-
 (defn- dotted-string?
   [value]
   (= (string.sub value 1 1) "."))
-
-
 
 (defn- array-of-strings?
   [value]
@@ -39,21 +31,15 @@
        (> (length value) 0)
        (every-ipairs? string? value 1)))
 
-
-
 (defn- boolean?
   [value]
   (or (= value true)
       (= value false)))
 
-
-
 (defn- extensions?
   [value]
   (and (array-of-strings? value)
        (every-ipairs? dotted-string? value 1)))
-
-
 
 (defn- block-rule?
   [value]
@@ -62,16 +48,12 @@
        (>= (. value 2) 0)
        (= (. value 3) nil)))
 
-
-
 (defn- inner-rule?
   [value]
   (and (= (. value 1) :inner)
        (= (. value 2) 0)
        (or (= (. value 3) nil)
            (and (integer? (. value 3)) (>= (. value 3) 0)))))
-
-
 
 (defn- rule?
   [value]
@@ -80,14 +62,10 @@
        (or (block-rule? value)
            (inner-rule? value))))
 
-
-
 (defn- rule-list?
   [value]
   (and (= (type value) :table)
        (every-ipairs? rule? value 1)))
-
-
 
 (defn- rule-map-entries?
   [value key]
@@ -98,41 +76,29 @@
            (rule-list? next-value)
            (rule-map-entries? value next-key)))))
 
-
-
 (defn- rule-map?
   [value]
   (and (= (type value) :table)
        (rule-map-entries? value nil)))
 
-
-
 (defn- missing
   [path]
   {:message (.. "missing " path)})
-
-
 
 (defn- required
   [config key path]
   (when (= (. config key) nil)
         (missing path)))
 
-
-
 (defn- invalid-width?
   [width strict?]
   (and (or strict? (not= width nil))
        (not (and (integer? width) (> width 0)))))
 
-
-
 (defn- invalid-extensions?
   [config require-scan?]
   (and (or require-scan? (not= (. config :extensions) nil))
        (not (extensions? (. config :extensions)))))
-
-
 
 (defn- invalid-parser?
   [parser strict?]
@@ -140,14 +106,10 @@
        (not= parser false)
        (not= (type parser) :string)))
 
-
-
 (defn- invalid-boolean?
   [value]
   (and (not= value nil)
        (not (boolean? value))))
-
-
 
 (defn- validate-values
   [config require-scan? strict?]
@@ -166,23 +128,17 @@
         (and (invalid-boolean? follow-symlinks)
              {:message "follow-symlinks must be a boolean"}))))
 
-
-
 (defn- missing-binding-forms
   [value]
   (when (and (or (. value :bindings) (. value :split-bindings))
              (= (. value :binding-forms) nil))
         (missing "alignment.binding-forms")))
 
-
-
 (defn- missing-clause-forms
   [value]
   (when (and (. value :clauses)
              (= (. value :clause-forms) nil))
         (missing "alignment.clause-forms")))
-
-
 
 (defn- validate-alignment
   [config]
@@ -192,9 +148,7 @@
              (or (missing-binding-forms value)
                  (missing-clause-forms value))))))
 
-
-
-(defn- break-after-args-entry?
+(defn- break-after-n-args-entry?
   [value]
   (and (= (type value) :table)
        (= (type (. value 1)) :number)
@@ -204,7 +158,11 @@
        (>= (. value 1) 1)
        (>= (. value 2) 1)))
 
-
+(defn- positive-integer?
+  [value]
+  (and (= (type value) :number)
+       (integer? value)
+       (>= value 1)))
 
 (defn- newline-instance?
   [value]
@@ -221,11 +179,13 @@
            (and (integer? (. value :options :after-header)) (>= (. value :options :after-header) 0)))
        (or (= (. value :options :before) nil)
            (and (integer? (. value :options :before)) (>= (. value :options :before) 0)))
+       (or (= (. value :options :between-same-level) nil)
+           (and (integer? (. value :options :between-same-level)) (>= (. value :options :between-same-level) 0)))
+       (or (= (. value :options :break-after-n-args) nil)
+           (and (= (type (. value :options :break-after-n-args)) :table)
+                (every-ipairs? break-after-n-args-entry? (. value :options :break-after-n-args) 1)))
        (or (= (. value :options :break-after-args) nil)
-           (and (= (type (. value :options :break-after-args)) :table)
-                (every-ipairs? break-after-args-entry? (. value :options :break-after-args) 1)))))
-
-
+           (positive-integer? (. value :options :break-after-args)))))
 
 (defn- validate-newline
   [config]
@@ -235,8 +195,6 @@
                          (every-ipairs? newline-instance? value 1))))
           {:message "newline must be a list of instances"})))
 
-
-
 (defn- validate-extensions
   [config]
   (or (and (= (. config :extensions) nil)
@@ -244,8 +202,6 @@
       (and (not= (. config :extensions) nil)
            (not (extensions? (. config :extensions)))
            {:message "extensions must be a non-empty list of strings starting with \".\""})))
-
-
 
 (defn- validate-paths
   [config require-paths?]
@@ -256,14 +212,10 @@
            (not (array-of-strings? (. config :paths)))
            {:message "paths must be an array of strings"})))
 
-
-
 (defn validate-scan
   [config require-paths?]
   (or (validate-extensions config)
       (validate-paths config require-paths?)))
-
-
 
 (defn- validate-table
   [config require-paths? require-scan? strict?]
@@ -274,8 +226,6 @@
       (validate-values config require-scan? strict?)
       (validate-alignment config)
       (validate-newline config)))
-
-
 
 (defn validate
   [config require-paths? require-scan? strict?]

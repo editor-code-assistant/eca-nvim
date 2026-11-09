@@ -14,27 +14,19 @@
     (table.insert lines (string.sub source start))
     lines))
 
-
-
 (defn- leading-spaces
   [line]
   (string.len (string.match line "^ *")))
 
-
-
 (defn- newline-rules
   [config]
   (or (. config :newline) []))
-
-
 
 (defn- form-selected?
   [forms head]
   (or (= forms nil)
       (accumulate [result false _ value (ipairs forms)]
                   (or result (= value head)))))
-
-
 
 (defn- file-selected?
   [files path matcher]
@@ -44,22 +36,19 @@
            (accumulate [result false _ pattern (ipairs files)]
                        (or result (matcher pattern path))))))
 
-
-
 (defn- rule-selected?
   [rule path matcher head]
   (and (file-selected? (. rule :applies-to :files) path matcher)
        (form-selected? (. rule :applies-to :forms) head)))
 
-
-
 (defn- named-definition-header?
   [line head]
-  (and (or (= head "defn") (= head "defn-"))
-       (string.match line "^%s*%(defn%-?%s+[^%s%(]+")
-       true))
-
-
+  (or (and (or (= head "defn") (= head "defn-"))
+           (string.match line "^%s*%(defn%-?%s+[^%s%(]+")
+           true)
+      (and (= head "deftest")
+           (string.match line "^%s*%(deftest%s+[^%s%(]+")
+           true)))
 
 (defn- form-header-line
   [lines span]
@@ -67,8 +56,6 @@
        (or (= span.head "fn")
            (named-definition-header? (. lines span.start) span.head))
        span.start))
-
-
 
 (defn- form-spans
   [source]
@@ -94,7 +81,34 @@
 
     result))
 
-
+(defn- same-level-form-groups
+  [source]
+  (let [(tokens error) (reader.tokenize source)
+        root           {:root true :children []}
+        stack          []
+        groups         [root]]
+    (when (not error)
+          (each [_ token (ipairs tokens)]
+                (if (= token.kind :open)
+                  (let [parent (or (. stack (length stack)) root)
+                        form   {:start     token.line
+                                :start-col token.col
+                                :head      nil
+                                :parent    parent
+                                :children  []}]
+                    (table.insert stack form)
+                    (table.insert groups form))
+                  (if (= token.kind :symbol)
+                    (let [top (. stack (length stack))]
+                      (when (and top (= top.head nil))
+                            (set top.head token.text)))
+                    (when (= token.kind :close)
+                          (let [top (table.remove stack)]
+                            (when (and top top.head)
+                                  (set top.end token.line)
+                                  (set top.end-col token.col)
+                                  (table.insert top.parent.children top))))))))
+    groups))
 
 (defn- max-break
   [breaks index count]
@@ -114,7 +128,7 @@
     (preceding-break-index lines (- index 1))
     index))
 
-(defn- break-after-args-positions
+(defn- break-after-n-args-positions
   [source span entries]
   (let [(tokens error) (reader.tokenize source)
         stack          []
@@ -150,7 +164,43 @@
                               (table.insert top.children {:line token.line :col token.col}))))))))
     positions))
 
-
+(defn- break-after-args-positions
+  [source span count]
+  (let [(tokens error) (reader.tokenize source)
+        stack          []
+        positions      []]
+    (when (not error)
+          (each [_ token (ipairs tokens)]
+                (if (= token.kind :open)
+                  (let [parent (. stack (length stack))]
+                    (when (and parent parent.head)
+                          (table.insert parent.children {:line token.line :col token.col}))
+                    (table.insert stack {:start token.line :head nil :children []}))
+                  (if (= token.kind :close)
+                    (let [top (table.remove stack)]
+                      (when (and top
+                                 (= top.start span.start)
+                                 (= top.head span.head))
+                            (for [index 2 (length top.children)]
+                                 (let [child (. top.children index)]
+                                   (table.insert positions {:line   child.line
+                                                            :col    child.col
+                                                            :indent (- (. (. top.children 1) :col) 1)
+                                                            :count  count})))))
+                    (let [top-index (length stack)
+                          top       (. stack top-index)]
+                      (when (and top
+                                 (or (= token.kind :symbol)
+                                     (= token.kind :string)
+                                     (= token.kind :number)))
+                            (if (= top.head nil)
+                              (do
+                               (table.remove stack top-index)
+                               (table.insert stack {:start    top.start
+                                                    :head     token.text
+                                                    :children top.children}))
+                              (table.insert top.children {:line token.line :col token.col}))))))))
+    positions))
 
 (defn- insert-breaks
   [source positions]
@@ -164,7 +214,8 @@
     (each [_ position (ipairs positions)]
           (let [line   (. lines position.line)
                 prefix (string.sub line 1 (- position.col 1))
-                suffix (string.sub line position.col)]
+                suffix (.. (string.rep " " (or position.indent 0))
+                           (string.sub line position.col))]
             (when (and line
                        (> (string.len (string.gsub prefix "%s+$" "")) 0)
                        (> (string.len suffix) 0))
@@ -174,21 +225,85 @@
                   (table.insert lines (+ position.line position.count) suffix))))
     (table.concat lines "\n")))
 
-
-
 (defn- apply-argument-break-rules
   [source config path matcher]
   (accumulate [result source _ rule (ipairs (newline-rules config))]
-              (let [entries (. rule :options :break-after-args)]
+              (let [entries (. rule :options :break-after-n-args)]
                 (if entries
                   (accumulate [result result _ span (ipairs (form-spans result))]
                               (if (rule-selected? rule path matcher span.head)
                                 (insert-breaks result
-                                               (break-after-args-positions result span entries))
+                                               (break-after-n-args-positions result span entries))
                                 result))
                   result))))
 
+(defn- apply-scalar-argument-break-rules
+  [source config path matcher]
+  (accumulate [result source _ rule (ipairs (newline-rules config))]
+              (let [count (. rule :options :break-after-args)]
+                (if count
+                  (accumulate [result result _ span (ipairs (form-spans result))]
+                              (if (rule-selected? rule path matcher span.head)
+                                (insert-breaks result
+                                               (break-after-args-positions result span count))
+                                result))
+                  result))))
 
+(defn- blank-lines-between?
+  [lines start end]
+  (if (>= start end)
+    true
+    (and (= (. lines start) "")
+         (blank-lines-between? lines (+ start 1) end))))
+
+(defn- normalize-gap
+  [lines left right count]
+  (when (blank-lines-between? lines (+ left 1) right)
+        (let [existing (- right left 1)]
+          (if (> existing count)
+            (for [_ 1 (- existing count)]
+                 (table.remove lines (+ left 1)))
+            (for [_ 1 (- count existing)]
+                 (table.insert lines (+ left 1) ""))))))
+
+(defn- normalize-same-line-gap
+  [lines left right count]
+  (when (> count 0)
+        (let [line   (. lines right.start)
+              prefix (string.gsub (string.sub line 1 (- right.start-col 1)) "%s+$" "")
+              suffix (string.sub line right.start-col)
+              indent (string.rep " " (- left.start-col 1))]
+          (tset lines right.start prefix)
+          (for [offset 1 count]
+               (table.insert lines (+ right.start offset) ""))
+          (tset lines (+ right.start count 1) (.. indent suffix)))))
+
+(defn- normalize-same-level-gaps
+  [source config path matcher]
+  (accumulate [result source _ rule (ipairs (newline-rules config))]
+              (let [count (. rule :options :between-same-level)]
+                (if (= count nil)
+                  result
+                  (let [lines (split-lines result)
+                        pairs []]
+                    (each [_ group (ipairs (same-level-form-groups result))]
+                          (let [children group.children]
+                            (for [index 1 (- (length children) 1)]
+                                 (let [left  (. children index)
+                                       right (. children (+ index 1))]
+                                   (when (and (rule-selected? rule path matcher left.head)
+                                              (rule-selected? rule path matcher right.head))
+                                         (table.insert pairs {:left  left
+                                                              :right right}))))))
+                    (table.sort pairs
+                                (fn
+                                  [left right]
+                                  (> left.left.end right.left.end)))
+                    (each [_ pair (ipairs pairs)]
+                          (if (= pair.left.end pair.right.start)
+                            (normalize-same-line-gap lines pair.left pair.right count)
+                            (normalize-gap lines pair.left.end pair.right.start count)))
+                    (table.concat lines "\n"))))))
 
 (defn- apply-newline-rules
   [source config path matcher]
@@ -229,13 +344,9 @@
                                (table.insert output ""))))))
       (table.concat output "\n"))))
 
-
-
 (defn- spaces-only?
   [line]
   (= line (string.rep " " (string.len line))))
-
-
 
 (defn- indentation-lines-equal?
   [left right]
@@ -250,32 +361,23 @@
                 (set same false))))
   same)
 
-
 (defn- whitespace-kind?
   [kind]
   (or (= kind :whitespace) (= kind :newline)))
-
-
 
 (defn- token-kind-equal?
   [left right]
   (or (= left.kind right.kind)
       (and (whitespace-kind? left.kind) (whitespace-kind? right.kind))))
 
-
-
 (defn- non-whitespace-token-equal?
   [left right]
   (= left.text right.text))
-
-
 
 (defn- newline-count
   [text]
   (let [count (select 2 (string.gsub text "\n" ""))]
     count))
-
-
 
 (defn- whitespace-token-equal?
   [left right]
@@ -283,15 +385,11 @@
        (> (string.len right.text) 0)
        (>= (newline-count right.text) (newline-count left.text))))
 
-
-
 (defn- token-text-equal?
   [left right]
   (if (whitespace-kind? left.kind)
     (whitespace-token-equal? left right)
     (non-whitespace-token-equal? left right)))
-
-
 
 (defn- token-sequences-equal?
   [left right index]
@@ -302,8 +400,6 @@
                      (and result
                           (token-kind-equal? token other)
                           (token-text-equal? token other))))))
-
-
 
 (defn- binding-whitespace-equal?
   [left right]
@@ -316,8 +412,6 @@
          (not= left-body right-body)
          (token-sequences-equal? left-tokens right-tokens 1))))
 
-
-
 (defn- line-equal?
   [line other allow-binding-whitespace?]
   (or (= line other)
@@ -327,8 +421,6 @@
            (binding-whitespace-equal? line other))
       (and (= other "") (spaces-only? line))))
 
-
-
 (defn- lines-equal?
   [left right index allow-binding-whitespace?]
   (if (> index (length left))
@@ -336,20 +428,14 @@
     (and (line-equal? (. left index) (. right index) allow-binding-whitespace?)
          (lines-equal? left right (+ index 1) allow-binding-whitespace?))))
 
-
-
 (defn- replace-last-token
   [tokens token]
   (table.remove tokens)
   (table.insert tokens token))
 
-
-
 (defn- merged-whitespace-token
   [previous token]
   {:kind :whitespace :text (.. previous.text token.text)})
-
-
 
 (defn- merge-whitespace-token
   [tokens token]
@@ -360,16 +446,12 @@
       (replace-last-token tokens (merged-whitespace-token previous token))
       (table.insert tokens token))))
 
-
-
 (defn- normalized-tokens
   [tokens]
   (let [result []]
     (each [_ token (ipairs tokens)]
           (merge-whitespace-token result token))
     result))
-
-
 
 (defn- token-whitespace-only?
   [before after]
@@ -382,8 +464,6 @@
          (= (length left-normalized) (length right-normalized))
          (token-sequences-equal? left-normalized right-normalized 1))))
 
-
-
 (defn indent-only?
   [before after allow-binding-whitespace?]
   (let [left  (split-lines before)
@@ -392,8 +472,6 @@
              (lines-equal? left right 1 allow-binding-whitespace?))
         (and allow-binding-whitespace?
              (token-whitespace-only? before after)))))
-
-
 
 (defn- ignored?
   [key]
@@ -414,23 +492,17 @@
       (= key "endcol")
       (= key "closer")))
 
-
-
 (defn- symbol?
   [value]
   (let [meta (and (= (type value) :table) (getmetatable value))]
     (and meta
          (= (tostring (. meta 1)) "SYMBOL"))))
 
-
-
 (defn- equal-key?
   [a b]
   (if (and (symbol? a) (symbol? b))
     (= (tostring a) (tostring b))
     (= a b)))
-
-
 
 (defn- entries
   [value]
@@ -439,8 +511,6 @@
           (when (not (ignored? key))
                 (table.insert result {:key key :value item})))
     result))
-
-
 
 (defn- matching-entry
   [equal parser entry right]
@@ -452,22 +522,16 @@
               (set found-index index)))
   found-index)
 
-
-
 (defn- remove-and-continue
   [continue equal parser left right found-index]
   (table.remove right found-index)
   (continue equal parser left right))
-
-
 
 (defn- continue-equal-entries
   [continue equal parser left right found-index]
   (if found-index
     (remove-and-continue continue equal parser left right found-index)
     false))
-
-
 
 (defn- equal-entries?
   [equal parser left right]
@@ -477,16 +541,12 @@
           found-index (matching-entry equal parser entry right)]
       (continue-equal-entries equal-entries? equal parser left right found-index))))
 
-
-
 (defn- equal-table?
   [equal parser a b]
   (let [left  (entries a)
         right (entries b)]
     (and (= (length left) (length right))
          (equal-entries? equal parser left right))))
-
-
 
 (defn- equal-value
   [parser a b]
@@ -497,8 +557,6 @@
         (= (tostring a) (tostring b))
         (equal-table? equal-value parser a b))
       (= a b))))
-
-
 
 (defn- parse-all
   [parser source]
@@ -512,8 +570,6 @@
                (set done true))))
     forms))
 
-
-
 (defn- forms-equal?
   [parser left right]
   (var same true)
@@ -521,7 +577,6 @@
         (when (not (equal-value parser form (. right i)))
               (set same false)))
   same)
-
 
 (defn ast-equal?
   [parser a b]
@@ -538,8 +593,6 @@
     (and ok
          result)))
 
-
-
 (defn- alignment-enabled?
   [alignment]
   (or alignment.bindings
@@ -548,8 +601,6 @@
       alignment.split-bindings
       alignment.collapse-padding))
 
-
-
 (defn- rules-config
   [config]
   {:indents      (. config :indents)
@@ -557,29 +608,21 @@
    :indent-width (. config :indent-width)
    :alignment    (. config :alignment)})
 
-
-
 (defn- indentation-output-error
   [source alignment out config]
   (when (not (or (indent-only? source out (alignment-enabled? alignment))
                  (. config :newline)))
         {:message "formatter changed more than indentation"}))
 
-
-
 (defn- parser-output-error
   [source parser out]
   (when (and parser (not (ast-equal? parser source out)))
         {:message "formatter changed the parsed form"}))
 
-
-
 (defn- formatted-output-error
   [source parser alignment out config]
   (or (indentation-output-error source alignment out config)
       (parser-output-error source parser out)))
-
-
 
 (defn- validated-output
   [source parser alignment out config]
@@ -588,13 +631,9 @@
       (values nil output-error)
       out)))
 
-
-
 (defn- format-string-error
   [alignment-error rules-error]
   (or alignment-error rules-error))
-
-
 
 (defn- format-string-valid
   [source parser config path matcher]
@@ -603,10 +642,11 @@
         (out error)   (indent.reindent broken-source config)]
     (if error
       (values nil error)
-      (let [output (apply-newline-rules out config path matcher)]
+      (let [scalar-broken (apply-scalar-argument-break-rules out config path matcher)
+            normalized    (normalize-same-level-gaps scalar-broken config path matcher)
+            newlines      (apply-newline-rules normalized config path matcher)
+            output        (normalize-same-level-gaps newlines config path matcher)]
         (validated-output source parser alignment output config)))))
-
-
 
 (defn format-string
   [source opts]

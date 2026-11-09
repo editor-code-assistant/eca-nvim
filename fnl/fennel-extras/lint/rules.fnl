@@ -22,21 +22,14 @@
   []
   (registry.defaults))
 
-
-
-
 (defn- update-check-state
   [state import-info head policy]
   {:module-import state.module-import})
-
-
 
 (defn- check-state-step
   [nodes index state policy recurse]
   (let [node (. nodes index)]
     (recurse nodes (+ index 1) (update-check-state state (import-macros? node) (list-head node) policy) policy)))
-
-
 
 (defn- check-state
   [nodes index state policy]
@@ -44,15 +37,11 @@
     state
     (check-state-step nodes index state policy check-state)))
 
-
-
 (defn- append-all
   [target items]
   (each [_ value (ipairs (or items []))]
         (table.insert target value))
   target)
-
-
 
 (defn- contains?
   [items target index]
@@ -60,8 +49,6 @@
     false
     (or (= (. items index) target)
         (contains? items target (+ index 1)))))
-
-
 
 (defn- evaluate-form
   [path form forms policy]
@@ -78,16 +65,11 @@
           (module-rule.module-import-finding findings path form head node policy))
     findings))
 
-
-
 (defn- append-form-findings
   [all path forms policy]
   (each [_ form (ipairs forms)]
         (append-all all (evaluate-form path form forms policy)))
   all)
-
-
-
 
 (defn- append-file-size-findings
   [findings path policy source]
@@ -95,17 +77,12 @@
     (size-rule.finding path policy source)
     findings))
 
-
-
-
 (defn- check-result
   [path forms policy source state]
   (let [findings (append-file-size-findings [] path policy source)
         findings (append-all findings (module-rule.required-form-finding path source policy))
         findings (append-form-findings findings path forms policy)]
     findings))
-
-
 
 (defn- check-instance
   [path forms policy source instance]
@@ -119,15 +96,11 @@
                         (core.assoc with-instance :description instance.value.description)
                         with-instance))))))
 
-
-
 (defn- append-instance-findings
   [result path forms policy source instance]
   (each [_ finding (ipairs (check-instance path forms policy source instance))]
         (table.insert result finding))
   result)
-
-
 
 (defn check
   [path forms policy source]

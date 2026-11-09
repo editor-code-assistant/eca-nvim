@@ -15,22 +15,16 @@
   [context]
   (or (. context :rules) {}))
 
-
-
 (defn- normalized-testing-form
   [finding]
   (or (and (string.match finding.form " > top#[0-9]+$")
            (.. finding.form " > testing#1"))
       finding.form))
 
-
-
 (defn- normalized-branch-form
   [finding]
   (let [form (string.gsub finding.form " > (top#[0-9]+) > (then.*)$" " > %1 > if#1 > %2")]
     form))
-
-
 
 (defn- normalized-form
   [finding]
@@ -39,16 +33,12 @@
     (normalized-testing-form finding)
     (normalized-branch-form finding)))
 
-
-
 (defn- normalize-finding
   [finding]
   (let [form (normalized-form finding)]
     (if (= finding.form form)
       finding
       (core.assoc finding :form form))))
-
-
 
 (defn- excluded?
   [exclusions finding source matcher index]
@@ -57,13 +47,9 @@
     (or (exclusion-matcher.matches? (. exclusions index) finding source matcher)
         (excluded? exclusions finding source matcher (+ index 1)))))
 
-
-
 (defn- branch-base
   [form suffix]
   (string.gsub form suffix ""))
-
-
 
 (defn- branch-form
   [form]
@@ -72,8 +58,6 @@
     (or (and (not= then-base form) then-base)
         (and (not= else-base form) else-base))))
 
-
-
 (defn- selected-form-step
   [forms target scope index recurse]
   (let [form (. forms index)]
@@ -81,23 +65,17 @@
       (selection.form-selected? form scope)
       (recurse forms target scope (+ index 1)))))
 
-
-
 (defn- selected-form?
   [forms target scope index]
   (if (> index (length forms))
     false
     (selected-form-step forms target scope index selected-form?)))
 
-
-
 (defn- selected-branch?
   [finding forms scope]
   (let [branch (branch-form finding.form)]
     (and branch
          (selected-form? forms branch scope 1))))
-
-
 
 (defn- selected-scope?
   [finding forms scope]
@@ -106,15 +84,11 @@
     (or (selection.form-selected? finding scope)
         (selected-branch? finding forms scope))))
 
-
-
 (defn- selected?
   [finding forms scope]
   (or (= scope nil)
       (= scope true)
       (selected-scope? finding forms scope)))
-
-
 
 (defn- append-selected-finding
   [result finding forms scope exclusions source matcher]
@@ -124,15 +98,11 @@
           (table.insert result normalized)))
   result)
 
-
-
 (defn- filter-findings-step
   [findings forms scope exclusions source matcher index result recurse]
   (let [finding     (. findings index)
         next-result (append-selected-finding result finding forms scope exclusions source matcher)]
     (recurse findings forms scope exclusions source matcher (+ index 1) next-result)))
-
-
 
 (defn- filter-findings
   [findings forms scope exclusions source matcher index result]
@@ -140,30 +110,22 @@
     result
     (filter-findings-step findings forms scope exclusions source matcher index result filter-findings)))
 
-
-
 (defn- filter-checked-findings
   [findings forms scope exclusions source matcher defer]
   (if defer
     (filter-findings findings forms scope [] source matcher 1 [])
     (filter-findings findings forms scope exclusions source matcher 1 [])))
 
-
-
 (defn- checked-findings-success
   [forms path policy exclusions scope source matcher defer]
   (let [findings (rules.check path forms policy source)]
     (filter-checked-findings findings forms scope exclusions source matcher defer)))
-
-
 
 (defn- checked-findings
   [forms error path policy exclusions scope source matcher defer]
   (if error
     (values nil error)
     (checked-findings-success forms path policy exclusions scope source matcher defer)))
-
-
 
 (defn- copy-context-exclusion
   [rule index value]
@@ -172,15 +134,11 @@
           (tset copy key item))
     (core.assoc copy :rule rule :instance index)))
 
-
-
 (defn- append-context-values
   [result rule index entries]
   (each [_ value (ipairs entries)]
         (table.insert result (copy-context-exclusion rule index value)))
   result)
-
-
 
 (defn- append-context-entry
   [result rule index entry]
@@ -188,23 +146,17 @@
     (append-context-values result rule index entry.exclusions)
     result))
 
-
-
 (defn- append-context-entries
   [result rule entries]
   (each [index entry (ipairs entries)]
         (append-context-entry result rule index entry))
   result)
 
-
-
 (defn- append-context-rule
   [result rule entries]
   (if (= (type entries) :table)
     (append-context-entries result rule entries)
     result))
-
-
 
 (defn- context-design-rules
   [context]
@@ -216,14 +168,10 @@
         nested
         {})))
 
-
-
 (defn- context-lint-rules
   [context]
   (let [rules (core.merge (or (. context :rules) {}))]
     (core.assoc rules :design nil)))
-
-
 
 (defn- merge-context-rules
   [rules design]
@@ -236,16 +184,12 @@
       (core.assoc merged "form-child-count" nil)
       merged)))
 
-
-
 (defn- context-lint-value
   [context]
   (let [rules  (merge-context-rules (context-lint-rules context)
                                     (context-design-rules context))
         design (context-design-rules context)]
     {:rules rules :design (and context.design {:rules design})}))
-
-
 
 (defn- append-context-exclusions
   [result raw-policy]
@@ -254,20 +198,14 @@
               (table.insert result (copy-context-exclusion item.rule item.index exclusion))))
   result)
 
-
-
 (defn- context-exclusions
   [context]
   (append-context-exclusions [] (context-lint-value context)))
-
-
 
 (defn- regex-exclusion-error-entry
   [entry matcher index]
   (when (and (or entry.pattern entry.code) (= matcher nil))
         {:message (.. "lint exclusion " index ": regex selectors require a matcher")}))
-
-
 
 (defn- regex-exclusion-error
   [exclusions matcher index]
@@ -277,27 +215,19 @@
       (or (regex-exclusion-error-entry entry matcher index)
           (regex-exclusion-error exclusions matcher (+ index 1))))))
 
-
-
 (defn- context-policy
   [context]
   (core.merge (context-lint-value context)
               {:matcher (. context :matcher)}))
 
-
-
 (defn- context-matcher-error
   [context exclusions]
   (regex-exclusion-error exclusions context.matcher 1))
-
-
 
 (defn- known-rule?
   [name]
   (accumulate [found false _ rule (ipairs (registry.rule-names))]
               (or found (= rule name))))
-
-
 
 (defn- known-rules
   [rules]
@@ -307,20 +237,14 @@
                 (tset result name value)))
     result))
 
-
-
 (defn- context-validation-error
   [context]
   (let [value (context-lint-value context)]
     (config-lint.lint-error {:rules (known-rules value.rules)})))
 
-
-
 (defn- context-forms
   [source path]
   (identity.forms source path))
-
-
 
 (defn- checked-context
   [forms parse-error path policy exclusions scope source context validation-error matcher-error]
@@ -328,8 +252,6 @@
     (if failure
       (_G.error failure)
       (checked-findings forms parse-error path policy exclusions scope source context.matcher context.defer-exclusions))))
-
-
 
 (defn check
   [source context]

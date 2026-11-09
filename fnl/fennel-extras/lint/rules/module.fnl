@@ -27,7 +27,6 @@
         []))
     []))
 
-
 (defn- contains?
   [items target index]
   (if (> index (length items))

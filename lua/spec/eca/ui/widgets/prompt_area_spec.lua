@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/prompt-area_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/prompt_area_spec.fnl
 local prompt_area = require("eca.ui.widgets.prompt-area")
 local function with_cleanup(cleanup, f)
   local ok, result = pcall(f)

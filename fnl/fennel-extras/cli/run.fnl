@@ -209,8 +209,6 @@
   (and discovered
        (format.discovered-files root paths discovered config-path include-config?)))
 
-
-
 (defn- run-format-files
   [context files]
   (let [(parser parser-error) (load-parser (or context.parsed.parser (. context.cfg.format :parser)))]

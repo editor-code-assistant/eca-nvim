@@ -17,138 +17,131 @@
             [finding.rule finding.form finding.severity]))
 
 (deftest defaults
-
-         (testing "all retained lint rules are off by default"
-                  (is (= 5 (length (vim.tbl_keys (rules.defaults)))))))
+  (testing "all retained lint rules are off by default"
+    (is (= 5 (length (vim.tbl_keys (rules.defaults)))))))
 
 (deftest forbidden-form
+  (testing "forbids a selected module target"
+    (let [policy {:forbidden-form [{:severity   "warning"
+                                    :applies-to {:modules "plenary.busted"}
+                                    :options    {}
+                                    :exclusions []}]}
+          result (identities (findings-for "(require :plenary.busted)\n(local value 1)"
+                                           "fnl/spec/one.fnl"
+                                           policy))]
+      (is (= [["forbidden-form" "fnl/spec/one.fnl > top#1" "warning"]] result))))
 
-         (testing "forbids a selected module target"
-                  (let [policy {:forbidden-form [{:severity   "warning"
-                                                  :applies-to {:modules "plenary.busted"}
-                                                  :options    {}
-                                                  :exclusions []}]}
-                        result (identities (findings-for "(require :plenary.busted)\n(local value 1)"
-                                                         "fnl/spec/one.fnl"
-                                                         policy))]
-                    (is (= [["forbidden-form" "fnl/spec/one.fnl > top#1" "warning"]] result))))
-
-         (testing "forbids selected executable forms"
-                  (let [policy {:forbidden-form [{:severity   "warning"
-                                                  :applies-to {:forms ["var" "set" "while"]}
-                                                  :options    {}
-                                                  :exclusions []}]}
-                        result (identities (findings-for "(var x 1)" "fnl/app.fnl" policy))]
-                    (is (= [["forbidden-form" "fnl/app.fnl > top#1" "warning"]] result)))))
+  (testing "forbids selected executable forms"
+    (let [policy {:forbidden-form [{:severity   "warning"
+                                    :applies-to {:forms ["var" "set" "while"]}
+                                    :options    {}
+                                    :exclusions []}]}
+          result (identities (findings-for "(var x 1)" "fnl/app.fnl" policy))]
+      (is (= [["forbidden-form" "fnl/app.fnl > top#1" "warning"]] result)))))
 
 (deftest rule-instance-description
-
-         (testing "propagates description without changing rule form or instance identity"
-                  (let [policy  {:forbidden-form [{:severity    "warning"
-                                                   :description "explain this rule"
-                                                   :applies-to  {:forms ["var"]}
-                                                   :options     {}
-                                                   :exclusions  []}]}
-                        result  (findings-for "(var x 1)" "fnl/app.fnl" policy)
-                        finding (. result 1)]
-                    (is (= {:description "explain this rule"
-                            :rule        "forbidden-form"
-                            :form        "fnl/app.fnl > top#1"
-                            :instance    1}
-                           {:description finding.description
-                            :rule        finding.rule
-                            :form        finding.form
-                            :instance    finding.instance})))))
+  (testing "propagates description without changing rule form or instance identity"
+    (let [policy  {:forbidden-form [{:severity    "warning"
+                                     :description "explain this rule"
+                                     :applies-to  {:forms ["var"]}
+                                     :options     {}
+                                     :exclusions  []}]}
+          result  (findings-for "(var x 1)" "fnl/app.fnl" policy)
+          finding (. result 1)]
+      (is (= {:description "explain this rule"
+              :rule        "forbidden-form"
+              :form        "fnl/app.fnl > top#1"
+              :instance    1}
+             {:description finding.description
+              :rule        finding.rule
+              :form        finding.form
+              :instance    finding.instance})))))
 
 (deftest module-import
+  (testing "requires the canonical core binding"
+    (let [policy {:module-import [{:severity   "error"
+                                   :applies-to {:modules "eca.nfnl.core"}
+                                   :options    {:mode    "require"
+                                                :binding "core"}
+                                   :exclusions []}]}
+          result (identities (findings-for "(local c (require :eca.nfnl.core))"
+                                           "fnl/app.fnl"
+                                           policy))]
+      (is (= [["module-import" "fnl/app.fnl > local:c" "error"]] result))))
 
-         (testing "requires the canonical core binding"
-                  (let [policy {:module-import [{:severity   "error"
-                                                 :applies-to {:modules "eca.nfnl.core"}
-                                                 :options    {:mode    "require"
-                                                              :binding "core"}
-                                                 :exclusions []}]}
-                        result (identities (findings-for "(local c (require :eca.nfnl.core))"
-                                                         "fnl/app.fnl"
-                                                         policy))]
-                    (is (= [["module-import" "fnl/app.fnl > local:c" "error"]] result))))
-
-         (testing "forbids direct test-library requires"
-                  (let [policy {:module-import [{:severity   "error"
-                                                 :applies-to {:modules ["plenary.busted"]}
-                                                 :options    {:mode "forbid"}
-                                                 :exclusions [{:path "^fnl/spec/"}]}]}
-                        result (identities (findings-for "(require :plenary.busted)"
-                                                         "fnl/spec/app_spec.fnl"
-                                                         policy))]
-                    (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]] result)))))
+  (testing "forbids direct test-library requires"
+    (let [policy {:module-import [{:severity   "error"
+                                   :applies-to {:modules ["plenary.busted"]}
+                                   :options    {:mode "forbid"}
+                                   :exclusions [{:path "^fnl/spec/"}]}]}
+          result (identities (findings-for "(require :plenary.busted)"
+                                           "fnl/spec/app_spec.fnl"
+                                           policy))]
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]] result)))))
 
 (deftest required-form
+  (testing "reports a missing top-level form"
+    (let [policy {:required-form [{:severity   "error"
+                                   :applies-to {:forms ["module"]}
+                                   :options    {}
+                                   :exclusions []}]}
+          result (identities (findings-for "(local value 1)" "fnl/app.fnl" policy))]
+      (is (= [["required-form" "fnl/app.fnl > file" "error"]] result))))
 
-         (testing "reports a missing top-level form"
-                  (let [policy {:required-form [{:severity   "error"
-                                                 :applies-to {:forms ["module"]}
-                                                 :options    {}
-                                                 :exclusions []}]}
-                        result (identities (findings-for "(local value 1)" "fnl/app.fnl" policy))]
-                    (is (= [["required-form" "fnl/app.fnl > file" "error"]] result))))
-
-         (testing "accepts a compliant top-level form"
-                  (let [policy {:required-form [{:severity   "error"
-                                                 :applies-to {:forms ["module"]}
-                                                 :options    {}
-                                                 :exclusions []}]}
-                        result (identities (findings-for "(module app)" "fnl/app.fnl" policy))]
-                    (is (= [] result)))))
+  (testing "accepts a compliant top-level form"
+    (let [policy {:required-form [{:severity   "error"
+                                   :applies-to {:forms ["module"]}
+                                   :options    {}
+                                   :exclusions []}]}
+          result (identities (findings-for "(module app)" "fnl/app.fnl" policy))]
+      (is (= [] result)))))
 
 (deftest migrated-child-count
-
-         (testing "canonical child-count preserves named testing child checks"
-                  (let [policy {:child-count [{:severity   "error"
-                                               :applies-to {:forms ["testing"]}
-                                               :options    {:children  ["is"]
-                                                            :max-count 1}
-                                               :exclusions []}]}
-                        result (identities (findings-for "(deftest run (testing \"x\" (is a) (is b)))"
-                                                         "fnl/spec/app_spec.fnl"
-                                                         policy))]
-                    (is (= [["child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                           result)))))
+  (testing "canonical child-count preserves named testing child checks"
+    (let [policy {:child-count [{:severity   "error"
+                                 :applies-to {:forms ["testing"]}
+                                 :options    {:children  ["is"]
+                                              :max-count 1}
+                                 :exclusions []}]}
+          result (identities (findings-for "(deftest run (testing \"x\" (is a) (is b)))"
+                                           "fnl/spec/app_spec.fnl"
+                                           policy))]
+      (is (= [["child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             result)))))
 
 (deftest direct-child-arity
+  (let [policy  {:child-count [{:severity   "warning"
+                                :applies-to {:forms ["if"]}
+                                :options    {:min-count 2
+                                             :max-count 2
+                                             :nil-count false}
+                                :exclusions []}]}
+        finding (fn [source]
+                  (identities (findings-for source "fnl/app.fnl" policy)))]
 
-         (let [policy  {:child-count [{:severity   "warning"
-                                       :applies-to {:forms ["if"]}
-                                       :options    {:min-count 2
-                                                    :max-count 2
-                                                    :nil-count false}
-                                       :exclusions []}]}
-               finding (fn [source]
-                         (identities (findings-for source "fnl/app.fnl" policy)))]
+    (testing "rejects an if with no else"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok value))"))))
 
-           (testing "rejects an if with no else"
-                    (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
-                           (finding "(defn run [] (if ok value))"))))
+    (testing "rejects an if with a literal nil else"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok value nil))"))))
 
-           (testing "rejects an if with a literal nil else"
-                    (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
-                           (finding "(defn run [] (if ok value nil))"))))
+    (testing "rejects an if with multiple clauses"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok a b c d))"))))
 
-           (testing "rejects an if with multiple clauses"
-                    (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
-                           (finding "(defn run [] (if ok a b c d))"))))
+    (testing "rejects a multi-clause if with broad direct bounds"
+      (let [broad-policy  {:child-count [{:severity   "warning"
+                                          :applies-to {:forms ["if"]}
+                                          :options    {:min-count 0
+                                                       :max-count 10
+                                                       :nil-count true}
+                                          :exclusions []}]}
+            broad-finding (fn [source]
+                            (identities (findings-for source "fnl/app.fnl" broad-policy)))]
+        (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+               (broad-finding "(defn run [] (if ok a b c d))")))))
 
-           (testing "rejects a multi-clause if with broad direct bounds"
-                    (let [broad-policy  {:child-count [{:severity   "warning"
-                                                        :applies-to {:forms ["if"]}
-                                                        :options    {:min-count 0
-                                                                     :max-count 10
-                                                                     :nil-count true}
-                                                        :exclusions []}]}
-                          broad-finding (fn [source]
-                                          (identities (findings-for source "fnl/app.fnl" broad-policy)))]
-                      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
-                             (broad-finding "(defn run [] (if ok a b c d))")))))
-
-           (testing "allows a normal two-branch if"
-                    (is (= [] (finding "(defn run [] (if ok value fallback))"))))))
+    (testing "allows a normal two-branch if"
+      (is (= [] (finding "(defn run [] (if ok value fallback))"))))))

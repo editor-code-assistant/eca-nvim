@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/expandable-block_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/expandable_block_spec.fnl
 local expandable = require("eca.ui.widgets.expandable-block")
 local function _1_()
   local function _2_()

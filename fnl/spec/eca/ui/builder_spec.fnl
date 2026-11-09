@@ -119,11 +119,10 @@
                             :closed (ui.is-open?)})))))))
 
 (deftest create-chat-ui
+  (let [state (create-chat-ui-scenario)]
 
-         (let [state (create-chat-ui-scenario)]
+    (testing "opens and exposes its buffer through the public API"
+      (is (= {:open? true :buf 11} state.opened)))
 
-           (testing "opens and exposes its buffer through the public API"
-                    (is (= {:open? true :buf 11} state.opened)))
-
-           (testing "close makes the public open state false"
-                    (is (= false state.closed)))))
+    (testing "close makes the public open state false"
+      (is (= false state.closed)))))

@@ -28,13 +28,9 @@
           (table.insert findings
                         (finding path form (rule-severity policy "form-child-count") "form-child-count" "each testing form must contain exactly one is" node)))))
 
-
-
 (defn- nil-literal?
   [node]
   (and node (= node.kind :symbol) (= node.text "nil")))
-
-
 
 (defn- contains?
   [items target index]
@@ -43,15 +39,11 @@
     (or (= (. items index) target)
         (contains? items target (+ index 1)))))
 
-
-
 (defn- if-direct-count
   [children]
   (if (> (- (length children) 2) 0)
     (- (length children) 2)
     0))
-
-
 
 (defn- non-if-direct-count
   [children]
@@ -59,16 +51,12 @@
     (- (length children) 1)
     0))
 
-
-
 (defn- direct-count
   [node]
   (let [children (meaningful-children node)]
     (if (= (list-head node) "if")
       (if-direct-count children)
       (non-if-direct-count children))))
-
-
 
 (defn- direct-child-valid?
   [node options]
@@ -88,15 +76,11 @@
          (>= count min)
          (<= count max))))
 
-
-
 (defn- child-count-invalid?
   [node options]
   (if options.children
     (not= (count-child-forms node options.children 1 0) options.max-count)
     (not (direct-child-valid? node options))))
-
-
 
 (defn child-count-finding
   [findings path form policy node]

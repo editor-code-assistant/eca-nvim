@@ -17,12 +17,12 @@ local function _1_()
   local function _2_()
     local format_config = repository_format()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {indents = {fn = {{"inner", 0}}}, ["format-as"] = aliases}
-    local actual_7_auto = {indents = format_config.indents, ["format-as"] = vim.tbl_extend("force", {}, aliases)}
+    local expected_6_auto = {indents = {fn = {{"inner", 0}}, deftest = {{"block", 1}}}, ["format-as"] = {def = "fn", ["def-"] = "fn", defn = "fn", ["defn-"] = "fn", testing = "deftest"}, alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "match", "case-try", "match-try", "if"}}, newline = {{["applies-to"] = {files = {"^fennel-extras/"}, forms = {"fn", "defn", "defn-"}}, options = {["after-header"] = 0, ["between-same-level"] = 1, ["break-after-n-args"] = {{1, 1}, {2, 1}}}}, {["applies-to"] = {forms = {"testing"}}, options = {before = 0}}, {["applies-to"] = {files = {"^spec/"}, forms = {"deftest"}}, options = {["after-header"] = 0}}, {["applies-to"] = {files = {"^spec/"}, forms = {"testing"}}, options = {["between-same-level"] = 1}}, {["applies-to"] = {files = {"^spec/"}, forms = {"="}}, options = {["break-after-args"] = 1}}}}
+    local actual_7_auto = {indents = format_config.indents, ["format-as"] = format_config["format-as"], alignment = format_config.alignment, newline = format_config.newline}
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("keeps only fn as the declaration indentation base and aliases definitions to it", _2_)
+  return require("plenary.busted").it("matches the current declaration, alignment, and newline rules", _2_)
 end
 require("plenary.busted").describe("canonical-configuration", _1_)
 local function _3_()

@@ -102,11 +102,14 @@ local function validate_alignment(config)
   local value = config.alignment
   return (alignment.validate(value) or (value and (missing_binding_forms(value) or missing_clause_forms(value))))
 end
-local function break_after_args_entry_3f(value)
+local function break_after_n_args_entry_3f(value)
   return ((type(value) == "table") and (type(value[1]) == "number") and (type(value[2]) == "number") and integer_3f(value[1]) and integer_3f(value[2]) and (value[1] >= 1) and (value[2] >= 1))
 end
+local function positive_integer_3f(value)
+  return ((type(value) == "number") and integer_3f(value) and (value >= 1))
+end
 local function newline_instance_3f(value)
-  return ((type(value) == "table") and (type(value["applies-to"]) == "table") and ((value["applies-to"].files == nil) or array_of_strings_3f(value["applies-to"].files)) and ((value["applies-to"].forms == nil) or array_of_strings_3f(value["applies-to"].forms)) and (type(value.options) == "table") and ((value.options.after == nil) or (integer_3f(value.options.after) and (value.options.after >= 0))) and ((value.options["after-header"] == nil) or (integer_3f(value.options["after-header"]) and (value.options["after-header"] >= 0))) and ((value.options.before == nil) or (integer_3f(value.options.before) and (value.options.before >= 0))) and ((value.options["break-after-args"] == nil) or ((type(value.options["break-after-args"]) == "table") and every_ipairs_3f(break_after_args_entry_3f, value.options["break-after-args"], 1))))
+  return ((type(value) == "table") and (type(value["applies-to"]) == "table") and ((value["applies-to"].files == nil) or array_of_strings_3f(value["applies-to"].files)) and ((value["applies-to"].forms == nil) or array_of_strings_3f(value["applies-to"].forms)) and (type(value.options) == "table") and ((value.options.after == nil) or (integer_3f(value.options.after) and (value.options.after >= 0))) and ((value.options["after-header"] == nil) or (integer_3f(value.options["after-header"]) and (value.options["after-header"] >= 0))) and ((value.options.before == nil) or (integer_3f(value.options.before) and (value.options.before >= 0))) and ((value.options["between-same-level"] == nil) or (integer_3f(value.options["between-same-level"]) and (value.options["between-same-level"] >= 0))) and ((value.options["break-after-n-args"] == nil) or ((type(value.options["break-after-n-args"]) == "table") and every_ipairs_3f(break_after_n_args_entry_3f, value.options["break-after-n-args"], 1))) and ((value.options["break-after-args"] == nil) or positive_integer_3f(value.options["break-after-args"])))
 end
 local function validate_newline(config)
   local value = config.newline

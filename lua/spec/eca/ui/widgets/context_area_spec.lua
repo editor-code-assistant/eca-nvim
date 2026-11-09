@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/context-area_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/context_area_spec.fnl
 local context_area = require("eca.ui.widgets.context-area")
 local function with_cleanup(cleanup, f)
   local ok, result = pcall(f)

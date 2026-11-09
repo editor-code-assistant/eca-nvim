@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/components/prompt-prefix_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/components/prompt_prefix_spec.fnl
 local prompt_prefix = require("eca.ui.components.prompt-prefix")
 local function _1_()
   local function _2_()

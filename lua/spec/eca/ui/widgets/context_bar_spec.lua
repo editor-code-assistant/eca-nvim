@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/context-bar_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/context_bar_spec.fnl
 local context_bar = require("eca.ui.widgets.context-bar")
 local function with_cleanup(cleanup, f)
   local ok, result = pcall(f)

@@ -12,8 +12,6 @@
   [text]
   (parse.parse-string text))
 
-
-
 (defn- array-of-strings?
   [value]
   (if (not= (type value) :table)
@@ -27,14 +25,10 @@
              (set index (+ index 1)))
       valid)))
 
-
-
 (defn- integer?
   [value]
   (and (= (type value) :number)
        (= value (math.floor value))))
-
-
 
 (defn- valid-rule?
   [rule]
@@ -50,8 +44,6 @@
           false)))
     false))
 
-
-
 (defn- valid-rule-list?
   [value]
   (if (= (type value) :table)
@@ -62,8 +54,6 @@
                   (set valid false)))
       valid)
     false))
-
-
 
 (defn- rule-map-error
   [value prefix]
@@ -77,8 +67,6 @@
       failure)
     {:message (.. prefix ": invalid indentation rule")}))
 
-
-
 (defn- extensions?
   [value]
   (if (and (= (type value) :table) (> (length value) 0))
@@ -91,14 +79,10 @@
       valid)
     false))
 
-
-
 (defn- configuration-error-with-lint
   [failure lint]
   (or failure
       (and lint (lint-config.lint-error lint))))
-
-
 
 (defn- configuration-error
   [tbl]
@@ -107,8 +91,6 @@
       (configuration-error-with-lint nil (. tbl :lint))
       (and (. tbl :design)
            (lint-config.design-error (. tbl :design)))))
-
-
 
 (defn- workspace-key-error
   [workspace]
@@ -122,8 +104,6 @@
                                     candidate))]
           (when key
                 {:message (.. "unknown workspace key: " key)}))))
-
-
 
 (defn- workspace-error
   [tbl]
@@ -150,13 +130,9 @@
                    (not (or (= workspace.config true) (= workspace.config false))))
               {:message "workspace.config must be a boolean"}))))
 
-
-
 (defn- content-error
   [tbl]
   (workspace-error tbl))
-
-
 
 (defn validate-workspace
   [workspace require-paths?]
@@ -181,28 +157,20 @@
                  (not (or (= workspace.config true) (= workspace.config false))))
             {:message "workspace.config must be a boolean"})))
 
-
-
 (defn- validation-result
   [tbl failure]
   (if failure
     (values nil failure)
     tbl))
 
-
-
 (defn- validation-failure
   [tbl]
   (or (configuration-error tbl)
       (content-error tbl)))
 
-
-
 (defn- valid-table
   [tbl]
   (validation-result tbl (validation-failure tbl)))
-
-
 
 (defn- unknown-config-key
   [tbl]
@@ -214,15 +182,11 @@
                   key
                   candidate))))
 
-
-
 (defn- unknown-config-error
   [tbl]
   (let [key (unknown-config-key tbl)]
     (when key
           {:message (.. "unknown configuration key: " key)})))
-
-
 
 (defn- format-fragment-key?
   [key]
@@ -234,8 +198,6 @@
       (= key :newline)
       (= key :extensions)))
 
-
-
 (defn- unknown-format-fragment-key
   [tbl]
   (accumulate [candidate nil key _ (pairs tbl)]
@@ -245,8 +207,6 @@
                 key
                 candidate)))
 
-
-
 (defn- format-fragment-error
   [tbl]
   (let [key (unknown-format-fragment-key tbl)]
@@ -254,21 +214,15 @@
       {:message (.. "unknown configuration key: " key)}
       (format-config.validate tbl false false false))))
 
-
-
 (defn- validate-table-result
   [tbl failure]
   (if failure
     (values nil failure)
     (valid-table tbl)))
 
-
-
 (defn- validate-canonical-table
   [tbl]
   (validate-table-result tbl (unknown-config-error tbl)))
-
-
 
 (defn validate
   [tbl]
@@ -279,8 +233,6 @@
       (let [failure (format-fragment-error tbl)]
         (validation-result tbl failure)))))
 
-
-
 (defn- append-canonical-instance-exclusions
   [result rule index instance]
   (each [_ exclusion (ipairs (or instance.exclusions []))]
@@ -290,15 +242,11 @@
           (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index))))
   result)
 
-
-
 (defn- append-canonical-rule-exclusions
   [result rule instances]
   (each [index instance (ipairs (or instances []))]
         (append-canonical-instance-exclusions result rule index instance))
   result)
-
-
 
 (defn- canonical-exclusions
   [rules]
@@ -306,8 +254,6 @@
     (each [rule instances (pairs rules)]
           (append-canonical-rule-exclusions result rule instances))
     result))
-
-
 
 (defn- valid-lint-policy
   [cfg]
@@ -324,15 +270,11 @@
        :design     (and cfg.design {:rules design})
        :exclusions (canonical-exclusions normalized)})))
 
-
-
 (defn- lint-policy-valid
   [valid]
   (if (and (= valid.lint nil) (= valid.design nil))
     (values nil {:message "missing lint or design"})
     (valid-lint-policy valid)))
-
-
 
 (defn lint-policy
   [cfg]
@@ -341,22 +283,16 @@
       (values nil error)
       (lint-policy-valid valid))))
 
-
-
 (defn- join-path
   [dir name]
   (if (= (string.sub dir -1) "/")
     (.. dir name)
     (.. dir "/" name)))
 
-
-
 (defn- close-file
   [file]
   (file:close)
   true)
-
-
 
 (defn- exists?
   [path]
@@ -368,14 +304,10 @@
           (close-file file)
           false)))))
 
-
-
 (defn- git-marker?
   [dir]
   (or (exists? (join-path dir ".git"))
       (exists? (join-path (join-path dir ".git") "HEAD"))))
-
-
 
 (defn- parent-dir
   [dir]
@@ -388,13 +320,9 @@
             "/"
             parent))))
 
-
-
 (defn- found-config
   [candidate]
   (values candidate false))
-
-
 
 (defn find
   [start-dir]
@@ -414,8 +342,6 @@
                    (set dir parent)
                    (set searching false)))))))
   result)
-
-
 
 (defn load
   [path]

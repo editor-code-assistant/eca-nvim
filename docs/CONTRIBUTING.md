@@ -202,12 +202,24 @@ The boolean switches are `:bindings`, `:maps`, `:clauses`, `:split-bindings`, an
 
 #### `:newline`
 
-`:newline` is a list of formatter instances. Each instance has `:applies-to`, optionally selecting `:files` and/or `:forms`, and `:options` with non-negative integer `:before`, `:after`, and/or `:after-header` counts. `:break-after-args` is an optional list of `[arg-index line-break-count]` pairs; both values are positive integers. File selectors are Vim regular expressions matched against the workspace-relative source path. File and form selectors are ANDed; a file-scoped rule is skipped when no source path and matcher are provided. Rules without `:files` remain global. Omitted counts are zero, but an explicit `:after-header 0` removes contiguous blank lines after a selected header. `:after-header` applies to `fn`, and named `defn` and `defn-` forms when the header line is before the form end, and inserts blank lines after the declaration header line. `:break-after-args` inserts the requested number of line breaks after selected declaration arguments; for example, `[[1 1] [2 1]]` puts a named definition's header, argument vector, and body on separate lines. Newline rules add or remove only whitespace without changing tokens or parsed forms.
+`:newline` is a list of formatter instances. Each instance has `:applies-to`, optionally selecting `:files` and/or `:forms`, and `:options` with non-negative integer `:before`, `:after`, `:after-header`, and/or `:between-same-level` counts. `:break-after-n-args` is an optional list of `[arg-index line-break-count]` pairs; both values are positive integers. The scalar `:break-after-args` option is a positive integer that inserts that many line breaks between each adjacent direct argument of selected forms. File selectors are Vim regular expressions matched against the workspace-relative source path. File and form selectors are ANDed; a file-scoped rule is skipped when no source path and matcher are provided. Rules without `:files` remain global. Omitted counts are zero, but an explicit `:after-header 0` removes contiguous blank lines after a selected header. `:after-header` applies to `fn`, and named `defn`, `defn-`, and `deftest` forms when the header line is before the form end, and inserts blank lines after the declaration header line. `:between-same-level` normalizes the blank-line gap between adjacent selected sibling forms at the same nesting level to exactly its non-negative count; gaps containing comments or other nonblank content, parent/child boundaries, and unselected siblings are left unchanged. `:break-after-n-args` inserts the requested number of line breaks after selected declaration arguments; for example, `[[1 1] [2 1]]` puts a named definition's header, argument vector, and body on separate lines. Newline rules add or remove only whitespace without changing tokens or parsed forms.
+
+For specs, the repository configuration scopes `{:after-header 0}` for `deftest` and `{:between-same-level 1}` for `testing` to `^spec/` files. This removes blank lines after a test declaration header and keeps adjacent sibling `testing` forms one blank line apart, without changing the gap between a `deftest` parent and its child `testing` forms:
+
+```fennel
+:newline [{:applies-to {:files ["^spec/"]
+                        :forms ["deftest"]}
+           :options {:after-header 0}}
+          {:applies-to {:files ["^spec/"]
+                        :forms ["testing"]}
+           :options {:between-same-level 1}}]
+```
 
 ```fennel
 :newline [{:applies-to {:files ["^fennel-extras/"]
                         :forms ["fn" "defn" "defn-"]}
-           :options {:after-header 1}}
+           :options {:after-header 1
+                     :between-same-level 1}}
           {:applies-to {:forms ["testing"]}
            :options {:before 1}}]
 ```

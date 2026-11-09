@@ -44,31 +44,21 @@
           (tset result name (. option-types name)))
     result))
 
-
-
 (defn names
   [rule]
   (. option-names rule))
-
-
 
 (defn required-names
   [rule]
   (. required-option-names rule))
 
-
-
 (defn defaults
   []
   {})
 
-
-
 (defn- boolean?
   [value]
   (or (= value true) (= value false)))
-
-
 
 (defn- positive-integer?
   [value]
@@ -76,15 +66,11 @@
        (= value (math.floor value))
        (> value 0)))
 
-
-
 (defn- non-negative-integer?
   [value]
   (and (= (type value) :number)
        (= value (math.floor value))
        (>= value 0)))
-
-
 
 (defn- strings-step
   [value index]
@@ -92,8 +78,6 @@
     true
     (and (= (type (. value index)) :string)
          (strings-step value (+ index 1)))))
-
-
 
 (defn- strings?
   [value]
@@ -127,14 +111,10 @@
       (validator value)
       true)))
 
-
-
 (defn- option-type-message
   [kind option]
   (let [message (. type-messages kind)]
     (.. option message)))
-
-
 
 (defn- first-option-error-step
   [rule options keys index]
@@ -149,21 +129,15 @@
                {:message (option-type-message kind key)})
           (first-option-error-step rule options keys (+ index 1))))))
 
-
-
 (defn- first-option-error
   [rule options]
   (let [keys (vim.tbl_keys options)]
     (table.sort keys)
     (first-option-error-step rule options keys 1)))
 
-
-
 (defn- unknown-option-result
   [rule error]
   {:message (.. error.message " for lint rule " rule)})
-
-
 
 (defn- table-validation-result
   [rule error]
@@ -171,15 +145,11 @@
     (unknown-option-result rule error)
     error))
 
-
-
 (defn- table-validation-error
   [rule options]
   (let [error (first-option-error rule options)]
     (and error
          (table-validation-result rule error))))
-
-
 
 (defn- validate-present
   [rule options]
@@ -187,15 +157,11 @@
     (table-validation-error rule options)
     {:message "options must be a table"}))
 
-
-
 (defn validate
   [rule options]
   (if (= options nil)
     nil
     (validate-present rule options)))
-
-
 
 (defn normalized
   [overrides]

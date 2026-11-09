@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/message-list_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/message_list_spec.fnl
 local function with_cleanup(cleanup, f)
   local ok, result = pcall(f)
   cleanup()

@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/components/bar-items_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/components/bar_items_spec.fnl
 local bar_items = require("eca.ui.components.bar-items")
 local function _1_()
   local function _2_()

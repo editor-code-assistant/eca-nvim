@@ -57,7 +57,7 @@ local function rule_selected_3f(rule, path, matcher, head)
   return (file_selected_3f(rule["applies-to"].files, path, matcher) and form_selected_3f(rule["applies-to"].forms, head))
 end
 local function named_definition_header_3f(line, head)
-  return (((head == "defn") or (head == "defn-")) and string.match(line, "^%s*%(defn%-?%s+[^%s%(]+") and true)
+  return ((((head == "defn") or (head == "defn-")) and string.match(line, "^%s*%(defn%-?%s+[^%s%(]+") and true) or ((head == "deftest") and string.match(line, "^%s*%(deftest%s+[^%s%(]+") and true))
 end
 local function form_header_line(lines, span)
   return (lines[span.start] and ((span.head == "fn") or named_definition_header_3f(lines[span.start], span.head)) and span.start)
@@ -97,6 +97,43 @@ local function form_spans(source)
   table.sort(result, _10_)
   return result
 end
+local function same_level_form_groups(source)
+  local tokens, error = reader.tokenize(source)
+  local root = {root = true, children = {}}
+  local stack = {}
+  local groups = {root}
+  if not error then
+    for _, token in ipairs(tokens) do
+      if (token.kind == "open") then
+        local parent = (stack[#stack] or root)
+        local form = {start = token.line, ["start-col"] = token.col, head = nil, parent = parent, children = {}}
+        table.insert(stack, form)
+        table.insert(groups, form)
+      else
+        if (token.kind == "symbol") then
+          local top = stack[#stack]
+          if (top and (top.head == nil)) then
+            top.head = token.text
+          else
+          end
+        else
+          if (token.kind == "close") then
+            local top = table.remove(stack)
+            if (top and top.head) then
+              top["end"] = token.line
+              top["end-col"] = token.col
+              table.insert(top.parent.children, top)
+            else
+            end
+          else
+          end
+        end
+      end
+    end
+  else
+  end
+  return groups
+end
 local function max_break(breaks, index, count)
   if (count > (breaks[index] or 0)) then
     breaks[index] = count
@@ -120,7 +157,7 @@ local function preceding_break_index(lines, index)
     return index
   end
 end
-local function break_after_args_positions(source, span, entries)
+local function break_after_n_args_positions(source, span, entries)
   local tokens, error = reader.tokenize(source)
   local stack = {}
   local positions = {}
@@ -171,20 +208,62 @@ local function break_after_args_positions(source, span, entries)
   end
   return positions
 end
+local function break_after_args_positions(source, span, count)
+  local tokens, error = reader.tokenize(source)
+  local stack = {}
+  local positions = {}
+  if not error then
+    for _, token in ipairs(tokens) do
+      if (token.kind == "open") then
+        local parent = stack[#stack]
+        if (parent and parent.head) then
+          table.insert(parent.children, {line = token.line, col = token.col})
+        else
+        end
+        table.insert(stack, {start = token.line, head = nil, children = {}})
+      else
+        if (token.kind == "close") then
+          local top = table.remove(stack)
+          if (top and (top.start == span.start) and (top.head == span.head)) then
+            for index = 2, #top.children do
+              local child = top.children[index]
+              table.insert(positions, {line = child.line, col = child.col, indent = (top.children[1].col - 1), count = count})
+            end
+          else
+          end
+        else
+          local top_index = #stack
+          local top = stack[top_index]
+          if (top and ((token.kind == "symbol") or (token.kind == "string") or (token.kind == "number"))) then
+            if (top.head == nil) then
+              table.remove(stack, top_index)
+              table.insert(stack, {start = top.start, head = token.text, children = top.children})
+            else
+              table.insert(top.children, {line = token.line, col = token.col})
+            end
+          else
+          end
+        end
+      end
+    end
+  else
+  end
+  return positions
+end
 local function insert_breaks(source, positions)
   local lines = split_lines(source)
-  local function _23_(left, right)
+  local function _36_(left, right)
     if (left.line == right.line) then
       return (left.col > right.col)
     else
       return (left.line > right.line)
     end
   end
-  table.sort(positions, _23_)
+  table.sort(positions, _36_)
   for _, position in ipairs(positions) do
     local line = lines[position.line]
     local prefix = string.sub(line, 1, (position.col - 1))
-    local suffix = string.sub(line, position.col)
+    local suffix = (string.rep(" ", (position.indent or 0)) .. string.sub(line, position.col))
     if (line and (string.len(string.gsub(prefix, "%s+$", "")) > 0) and (string.len(suffix) > 0)) then
       lines[position.line] = string.gsub(prefix, "%s+$", "")
       for offset = 1, (position.count - 1) do
@@ -199,12 +278,12 @@ end
 local function apply_argument_break_rules(source, config, path, matcher)
   local result = source
   for _, rule in ipairs(newline_rules(config)) do
-    local entries = rule.options["break-after-args"]
+    local entries = rule.options["break-after-n-args"]
     if entries then
       local result0 = result
       for _0, span in ipairs(form_spans(result0)) do
         if rule_selected_3f(rule, path, matcher, span.head) then
-          result0 = insert_breaks(result0, break_after_args_positions(result0, span, entries))
+          result0 = insert_breaks(result0, break_after_n_args_positions(result0, span, entries))
         else
           result0 = result0
         end
@@ -212,6 +291,103 @@ local function apply_argument_break_rules(source, config, path, matcher)
       result = result0
     else
       result = result
+    end
+  end
+  return result
+end
+local function apply_scalar_argument_break_rules(source, config, path, matcher)
+  local result = source
+  for _, rule in ipairs(newline_rules(config)) do
+    local count = rule.options["break-after-args"]
+    if count then
+      local result0 = result
+      for _0, span in ipairs(form_spans(result0)) do
+        if rule_selected_3f(rule, path, matcher, span.head) then
+          result0 = insert_breaks(result0, break_after_args_positions(result0, span, count))
+        else
+          result0 = result0
+        end
+      end
+      result = result0
+    else
+      result = result
+    end
+  end
+  return result
+end
+local function blank_lines_between_3f(lines, start, _end)
+  if (start >= _end) then
+    return true
+  else
+    return ((lines[start] == "") and blank_lines_between_3f(lines, (start + 1), _end))
+  end
+end
+local function normalize_gap(lines, left, right, count)
+  if blank_lines_between_3f(lines, (left + 1), right) then
+    local existing = (right - left - 1)
+    if (existing > count) then
+      for _ = 1, (existing - count) do
+        table.remove(lines, (left + 1))
+      end
+      return nil
+    else
+      for _ = 1, (count - existing) do
+        table.insert(lines, (left + 1), "")
+      end
+      return nil
+    end
+  else
+    return nil
+  end
+end
+local function normalize_same_line_gap(lines, left, right, count)
+  if (count > 0) then
+    local line = lines[right.start]
+    local prefix = string.gsub(string.sub(line, 1, (right["start-col"] - 1)), "%s+$", "")
+    local suffix = string.sub(line, right["start-col"])
+    local indent0 = string.rep(" ", (left["start-col"] - 1))
+    lines[right.start] = prefix
+    for offset = 1, count do
+      table.insert(lines, (right.start + offset), "")
+    end
+    lines[(right.start + count + 1)] = (indent0 .. suffix)
+    return nil
+  else
+    return nil
+  end
+end
+local function normalize_same_level_gaps(source, config, path, matcher)
+  local result = source
+  for _, rule in ipairs(newline_rules(config)) do
+    local count = rule.options["between-same-level"]
+    if (count == nil) then
+      result = result
+    else
+      local lines = split_lines(result)
+      local pairs = {}
+      for _0, group in ipairs(same_level_form_groups(result)) do
+        local children = group.children
+        for index = 1, (#children - 1) do
+          local left = children[index]
+          local right = children[(index + 1)]
+          if (rule_selected_3f(rule, path, matcher, left.head) and rule_selected_3f(rule, path, matcher, right.head)) then
+            table.insert(pairs, {left = left, right = right})
+          else
+          end
+        end
+      end
+      local function _48_(left, right)
+        return (left.left["end"] > right.left["end"])
+      end
+      table.sort(pairs, _48_)
+      for _0, pair in ipairs(pairs) do
+        if (pair.left["end"] == pair.right.start) then
+          normalize_same_line_gap(lines, pair.left, pair.right, count)
+        else
+          normalize_gap(lines, pair.left["end"], pair.right.start, count)
+        end
+      end
+      result = table.concat(lines, "\n")
     end
   end
   return result
@@ -311,17 +487,17 @@ local function token_text_equal_3f(left, right)
   end
 end
 local function token_sequences_equal_3f(left, right, index)
-  local and_37_ = (#left == #right)
-  if and_37_ then
+  local and_60_ = (#left == #right)
+  if and_60_ then
     local result = true
     for offset in ipairs(left) do
       local token = left[offset]
       local other = right[offset]
       result = (result and token_kind_equal_3f(token, other) and token_text_equal_3f(token, other))
     end
-    and_37_ = result
+    and_60_ = result
   end
-  return and_37_
+  return and_60_
 end
 local function binding_whitespace_equal_3f(left, right)
   local left_body = string.gsub(left, "^ *", "")
@@ -481,7 +657,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _50_()
+    local function _73_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -490,7 +666,7 @@ do
         return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_50_)
+    ok, result = pcall(_73_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
@@ -537,7 +713,10 @@ local function format_string_valid(source, parser, config, path, matcher)
   if error then
     return nil, error
   else
-    local output = apply_newline_rules(out, config, path, matcher)
+    local scalar_broken = apply_scalar_argument_break_rules(out, config, path, matcher)
+    local normalized = normalize_same_level_gaps(scalar_broken, config, path, matcher)
+    local newlines = apply_newline_rules(normalized, config, path, matcher)
+    local output = normalize_same_level_gaps(newlines, config, path, matcher)
     return validated_output(source, parser, alignment, output, config)
   end
 end

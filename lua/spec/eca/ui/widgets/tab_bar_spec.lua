@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/tab-bar_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/tab_bar_spec.fnl
 local tab_bar = require("eca.ui.widgets.tab-bar")
 local function _1_()
   local function _2_()

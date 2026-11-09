@@ -503,221 +503,146 @@
 
 
 (deftest spec-shape
-
-
-
-
-         (testing "the approved spec macro import is clean"
-                  (is (= []
-                         (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)"
-                                    "fnl/spec/app_spec.fnl"
-                                    nil))))
-
-
-
-
-         (testing "a spec macro import missing is is reported"
-                  (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
-                         (forms-for "(import-macros {: deftest : testing} :spec.eca.macros)"
-                                    "fnl/spec/app_spec.fnl"
-                                    nil))))
-
-
-
-
-         (testing "a spec macro import from another module is reported"
-                  (is (= []
-                         (forms-for "(import-macros {: deftest : testing : is} :other.macros)"
-                                    "fnl/spec/app_spec.fnl"
-                                    nil))))
-
-
-
-
-         (testing "a spec with no macro import has the spec identity"
-                  (is (= []
-                         (forms-for "(deftest run (is true))" "fnl/spec/app_spec.fnl" nil))))
-
-
-
-
-         (testing "a prefixed spec macro import is reported"
-                  (is (= []
-                         (findings-for-rule "'(import-macros {: deftest : testing : is} :spec.eca.macros)"
-                                            "fnl/spec/app_spec.fnl"
-                                            "module-import"))))
-
-
-
-
-         (testing "a nested spec macro import is reported"
-                  (is (= []
-                         (findings-for-rule "(do (import-macros {: deftest : testing : is} :spec.eca.macros))\n(deftest run (testing \"works\" (is true)))"
-                                            "fnl/spec/x_spec.fnl"
-                                            "module-import"))))
-
-
-
-
-         (testing "a wrong macro import is reported independently of test content"
-                  (is (= []
-                         (forms-for "(import-macros {: deftest} :other) (deftest t (testing \"x\" (is true)))"
-                                    "fnl/spec/app_spec.fnl"
-                                    nil))))
-
-
-
-
-         (testing "a spec with only a direct require still has the spec identity"
-                  (is (= []
-                         (forms-for "(require :foo)" "fnl/spec/app_spec.fnl" nil))))
-
-
-
-
-         (testing "a module form in a spec is reported at that form"
-                  (is (= []
-                         (forms-for "(module app)\n(import-macros {: deftest : testing : is} :spec.eca.macros)"
-                                    "fnl/spec/app_spec.fnl"
-                                    nil))))
-
-         (deftest module-import
-
-
-
-
-                  (testing "keyword plenary require is forbidden in ordinary specs"
-                           (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
-                                  (findings-for-rule "(require :plenary.busted)" "fnl/spec/app_spec.fnl" "module-import"))))
-
-
-
-
-                  (testing "string luassert require is forbidden in ordinary specs"
-                           (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
-                                  (findings-for-rule "(require \"luassert\")" "fnl/spec/app_spec.fnl" "module-import"))))
-
-
-
-
-                  (testing "the spec macro implementation may require test libraries directly"
-                           (is (= []
-                                  (forms-for "(require :plenary.busted)\n(require \"luassert\")"
-                                             "fnl/spec/eca/macros.fnlm"
-                                             nil))))
-
-
-
-
-                  (testing "direct test-library requires are not a non-spec finding"
-                           (is (= []
-                                  (forms-for "(import-macros {: module : def : defn : defn-} :eca.nfnl.macros.aniseed)\n(module ordinary)\n(require :plenary.busted)\n(require \"luassert\")"
-                                             "fnl/ordinary.fnl"
-                                             nil)))))
-
-         (deftest form-child-count
-
-
-
-
-                  (testing "one direct is in testing is clean"
-                           (is (= []
-                                  (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (is true)))"
-                                             "fnl/spec/app_spec.fnl"
-                                             nil))))
-
-
-
-
-                  (testing "one is inside a let wrapper is clean"
-                           (is (= []
-                                  (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (let [x 1] (is (= x 1)))))"
-                                             "fnl/spec/app_spec.fnl"
-                                             nil))))
-
-
-
-
-                  (testing "testing with no is is reported"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"none\" (let [x 1] x)))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
-
-
-
-
-                  (testing "testing with two is forms is reported once"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"two\" (is true) (is true)))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
-
-
-
-
-                  (testing "nested testing forms are counted separately"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"outer\" (testing \"inner\" (is true))))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
-
-
-
-
-                  (testing "quoted is data is not counted"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"quoted\" '(is true)))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
-
-
-
-
-                  (testing "a quoted is separated by a comment is not counted"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"x\" '
+  (testing "the approved spec macro import is clean"
+    (is (= []
+           (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)"
+                      "fnl/spec/app_spec.fnl"
+                      nil))))
+
+  (testing "a spec macro import missing is is reported"
+    (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+           (forms-for "(import-macros {: deftest : testing} :spec.eca.macros)"
+                      "fnl/spec/app_spec.fnl"
+                      nil))))
+
+  (testing "a spec macro import from another module is reported"
+    (is (= []
+           (forms-for "(import-macros {: deftest : testing : is} :other.macros)"
+                      "fnl/spec/app_spec.fnl"
+                      nil))))
+
+  (testing "a spec with no macro import has the spec identity"
+    (is (= []
+           (forms-for "(deftest run (is true))" "fnl/spec/app_spec.fnl" nil))))
+
+  (testing "a prefixed spec macro import is reported"
+    (is (= []
+           (findings-for-rule "'(import-macros {: deftest : testing : is} :spec.eca.macros)"
+                              "fnl/spec/app_spec.fnl"
+                              "module-import"))))
+
+  (testing "a nested spec macro import is reported"
+    (is (= []
+           (findings-for-rule "(do (import-macros {: deftest : testing : is} :spec.eca.macros))\n(deftest run (testing \"works\" (is true)))"
+                              "fnl/spec/x_spec.fnl"
+                              "module-import"))))
+
+  (testing "a wrong macro import is reported independently of test content"
+    (is (= []
+           (forms-for "(import-macros {: deftest} :other) (deftest t (testing \"x\" (is true)))"
+                      "fnl/spec/app_spec.fnl"
+                      nil))))
+
+  (testing "a spec with only a direct require still has the spec identity"
+    (is (= []
+           (forms-for "(require :foo)" "fnl/spec/app_spec.fnl" nil))))
+
+  (testing "a module form in a spec is reported at that form"
+    (is (= []
+           (forms-for "(module app)\n(import-macros {: deftest : testing : is} :spec.eca.macros)"
+                      "fnl/spec/app_spec.fnl"
+                      nil))))
+
+  (deftest module-import
+    (testing "keyword plenary require is forbidden in ordinary specs"
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+             (findings-for-rule "(require :plenary.busted)" "fnl/spec/app_spec.fnl" "module-import"))))
+
+    (testing "string luassert require is forbidden in ordinary specs"
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+             (findings-for-rule "(require \"luassert\")" "fnl/spec/app_spec.fnl" "module-import"))))
+
+    (testing "the spec macro implementation may require test libraries directly"
+      (is (= []
+             (forms-for "(require :plenary.busted)\n(require \"luassert\")"
+                        "fnl/spec/eca/macros.fnlm"
+                        nil))))
+
+    (testing "direct test-library requires are not a non-spec finding"
+      (is (= []
+             (forms-for "(import-macros {: module : def : defn : defn-} :eca.nfnl.macros.aniseed)\n(module ordinary)\n(require :plenary.busted)\n(require \"luassert\")"
+                        "fnl/ordinary.fnl"
+                        nil)))))
+
+  (deftest form-child-count
+    (testing "one direct is in testing is clean"
+      (is (= []
+             (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (is true)))"
+                        "fnl/spec/app_spec.fnl"
+                        nil))))
+
+    (testing "one is inside a let wrapper is clean"
+      (is (= []
+             (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (let [x 1] (is (= x 1)))))"
+                        "fnl/spec/app_spec.fnl"
+                        nil))))
+
+    (testing "testing with no is is reported"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"none\" (let [x 1] x)))"
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
+
+    (testing "testing with two is forms is reported once"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"two\" (is true) (is true)))"
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
+
+    (testing "nested testing forms are counted separately"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"outer\" (testing \"inner\" (is true))))"
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
+
+    (testing "quoted is data is not counted"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"quoted\" '(is true)))"
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
+
+    (testing "a quoted is separated by a comment is not counted"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"x\" '
  ;; comment
  (is true)))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
 
-
-
-
-                  (testing "a quasiquoted is separated by a newline is not counted"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"x\" `
+    (testing "a quasiquoted is separated by a newline is not counted"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"x\" `
 (is true)))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
 
+    (testing "a quoted is separated by whitespace is not counted"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"x\" ' (is true)))"
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
 
+    (testing "a quoted is plus an executable is is counted once"
+      (is (= []
+             (findings-for-rule "(deftest run (testing \"x\" '(is false) (is true)))"
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count"))))
 
-
-                  (testing "a quoted is separated by whitespace is not counted"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"x\" ' (is true)))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
-
-
-
-
-                  (testing "a quoted is plus an executable is is counted once"
-                           (is (= []
-                                  (findings-for-rule "(deftest run (testing \"x\" '(is false) (is true)))"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count"))))
-
-
-
-
-                  (testing "strings and comments containing is are not counted"
-                           (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-                                  (findings-for-rule "(deftest run (testing \"is in text\" (print \"is\"))) ;; is\n"
-                                                     "fnl/spec/app_spec.fnl"
-                                                     "form-child-count")))))
+    (testing "strings and comments containing is are not counted"
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+             (findings-for-rule "(deftest run (testing \"is in text\" (print \"is\"))) ;; is\n"
+                                "fnl/spec/app_spec.fnl"
+                                "form-child-count")))))
 
 )
 
@@ -729,22 +654,8 @@
 
 
 (deftest lint-repo-properties
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-         (testing "cli implementation files are clean"
-                  (is (= [] (. (repo-scenario nil) :cli-files)))) )
+  (testing "cli implementation files are clean"
+    (is (= [] (. (repo-scenario nil) :cli-files)))) )
 
 (defn- context-base
   [ctx]
@@ -795,20 +706,13 @@
 
 
 (deftest opt-in-policy
+  (testing "lint check reports no findings when rules are omitted"
+    (is (= []
+           (check-context "(local c (require :eca.nfnl.core))"
+                          {:path "fnl/app.fnl"}))))
 
-
-
-
-         (testing "lint check reports no findings when rules are omitted"
-                  (is (= []
-                         (check-context "(local c (require :eca.nfnl.core))"
-                                        {:path "fnl/app.fnl"}))))
-
-
-
-
-         (testing "the shared compatibility policy enables all retained rules"
-                  (is (= 5 (policy-size (all-enabled-policy))))) )
+  (testing "the shared compatibility policy enables all retained rules"
+    (is (= 5 (policy-size (all-enabled-policy))))) )
 
 (defn- first-finding-form
   [findings rule]
@@ -824,37 +728,28 @@
 
 
 (testing "narrows syntax-quoted if exclusion without hiding executable if findings"
-         (let [source  (read-source "fnl/spec/eca/macros.fnlm")
-               result  (check-source-with-matcher source
-                                                  "fnl/spec/eca/macros.fnlm"
-                                                  {:child-count [{:severity   "error"
-                                                                  :applies-to {:forms ["if"]}
-                                                                  :options    {:min-count 2
-                                                                               :max-count 2
-                                                                               :nil-count false}
-                                                                  :exclusions []}]}
-                                                  [{:rule   "child-count"
-                                                    :code   "^[(]if has-message"
-                                                    :reason "syntax-quoted AST children are structural data, not semantic if branches"}])
-               summary (icollect [_ finding (ipairs result)]
-                                 [(. finding :line) (. finding :code)])]
-           (is (= []
-                  (icollect [_ finding (ipairs summary)]
-                            (when (= (. finding 1) 17)
-                                  finding))))))
+  (let [source  (read-source "fnl/spec/eca/macros.fnlm")
+        result  (check-source-with-matcher source
+                                           "fnl/spec/eca/macros.fnlm"
+                                           {:child-count [{:severity   "error"
+                                                           :applies-to {:forms ["if"]}
+                                                           :options    {:min-count 2
+                                                                        :max-count 2
+                                                                        :nil-count false}
+                                                           :exclusions []}]}
+                                           [{:rule   "child-count"
+                                             :code   "^[(]if has-message"
+                                             :reason "syntax-quoted AST children are structural data, not semantic if branches"}])
+        summary (icollect [_ finding (ipairs result)]
+                          [(. finding :line) (. finding :code)])]
+    (is (= []
+           (icollect [_ finding (ipairs summary)]
+                     (when (= (. finding 1) 17)
+                           finding))))))
 
 
 
 (deftest normalized-exclusion-identities
-
-
-
-
-
-
-
-
-
 )
 
 (defn- forbidden-form-summary
@@ -882,75 +777,11 @@
 
 
 (deftest forbidden-form
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-         (testing "does not flag mutations in a spec file"
-                  (is (= {:count 0 :rules [] :severities []}
-                         (forbidden-form-summary "(var x 1) (set x 2) (while ok (g))"
-                                                 "fnl/spec/app_spec.fnl"
-                                                 nil))))
+  (testing "does not flag mutations in a spec file"
+    (is (= {:count 0 :rules [] :severities []}
+           (forbidden-form-summary "(var x 1) (set x 2) (while ok (g))"
+                                   "fnl/spec/app_spec.fnl"
+                                   nil))))
 
 
 
@@ -1022,37 +853,8 @@
 
 
 (deftest file-size
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-         (testing "does not report a spec file"
-                  (is (= 0 (length (file-size-findings (repeated-code 4) "fnl/spec/app_spec.fnl" {} 3 nil)))))
+  (testing "does not report a spec file"
+    (is (= 0 (length (file-size-findings (repeated-code 4) "fnl/spec/app_spec.fnl" {} 3 nil)))))
 
 
 
@@ -1085,16 +887,8 @@
 )
 
 (deftest forbidden-form-exclusions
-
-
-
-
 )
 (deftest forbidden-form-nested-exclusion
-
-
-
-
 )
 
 (defn- findings-for-named-rule
@@ -1163,253 +957,136 @@
 
 
 (deftest configurable-rule-options
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-         (testing "module-import accepts configured macro names and module"
-                  (is (= 0
-                         (length (option-findings "(import-macros {: check : verify} :my.spec.macros)"
-                                                  "fnl/spec/app_spec.fnl"
-                                                  "module-import"
-                                                  {:module "my.spec.macros" :forms ["check" "verify"]})))))
-
-
-
-
-         (testing "forbidden-form accepts a configured module form"
-                  (is (= 0
-                         (length (option-findings "(module app)"
-                                                  "fnl/spec/app_spec.fnl"
-                                                  "forbidden-form"
-                                                  {:module "custom-module"})))))
-
-
-
-
-         (testing "module-import accepts configured forbidden modules"
-                  (is (= 1
-                         (length (option-findings "(require :custom.test)"
-                                                  "fnl/spec/app_spec.fnl"
-                                                  "module-import"
-                                                  {:mode "forbid" :modules ["custom.test"] :exclusions []})))))
-
-
-
-
-
-         (testing "form-child-count accepts configured testing and assertion forms"
-                  (is (= 0
-                         (length (option-findings "(checking \"one\" (assertion true))"
-                                                  "fnl/spec/app_spec.fnl"
-                                                  "form-child-count"
-                                                  {:children ["assertion"] :max-count 1})))))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-         (testing "applies-to all makes forbidden-form inspect spec files"
-                  (is (= 1
-                         (length (option-findings "(var x 1)"
-                                                  "fnl/spec/app_spec.fnl"
-                                                  "forbidden-form"
-                                                  {:applies-to :all})))))
-
-
-
-
-         (testing "forbidden-form accepts configured mutation forms"
-                  (is (= 1
-                         (length (option-findings "(alter x 1)"
-                                                  "fnl/app.fnl"
-                                                  "forbidden-form"
-                                                  {:forms ["alter"]})))))
-
-
-
-
-         (testing "module-import accepts configured module and binding"
-                  (is (= 0
-                         (length (option-findings "(local c (require :my.core))"
-                                                  "fnl/app.fnl"
-                                                  "module-import"
-                                                  {:mode "require" :mode "require" :module "my.core" :binding "c"})))))
-
-
-
-
-
-         (deftest selector-exclusions
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  (testing "module-import accepts configured macro names and module"
+    (is (= 0
+           (length (option-findings "(import-macros {: check : verify} :my.spec.macros)"
+                                    "fnl/spec/app_spec.fnl"
+                                    "module-import"
+                                    {:module "my.spec.macros" :forms ["check" "verify"]})))))
+
+  (testing "forbidden-form accepts a configured module form"
+    (is (= 0
+           (length (option-findings "(module app)"
+                                    "fnl/spec/app_spec.fnl"
+                                    "forbidden-form"
+                                    {:module "custom-module"})))))
+
+  (testing "module-import accepts configured forbidden modules"
+    (is (= 1
+           (length (option-findings "(require :custom.test)"
+                                    "fnl/spec/app_spec.fnl"
+                                    "module-import"
+                                    {:mode "forbid" :modules ["custom.test"] :exclusions []})))))
+
+  (testing "form-child-count accepts configured testing and assertion forms"
+    (is (= 0
+           (length (option-findings "(checking \"one\" (assertion true))"
+                                    "fnl/spec/app_spec.fnl"
+                                    "form-child-count"
+                                    {:children ["assertion"] :max-count 1})))))
+
+  (testing "applies-to all makes forbidden-form inspect spec files"
+    (is (= 1
+           (length (option-findings "(var x 1)"
+                                    "fnl/spec/app_spec.fnl"
+                                    "forbidden-form"
+                                    {:applies-to :all})))))
+
+  (testing "forbidden-form accepts configured mutation forms"
+    (is (= 1
+           (length (option-findings "(alter x 1)"
+                                    "fnl/app.fnl"
+                                    "forbidden-form"
+                                    {:forms ["alter"]})))))
+
+  (testing "module-import accepts configured module and binding"
+    (is (= 0
+           (length (option-findings "(local c (require :my.core))"
+                                    "fnl/app.fnl"
+                                    "module-import"
+                                    {:mode "require" :mode "require" :module "my.core" :binding "c"})))))
+
+
+
+
+
+  (deftest selector-exclusions
     )
 
-         (deftest shipped-bug-regressions
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                  (testing "forbidden-form uses the configured module-form"
-                           (let [namespace-result (option-findings "(namespace foo)"
-                                                                   "fnl/spec/app_spec.fnl"
-                                                                   "forbidden-form"
-                                                                   {:forms ["namespace"]})
-                                 module-result    (option-findings "(module foo)"
-                                                                   "fnl/spec/app_spec.fnl"
-                                                                   "forbidden-form"
-                                                                   {:forms ["namespace"]})]
-                             (is (and (= 1 (length namespace-result))
-                                      (= 0 (length module-result)))))))
+  (deftest shipped-bug-regressions
+    (testing "forbidden-form uses the configured module-form"
+      (let [namespace-result (option-findings "(namespace foo)"
+                                              "fnl/spec/app_spec.fnl"
+                                              "forbidden-form"
+                                              {:forms ["namespace"]})
+            module-result    (option-findings "(module foo)"
+                                              "fnl/spec/app_spec.fnl"
+                                              "forbidden-form"
+                                              {:forms ["namespace"]})]
+        (is (and (= 1 (length namespace-result))
+                 (= 0 (length module-result)))))))
 
 )
 
 (deftest migrated-selector-runtime-contract
+  (testing "moved module selectors preserve exact, order-sensitive matching"
+    (let [result (check-source-exact "(require :plenary.busted)\n(require :luassert)"
+                                     "fnl/spec/app_spec.fnl"
+                                     {:module-import [{:severity   "error"
+                                                       :applies-to {:modules ["plenary.busted"]}
+                                                       :options    {:mode "forbid"}
+                                                       :exclusions []}]})]
+      (is (= ["module-import"]
+             (icollect [_ finding (ipairs result)] (. finding :rule))))))
 
-         (testing "moved module selectors preserve exact, order-sensitive matching"
-                  (let [result (check-source-exact "(require :plenary.busted)\n(require :luassert)"
-                                                   "fnl/spec/app_spec.fnl"
-                                                   {:module-import [{:severity   "error"
-                                                                     :applies-to {:modules ["plenary.busted"]}
-                                                                     :options    {:mode "forbid"}
-                                                                     :exclusions []}]})]
-                    (is (= ["module-import"]
-                           (icollect [_ finding (ipairs result)] (. finding :rule))))))
+  (testing "empty and absent form selectors both mean all forms"
+    (let [empty-result  (check-source-exact "(var x 1)"
+                                            "fnl/app.fnl"
+                                            {:forbidden-form [{:severity   "warning"
+                                                               :applies-to {:forms []}
+                                                               :options    {}
+                                                               :exclusions []}]})
+          absent-result (check-source-exact "(var x 1)"
+                                            "fnl/app.fnl"
+                                            {:forbidden-form [{:severity   "warning"
+                                                               :applies-to {}
+                                                               :options    {}
+                                                               :exclusions []}]})]
+      (is (= (length absent-result) (length empty-result)))))
 
-         (testing "empty and absent form selectors both mean all forms"
-                  (let [empty-result  (check-source-exact "(var x 1)"
-                                                          "fnl/app.fnl"
-                                                          {:forbidden-form [{:severity   "warning"
-                                                                             :applies-to {:forms []}
-                                                                             :options    {}
-                                                                             :exclusions []}]})
-                        absent-result (check-source-exact "(var x 1)"
-                                                          "fnl/app.fnl"
-                                                          {:forbidden-form [{:severity   "warning"
-                                                                             :applies-to {}
-                                                                             :options    {}
-                                                                             :exclusions []}]})]
-                    (is (= (length absent-result) (length empty-result)))))
-
-         (testing "file-level findings retain a nil node with moved file selectors"
-                  (let [result (check-source-exact "(module app)\n(local x 1)"
-                                                   "fnl/app.fnl"
-                                                   {:file-size [{:severity   "warning"
-                                                                 :applies-to {:files ["^fnl/app[.]fnl$"]}
-                                                                 :options    {:max-code-lines 1}
-                                                                 :exclusions []}]})]
-                    (is (and (= 1 (length result))
-                             (= nil (. result 1 :node))))))
+  (testing "file-level findings retain a nil node with moved file selectors"
+    (let [result (check-source-exact "(module app)\n(local x 1)"
+                                     "fnl/app.fnl"
+                                     {:file-size [{:severity   "warning"
+                                                   :applies-to {:files ["^fnl/app[.]fnl$"]}
+                                                   :options    {:max-code-lines 1}
+                                                   :exclusions []}]})]
+      (is (and (= 1 (length result))
+               (= nil (. result 1 :node))))))
 
 )
 
 (deftest removed-layout-rules-runtime
+  (testing "unknown control-layout runtime keys produce no findings"
+    (is (= []
+           (check-source-exact "(defn f [] (if a b c))"
+                               "fnl/app.fnl"
+                               {:control-layout [{:severity   "warning"
+                                                  :applies-to {:forms ["if"]}
+                                                  :options    {}
+                                                  :exclusions []}]}))))
 
-         (testing "unknown control-layout runtime keys produce no findings"
-                  (is (= []
-                         (check-source-exact "(defn f [] (if a b c))"
-                                             "fnl/app.fnl"
-                                             {:control-layout [{:severity   "warning"
-                                                                :applies-to {:forms ["if"]}
-                                                                :options    {}
-                                                                :exclusions []}]}))))
-
-         (testing "unknown multiline-layout runtime keys produce no findings"
-                  (is (= []
-                         (check-source-exact "(let\n  [x 1]\n  x)"
-                                             "fnl/app.fnl"
-                                             {:multiline-layout [{:severity   "warning"
-                                                                  :applies-to {}
-                                                                  :options    {:clauses  ["case" "match" "case-try" "match-try"]
-                                                                               :bindings ["let" "when-let" "if-let" "with-open"]}
-                                                                  :exclusions []}]}))))
+  (testing "unknown multiline-layout runtime keys produce no findings"
+    (is (= []
+           (check-source-exact "(let\n  [x 1]\n  x)"
+                               "fnl/app.fnl"
+                               {:multiline-layout [{:severity   "warning"
+                                                    :applies-to {}
+                                                    :options    {:clauses  ["case" "match" "case-try" "match-try"]
+                                                                 :bindings ["let" "when-let" "if-let" "with-open"]}
+                                                    :exclusions []}]}))))
 
 )
 
 (deftest module-selector-vector-compatibility
-
-
-
 )

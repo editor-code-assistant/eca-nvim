@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/footer-bar_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/footer_bar_spec.fnl
 local function with_cleanup(cleanup, f)
   local ok, result = pcall(f)
   cleanup()

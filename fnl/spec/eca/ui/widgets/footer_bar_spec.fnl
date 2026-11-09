@@ -86,55 +86,52 @@
                      (footer-bar.create 1 2 items))))
 
 (deftest create
+  (testing "get-state returns the initial items"
+    (let [widget (create-scenario [{:value :initial}])]
+      (is (= [{:value :initial}] (widget.get-state)))))
 
-         (testing "get-state returns the initial items"
-                  (let [widget (create-scenario [{:value :initial}])]
-                    (is (= [{:value :initial}] (widget.get-state)))))
-
-         (testing "nil initial items become an empty table"
-                  (let [widget (create-scenario nil)]
-                    (is (= [] (widget.get-state))))))
+  (testing "nil initial items become an empty table"
+    (let [widget (create-scenario nil)]
+      (is (= [] (widget.get-state))))))
 
 (deftest render
+  (testing "returns zero"
+    (let [{: widget} (lualine-scenario [{:value :one}])]
+      (is (= 0 (widget.render)))))
 
-         (testing "returns zero"
-                  (let [{: widget} (lualine-scenario [{:value :one}])]
-                    (is (= 0 (widget.render)))))
+  (testing "passes the items to lualine.setup when lualine is available"
+    (let [{: widget : setup-calls} (lualine-scenario [{:value :one}])]
+      (widget.render)
+      (is (= [[{:value :one}]] setup-calls))))
 
-         (testing "passes the items to lualine.setup when lualine is available"
-                  (let [{: widget : setup-calls} (lualine-scenario [{:value :one}])]
-                    (widget.render)
-                    (is (= [[{:value :one}]] setup-calls))))
+  (testing "renders bar-items with the items when lualine is unavailable"
+    (let [{: widget : render-calls} (native-scenario [{:value :two}])]
+      (capture-set-option widget.render)
+      (is (= [{:items [{:value :two}]}] render-calls))))
 
-         (testing "renders bar-items with the items when lualine is unavailable"
-                  (let [{: widget : render-calls} (native-scenario [{:value :two}])]
-                    (capture-set-option widget.render)
-                    (is (= [{:items [{:value :two}]}] render-calls))))
-
-         (testing "sets the native statusline when lualine is unavailable"
-                  (let [{: widget} (native-scenario [{:value :two}])]
-                    (is (= [:statusline :rendered {}] (capture-set-option widget.render))))))
+  (testing "sets the native statusline when lualine is unavailable"
+    (let [{: widget} (native-scenario [{:value :two}])]
+      (is (= [:statusline :rendered {}] (capture-set-option widget.render))))))
 
 (deftest update
+  (testing "before render does not apply"
+    (let [{: widget : setup-calls} (lualine-scenario [{:value :initial}])]
+      (widget.update [{:value :updated}])
+      (is (= [] setup-calls))))
 
-         (testing "before render does not apply"
-                  (let [{: widget : setup-calls} (lualine-scenario [{:value :initial}])]
-                    (widget.update [{:value :updated}])
-                    (is (= [] setup-calls))))
+  (testing "before render updates the state"
+    (let [{: widget} (lualine-scenario [{:value :initial}])]
+      (widget.update [{:value :updated}])
+      (is (= [{:value :updated}] (widget.get-state)))))
 
-         (testing "before render updates the state"
-                  (let [{: widget} (lualine-scenario [{:value :initial}])]
-                    (widget.update [{:value :updated}])
-                    (is (= [{:value :updated}] (widget.get-state)))))
+  (testing "after render applies the new items"
+    (let [{: widget : setup-calls} (lualine-scenario [{:value :initial}])]
+      (widget.render)
+      (widget.update [{:value :later}])
+      (is (= [[{:value :initial}] [{:value :later}]] setup-calls))))
 
-         (testing "after render applies the new items"
-                  (let [{: widget : setup-calls} (lualine-scenario [{:value :initial}])]
-                    (widget.render)
-                    (widget.update [{:value :later}])
-                    (is (= [[{:value :initial}] [{:value :later}]] setup-calls))))
-
-         (testing "get-state reflects later updates"
-                  (let [{: widget} (lualine-scenario [{:value :initial}])]
-                    (widget.update [{:value :updated}])
-                    (widget.update [{:value :later}])
-                    (is (= [{:value :later}] (widget.get-state))))))
+  (testing "get-state reflects later updates"
+    (let [{: widget} (lualine-scenario [{:value :initial}])]
+      (widget.update [{:value :updated}])
+      (widget.update [{:value :later}])
+      (is (= [{:value :later}] (widget.get-state))))))

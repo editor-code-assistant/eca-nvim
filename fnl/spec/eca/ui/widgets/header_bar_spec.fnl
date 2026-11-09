@@ -31,25 +31,23 @@
          (f calls result (widget.line-count)))))))
 
 (deftest state
-
-         (testing "exposes initial items and fixed line count"
-                  (let [options []
-                        canvas  {:set-option (fn [_ name value] (table.insert options [name value]))}
-                        widget  (header-bar.create 1 2 [{:value "x"}])]
-                    (is (= {:items [{:value "x"}] :line-count 1}
-                           {:items      (widget.get-state)
-                            :line-count (widget.line-count)})))))
+  (testing "exposes initial items and fixed line count"
+    (let [options []
+          canvas  {:set-option (fn [_ name value] (table.insert options [name value]))}
+          widget  (header-bar.create 1 2 [{:value "x"}])]
+      (is (= {:items [{:value "x"}] :line-count 1}
+             {:items      (widget.get-state)
+              :line-count (widget.line-count)})))))
 
 (deftest render
-
-         (testing "writes the winbar and spacing line and returns one line"
-                  (render-scenario
-                   (fn [calls result line-count]
-                     (is (= {:options    [[:winbar " %#EcaHeaderValue#x" {:win 2}]]
-                             :lines      [[1 0 1 false [""]]]
-                             :result     1
-                             :line-count 1}
-                            {:options    (. calls :options)
-                             :lines      (. calls :lines)
-                             :result     result
-                             :line-count line-count}))))))
+  (testing "writes the winbar and spacing line and returns one line"
+    (render-scenario
+     (fn [calls result line-count]
+       (is (= {:options    [[:winbar " %#EcaHeaderValue#x" {:win 2}]]
+               :lines      [[1 0 1 false [""]]]
+               :result     1
+               :line-count 1}
+              {:options    (. calls :options)
+               :lines      (. calls :lines)
+               :result     result
+               :line-count line-count}))))))

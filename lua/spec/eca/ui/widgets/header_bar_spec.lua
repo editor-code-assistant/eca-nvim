@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/header-bar_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/header_bar_spec.fnl
 local header_bar = require("eca.ui.widgets.header-bar")
 local function with_cleanup(cleanup, f)
   local ok, result = pcall(f)

@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/components/context-item_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/components/context_item_spec.fnl
 local context_item = require("eca.ui.components.context-item")
 local function _1_()
   local function _2_()

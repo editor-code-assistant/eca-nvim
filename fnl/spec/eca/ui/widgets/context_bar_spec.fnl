@@ -38,22 +38,20 @@
          (f calls))))))
 
 (deftest state
-
-         (testing "deduplicates and clears context items"
-                  (let [widget (context-bar.create 1)]
-                    (widget.add {:text "@file" :hl-group :EcaContextFile})
-                    (widget.add {:text "@file" :hl-group :EcaContextFile})
-                    (widget.clear)
-                    (is (= 0 (length (. (widget.get-state) :items)))))))
+  (testing "deduplicates and clears context items"
+    (let [widget (context-bar.create 1)]
+      (widget.add {:text "@file" :hl-group :EcaContextFile})
+      (widget.add {:text "@file" :hl-group :EcaContextFile})
+      (widget.clear)
+      (is (= 0 (length (. (widget.get-state) :items)))))))
 
 (deftest render
-
-         (testing "writes the context line and highlight through the public renderer"
-                  (render-scenario
-                   (fn [calls]
-                     (is (= {:namespace ["eca-context-bar"]
-                             :lines     [[2 3 4 false ["@file"]]]
-                             :extmarks  [[2 8 3 0 {:end_col 5 :hl_group :EcaContextFile}]]}
-                            {:namespace (. calls :namespace)
-                             :lines     (. calls :lines)
-                             :extmarks  (. calls :extmarks)}))))))
+  (testing "writes the context line and highlight through the public renderer"
+    (render-scenario
+     (fn [calls]
+       (is (= {:namespace ["eca-context-bar"]
+               :lines     [[2 3 4 false ["@file"]]]
+               :extmarks  [[2 8 3 0 {:end_col 5 :hl_group :EcaContextFile}]]}
+              {:namespace (. calls :namespace)
+               :lines     (. calls :lines)
+               :extmarks  (. calls :extmarks)}))))))

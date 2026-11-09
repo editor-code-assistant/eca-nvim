@@ -25,25 +25,17 @@
           (tset result rule "off"))
     result))
 
-
-
 (defn rule-names
   []
   rule-name-list)
-
-
 
 (defn lint-rule-names
   []
   lint-rule-name-list)
 
-
-
 (defn design-rule-names
   []
   design-rule-name-list)
-
-
 
 (defn rule-domain
   [rule]
@@ -52,25 +44,17 @@
     :lint
     :design))
 
-
-
 (defn option-schema
   [rule]
   (options.schema rule))
-
-
 
 (defn required-option-names
   [rule]
   (options.required-names rule))
 
-
-
 (defn applies-to-required-names
   [rule]
   (. required-semantic-applies-to rule))
-
-
 
 (defn rule-scope
   [rule]
@@ -78,15 +62,11 @@
     (and properties
          (. properties :scope))))
 
-
-
 (defn- append-instances
   [result rule instances]
   (each [index instance (ipairs instances)]
         (table.insert result {:rule rule :index index :value instance}))
   result)
-
-
 
 (defn- append-legacy-child-count
   [result lint-rules]
@@ -94,8 +74,6 @@
              (= (. lint-rules "child-count") nil))
         (append-instances result "form-child-count" (. lint-rules "form-child-count")))
   result)
-
-
 
 (defn instances
   [policy]
@@ -113,8 +91,6 @@
     (append-legacy-child-count result lint-rules)
     result))
 
-
-
 (defn- singleton-module-value
   [value]
   (if (= (type value) :string)
@@ -124,15 +100,11 @@
       (. value 1)
       value)))
 
-
-
 (defn- module-set-value
   [value]
   (if (= (type value) :string)
     [value]
     value))
-
-
 
 (defn- semantic-option-value
   [applies name singleton]
@@ -142,8 +114,6 @@
     (if (= name "modules")
       (module-set-value (. applies :modules))
       (. applies :forms))))
-
-
 
 (defn- normalized-options
   [rule instance]
@@ -162,8 +132,6 @@
                     result
                     (core.assoc result name value))))))
 
-
-
 (defn evaluator-policy
   [policy rule instance]
   (let [base-result  (core.assoc (defaults) rule instance.severity)
@@ -177,8 +145,6 @@
         with-options (core.assoc result :options normalized)]
     (core.assoc with-options :matcher policy.matcher)))
 
-
-
 (defn- matches?
   [matcher pattern value]
   (and pattern
@@ -187,33 +153,23 @@
          (matcher pattern value)
          (>= (vim.fn.match value pattern) 0))))
 
-
-
 (defn- any-match?
   [items matcher value]
   (accumulate [result false _ pattern (ipairs items)]
               (or result (matches? matcher pattern value))))
 
-
-
 (defn- node-form
   [node]
   (ast.list-head node))
-
-
 
 (defn- node-module
   [node]
   node.text)
 
-
-
 (defn- node-matches?
   [items finding matcher value-fn]
   (or (= (length items) 0)
       (and finding.node (any-match? items matcher (value-fn finding.node)))))
-
-
 
 (defn- scope-matches?
   [applies finding matcher]
@@ -222,14 +178,10 @@
        (node-matches? (or applies.forms []) finding matcher node-form)
        (node-matches? (or applies.modules []) finding matcher node-module)))
 
-
-
 (defn- semantic-name?
   [rule name]
   (accumulate [found false _ candidate (ipairs (or (. semantic-applies-to rule) []))]
               (or found (= candidate name))))
-
-
 
 (defn- generic-applies-to
   [rule applies]
@@ -242,31 +194,21 @@
                                       (. applies name)))))
     result))
 
-
-
 (defn instance-applies-to?
   [rule instance finding matcher]
   (scope-matches? (generic-applies-to rule (or instance.applies-to {})) finding matcher))
-
-
 
 (defn rule-options
   [policy rule]
   (and policy policy.options))
 
-
-
 (defn finding
   [path form severity rule message node]
   {:kind "finding" :path path :line form.line :col form.col :end-line form.end-line :end-col form.end-col :severity severity :rule rule :form form.form :message message :node node})
 
-
-
 (defn rule-severity
   [policy rule]
   (or (and policy (. policy rule)) "off"))
-
-
 
 (defn enabled?
   [policy rule]

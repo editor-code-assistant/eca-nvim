@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/steering-area_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/steering_area_spec.fnl
 local steering_area = require("eca.ui.widgets.steering-area")
 local function with_cleanup(cleanup, f)
   local ok, result = pcall(f)

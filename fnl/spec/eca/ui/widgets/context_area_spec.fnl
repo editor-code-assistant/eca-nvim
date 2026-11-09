@@ -43,27 +43,25 @@
            (f calls result (widget.get-end-line))))))))
 
 (deftest state
-
-         (testing "tracks unique context items"
-                  (let [widget (context-area.create 1)]
-                    (widget.add {:text "@file" :hl-group :EcaContextFile})
-                    (widget.remove "@file")
-                    (is (= false (widget.has-items?))))))
+  (testing "tracks unique context items"
+    (let [widget (context-area.create 1)]
+      (widget.add {:text "@file" :hl-group :EcaContextFile})
+      (widget.remove "@file")
+      (is (= false (widget.has-items?))))))
 
 (deftest render
-
-         (testing "writes the context line and highlight and returns its line count"
-                  (render-scenario
-                   (fn [calls result end-line]
-                     (is (= {:namespace ["eca-context-area"]
-                             :clear     [[3 7 0 -1]]
-                             :lines     [[3 4 4 false ["@file"]]]
-                             :extmarks  [[3 7 4 0 {:end_col 5 :hl_group :EcaContextFile}]]
-                             :result    1
-                             :end-line  5}
-                            {:namespace (. calls :namespace)
-                             :clear     (. calls :clear)
-                             :lines     (. calls :lines)
-                             :extmarks  (. calls :extmarks)
-                             :result    result
-                             :end-line  end-line}))))))
+  (testing "writes the context line and highlight and returns its line count"
+    (render-scenario
+     (fn [calls result end-line]
+       (is (= {:namespace ["eca-context-area"]
+               :clear     [[3 7 0 -1]]
+               :lines     [[3 4 4 false ["@file"]]]
+               :extmarks  [[3 7 4 0 {:end_col 5 :hl_group :EcaContextFile}]]
+               :result    1
+               :end-line  5}
+              {:namespace (. calls :namespace)
+               :clear     (. calls :clear)
+               :lines     (. calls :lines)
+               :extmarks  (. calls :extmarks)
+               :result    result
+               :end-line  end-line}))))))

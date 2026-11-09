@@ -141,92 +141,89 @@
          :has-message (. result :has-message)}))))
 
 (deftest round-trip
-
-         (testing "all Fennel sources round-trip through parsing and tokenization"
-                  (is (= [] (round-trip-scenario)))))
+  (testing "all Fennel sources round-trip through parsing and tokenization"
+    (is (= [] (round-trip-scenario)))))
 
 (deftest structure
+  (testing "a string containing delimiters, semicolon, and an escaped quote is one string token"
+    (is (= [:string] (kinds-for "\"a) ; \\\" b\""))))
 
-         (testing "a string containing delimiters, semicolon, and an escaped quote is one string token"
-                  (is (= [:string] (kinds-for "\"a) ; \\\" b\""))))
-
-         (testing "a multi-line string is one string token"
-                  (is (= [:string]
-                         (kinds-for "\"line one
+  (testing "a multi-line string is one string token"
+    (is (= [:string]
+           (kinds-for "\"line one
 line two\""))))
 
-         (testing "a parenthesis in a comment does not open a list"
-                  (is (= [:comment :newline :open :symbol :close]
-                         (kinds-for ";; comment (\n(a)"))))
+  (testing "a parenthesis in a comment does not open a list"
+    (is (= [:comment :newline :open :symbol :close]
+           (kinds-for ";; comment (\n(a)"))))
 
-         (testing "hash prefix is followed by a list"
-                  (is (= [:prefix :open :symbol :whitespace :symbol :whitespace :symbol :close]
-                         (kinds-for "#(+ $1 $2)"))))
+  (testing "hash prefix is followed by a list"
+    (is (= [:prefix :open :symbol :whitespace :symbol :whitespace :symbol :close]
+           (kinds-for "#(+ $1 $2)"))))
 
-         (testing "quote and unquote prefixes are preserved"
-                  (is (= [:prefix :open :symbol :whitespace :prefix :symbol :close]
-                         (kinds-for "`(foo ,bar)"))))
+  (testing "quote and unquote prefixes are preserved"
+    (is (= [:prefix :open :symbol :whitespace :prefix :symbol :close]
+           (kinds-for "`(foo ,bar)"))))
 
-         (testing "keywords, punctuation symbols, and numbers have their respective kinds"
-                  (is (= [:symbol
-                          :whitespace
-                          :symbol
-                          :whitespace
-                          :symbol
-                          :whitespace
-                          :symbol
-                          :whitespace
-                          :symbol
-                          :whitespace
-                          :number
-                          :whitespace
-                          :number
-                          :whitespace
-                          :number
-                          :whitespace
-                          :number]
-                         (kinds-for ":kw a.b:c ?. & ... 0x1F 1e3 1_000 -2.5"))))
+  (testing "keywords, punctuation symbols, and numbers have their respective kinds"
+    (is (= [:symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :symbol
+            :whitespace
+            :number
+            :whitespace
+            :number
+            :whitespace
+            :number
+            :whitespace
+            :number]
+           (kinds-for ":kw a.b:c ?. & ... 0x1F 1e3 1_000 -2.5"))))
 
-         (testing "a comment before a close delimiter is a child of that list"
-                  (is (= :comment (comment-child-kind))))
+  (testing "a comment before a close delimiter is a child of that list"
+    (is (= :comment (comment-child-kind))))
 
-         (testing "a leading shebang line is one comment token"
-                  (is (= [:comment :newline :symbol]
-                         (kinds-for "#!/usr/bin/env fennel\nfoo"))))
+  (testing "a leading shebang line is one comment token"
+    (is (= [:comment :newline :symbol]
+           (kinds-for "#!/usr/bin/env fennel\nfoo"))))
 
-         (testing "nested delimiters produce list, sequence, and table nodes"
-                  (is (= [:list :sequence :table] (nested-kinds)))))
+  (testing "nested delimiters produce list, sequence, and table nodes"
+    (is (= [:list :sequence :table] (nested-kinds)))))
 
 (deftest fail-closed
+  (testing "an extra close delimiter returns an error at line 2 column 5"
+    (is (= {:value? false :has-message true :line 2 :col 5}
+           (fail-closed-summary "(ok)\n    )" true))))
 
-         (testing "an extra close delimiter returns an error at line 2 column 5"
-                  (is (= {:value? false :has-message true :line 2 :col 5}
-                         (fail-closed-summary "(ok)\n    )" true))))
+  (testing "a missing close delimiter returns an error"
+    (is (= {:value? false :has-message true}
+           (fail-closed-summary "(missing"))))
 
-         (testing "a missing close delimiter returns an error"
-                  (is (= {:value? false :has-message true}
-                         (fail-closed-summary "(missing"))))
+  (testing "an unterminated string returns an error"
+    (is (= {:value? false :has-message true}
+           (fail-closed-summary "\"unterminated"))))
 
-         (testing "an unterminated string returns an error"
-                  (is (= {:value? false :has-message true}
-                         (fail-closed-summary "\"unterminated"))))
+  (testing "at-sign reader syntax returns an error"
+    (is (= {:value? false :has-message true}
+           (fail-closed-summary "@foo"))))
 
-         (testing "at-sign reader syntax returns an error"
-                  (is (= {:value? false :has-message true}
-                         (fail-closed-summary "@foo"))))
+  (testing "comma-at reader syntax returns an error"
+    (is (= {:value? false :has-message true}
+           (fail-closed-summary ",@foo"))))
 
-         (testing "comma-at reader syntax returns an error"
-                  (is (= {:value? false :has-message true}
-                         (fail-closed-summary ",@foo"))))
+  (testing "a tab outside strings and comments returns an error"
+    (is (= {:value? false :has-message true}
+           (fail-closed-summary "foo\tbar"))))
 
-         (testing "a tab outside strings and comments returns an error"
-                  (is (= {:value? false :has-message true}
-                         (fail-closed-summary "foo\tbar"))))
+  (testing "carriage-return line endings return an error"
+    (is (= {:value? false :has-message true}
+           (fail-closed-summary "foo\r\nbar"))))
 
-         (testing "carriage-return line endings return an error"
-                  (is (= {:value? false :has-message true}
-                         (fail-closed-summary "foo\r\nbar"))))
-
-         (testing "an escaped carriage return inside a string returns an error"
-                  (is (= {:value? false :has-message true}
-                         (fail-closed-summary "\"\\\r\"")))))
+  (testing "an escaped carriage return inside a string returns an error"
+    (is (= {:value? false :has-message true}
+           (fail-closed-summary "\"\\\r\"")))))

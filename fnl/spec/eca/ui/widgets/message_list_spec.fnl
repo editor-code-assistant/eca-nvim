@@ -75,6 +75,5 @@
             :defer-calls  defer-calls}))))))
 
 (deftest append-message
-
-         (testing "finishes an active stream before starting the next stream"
-                  (is (= true (. (append-after-streaming-scenario) :ok)))))
+  (testing "finishes an active stream before starting the next stream"
+    (is (= true (. (append-after-streaming-scenario) :ok)))))

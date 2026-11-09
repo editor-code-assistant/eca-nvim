@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/widgets/status-bar_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/widgets/status_bar_spec.fnl
 local status_bar = require("eca.ui.widgets.status-bar")
 local function _1_()
   local function _2_()

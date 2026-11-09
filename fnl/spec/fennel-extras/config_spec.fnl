@@ -244,252 +244,288 @@
                                                            (= :string (type (. err :message))))})))}))))
 
 (deftest parse-string
+  (testing "parses a realistic data-only configuration and converts keywords to strings"
+    (is (= {:indents   {:deftest [["block" 1]]
+                        :testing [["block" 1]]}
+            :format-as {:my-let "let"}
+            :paths     ["fnl"]
+            :exclude   ["fnl/eca/nfnl"]}
+           (parse-value "{:indents {\"deftest\" [[:block 1]] \"testing\" [[:block 1]]} :format-as {\"my-let\" \"let\"} :paths [\"fnl\"] :exclude [\"fnl/eca/nfnl\"]}"))))
 
-         (testing "parses a realistic data-only configuration and converts keywords to strings"
-                  (is (= {:indents   {:deftest [["block" 1]]
-                                      :testing [["block" 1]]}
-                          :format-as {:my-let "let"}
-                          :paths     ["fnl"]
-                          :exclude   ["fnl/eca/nfnl"]}
-                         (parse-value "{:indents {\"deftest\" [[:block 1]] \"testing\" [[:block 1]]} :format-as {\"my-let\" \"let\"} :paths [\"fnl\"] :exclude [\"fnl/eca/nfnl\"]}"))))
-
-         (testing "parses escapes, numbers, booleans, nil, and ignores comments"
-                  (is (= {:text     "quote \" slash \\ line\n tab\t"
-                          :one      1
-                          :decimal  2.5
-                          :negative -3
-                          :yes      true
-                          :no       false
-                          :nothing  nil}
-                         (parse-value "{:text \"quote \\\" slash \\\\ line\\n tab\\t\" ; comment\n :one 1 :decimal 2.5 :negative -3 :yes true :no false :nothing nil}")))))
+  (testing "parses escapes, numbers, booleans, nil, and ignores comments"
+    (is (= {:text     "quote \" slash \\ line\n tab\t"
+            :one      1
+            :decimal  2.5
+            :negative -3
+            :yes      true
+            :no       false
+            :nothing  nil}
+           (parse-value "{:text \"quote \\\" slash \\\\ line\\n tab\\t\" ; comment\n :one 1 :decimal 2.5 :negative -3 :yes true :no false :nothing nil}")))))
 
 (deftest rejection
+  (testing "rejects a list and reports line 1 column 5"
+    (is (= {:value? false :has-message true :line 1 :col 5}
+           (parse-error-summary "{:a (require :x)}" true))))
 
-         (testing "rejects a list and reports line 1 column 5"
-                  (is (= {:value? false :has-message true :line 1 :col 5}
-                         (parse-error-summary "{:a (require :x)}" true))))
+  (testing "rejects a bare symbol"
+    (is (= {:value? false :has-message true}
+           (parse-error-summary "{:a foo}" false))))
 
-         (testing "rejects a bare symbol"
-                  (is (= {:value? false :has-message true}
-                         (parse-error-summary "{:a foo}" false))))
+  (testing "rejects hash reader prefixes"
+    (is (= {:value? false :has-message true}
+           (parse-error-summary "{:a #(x)}" false))))
 
-         (testing "rejects hash reader prefixes"
-                  (is (= {:value? false :has-message true}
-                         (parse-error-summary "{:a #(x)}" false))))
+  (testing "rejects more than one top-level form"
+    (is (= {:value? false :has-message true}
+           (parse-error-summary "{} {}" false))))
 
-         (testing "rejects more than one top-level form"
-                  (is (= {:value? false :has-message true}
-                         (parse-error-summary "{} {}" false))))
+  (testing "rejects an empty file"
+    (is (= {:value? false :has-message true}
+           (parse-error-summary "" false))))
 
-         (testing "rejects an empty file"
-                  (is (= {:value? false :has-message true}
-                         (parse-error-summary "" false))))
+  (testing "rejects a non-table top-level form"
+    (is (= {:value? false :has-message true}
+           (parse-error-summary "[1]" false))))
 
-         (testing "rejects a non-table top-level form"
-                  (is (= {:value? false :has-message true}
-                         (parse-error-summary "[1]" false))))
+  (testing "rejects unbalanced input"
+    (is (= {:value? false :has-message true}
+           (parse-error-summary "{:a 1" false))))
 
-         (testing "rejects unbalanced input"
-                  (is (= {:value? false :has-message true}
-                         (parse-error-summary "{:a 1" false))))
+  (testing "validate rejects an unknown top-level key"
+    (is (= {:value? false :has-message true}
+           (validate-summary {:workspace {:colour 1}
+                              :format    {}
+                              :lint      {:rules {}}}))))
 
-         (testing "validate rejects an unknown top-level key"
-                  (is (= {:value? false :has-message true}
-                         (validate-summary {:workspace {:colour 1}
-                                            :format    {}
-                                            :lint      {:rules {}}}))))
-
-         (testing "validate rejects paths that are not a sequence"
-                  (is (= {:value? false :has-message true}
-                         (validate-summary {:paths "fnl"})))))
+  (testing "validate rejects paths that are not a sequence"
+    (is (= {:value? false :has-message true}
+           (validate-summary {:paths "fnl"})))))
 
 (deftest find-load
+  (testing "find returns a config in the start directory"
+    (let [result (find-load-scenario)]
+      (is (= (. result :root-config) (. result :start)))))
 
-         (testing "find returns a config in the start directory"
-                  (let [result (find-load-scenario)]
-                    (is (= (. result :root-config) (. result :start)))))
+  (testing "find returns the nearest config in a parent directory"
+    (let [result (find-load-scenario)]
+      (is (= (. result :config-path) (. result :parent)))))
 
-         (testing "find returns the nearest config in a parent directory"
-                  (let [result (find-load-scenario)]
-                    (is (= (. result :config-path) (. result :parent)))))
+  (testing "find stops at a .git directory"
+    (is (nil? (. (find-load-scenario) :stopped))))
 
-         (testing "find stops at a .git directory"
-                  (is (nil? (. (find-load-scenario) :stopped))))
+  (testing "load returns the validated table from a file"
+    (is (= {:workspace {:paths ["fnl"]}
+            :format    {:indent-width 2 :indents {} :parser false}
+            :lint      {:rules {}}}
+           (. (find-load-scenario) :loaded))))
 
-         (testing "load returns the validated table from a file"
-                  (is (= {:workspace {:paths ["fnl"]}
-                          :format    {:indent-width 2 :indents {} :parser false}
-                          :lint      {:rules {}}}
-                         (. (find-load-scenario) :loaded))))
-
-         (testing "load returns a structured error for a missing path"
-                  (is (= {:value? false :has-message true}
-                         (. (find-load-scenario) :missing)))))
+  (testing "load returns a structured error for a missing path"
+    (is (= {:value? false :has-message true}
+           (. (find-load-scenario) :missing)))))
 
 (deftest config-new-configuration
+  (testing "accepts an indent width of four"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:indent-width 4}))))
 
-         (testing "accepts an indent width of four"
-                  (is (= {:value? true :has-message false}
-                         (validate-summary {:indent-width 4}))))
+  (testing "rejects zero indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width 0}")]
+      (is (= "indent-width must be a positive integer" message))))
 
-         (testing "rejects zero indent width with a specific validation message"
-                  (let [message (validation-error-message "{:indent-width 0}")]
-                    (is (= "indent-width must be a positive integer" message))))
+  (testing "rejects negative indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width -1}")]
+      (is (= "indent-width must be a positive integer" message))))
 
-         (testing "rejects negative indent width with a specific validation message"
-                  (let [message (validation-error-message "{:indent-width -1}")]
-                    (is (= "indent-width must be a positive integer" message))))
+  (testing "rejects non-integer indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width 2.5}")]
+      (is (= "indent-width must be a positive integer" message))))
 
-         (testing "rejects non-integer indent width with a specific validation message"
-                  (let [message (validation-error-message "{:indent-width 2.5}")]
-                    (is (= "indent-width must be a positive integer" message))))
-
-         (testing "rejects string indent width with a specific validation message"
-                  (let [message (validation-error-message "{:indent-width \"4\"}")]
-                    (is (= "indent-width must be a positive integer" message))))
+  (testing "rejects string indent width with a specific validation message"
+    (let [message (validation-error-message "{:indent-width \"4\"}")]
+      (is (= "indent-width must be a positive integer" message))))
 )
 
 (deftest exact-formatter-configuration
+  (testing "rejects the removed builtins key"
+    (is (= "unknown configuration key: builtins"
+           (validation-error-message-raw "{:builtins false}"))))
 
-         (testing "rejects the removed builtins key"
-                  (is (= "unknown configuration key: builtins"
-                         (validation-error-message-raw "{:builtins false}"))))
+  (testing "rejects the removed prefix-fallbacks key"
+    (is (= "unknown configuration key: prefix-fallbacks"
+           (validation-error-message-raw "{:prefix-fallbacks false}"))))
 
-         (testing "rejects the removed prefix-fallbacks key"
-                  (is (= "unknown configuration key: prefix-fallbacks"
-                         (validation-error-message-raw "{:prefix-fallbacks false}"))))
+  (testing "rejects the removed indent-patterns key"
+    (is (= "unknown configuration key: indent-patterns"
+           (validation-error-message-raw "{:indent-patterns []}"))))
 
-         (testing "rejects the removed indent-patterns key"
-                  (is (= "unknown configuration key: indent-patterns"
-                         (validation-error-message-raw "{:indent-patterns []}"))))
-
-         (testing "accepts exact indents and preserves format-as aliases"
-                  (is (= nil
-                         (validation-error-message-raw
-                          "{:indent-width 2 :parser false :indents {\"if\" [[:block 1]]} :format-as {\"my-if\" \"if\"}}")))))
+  (testing "accepts exact indents and preserves format-as aliases"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {\"if\" [[:block 1]]} :format-as {\"my-if\" \"if\"}}")))))
 
 (deftest file-scoped-newline-configuration
+  (testing "accepts file and form selectors on newline rules"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^fennel-extras/\"] :forms [\"fn\" \"defn\" \"defn-\"]} :options {:after-header 1}}]}"))))
 
-         (testing "accepts file and form selectors on newline rules"
-                  (is (= nil
-                         (validation-error-message-raw
-                          "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^fennel-extras/\"] :forms [\"fn\" \"defn\" \"defn-\"]} :options {:after-header 1}}]}"))))
+  (testing "accepts zero after-header and break-after-n-args pairs"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:after-header 0 :break-after-n-args [[1 1] [2 1]]}}]}"))))
 
-         (testing "accepts zero after-header and break-after-args pairs"
-                  (is (= nil
-                         (validation-error-message-raw
-                          "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:after-header 0 :break-after-args [[1 1] [2 1]]}}]}"))))
+  (testing "accepts non-negative between-same-level counts"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level 0}}]}"))))
 
-         (testing "rejects a non-list break-after-args value"
-                  (is (not= nil
-                            (validation-error-message-raw
-                             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-args true}}]}"))))
+  (testing "accepts positive between-same-level counts"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level 2}}]}"))))
 
-         (testing "rejects a break-after-args entry that is not a pair of integers"
-                  (is (not= nil
-                            (validation-error-message-raw
-                             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-args [[1 \"1\"]]}}]}"))))
+  (testing "rejects a negative between-same-level count"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level -1}}]}"))))
+
+  (testing "rejects a non-integer between-same-level count"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level 1.5}}]}"))))
+
+  (testing "rejects a string between-same-level count"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level \"1\"}}]}"))))
+
+  (testing "rejects a non-list break-after-n-args value"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-n-args true}}]}"))))
+
+  (testing "rejects a break-after-n-args entry that is not a pair of integers"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-n-args [[1 \"1\"]]}}]}"))))
+
+  (testing "accepts a positive scalar break-after-args value"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^spec/\"] :forms [\"=\"]} :options {:break-after-args 1}}]}"))))
+
+  (testing "rejects zero break-after-args"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args 0}}]}"))))
+
+  (testing "rejects a non-integer break-after-args value"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args 1.5}}]}"))))
+
+  (testing "rejects a list under scalar break-after-args"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args [[1 1]]}}]}"))))
 )
 
 (deftest extensions
+  (testing "accepts a non-empty list of dotted extension strings"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:extensions [".fnl" ".fnlm"]}))))
 
-         (testing "accepts a non-empty list of dotted extension strings"
-                  (is (= {:value? true :has-message false}
-                         (validate-summary {:extensions [".fnl" ".fnlm"]}))))
+  (testing "rejects an empty extensions list with the exact validation message"
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions []}"))))
 
-         (testing "rejects an empty extensions list with the exact validation message"
-                  (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-                         (validation-error-message "{:extensions []}"))))
+  (testing "rejects non-string extensions with the exact validation message"
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions [1]}"))))
 
-         (testing "rejects non-string extensions with the exact validation message"
-                  (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-                         (validation-error-message "{:extensions [1]}"))))
+  (testing "rejects extensions without a leading dot with the exact validation message"
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions [\"fnl\"]}"))))
 
-         (testing "rejects extensions without a leading dot with the exact validation message"
-                  (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-                         (validation-error-message "{:extensions [\"fnl\"]}"))))
-
-         (testing "rejects a non-list extensions value with the exact validation message"
-                  (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-                         (validation-error-message "{:extensions \".fnl\"}")))))
+  (testing "rejects a non-list extensions value with the exact validation message"
+    (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
+           (validation-error-message "{:extensions \".fnl\"}")))))
 
 (deftest new-keys
+  (testing "does not require paths during general configuration validation"
+    (is (= nil
+           (validation-error-message-raw "{:indent-width 2 :indents {} :parser false :extensions [\".fnl\"]}"))))
 
-         (testing "does not require paths during general configuration validation"
-                  (is (= nil
-                         (validation-error-message-raw "{:indent-width 2 :indents {} :parser false :extensions [\".fnl\"]}"))))
+  (testing "rejects a non-boolean dotfiles value with the exact validation message"
+    (is (= "workspace.dotfiles must be a boolean"
+           (validation-error-message "{:dotfiles 1}"))))
 
-         (testing "rejects a non-boolean dotfiles value with the exact validation message"
-                  (is (= "workspace.dotfiles must be a boolean"
-                         (validation-error-message "{:dotfiles 1}"))))
+  (testing "rejects a non-boolean symlinks value with the exact validation message"
+    (is (= "workspace.symlinks must be a boolean"
+           (validation-error-message "{:symlinks 1}"))))
 
-         (testing "rejects a non-boolean symlinks value with the exact validation message"
-                  (is (= "workspace.symlinks must be a boolean"
-                         (validation-error-message "{:symlinks 1}"))))
+  (testing "rejects a non-string parser value with the exact validation message"
+    (is (= "parser must be a string or false"
+           (validation-error-message "{:parser 1}"))))
 
-         (testing "rejects a non-string parser value with the exact validation message"
-                  (is (= "parser must be a string or false"
-                         (validation-error-message "{:parser 1}"))))
-
-         (testing "rejects the removed align-bindings key"
-                  (is (= "unknown configuration key: align-bindings"
-                         (validation-error-message-raw "{:align-bindings true}")))))
+  (testing "rejects the removed align-bindings key"
+    (is (= "unknown configuration key: align-bindings"
+           (validation-error-message-raw "{:align-bindings true}")))))
 
 (deftest alignment-configuration
+  (testing "accepts an alignment table"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:alignment {:maps true}}))))
 
-         (testing "accepts an alignment table"
-                  (is (= {:value? true :has-message false}
-                         (validate-summary {:alignment {:maps true}}))))
+  (testing "rejects a boolean alignment value with the exact validation message"
+    (is (= "alignment must be a table"
+           (validation-error-message "{:alignment true}"))))
 
-         (testing "rejects a boolean alignment value with the exact validation message"
-                  (is (= "alignment must be a table"
-                         (validation-error-message "{:alignment true}"))))
+  (testing "rejects a string alignment value with the exact validation message"
+    (is (= "alignment must be a table"
+           (validation-error-message "{:alignment \"yes\"}"))))
 
-         (testing "rejects a string alignment value with the exact validation message"
-                  (is (= "alignment must be a table"
-                         (validation-error-message "{:alignment \"yes\"}"))))
+  (testing "rejects an unknown alignment key with the key in the error"
+    (is (= "unknown alignment key: nope"
+           (validation-error-message "{:alignment {:nope true}}"))))
 
-         (testing "rejects an unknown alignment key with the key in the error"
-                  (is (= "unknown alignment key: nope"
-                         (validation-error-message "{:alignment {:nope true}}"))))
+  (testing "rejects a non-boolean alignment toggle with the exact validation message"
+    (is (= "alignment key maps must be a boolean"
+           (validation-error-message "{:alignment {:maps 1}}"))))
 
-         (testing "rejects a non-boolean alignment toggle with the exact validation message"
-                  (is (= "alignment key maps must be a boolean"
-                         (validation-error-message "{:alignment {:maps 1}}"))))
+  (testing "rejects a non-list binding-forms value with the exact validation message"
+    (is (= "alignment key binding-forms must be a list of strings"
+           (validation-error-message "{:alignment {:binding-forms \"let\"}}"))))
 
-         (testing "rejects a non-list binding-forms value with the exact validation message"
-                  (is (= "alignment key binding-forms must be a list of strings"
-                         (validation-error-message "{:alignment {:binding-forms \"let\"}}"))))
+  (testing "rejects a map binding-forms value with the exact validation message"
+    (is (= "alignment key binding-forms must be a list of strings"
+           (validation-error-message "{:alignment {:binding-forms {:foo \"bar\"}}}"))))
 
-         (testing "rejects a map binding-forms value with the exact validation message"
-                  (is (= "alignment key binding-forms must be a list of strings"
-                         (validation-error-message "{:alignment {:binding-forms {:foo \"bar\"}}}"))))
+  (testing "rejects a non-string clause form with the exact validation message"
+    (is (= "alignment key clause-forms must be a list of strings"
+           (validation-error-message "{:alignment {:clause-forms [1]}}"))))
 
-         (testing "rejects a non-string clause form with the exact validation message"
-                  (is (= "alignment key clause-forms must be a list of strings"
-                         (validation-error-message "{:alignment {:clause-forms [1]}}"))))
+  (testing "rejects a map clause-forms value with the exact validation message"
+    (is (= "alignment key clause-forms must be a list of strings"
+           (validation-error-message "{:alignment {:clause-forms {:foo \"bar\"}}}"))))
 
-         (testing "rejects a map clause-forms value with the exact validation message"
-                  (is (= "alignment key clause-forms must be a list of strings"
-                         (validation-error-message "{:alignment {:clause-forms {:foo \"bar\"}}}"))))
+  (testing "missing alignment switches remain off"
+    (let [config   (load-config)
+          settings (require :fennel-extras.indent.settings)
+          value    {:alignment {:binding-forms ["let"]
+                                :clause-forms  ["case"]}}]
+      (is (= {:bindings         false
+              :maps             false
+              :clauses          false
+              :split-bindings   false
+              :collapse-padding false
+              :binding-forms    ["let"]
+              :clause-forms     ["case"]}
+             (settings.resolve (config.validate value))))))
 
-         (testing "missing alignment switches remain off"
-                  (let [config   (load-config)
-                        settings (require :fennel-extras.indent.settings)
-                        value    {:alignment {:binding-forms ["let"]
-                                              :clause-forms  ["case"]}}]
-                    (is (= {:bindings         false
-                            :maps             false
-                            :clauses          false
-                            :split-bindings   false
-                            :collapse-padding false
-                            :binding-forms    ["let"]
-                            :clause-forms     ["case"]}
-                           (settings.resolve (config.validate value))))))
-
-         (testing "alignment tables require binding forms when binding alignment is enabled"
-                  (is (= "missing alignment.binding-forms"
-                         (validation-error-message "{:alignment {:bindings true}}")))))
+  (testing "alignment tables require binding forms when binding alignment is enabled"
+    (is (= "missing alignment.binding-forms"
+           (validation-error-message "{:alignment {:bindings true}}")))))
 
 (defn- formatter-projection
   [config]
@@ -509,64 +545,80 @@
 
 
 (deftest lint-configuration
+  (testing "accepts a canonical lint rule instance"
+    (is (= {:value? true :has-message false}
+           (validate-summary {:lint {                                     :rules      {:forbidden-form
+                                                                                       [{:severity   :warning
+                                                                                         :applies-to {:files   ["^spec/"]
+                                                                                                      :forms   ["require"]
+                                                                                                      :modules "plenary.busted"}
+                                                                                         :options    {}
+                                                                                         :exclusions []}]}}}))))
 
-         (testing "accepts a canonical lint rule instance"
-                  (is (= {:value? true :has-message false}
-                         (validate-summary {:lint {                                     :rules      {:forbidden-form
-                                                                                                     [{:severity   :warning
-                                                                                                       :applies-to {:files   ["^spec/"]
-                                                                                                                    :forms   ["require"]
-                                                                                                                    :modules "plenary.busted"}
-                                                                                                       :options    {}
-                                                                                                       :exclusions []}]}}}))))
+  (testing "rejects a direct rule map"
+    (is (= {:value? false :has-message true}
+           (validate-summary {:lint {                                     :rules      {:forbidden-form
+                                                                                       {:severity   :warning
+                                                                                        :applies-to {:files ["^spec/"]
+                                                                                                     :forms ["require"]}
+                                                                                        :options    {:module "plenary.busted"}
+                                                                                        :exclusions []}}}}))))
 
-         (testing "rejects a direct rule map"
-                  (is (= {:value? false :has-message true}
-                         (validate-summary {:lint {                                     :rules      {:forbidden-form
-                                                                                                     {:severity   :warning
-                                                                                                      :applies-to {:files ["^spec/"]
-                                                                                                                   :forms ["require"]}
-                                                                                                      :options    {:module "plenary.busted"}
-                                                                                                      :exclusions []}}}}))))
+  (testing "reports option errors deterministically"
+    (let [first          "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true :module 1} :exclusions []}]}}}"
+          second         "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}"
+          first-message  (validation-error-message first)
+          second-message (validation-error-message second)]
+      (is (= first-message second-message))))
 
-         (testing "reports option errors deterministically"
-                  (let [first          "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true :module 1} :exclusions []}]}}}"
-                        second         "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}"
-                        first-message  (validation-error-message first)
-                        second-message (validation-error-message second)]
-                    (is (= first-message second-message))))
+  (testing "reports the lexicographically first invalid option"
+    (let [message (validation-error-message "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}")]
+      (is (string.match message "module must be a string"))))
 
-         (testing "reports the lexicographically first invalid option"
-                  (let [message (validation-error-message "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}")]
-                    (is (string.match message "module must be a string"))))
-
-         (testing "unknown options include the rule name"
-                  (let [message (validation-error-message "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")]
-                    (is (string.match message "unknown option unknown")))))
+  (testing "unknown options include the rule name"
+    (let [message (validation-error-message "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")]
+      (is (string.match message "unknown option unknown")))))
 
 (deftest lint-policy
-
-         (testing "lint policy preserves explicit rule options"
-                  (let [policy (lint-policy-value {:lint {                                            :rules      {}}})]
-                    (is (and (not (. policy :error)) (. policy :rules))))))
+  (testing "lint policy preserves explicit rule options"
+    (let [policy (lint-policy-value {:lint {                                            :rules      {}}})]
+      (is (and (not (. policy :error)) (. policy :rules))))))
 
 (deftest formatter-isolation
-
-         (testing "lint configuration does not change formatter output"
-                  (let [result (format-with-config "(let [x 1] x)" {:indent-width 2
-                                                                    :parser       false
-                                                                    :paths        ["fnl"]
-                                                                    :extensions   [".fnl"]})]
-                    (is (or (. result :module-missing) (. result :value))))))
+  (testing "lint configuration does not change formatter output"
+    (let [result (format-with-config "(let [x 1] x)" {:indent-width 2
+                                                      :parser       false
+                                                      :paths        ["fnl"]
+                                                      :extensions   [".fnl"]})]
+      (is (or (. result :module-missing) (. result :value))))))
 
 (deftest canonical-format-aliases
-
-         (testing "canonical indents contain only fn and definition forms alias it exactly"
-                  (let [config (assert (load-config))
-                        format (. (assert (config.load ".fnl-extras.fnl")) :format)]
-                    (is (= {:indents   {"fn" [[:inner 0]]}
-                            :format-as {"def"   "fn"
-                                        "def-"  "fn"
-                                        "defn"  "fn"
-                                        "defn-" "fn"}}
-                           {:indents (. format :indents) :format-as (. format :format-as)})))))
+  (testing "canonical formatter rules match the current config"
+    (let [config (assert (load-config))
+          format (. (assert (config.load ".fnl-extras.fnl")) :format)]
+      (is (= {:indents   {"fn"      [[:inner 0]]
+                          "deftest" [[:block 1]]}
+              :format-as {"def"     "fn"
+                          "def-"    "fn"
+                          "defn"    "fn"
+                          "defn-"   "fn"
+                          "testing" "deftest"}
+              :newline   [{:applies-to {:files ["^fennel-extras/"]
+                                         :forms ["fn" "defn" "defn-"]}
+                            :options    {:after-header       0
+                                         :between-same-level 1
+                                         :break-after-n-args [[1 1] [2 1]]}}
+                           {:applies-to {:forms ["testing"]}
+                            :options    {:before 0}}
+                           {:applies-to {:files ["^spec/"]
+                                         :forms ["deftest"]}
+                            :options    {:after-header 0}}
+                           {:applies-to {:files ["^spec/"]
+                                         :forms ["testing"]}
+                            :options    {:between-same-level 1}}
+                           {:applies-to {:files ["^spec/"]
+                                         :forms ["="]}
+                            :options    {:break-after-args 1}}]}
+             {:indents (. format :indents)
+              :format-as (. format :format-as)
+              :newline (. format :newline)})))))

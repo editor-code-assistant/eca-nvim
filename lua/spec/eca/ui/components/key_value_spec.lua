@@ -1,4 +1,4 @@
--- [nfnl] fnl/spec/eca/ui/components/key-value_spec.fnl
+-- [nfnl] fnl/spec/eca/ui/components/key_value_spec.fnl
 local key_value = require("eca.ui.components.key-value")
 local function _1_()
   local function _2_()
