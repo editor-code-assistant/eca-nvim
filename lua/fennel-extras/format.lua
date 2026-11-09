@@ -120,10 +120,102 @@ local function preceding_break_index(lines, index)
     return index
   end
 end
+local function break_after_args_positions(source, span, entries)
+  local tokens, error = reader.tokenize(source)
+  local stack = {}
+  local positions = {}
+  if not error then
+    for _, token in ipairs(tokens) do
+      if (token.kind == "open") then
+        local parent = stack[#stack]
+        if (parent and parent.head) then
+          table.insert(parent.children, {line = token.line, col = token.col})
+        else
+        end
+        table.insert(stack, {start = token.line, head = nil, children = {}})
+      else
+        if (token.kind == "close") then
+          local top = table.remove(stack)
+          if (top and (top.start == span.start) and (top.head == span.head)) then
+            for _0, entry in ipairs(entries) do
+              local offset
+              if ((span.head == "defn") or (span.head == "defn-")) then
+                offset = 1
+              else
+                offset = 0
+              end
+              local child = top.children[(entry[1] + offset)]
+              if child then
+                table.insert(positions, {line = child.line, col = child.col, count = entry[2]})
+              else
+              end
+            end
+          else
+          end
+        else
+          local top = stack[#stack]
+          if (top and (token.kind == "symbol")) then
+            if (top.head == nil) then
+              top.head = token.text
+            else
+              table.insert(top.children, {line = token.line, col = token.col})
+            end
+          else
+          end
+        end
+      end
+    end
+  else
+  end
+  return positions
+end
+local function insert_breaks(source, positions)
+  local lines = split_lines(source)
+  local function _23_(left, right)
+    if (left.line == right.line) then
+      return (left.col > right.col)
+    else
+      return (left.line > right.line)
+    end
+  end
+  table.sort(positions, _23_)
+  for _, position in ipairs(positions) do
+    local line = lines[position.line]
+    local prefix = string.sub(line, 1, (position.col - 1))
+    local suffix = string.sub(line, position.col)
+    if (line and (string.len(string.gsub(prefix, "%s+$", "")) > 0) and (string.len(suffix) > 0)) then
+      lines[position.line] = string.gsub(prefix, "%s+$", "")
+      for offset = 1, (position.count - 1) do
+        table.insert(lines, (position.line + offset), "")
+      end
+      table.insert(lines, (position.line + position.count), suffix)
+    else
+    end
+  end
+  return table.concat(lines, "\n")
+end
+local function apply_argument_break_rules(source, config, path, matcher)
+  local result = source
+  for _, rule in ipairs(newline_rules(config)) do
+    local entries = rule.options["break-after-args"]
+    if entries then
+      local spans = form_spans(result)
+      for _0, span in ipairs(spans) do
+        if rule_selected_3f(rule, path, matcher, span.head) then
+          result = insert_breaks(result, break_after_args_positions(result, span, entries))
+        else
+        end
+      end
+    else
+    end
+  end
+  return result
+end
 local function apply_newline_rules(source, config, path, matcher)
   local lines = split_lines(source)
   local spans = form_spans(source)
   local breaks = {}
+  local removals = {}
   for _, rule in ipairs(newline_rules(config)) do
     local before = (rule.options.before or 0)
     local after = (rule.options.after or 0)
@@ -137,7 +229,13 @@ local function apply_newline_rules(source, config, path, matcher)
         end
         local header_line = form_header_line(lines, span)
         if (header_line and (header_line < span["end"])) then
-          max_break(breaks, header_line, after_header)
+          if ((rule.options["after-header"] ~= nil) and (after_header == 0)) then
+            for offset = 1, blank_run_after(lines, header_line) do
+              removals[(header_line + offset)] = true
+            end
+          else
+            max_break(breaks, header_line, after_header)
+          end
         else
         end
       else
@@ -152,7 +250,7 @@ local function apply_newline_rules(source, config, path, matcher)
     limit = preceding_break_index(lines, #lines)
   end
   for index, line in ipairs(lines) do
-    if (index <= limit) then
+    if ((index <= limit) and not removals[index]) then
       table.insert(output, line)
       local count = (breaks[index] or 0)
       local existing = blank_run_after(lines, index)
@@ -208,17 +306,17 @@ local function token_text_equal_3f(left, right)
   end
 end
 local function token_sequences_equal_3f(left, right, index)
-  local and_22_ = (#left == #right)
-  if and_22_ then
+  local and_37_ = (#left == #right)
+  if and_37_ then
     local result = true
     for offset in ipairs(left) do
       local token = left[offset]
       local other = right[offset]
       result = (result and token_kind_equal_3f(token, other) and token_text_equal_3f(token, other))
     end
-    and_22_ = result
+    and_37_ = result
   end
-  return and_22_
+  return and_37_
 end
 local function binding_whitespace_equal_3f(left, right)
   local left_body = string.gsub(left, "^ *", "")
@@ -378,7 +476,7 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _35_()
+    local function _50_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       if (#left ~= #right) then
@@ -387,7 +485,7 @@ do
         return forms_equal_3f(parser, left, right)
       end
     end
-    ok, result = pcall(_35_)
+    ok, result = pcall(_50_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
@@ -429,7 +527,8 @@ local function format_string_error(alignment_error, rules_error)
 end
 local function format_string_valid(source, parser, config, path, matcher)
   local alignment = settings.resolve(config)
-  local out, error = indent.reindent(source, config)
+  local broken_source = apply_argument_break_rules(source, config, path, matcher)
+  local out, error = indent.reindent(broken_source, config)
   if error then
     return nil, error
   else

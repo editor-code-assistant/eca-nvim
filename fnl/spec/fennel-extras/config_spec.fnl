@@ -373,7 +373,23 @@
          (testing "accepts file and form selectors on newline rules"
                   (is (= nil
                          (validation-error-message-raw
-                          "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^fennel-extras/\"] :forms [\"fn\" \"defn\" \"defn-\"]} :options {:after-header 1}}]}")))))
+                          "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^fennel-extras/\"] :forms [\"fn\" \"defn\" \"defn-\"]} :options {:after-header 1}}]}"))))
+
+         (testing "accepts zero after-header and break-after-args pairs"
+                  (is (= nil
+                         (validation-error-message-raw
+                          "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:after-header 0 :break-after-args [[1 1] [2 1]]}}]}"))))
+
+         (testing "rejects a non-list break-after-args value"
+                  (is (not= nil
+                            (validation-error-message-raw
+                             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-args true}}]}"))))
+
+         (testing "rejects a break-after-args entry that is not a pair of integers"
+                  (is (not= nil
+                            (validation-error-message-raw
+                             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-args [[1 \"1\"]]}}]}"))))
+)
 
 (deftest extensions
 

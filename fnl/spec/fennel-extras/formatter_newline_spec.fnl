@@ -2,6 +2,7 @@
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local format (require :fennel-extras.format))
+(local parser (require :eca.nfnl.fennel))
 
 (local base-config
        {:indent-width 2
@@ -94,6 +95,69 @@
            (testing "after-header does not add a trailing break to one-line defn-"
                     (is (= "(defn- run [] true)"
                            (formatted-with-config format "(defn- run [] true)" config))))))
+
+(deftest explicit-zero-header-newline
+
+         (testing "after-header zero removes contiguous existing blank lines after a selected fn header"
+                  (let [config {:indent-width 2
+                                :parser       false
+                                :indents      {"fn" [[:inner 0]]}
+                                :newline      [{:applies-to {:forms ["fn"]}
+                                                :options    {:after-header 0}}]}]
+                    (is (= "(fn\n  []\n  true)"
+                           (formatted-with-config format "(fn\n\n\n[]\ntrue)" config)))))
+
+         (testing "omitted after-header preserves existing blank lines after a selected fn header"
+                  (let [config {:indent-width 2
+                                :parser       false
+                                :indents      {"fn" [[:inner 0]]}
+                                :newline      [{:applies-to {:forms ["fn"]}
+                                                :options    {}}]}]
+                    (is (= "(fn\n\n  []\n  true)"
+                           (formatted-with-config format "(fn\n\n[]\ntrue)" config))))))
+
+(deftest break-after-args
+
+         (let [config {:indent-width 2
+                       :parser       false
+                       :indents      {"defn" [[:block 1]]}
+                       :newline      [{:applies-to {:forms ["defn"]}
+                                       :options    {:break-after-args [[1 1] [2 1]]}}]}]
+
+           (testing "break-after-args canonicalizes direct defn argument boundaries"
+                    (is (= "(defn parse-string\n  [text]\n  (parse.parse-string text))"
+                           (formatted-with-config format
+                                                  "(defn parse-string [text] (parse.parse-string text))"
+                                                  config))))
+
+           (testing "break-after-args canonicalizes already-varied input layouts"
+                    (is (= "(defn parse-string\n  [text]\n  (parse.parse-string text))"
+                           (formatted-with-config format
+                                                  "(defn parse-string\n[text]\n(parse.parse-string text))"
+                                                  config))))
+
+           (testing "break-after-args is opt-in"
+                    (let [without-option {:indent-width 2
+                                          :parser       false
+                                          :indents      {"defn" [[:block 1]]}}]
+                      (is (= "(defn parse-string [text] (parse.parse-string text))"
+                             (formatted-with-config format
+                                                    "(defn parse-string [text] (parse.parse-string text))"
+                                                    without-option)))))
+
+           (testing "break-after-args canonicalization is idempotent"
+                    (let [formatted (formatted-with-config format
+                                                           "(defn parse-string [text] (parse.parse-string text))"
+                                                           config)]
+                      (is (= formatted
+                             (formatted-with-config format formatted config)))))
+
+           (testing "break-after-args preserves parsed forms"
+                    (is (format.ast-equal? parser
+                                           "(defn parse-string [text] (parse.parse-string text))"
+                                           (formatted-with-config format
+                                                                  "(defn parse-string [text] (parse.parse-string text))"
+                                                                  config))))))
 
 (deftest exact-alias-newline-membership
 

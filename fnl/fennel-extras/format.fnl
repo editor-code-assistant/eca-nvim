@@ -96,7 +96,10 @@
                           (let [top (table.remove stack)]
                             (when (and top top.head)
                                   (table.insert result {:head top.head :start top.start :end token.line}))))))))
-    (table.sort result (fn [left right] (> left.start right.start)))
+    (table.sort result (fn
+
+                         [left right]
+                         (> left.start right.start)))
 
 
     result))
@@ -124,12 +127,90 @@
     (preceding-break-index lines (- index 1))
     index))
 
+(defn- break-after-args-positions
+
+  [source span entries]
+  (let [(tokens error) (reader.tokenize source)
+        stack          []
+        positions      []]
+    (when (not error)
+          (each [_ token (ipairs tokens)]
+                (if (= token.kind :open)
+                  (let [parent (. stack (length stack))]
+                    (when (and parent parent.head)
+                          (table.insert parent.children {:line token.line :col token.col}))
+                    (table.insert stack {:start token.line :head nil :children []}))
+                  (if (= token.kind :close)
+                    (let [top (table.remove stack)]
+                      (when (and top
+                                 (= top.start span.start)
+                                 (= top.head span.head))
+                            (each [_ entry (ipairs entries)]
+                                  (let [offset (if (or (= span.head "defn") (= span.head "defn-")) 1 0)
+                                        child  (. top.children (+ (. entry 1) offset))]
+                                    (when child
+                                          (table.insert positions {:line  child.line
+                                                                   :col   child.col
+                                                                   :count (. entry 2)}))))))
+                    (let [top (. stack (length stack))]
+                      (when (and top (= token.kind :symbol))
+                            (if (= top.head nil)
+                              (set top.head token.text)
+                              (table.insert top.children {:line token.line :col token.col}))))))))
+    positions))
+
+
+
+(defn- insert-breaks
+
+  [source positions]
+  (let [lines (split-lines source)]
+    (table.sort positions
+                (fn
+
+                  [left right]
+                  (if (= left.line right.line)
+                    (> left.col right.col)
+                    (> left.line right.line))))
+    (each [_ position (ipairs positions)]
+          (let [line   (. lines position.line)
+                prefix (string.sub line 1 (- position.col 1))
+                suffix (string.sub line position.col)]
+            (when (and line
+                       (> (string.len (string.gsub prefix "%s+$" "")) 0)
+                       (> (string.len suffix) 0))
+                  (tset lines position.line (string.gsub prefix "%s+$" ""))
+                  (for [offset 1 (- position.count 1)]
+                       (table.insert lines (+ position.line offset) ""))
+                  (table.insert lines (+ position.line position.count) suffix))))
+    (table.concat lines "\n")))
+
+
+
+(defn- apply-argument-break-rules
+
+  [source config path matcher]
+  (let []
+    (var result source)
+    (each [_ rule (ipairs (newline-rules config))]
+          (let [entries (. rule :options :break-after-args)]
+            (when entries
+                  (let [spans (form-spans result)]
+                    (each [_ span (ipairs spans)]
+                          (when (rule-selected? rule path matcher span.head)
+                                (set result (insert-breaks result
+                                                           (break-after-args-positions result span entries)))))))))
+    result))
+
+
+
 (defn- apply-newline-rules
 
   [source config path matcher]
-  (let [lines  (split-lines source)
-        spans  (form-spans source)
-        breaks {}]
+  (let [lines    (split-lines source)
+        spans    (form-spans source)
+        breaks   {}
+        removals {}]
     (each [_ rule (ipairs (newline-rules config))]
           (let [before       (or (. rule :options :before) 0)
                 after        (or (. rule :options :after) 0)
@@ -141,14 +222,19 @@
                               (max-break breaks span.end after))
                         (let [header-line (form-header-line lines span)]
                           (when (and header-line (< header-line span.end))
-                                (max-break breaks header-line after-header)))))))
+                                (if (and (not= (. rule :options :after-header) nil)
+                                         (= after-header 0))
+                                  (for [offset 1 (blank-run-after lines header-line)]
+                                       (tset removals (+ header-line offset) true))
+                                  (max-break breaks header-line after-header))))))))
     (let [output []
           limit  (if (and (> (length lines) 1)
                           (= (. lines (length lines)) ""))
                    (+ 1 (preceding-break-index lines (- (length lines) 1)))
                    (preceding-break-index lines (length lines)))]
       (each [index line (ipairs lines)]
-            (when (<= index limit)
+            (when (and (<= index limit)
+                       (not (. removals index)))
                   (table.insert output line)
                   (let [count    (or (. breaks index) 0)
                         existing (blank-run-after lines index)
@@ -485,7 +571,9 @@
 (defn ast-equal?
 
   [parser a b]
-  (let [(ok result) (pcall (fn []
+  (let [(ok result) (pcall (fn
+
+                             []
 
                              (let [left  (parse-all parser a)
                                    right (parse-all parser b)]
@@ -565,8 +653,9 @@
 (defn- format-string-valid
 
   [source parser config path matcher]
-  (let [alignment   (settings.resolve config)
-        (out error) (indent.reindent source config)]
+  (let [alignment     (settings.resolve config)
+        broken-source (apply-argument-break-rules source config path matcher)
+        (out error)   (indent.reindent broken-source config)]
     (if error
       (values nil error)
       (let [output (apply-newline-rules out config path matcher)]

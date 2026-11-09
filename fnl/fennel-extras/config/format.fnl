@@ -217,6 +217,19 @@
 
 
 
+(defn- break-after-args-entry?
+
+  [value]
+  (and (= (type value) :table)
+       (= (type (. value 1)) :number)
+       (= (type (. value 2)) :number)
+       (integer? (. value 1))
+       (integer? (. value 2))
+       (>= (. value 1) 1)
+       (>= (. value 2) 1)))
+
+
+
 (defn- newline-instance?
 
   [value]
@@ -232,7 +245,10 @@
        (or (= (. value :options :after-header) nil)
            (and (integer? (. value :options :after-header)) (>= (. value :options :after-header) 0)))
        (or (= (. value :options :before) nil)
-           (and (integer? (. value :options :before)) (>= (. value :options :before) 0)))))
+           (and (integer? (. value :options :before)) (>= (. value :options :before) 0)))
+       (or (= (. value :options :break-after-args) nil)
+           (and (= (type (. value :options :break-after-args)) :table)
+                (every-ipairs? break-after-args-entry? (. value :options :break-after-args) 1)))))
 
 
 

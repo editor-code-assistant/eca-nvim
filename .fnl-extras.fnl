@@ -22,7 +22,8 @@
                  :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
   :newline      [{:applies-to {:files ["^fennel-extras/"]
                                :forms ["fn" "defn" "defn-"]}
-                  :options    {:after-header 1}}
+                  :options    {:after-header     1
+                               :break-after-args [[1 1] [2 1]]}}
                  {:applies-to {:forms ["testing"]}
                   :options    {:before 1}}]}
  :lint
