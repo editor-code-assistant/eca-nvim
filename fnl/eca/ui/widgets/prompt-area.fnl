@@ -105,8 +105,6 @@
 
       ;; Compute prompt line index (always the last rendered line)
       (let [prompt-line-idx (- (+ start-line (length lines)) 1)]
-        (set state.prompt-start-line prompt-line-idx)
-
         ;; Highlight prompt prefix "> "
         (let [buf-line (or (. (nvim.nvim_buf_get_lines buf-id prompt-line-idx (+ prompt-line-idx 1) false) 1) "")]
           (when (>= (length buf-line) (length idle-prefix.text))

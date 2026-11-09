@@ -102,7 +102,6 @@ local function create(buf_id, _3fopts)
     nvim.nvim_buf_set_lines(buf_id, start_line, -1, false, lines)
     do
       local prompt_line_idx = ((start_line + #lines) - 1)
-      state["prompt-start-line"] = prompt_line_idx
       local buf_line = (nvim.nvim_buf_get_lines(buf_id, prompt_line_idx, (prompt_line_idx + 1), false)[1] or "")
       if (#buf_line >= #idle_prefix.text) then
         nvim.nvim_buf_set_extmark(buf_id, ns, prompt_line_idx, 0, {end_col = #idle_prefix.text, hl_group = idle_prefix["hl-group"]})
