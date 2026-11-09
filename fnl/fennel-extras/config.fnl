@@ -9,14 +9,12 @@
 (local format-config (require :fennel-extras.config.format))
 
 (defn parse-string
-
   [text]
   (parse.parse-string text))
 
 
 
 (defn- array-of-strings?
-
   [value]
   (if (not= (type value) :table)
     false
@@ -32,7 +30,6 @@
 
 
 (defn- integer?
-
   [value]
   (and (= (type value) :number)
        (= value (math.floor value))))
@@ -40,7 +37,6 @@
 
 
 (defn- valid-rule?
-
   [rule]
   (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
     (let [kind  (. rule 1)
@@ -57,7 +53,6 @@
 
 
 (defn- valid-rule-list?
-
   [value]
   (if (= (type value) :table)
     (let []
@@ -71,7 +66,6 @@
 
 
 (defn- rule-map-error
-
   [value prefix]
   (if (= (type value) :table)
     (let []
@@ -86,7 +80,6 @@
 
 
 (defn- extensions?
-
   [value]
   (if (and (= (type value) :table) (> (length value) 0))
     (let []
@@ -101,7 +94,6 @@
 
 
 (defn- configuration-error-with-lint
-
   [failure lint]
   (or failure
       (and lint (lint-config.lint-error lint))))
@@ -109,7 +101,6 @@
 
 
 (defn- configuration-error
-
   [tbl]
   (or (and (. tbl :format)
            (format-config.validate (. tbl :format) false false false))
@@ -120,7 +111,6 @@
 
 
 (defn- workspace-key-error
-
   [workspace]
   (when (= (type workspace) :table)
         (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}
@@ -136,7 +126,6 @@
 
 
 (defn- workspace-error
-
   [tbl]
   (let [workspace (. tbl :workspace)]
     (or (when (and workspace (not= (type workspace) :table))
@@ -164,14 +153,12 @@
 
 
 (defn- content-error
-
   [tbl]
   (workspace-error tbl))
 
 
 
 (defn validate-workspace
-
   [workspace require-paths?]
   (or (when (not= (type workspace) :table)
             {:message "workspace must be a table"})
@@ -197,7 +184,6 @@
 
 
 (defn- validation-result
-
   [tbl failure]
   (if failure
     (values nil failure)
@@ -206,7 +192,6 @@
 
 
 (defn- validation-failure
-
   [tbl]
   (or (configuration-error tbl)
       (content-error tbl)))
@@ -214,14 +199,12 @@
 
 
 (defn- valid-table
-
   [tbl]
   (validation-result tbl (validation-failure tbl)))
 
 
 
 (defn- unknown-config-key
-
   [tbl]
   (let [allowed {:workspace true :format true :lint true :design true}]
     (accumulate [candidate nil key _ (pairs tbl)]
@@ -234,7 +217,6 @@
 
 
 (defn- unknown-config-error
-
   [tbl]
   (let [key (unknown-config-key tbl)]
     (when key
@@ -243,7 +225,6 @@
 
 
 (defn- format-fragment-key?
-
   [key]
   (or (= key :indent-width)
       (= key :parser)
@@ -256,7 +237,6 @@
 
 
 (defn- unknown-format-fragment-key
-
   [tbl]
   (accumulate [candidate nil key _ (pairs tbl)]
               (if (and (not (format-fragment-key? key))
@@ -268,7 +248,6 @@
 
 
 (defn- format-fragment-error
-
   [tbl]
   (let [key (unknown-format-fragment-key tbl)]
     (if key
@@ -278,7 +257,6 @@
 
 
 (defn- validate-table-result
-
   [tbl failure]
   (if failure
     (values nil failure)
@@ -287,14 +265,12 @@
 
 
 (defn- validate-canonical-table
-
   [tbl]
   (validate-table-result tbl (unknown-config-error tbl)))
 
 
 
 (defn validate
-
   [tbl]
   (if (not= (type tbl) :table)
     (values nil {:message "configuration must be a table"})
@@ -306,7 +282,6 @@
 
 
 (defn- append-canonical-instance-exclusions
-
   [result rule index instance]
   (each [_ exclusion (ipairs (or instance.exclusions []))]
         (let [copy {}]
@@ -318,7 +293,6 @@
 
 
 (defn- append-canonical-rule-exclusions
-
   [result rule instances]
   (each [index instance (ipairs (or instances []))]
         (append-canonical-instance-exclusions result rule index instance))
@@ -327,7 +301,6 @@
 
 
 (defn- canonical-exclusions
-
   [rules]
   (let [result []]
     (each [rule instances (pairs rules)]
@@ -337,7 +310,6 @@
 
 
 (defn- valid-lint-policy
-
   [cfg]
   (let [rules  (core.merge (or (and cfg.lint cfg.lint.rules) {}))
         design (and cfg.design cfg.design.rules)]
@@ -355,7 +327,6 @@
 
 
 (defn- lint-policy-valid
-
   [valid]
   (if (and (= valid.lint nil) (= valid.design nil))
     (values nil {:message "missing lint or design"})
@@ -364,7 +335,6 @@
 
 
 (defn lint-policy
-
   [cfg]
   (let [(valid error) (validate cfg)]
     (if error
@@ -374,7 +344,6 @@
 
 
 (defn- join-path
-
   [dir name]
   (if (= (string.sub dir -1) "/")
     (.. dir name)
@@ -383,7 +352,6 @@
 
 
 (defn- close-file
-
   [file]
   (file:close)
   true)
@@ -391,7 +359,6 @@
 
 
 (defn- exists?
-
   [path]
   (let [uv (or (and vim vim.loop) (and vim vim.uv))]
     (if uv
@@ -404,7 +371,6 @@
 
 
 (defn- git-marker?
-
   [dir]
   (or (exists? (join-path dir ".git"))
       (exists? (join-path (join-path dir ".git") "HEAD"))))
@@ -412,7 +378,6 @@
 
 
 (defn- parent-dir
-
   [dir]
   (let [trimmed (if (and (> (string.len dir) 1) (= (string.sub dir -1) "/"))
                   (string.sub dir 1 -2)
@@ -426,14 +391,12 @@
 
 
 (defn- found-config
-
   [candidate]
   (values candidate false))
 
 
 
 (defn find
-
   [start-dir]
   (var dir start-dir)
   (var result nil)
@@ -455,14 +418,15 @@
 
 
 (defn load
-
   [path]
   (let [file (io.open path :r)]
     (if (not file)
       (values nil {:message (.. "could not read config file: " path)})
       (let [text (file:read "*a")]
         (file:close)
-        (let [(ok parsed-or-error) (pcall (fn [] (parse-string text)))]
+        (let [(ok parsed-or-error) (pcall (fn
+                                            []
+                                            (parse-string text)))]
 
 
           (if (not ok)

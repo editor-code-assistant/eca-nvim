@@ -5,7 +5,6 @@
 (local alignment (require :fennel-extras.indent.settings))
 
 (defn- integer?
-
   [value]
   (and (= (type value) :number)
        (= value (math.floor value))))
@@ -13,7 +12,6 @@
 
 
 (defn- every-ipairs?
-
   [predicate value index]
   (let [item (. value index)]
     (if (= item nil)
@@ -24,21 +22,18 @@
 
 
 (defn- string?
-
   [value]
   (= (type value) :string))
 
 
 
 (defn- dotted-string?
-
   [value]
   (= (string.sub value 1 1) "."))
 
 
 
 (defn- array-of-strings?
-
   [value]
   (and (= (type value) :table)
        (> (length value) 0)
@@ -47,7 +42,6 @@
 
 
 (defn- boolean?
-
   [value]
   (or (= value true)
       (= value false)))
@@ -55,7 +49,6 @@
 
 
 (defn- extensions?
-
   [value]
   (and (array-of-strings? value)
        (every-ipairs? dotted-string? value 1)))
@@ -63,7 +56,6 @@
 
 
 (defn- block-rule?
-
   [value]
   (and (= (. value 1) :block)
        (integer? (. value 2))
@@ -73,7 +65,6 @@
 
 
 (defn- inner-rule?
-
   [value]
   (and (= (. value 1) :inner)
        (= (. value 2) 0)
@@ -83,7 +74,6 @@
 
 
 (defn- rule?
-
   [value]
   (and (= (type value) :table)
        (= (type (. value 1)) :string)
@@ -93,7 +83,6 @@
 
 
 (defn- rule-list?
-
   [value]
   (and (= (type value) :table)
        (every-ipairs? rule? value 1)))
@@ -101,7 +90,6 @@
 
 
 (defn- rule-map-entries?
-
   [value key]
   (let [(next-key next-value) (next value key)]
     (if (= next-key nil)
@@ -113,7 +101,6 @@
 
 
 (defn- rule-map?
-
   [value]
   (and (= (type value) :table)
        (rule-map-entries? value nil)))
@@ -121,14 +108,12 @@
 
 
 (defn- missing
-
   [path]
   {:message (.. "missing " path)})
 
 
 
 (defn- required
-
   [config key path]
   (when (= (. config key) nil)
         (missing path)))
@@ -136,7 +121,6 @@
 
 
 (defn- invalid-width?
-
   [width strict?]
   (and (or strict? (not= width nil))
        (not (and (integer? width) (> width 0)))))
@@ -144,7 +128,6 @@
 
 
 (defn- invalid-extensions?
-
   [config require-scan?]
   (and (or require-scan? (not= (. config :extensions) nil))
        (not (extensions? (. config :extensions)))))
@@ -152,7 +135,6 @@
 
 
 (defn- invalid-parser?
-
   [parser strict?]
   (and (or strict? (not= parser nil))
        (not= parser false)
@@ -161,7 +143,6 @@
 
 
 (defn- invalid-boolean?
-
   [value]
   (and (not= value nil)
        (not (boolean? value))))
@@ -169,7 +150,6 @@
 
 
 (defn- validate-values
-
   [config require-scan? strict?]
   (let [width           (. config :indent-width)
         parser          (. config :parser)
@@ -189,7 +169,6 @@
 
 
 (defn- missing-binding-forms
-
   [value]
   (when (and (or (. value :bindings) (. value :split-bindings))
              (= (. value :binding-forms) nil))
@@ -198,7 +177,6 @@
 
 
 (defn- missing-clause-forms
-
   [value]
   (when (and (. value :clauses)
              (= (. value :clause-forms) nil))
@@ -207,7 +185,6 @@
 
 
 (defn- validate-alignment
-
   [config]
   (let [value (. config :alignment)]
     (or (alignment.validate value)
@@ -218,7 +195,6 @@
 
 
 (defn- break-after-args-entry?
-
   [value]
   (and (= (type value) :table)
        (= (type (. value 1)) :number)
@@ -231,7 +207,6 @@
 
 
 (defn- newline-instance?
-
   [value]
   (and (= (type value) :table)
        (= (type (. value :applies-to)) :table)
@@ -253,7 +228,6 @@
 
 
 (defn- validate-newline
-
   [config]
   (let [value (. config :newline)]
     (when (and (not= value nil)
@@ -264,7 +238,6 @@
 
 
 (defn- validate-extensions
-
   [config]
   (or (and (= (. config :extensions) nil)
            (missing "extensions"))
@@ -275,7 +248,6 @@
 
 
 (defn- validate-paths
-
   [config require-paths?]
   (or (and require-paths?
            (= (. config :paths) nil)
@@ -287,7 +259,6 @@
 
 
 (defn validate-scan
-
   [config require-paths?]
   (or (validate-extensions config)
       (validate-paths config require-paths?)))
@@ -295,7 +266,6 @@
 
 
 (defn- validate-table
-
   [config require-paths? require-scan? strict?]
   (or (and strict? (required config :indent-width "indent-width"))
       (and strict? (required config :parser "parser"))
@@ -308,7 +278,6 @@
 
 
 (defn validate
-
   [config require-paths? require-scan? strict?]
   (if (= (type config) :table)
     (validate-table config require-paths? require-scan? strict?)

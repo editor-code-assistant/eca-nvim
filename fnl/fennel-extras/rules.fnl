@@ -10,18 +10,15 @@
 (var alias-rule nil)
 
 (defn- error
-
   [message]
   {:message message})
 
 (defn- integer?
-
   [value]
   (and (= (type value) :number)
        (= value (math.floor value))))
 
 (defn- validate-rule
-
   [rule]
   (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
     (let [kind  (. rule 1)
@@ -37,7 +34,6 @@
     (error "invalid indentation rule")))
 
 (defn- validate-rule-items
-
   [value]
   (var failure nil)
   (each [_ rule (ipairs value)]
@@ -46,14 +42,12 @@
   failure)
 
 (defn- validate-rule-list
-
   [value]
   (if (= (type value) :table)
     (validate-rule-items value)
     (error "indentation rules must be a list")))
 
 (defn- validate-map-items
-
   [items rules?]
   (var failure nil)
   (each [name value (pairs items)]
@@ -67,7 +61,6 @@
   failure)
 
 (defn- validate-map
-
   [items rules?]
   (if (= items nil)
     nil
@@ -76,7 +69,8 @@
       (error "indentation configuration must be a table"))))
 
 (set resolve-name
-     (fn [config name seen]
+     (fn
+       [config name seen]
 
        (let [indents (or (. config :indents) {})
              aliases (or (. config :format-as) {})]
@@ -87,7 +81,8 @@
              (values nil nil false))))))
 
 (set alias-rule
-     (fn [config name seen]
+     (fn
+       [config name seen]
 
        (if (. seen name)
          (values nil (error "format-as alias cycle"))
@@ -102,12 +97,10 @@
                  (values nil (error "format-as target has no indentation rule")))))))))
 
 (defn- validate-alignment
-
   [config]
   (alignment.validate (. config :alignment)))
 
 (defn- validate-config-table
-
   [config]
   (var failure nil)
   (each [key _ (pairs config)]
@@ -136,7 +129,6 @@
   failure)
 
 (defn validate
-
   [config]
   (if (= config nil)
     nil
@@ -145,7 +137,6 @@
       (error "indentation configuration must be a table"))))
 
 (defn resolve
-
   [config name]
   (let [(rule _ found) (resolve-name (or config {}) name {})]
     (when found

@@ -13,7 +13,6 @@
 (local count-is ast.count-is)
 
 (defn- count-child-forms
-
   [node children index result]
   (if (> index (length children))
     result
@@ -21,7 +20,6 @@
                        (+ result (count-is node 1 0 (list-head node) (. children index))))))
 
 (defn form-child-count-finding
-
   [findings path form policy node]
   (let [options (rule-options policy "form-child-count")
         count   (count-child-forms node options.children 1 0)]
@@ -33,14 +31,12 @@
 
 
 (defn- nil-literal?
-
   [node]
   (and node (= node.kind :symbol) (= node.text "nil")))
 
 
 
 (defn- contains?
-
   [items target index]
   (if (> index (length items))
     false
@@ -50,7 +46,6 @@
 
 
 (defn- if-direct-count
-
   [children]
   (if (> (- (length children) 2) 0)
     (- (length children) 2)
@@ -59,7 +54,6 @@
 
 
 (defn- non-if-direct-count
-
   [children]
   (if (> (- (length children) 1) 0)
     (- (length children) 1)
@@ -68,7 +62,6 @@
 
 
 (defn- direct-count
-
   [node]
   (let [children (meaningful-children node)]
     (if (= (list-head node) "if")
@@ -78,7 +71,6 @@
 
 
 (defn- direct-child-valid?
-
   [node options]
   (let [children     (meaningful-children node)
         head         (list-head node)
@@ -99,7 +91,6 @@
 
 
 (defn- child-count-invalid?
-
   [node options]
   (if options.children
     (not= (count-child-forms node options.children 1 0) options.max-count)
@@ -108,7 +99,6 @@
 
 
 (defn child-count-finding
-
   [findings path form policy node]
   (let [options      (rule-options policy "child-count")
         form-applies (or (= (length (or options.forms [])) 0)

@@ -153,10 +153,12 @@ local function break_after_args_positions(source, span, entries)
           else
           end
         else
-          local top = stack[#stack]
+          local top_index = #stack
+          local top = stack[top_index]
           if (top and (token.kind == "symbol")) then
             if (top.head == nil) then
-              top.head = token.text
+              table.remove(stack, top_index)
+              table.insert(stack, {start = top.start, head = token.text, children = top.children})
             else
               table.insert(top.children, {line = token.line, col = token.col})
             end
@@ -199,14 +201,17 @@ local function apply_argument_break_rules(source, config, path, matcher)
   for _, rule in ipairs(newline_rules(config)) do
     local entries = rule.options["break-after-args"]
     if entries then
-      local spans = form_spans(result)
-      for _0, span in ipairs(spans) do
+      local result0 = result
+      for _0, span in ipairs(form_spans(result0)) do
         if rule_selected_3f(rule, path, matcher, span.head) then
-          result = insert_breaks(result, break_after_args_positions(result, span, entries))
+          result0 = insert_breaks(result0, break_after_args_positions(result0, span, entries))
         else
+          result0 = result0
         end
       end
+      result = result0
     else
+      result = result
     end
   end
   return result

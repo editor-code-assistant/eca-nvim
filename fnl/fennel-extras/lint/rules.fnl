@@ -19,7 +19,6 @@
 (local rule-severity registry.rule-severity)
 
 (defn defaults
-
   []
   (registry.defaults))
 
@@ -27,14 +26,12 @@
 
 
 (defn- update-check-state
-
   [state import-info head policy]
   {:module-import state.module-import})
 
 
 
 (defn- check-state-step
-
   [nodes index state policy recurse]
   (let [node (. nodes index)]
     (recurse nodes (+ index 1) (update-check-state state (import-macros? node) (list-head node) policy) policy)))
@@ -42,7 +39,6 @@
 
 
 (defn- check-state
-
   [nodes index state policy]
   (if (> index (length nodes))
     state
@@ -51,7 +47,6 @@
 
 
 (defn- append-all
-
   [target items]
   (each [_ value (ipairs (or items []))]
         (table.insert target value))
@@ -60,7 +55,6 @@
 
 
 (defn- contains?
-
   [items target index]
   (if (> index (length items))
     false
@@ -70,7 +64,6 @@
 
 
 (defn- evaluate-form
-
   [path form forms policy]
   (let [node     form.node
         head     (list-head node)
@@ -88,7 +81,6 @@
 
 
 (defn- append-form-findings
-
   [all path forms policy]
   (each [_ form (ipairs forms)]
         (append-all all (evaluate-form path form forms policy)))
@@ -98,7 +90,6 @@
 
 
 (defn- append-file-size-findings
-
   [findings path policy source]
   (if (enabled? policy "file-size")
     (size-rule.finding path policy source)
@@ -108,7 +99,6 @@
 
 
 (defn- check-result
-
   [path forms policy source state]
   (let [findings (append-file-size-findings [] path policy source)
         findings (append-all findings (module-rule.required-form-finding path source policy))
@@ -118,7 +108,6 @@
 
 
 (defn- check-instance
-
   [path forms policy source instance]
   (let [instance-policy (registry.evaluator-policy policy instance.rule instance.value)
         state           (check-state (root-forms source) 1 {:module-import false} instance-policy)
@@ -133,7 +122,6 @@
 
 
 (defn- append-instance-findings
-
   [result path forms policy source instance]
   (each [_ finding (ipairs (check-instance path forms policy source instance))]
         (table.insert result finding))
@@ -142,7 +130,6 @@
 
 
 (defn check
-
   [path forms policy source]
   (accumulate [result [] _ instance (ipairs (registry.instances policy))]
               (append-instance-findings result path forms policy source instance)))

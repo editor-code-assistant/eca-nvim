@@ -3,6 +3,7 @@
 
 (local format (require :fennel-extras.format))
 (local parser (require :eca.nfnl.fennel))
+(local ast-equal? (. format :ast-equal?))
 
 (local base-config
        {:indent-width 2
@@ -153,11 +154,11 @@
                              (formatted-with-config format formatted config)))))
 
            (testing "break-after-args preserves parsed forms"
-                    (is (format.ast-equal? parser
-                                           "(defn parse-string [text] (parse.parse-string text))"
-                                           (formatted-with-config format
-                                                                  "(defn parse-string [text] (parse.parse-string text))"
-                                                                  config))))))
+                    (is (ast-equal? parser
+                                    "(defn parse-string [text] (parse.parse-string text))"
+                                    (formatted-with-config format
+                                                           "(defn parse-string [text] (parse.parse-string text))"
+                                                           config))))))
 
 (deftest exact-alias-newline-membership
 

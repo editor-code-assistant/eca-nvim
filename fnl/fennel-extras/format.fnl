@@ -6,7 +6,6 @@
 (local rules (require :fennel-extras.rules))
 
 (defn- split-lines
-
   [source]
   (let [lines []]
     (var start 1)
@@ -18,21 +17,18 @@
 
 
 (defn- leading-spaces
-
   [line]
   (string.len (string.match line "^ *")))
 
 
 
 (defn- newline-rules
-
   [config]
   (or (. config :newline) []))
 
 
 
 (defn- form-selected?
-
   [forms head]
   (or (= forms nil)
       (accumulate [result false _ value (ipairs forms)]
@@ -41,7 +37,6 @@
 
 
 (defn- file-selected?
-
   [files path matcher]
   (or (= files nil)
       (and path
@@ -52,7 +47,6 @@
 
 
 (defn- rule-selected?
-
   [rule path matcher head]
   (and (file-selected? (. rule :applies-to :files) path matcher)
        (form-selected? (. rule :applies-to :forms) head)))
@@ -60,7 +54,6 @@
 
 
 (defn- named-definition-header?
-
   [line head]
   (and (or (= head "defn") (= head "defn-"))
        (string.match line "^%s*%(defn%-?%s+[^%s%(]+")
@@ -69,7 +62,6 @@
 
 
 (defn- form-header-line
-
   [lines span]
   (and (. lines span.start)
        (or (= span.head "fn")
@@ -79,7 +71,6 @@
 
 
 (defn- form-spans
-
   [source]
   (let [(tokens error) (reader.tokenize source)
         stack          []
@@ -97,7 +88,6 @@
                             (when (and top top.head)
                                   (table.insert result {:head top.head :start top.start :end token.line}))))))))
     (table.sort result (fn
-
                          [left right]
                          (> left.start right.start)))
 
@@ -107,13 +97,11 @@
 
 
 (defn- max-break
-
   [breaks index count]
   (when (> count (or (. breaks index) 0))
         (tset breaks index count)))
 
 (defn- blank-run-after
-
   [lines index]
   (let [next-index (+ index 1)]
     (if (and (. lines next-index) (= (. lines next-index) ""))
@@ -121,14 +109,12 @@
       0)))
 
 (defn- preceding-break-index
-
   [lines index]
   (if (and (> index 0) (= (. lines index) ""))
     (preceding-break-index lines (- index 1))
     index))
 
 (defn- break-after-args-positions
-
   [source span entries]
   (let [(tokens error) (reader.tokenize source)
         stack          []
@@ -152,22 +138,25 @@
                                           (table.insert positions {:line  child.line
                                                                    :col   child.col
                                                                    :count (. entry 2)}))))))
-                    (let [top (. stack (length stack))]
+                    (let [top-index (length stack)
+                          top       (. stack top-index)]
                       (when (and top (= token.kind :symbol))
                             (if (= top.head nil)
-                              (set top.head token.text)
+                              (do
+                               (table.remove stack top-index)
+                               (table.insert stack {:start    top.start
+                                                    :head     token.text
+                                                    :children top.children}))
                               (table.insert top.children {:line token.line :col token.col}))))))))
     positions))
 
 
 
 (defn- insert-breaks
-
   [source positions]
   (let [lines (split-lines source)]
     (table.sort positions
                 (fn
-
                   [left right]
                   (if (= left.line right.line)
                     (> left.col right.col)
@@ -188,24 +177,20 @@
 
 
 (defn- apply-argument-break-rules
-
   [source config path matcher]
-  (let []
-    (var result source)
-    (each [_ rule (ipairs (newline-rules config))]
-          (let [entries (. rule :options :break-after-args)]
-            (when entries
-                  (let [spans (form-spans result)]
-                    (each [_ span (ipairs spans)]
-                          (when (rule-selected? rule path matcher span.head)
-                                (set result (insert-breaks result
-                                                           (break-after-args-positions result span entries)))))))))
-    result))
+  (accumulate [result source _ rule (ipairs (newline-rules config))]
+              (let [entries (. rule :options :break-after-args)]
+                (if entries
+                  (accumulate [result result _ span (ipairs (form-spans result))]
+                              (if (rule-selected? rule path matcher span.head)
+                                (insert-breaks result
+                                               (break-after-args-positions result span entries))
+                                result))
+                  result))))
 
 
 
 (defn- apply-newline-rules
-
   [source config path matcher]
   (let [lines    (split-lines source)
         spans    (form-spans source)
@@ -247,14 +232,12 @@
 
 
 (defn- spaces-only?
-
   [line]
   (= line (string.rep " " (string.len line))))
 
 
 
 (defn- indentation-lines-equal?
-
   [left right]
   (var same true)
   (each [i line (ipairs left)]
@@ -269,14 +252,12 @@
 
 
 (defn- whitespace-kind?
-
   [kind]
   (or (= kind :whitespace) (= kind :newline)))
 
 
 
 (defn- token-kind-equal?
-
   [left right]
   (or (= left.kind right.kind)
       (and (whitespace-kind? left.kind) (whitespace-kind? right.kind))))
@@ -284,14 +265,12 @@
 
 
 (defn- non-whitespace-token-equal?
-
   [left right]
   (= left.text right.text))
 
 
 
 (defn- newline-count
-
   [text]
   (let [count (select 2 (string.gsub text "\n" ""))]
     count))
@@ -299,7 +278,6 @@
 
 
 (defn- whitespace-token-equal?
-
   [left right]
   (and (> (string.len left.text) 0)
        (> (string.len right.text) 0)
@@ -308,7 +286,6 @@
 
 
 (defn- token-text-equal?
-
   [left right]
   (if (whitespace-kind? left.kind)
     (whitespace-token-equal? left right)
@@ -317,7 +294,6 @@
 
 
 (defn- token-sequences-equal?
-
   [left right index]
   (and (= (length left) (length right))
        (accumulate [result true offset (ipairs left)]
@@ -330,7 +306,6 @@
 
 
 (defn- binding-whitespace-equal?
-
   [left right]
   (let [left-body                  (string.gsub left "^ *" "")
         right-body                 (string.gsub right "^ *" "")
@@ -344,7 +319,6 @@
 
 
 (defn- line-equal?
-
   [line other allow-binding-whitespace?]
   (or (= line other)
       (= other
@@ -356,7 +330,6 @@
 
 
 (defn- lines-equal?
-
   [left right index allow-binding-whitespace?]
   (if (> index (length left))
     true
@@ -366,7 +339,6 @@
 
 
 (defn- replace-last-token
-
   [tokens token]
   (table.remove tokens)
   (table.insert tokens token))
@@ -374,14 +346,12 @@
 
 
 (defn- merged-whitespace-token
-
   [previous token]
   {:kind :whitespace :text (.. previous.text token.text)})
 
 
 
 (defn- merge-whitespace-token
-
   [tokens token]
   (let [previous (. tokens (length tokens))]
     (if (and previous
@@ -393,7 +363,6 @@
 
 
 (defn- normalized-tokens
-
   [tokens]
   (let [result []]
     (each [_ token (ipairs tokens)]
@@ -403,7 +372,6 @@
 
 
 (defn- token-whitespace-only?
-
   [before after]
   (let [(left left-error)   (reader.tokenize before)
         (right right-error) (reader.tokenize after)
@@ -417,7 +385,6 @@
 
 
 (defn indent-only?
-
   [before after allow-binding-whitespace?]
   (let [left  (split-lines before)
         right (split-lines after)]
@@ -429,7 +396,6 @@
 
 
 (defn- ignored?
-
   [key]
   (or (= key :filename)
       (= key :line)
@@ -451,7 +417,6 @@
 
 
 (defn- symbol?
-
   [value]
   (let [meta (and (= (type value) :table) (getmetatable value))]
     (and meta
@@ -460,7 +425,6 @@
 
 
 (defn- equal-key?
-
   [a b]
   (if (and (symbol? a) (symbol? b))
     (= (tostring a) (tostring b))
@@ -469,7 +433,6 @@
 
 
 (defn- entries
-
   [value]
   (let [result []]
     (each [key item (pairs value)]
@@ -480,7 +443,6 @@
 
 
 (defn- matching-entry
-
   [equal parser entry right]
   (var found-index nil)
   (each [index candidate (ipairs right)]
@@ -493,7 +455,6 @@
 
 
 (defn- remove-and-continue
-
   [continue equal parser left right found-index]
   (table.remove right found-index)
   (continue equal parser left right))
@@ -501,7 +462,6 @@
 
 
 (defn- continue-equal-entries
-
   [continue equal parser left right found-index]
   (if found-index
     (remove-and-continue continue equal parser left right found-index)
@@ -510,7 +470,6 @@
 
 
 (defn- equal-entries?
-
   [equal parser left right]
   (if (= (length left) 0)
     true
@@ -521,7 +480,6 @@
 
 
 (defn- equal-table?
-
   [equal parser a b]
   (let [left  (entries a)
         right (entries b)]
@@ -531,7 +489,6 @@
 
 
 (defn- equal-value
-
   [parser a b]
   (if (not= (type a) (type b))
     false
@@ -544,7 +501,6 @@
 
 
 (defn- parse-all
-
   [parser source]
   (let [iterator (parser.parser source "fennel-extras" {:comments true})
         forms    []]
@@ -559,7 +515,6 @@
 
 
 (defn- forms-equal?
-
   [parser left right]
   (var same true)
   (each [i form (ipairs left)]
@@ -569,10 +524,8 @@
 
 
 (defn ast-equal?
-
   [parser a b]
   (let [(ok result) (pcall (fn
-
                              []
 
                              (let [left  (parse-all parser a)
@@ -588,7 +541,6 @@
 
 
 (defn- alignment-enabled?
-
   [alignment]
   (or alignment.bindings
       alignment.maps
@@ -599,7 +551,6 @@
 
 
 (defn- rules-config
-
   [config]
   {:indents      (. config :indents)
    :format-as    (. config :format-as)
@@ -609,7 +560,6 @@
 
 
 (defn- indentation-output-error
-
   [source alignment out config]
   (when (not (or (indent-only? source out (alignment-enabled? alignment))
                  (. config :newline)))
@@ -618,7 +568,6 @@
 
 
 (defn- parser-output-error
-
   [source parser out]
   (when (and parser (not (ast-equal? parser source out)))
         {:message "formatter changed the parsed form"}))
@@ -626,7 +575,6 @@
 
 
 (defn- formatted-output-error
-
   [source parser alignment out config]
   (or (indentation-output-error source alignment out config)
       (parser-output-error source parser out)))
@@ -634,7 +582,6 @@
 
 
 (defn- validated-output
-
   [source parser alignment out config]
   (let [output-error (formatted-output-error source parser alignment out config)]
     (if output-error
@@ -644,14 +591,12 @@
 
 
 (defn- format-string-error
-
   [alignment-error rules-error]
   (or alignment-error rules-error))
 
 
 
 (defn- format-string-valid
-
   [source parser config path matcher]
   (let [alignment     (settings.resolve config)
         broken-source (apply-argument-break-rules source config path matcher)
@@ -664,7 +609,6 @@
 
 
 (defn format-string
-
   [source opts]
   (let [config           (or (. opts :config) {})
         parser           (. opts :parser)

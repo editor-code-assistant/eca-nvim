@@ -3,7 +3,6 @@
 (module fennel-extras.cli.table)
 
 (defn update
-
   [original changes]
   (let [result {}]
     (each [key value (pairs original)]

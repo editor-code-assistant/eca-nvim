@@ -14,20 +14,17 @@
 (local matcher (require :fennel-extras.cli.matcher))
 
 (defn- default-print-line
-
   [line]
   (io.stdout:write line "\n")
   (io.stdout:flush))
 
 (defn- default-print
-
   [line]
   (let [text (string.gsub line "\n+$" "")]
     (each [part (string.gmatch text "[^\n]+")]
           (default-print-line part))))
 
 (defn- config-default
-
   [cfg key default]
   (let [value (. cfg key)]
     (if (= value nil)
@@ -35,31 +32,26 @@
       value)))
 
 (defn- load-parser-result
-
   [name ok parser]
   (if ok
     parser
     (values nil (.. "could not require parser module: " name))))
 
 (defn- load-parser-result-call
-
   [name]
   (let [(ok parser) (pcall require name)]
     (load-parser-result name ok parser)))
 
 (defn- load-parser
-
   [name]
   (when name
         (load-parser-result-call name)))
 
 (defn- config-load-error
-
   [path error]
   (values nil error path))
 
 (defn- config-loaded
-
   [_ path]
   (let [(loaded error) (config.load path)]
     (if error
@@ -67,7 +59,6 @@
       (values loaded nil path))))
 
 (defn- config-for
-
   [root printer]
   (let [path (config.find root)]
     (if path
@@ -75,7 +66,6 @@
       (values nil {:message "missing .fnl-extras.fnl"} nil))))
 
 (defn- read-lint-item
-
   [file]
   (let [(source error) (fs.read-file file.absolute)]
     (if error
@@ -83,19 +73,16 @@
       (values source nil))))
 
 (defn- append-lint-source
-
   [result file source]
   (table.insert result {:path file.relative :source source})
   result)
 
 (defn- read-lint-item-success
-
   [state file source]
   (let [next-state {:files state.files :index (+ state.index 1) :result (append-lint-source state.result file source)}]
     (values next-state nil)))
 
 (defn- read-lint-item-result
-
   [state]
   (let [file           (. state.files state.index)
         (source error) (read-lint-item file)]
@@ -104,7 +91,6 @@
       (read-lint-item-success state file source))))
 
 (defn- read-lint-step-result
-
   [state]
   (let [(next-state error) (read-lint-item-result state)]
     (if error
@@ -112,14 +98,12 @@
       {:kind :next :state next-state})))
 
 (defn- read-lint-step
-
   [state]
   (if (> state.index (length state.files))
     {:kind :done :result state.result}
     (read-lint-step-result state)))
 
 (defn- read-lint-files
-
   [state]
   (let [step (read-lint-step state)]
     (case step.kind
@@ -128,31 +112,26 @@
       _      (read-lint-files step.state))))
 
 (defn- lint-policy-error
-
   [root config-path printer error]
   (printer (format.error-line (scan.relative root (or config-path ".fnl-extras.fnl")) error))
   2)
 
 (defn- lint-read-error
-
   [printer error]
   (printer (format.error-line error.path error.error))
   2)
 
 (defn- lint-run-error
-
   [printer error]
   (printer (format.error-line error.path error))
   2)
 
 (defn- lint-result
-
   [printer result]
   (each [_ line (ipairs result.lines)] (printer line))
   result.status)
 
 (defn- run-lint-sources
-
   [context policy sources]
   (let [(selected paths) (git.lint-selection context.parsed sources context.git-info)
         root             context.git-info.root
@@ -162,7 +141,6 @@
       (lint-result context.printer result))))
 
 (defn- run-lint-files
-
   [context policy files]
   (let [(sources read-error) (read-lint-files {:files files :index 1 :result []})]
     (if read-error
@@ -170,7 +148,6 @@
       (run-lint-sources context policy sources))))
 
 (defn- compile-exclusion-entry
-
   [entry]
   (when entry.path
         (matcher.compile-pattern entry.path))
@@ -180,19 +157,16 @@
         (matcher.compile-pattern entry.code)))
 
 (defn- compile-exclusion-patterns-step
-
   [exclusions index recurse]
   (when (<= index (length exclusions))
         (compile-exclusion-entry (. exclusions index))
         (recurse exclusions (+ index 1) recurse)))
 
 (defn- compile-exclusion-patterns
-
   [exclusions index recurse]
   (compile-exclusion-patterns-step exclusions index recurse))
 
 (defn- run-lint-policy-success
-
   [context files policy]
   (let [exclusions         (or policy.exclusions [])
         (ok compile-error) (pcall compile-exclusion-patterns exclusions 1 compile-exclusion-patterns)]
@@ -201,7 +175,6 @@
       (run-lint-files context (table-update.update policy {:matcher (matcher.vim-path-matcher context.cfg.workspace.paths)}) files))))
 
 (defn- run-lint-policy
-
   [context files]
   (let [(policy policy-error) (config.lint-policy context.cfg)]
     (if policy-error
@@ -209,7 +182,6 @@
       (run-lint-policy-success context files policy))))
 
 (defn- run-lint-discovery
-
   [context]
   (let [include-config?              (or (. context.cfg.workspace :config) false)
         inputs                       ((. arg-parser :lint-inputs) context.parsed context.cfg)
@@ -226,7 +198,6 @@
       (run-lint-policy context files))))
 
 (defn- run-lint
-
   [context]
   (let [(git-info git-error-value) (git.lint-git-info context.root context.parsed context.require-git)]
     (if git-error-value
@@ -234,7 +205,6 @@
       (run-lint-discovery (table-update.update context {:git-info git-info})))))
 
 (defn- format-discovery-files
-
   [root paths discovered config-path include-config?]
   (and discovered
        (format.discovered-files root paths discovered config-path include-config?)))
@@ -242,7 +212,6 @@
 
 
 (defn- run-format-files
-
   [context files]
   (let [(parser parser-error) (load-parser (or context.parsed.parser (. context.cfg.format :parser)))]
     (if parser-error
@@ -252,7 +221,6 @@
                         files))))
 
 (defn- run-format-discovery
-
   [root parsed cfg config-path]
   (let [include-config?              (or (. cfg.workspace :config) false)
         inputs                       ((. arg-parser :lint-inputs) parsed cfg)
@@ -266,34 +234,29 @@
     (values files discovery-error)))
 
 (defn- run-format-files-result
-
   [context files]
   (if (= (length files) 0)
     (git.emit-git-error context.printer "no files found")
     (run-format-files context files)))
 
 (defn- run-format-result
-
   [context files discovery-error]
   (if discovery-error
     (git.emit-git-error context.printer discovery-error)
     (run-format-files-result context files)))
 
 (defn- run-format
-
   [context]
   (let [(files discovery-error) (run-format-discovery context.root context.parsed context.cfg context.config-path)]
     (run-format-result context files discovery-error)))
 
 (defn- run-command-mode
-
   [context]
   (case (. context.args 1)
     "lint" (run-lint (table-update.update context {:require-git context.parsed.changed}))
     _      (run-format context)))
 
 (defn- command-config-error
-
   [context]
   (let [command         (. context.args 1)
         require-paths?  (= (length context.parsed.paths) 0)
@@ -303,19 +266,16 @@
         workspace-error)))
 
 (defn- config-error-result
-
   [printer config-path config-error]
   (printer (format.error-line config-path config-error))
   2)
 
 (defn- command-config-error-result
-
   [printer config-path failure]
   (printer (format.error-line config-path failure))
   2)
 
 (defn- canonical-workspace
-
   [workspace]
   {:paths      (or workspace.paths ["."])
    :exclude    (or workspace.exclude [])
@@ -325,14 +285,12 @@
    :config     (or workspace.config false)})
 
 (defn- canonical-fragment
-
   [cfg]
   (if cfg.workspace
     (table-update.update cfg {:workspace (canonical-workspace cfg.workspace)})
     cfg))
 
 (defn- fragment-config
-
   [cfg]
   (if cfg.format
     (canonical-fragment cfg)
@@ -346,7 +304,6 @@
      :lint      {:rules {}}}))
 
 (defn- run-command-loaded
-
   [context cfg config-path]
   (let [cfg     (fragment-config cfg)
         loaded  (table-update.update context {:cfg cfg :config-path config-path})
@@ -356,7 +313,6 @@
       (run-command-mode loaded))))
 
 (defn- run-command
-
   [context]
   (let [(cfg config-error config-path) (config-for context.root context.printer)]
     (if config-error
@@ -364,31 +320,26 @@
       (run-command-loaded context cfg config-path))))
 
 (defn- missing-config-result
-
   [printer]
   (printer "config: missing .fnl-extras.fnl")
   2)
 
 (defn- run-parsed
-
   [args printer root parsed]
   (run-command {:root root :args args :parsed parsed :printer printer}))
 
 (defn- run-parsed-result
-
   [args printer root parsed parse-error]
   (if parse-error
     (git.emit-git-error printer parse-error)
     (run-parsed args printer root parsed)))
 
 (defn- parse-and-run
-
   [args printer root]
   (let [(parsed parse-error) ((. arg-parser :parse-args) args)]
     (run-parsed-result args printer root parsed parse-error)))
 
 (defn run
-
   [args opts]
   (let [opts        (or opts {})
         printer     (or (. opts :print) default-print)
