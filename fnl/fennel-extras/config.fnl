@@ -7,23 +7,22 @@
 (local parse (require :fennel-extras.config.parse))
 (local lint-config (require :fennel-extras.config.lint))
 (local format-config (require :fennel-extras.config.format))
+(local find-config (require :fennel-extras.config.find))
 
 (defn parse-string
   [text]
   (parse.parse-string text))
 
+(defn- array-of-strings-step
+  [value index]
+  (or (= (. value index) nil)
+      (and (= (type (. value index)) :string)
+           (array-of-strings-step value (+ index 1)))))
+
 (defn- array-of-strings?
   [value]
-  (if (not= (type value) :table)
-    false
-    (let []
-      (var valid true)
-      (var index 1)
-      (while (and valid (not= (. value index) nil))
-             (when (not= (type (. value index)) :string)
-                   (set valid false))
-             (set index (+ index 1)))
-      valid)))
+  (and (= (type value) :table)
+       (array-of-strings-step value 1)))
 
 (defn- integer?
   [value]
@@ -32,52 +31,53 @@
 
 (defn- valid-rule?
   [rule]
-  (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
-    (let [kind  (. rule 1)
-          value (. rule 2)
-          index (. rule 3)]
-      (if (= kind :block)
-        (and (integer? value) (>= value 0) (= index nil))
-        (if (= kind :inner)
-          (and (= value 0)
-               (or (= index nil) (and (integer? index) (>= index 0))))
-          false)))
-    false))
+  (and (= (type rule) :table) (= (type (. rule 1)) :string)
+       (let [kind  (. rule 1)
+             value (. rule 2)
+             index (. rule 3)]
+         (if (= kind :block)
+           (and (integer? value) (>= value 0) (= index nil))
+           (and (= kind :inner)
+                (and (= value 0)
+                     (or (= index nil) (and (integer? index) (>= index 0)))))))))
+
+(defn- valid-rule-list-step
+  [value index]
+  (or (> index (length value))
+      (and (valid-rule? (. value index))
+           (valid-rule-list-step value (+ index 1)))))
 
 (defn- valid-rule-list?
   [value]
-  (if (= (type value) :table)
-    (let []
-      (var valid true)
-      (each [_ rule (ipairs value)]
-            (when (not (valid-rule? rule))
-                  (set valid false)))
-      valid)
-    false))
+  (and (= (type value) :table)
+       (valid-rule-list-step value 1)))
+
+(defn- rule-map-error-step
+  [value prefix name]
+  (let [(next-name rule) (next value name)]
+    (when next-name
+          (if (valid-rule-list? rule)
+            (rule-map-error-step value prefix next-name)
+            {:message (.. prefix next-name ": invalid indentation rule")}))))
 
 (defn- rule-map-error
   [value prefix]
   (if (= (type value) :table)
-    (let []
-      (var failure nil)
-      (each [name rule (pairs value)]
-            (when (= failure nil)
-                  (when (not (valid-rule-list? rule))
-                        (set failure {:message (.. prefix name ": invalid indentation rule")}))))
-      failure)
+    (rule-map-error-step value prefix nil)
     {:message (.. prefix ": invalid indentation rule")}))
+
+(defn- extensions-step
+  [value index]
+  (or (> index (length value))
+      (and (= (type (. value index)) :string)
+           (= (string.sub (. value index) 1 1) ".")
+           (extensions-step value (+ index 1)))))
 
 (defn- extensions?
   [value]
-  (if (and (= (type value) :table) (> (length value) 0))
-    (let []
-      (var valid true)
-      (each [_ extension (ipairs value)]
-            (when (or (not= (type extension) :string)
-                      (not (= (string.sub extension 1 1) ".")))
-                  (set valid false)))
-      valid)
-    false))
+  (and (= (type value) :table)
+       (> (length value) 0)
+       (extensions-step value 1)))
 
 (defn- configuration-error-with-lint
   [failure lint]
@@ -283,65 +283,9 @@
       (values nil error)
       (lint-policy-valid valid))))
 
-(defn- join-path
-  [dir name]
-  (if (= (string.sub dir -1) "/")
-    (.. dir name)
-    (.. dir "/" name)))
-
-(defn- close-file
-  [file]
-  (file:close)
-  true)
-
-(defn- exists?
-  [path]
-  (let [uv (or (and vim vim.loop) (and vim vim.uv))]
-    (if uv
-      (not= nil (uv.fs_stat path))
-      (let [file (io.open path :r)]
-        (if file
-          (close-file file)
-          false)))))
-
-(defn- git-marker?
-  [dir]
-  (or (exists? (join-path dir ".git"))
-      (exists? (join-path (join-path dir ".git") "HEAD"))))
-
-(defn- parent-dir
-  [dir]
-  (let [trimmed (if (and (> (string.len dir) 1) (= (string.sub dir -1) "/"))
-                  (string.sub dir 1 -2)
-                  dir)
-        parent  (string.match trimmed "^(.*)/[^/]+$")]
-    (when parent
-          (if (= parent "")
-            "/"
-            parent))))
-
-(defn- found-config
-  [candidate]
-  (values candidate false))
-
 (defn find
   [start-dir]
-  (var dir start-dir)
-  (var result nil)
-  (var searching true)
-  (while searching
-         (let [candidate (join-path dir ".fnl-extras.fnl")]
-           (if (exists? candidate)
-             (let [(new-result new-searching) (found-config candidate)]
-               (set result new-result)
-               (set searching new-searching))
-             (if (git-marker? dir)
-               (set searching false)
-               (let [parent (parent-dir dir)]
-                 (if parent
-                   (set dir parent)
-                   (set searching false)))))))
-  result)
+  (find-config.find start-dir))
 
 (defn load
   [path]

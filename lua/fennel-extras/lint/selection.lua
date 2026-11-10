@@ -162,18 +162,10 @@ do
 end
 local function overlaps_step(form, intervals, index, recurse)
   local interval = intervals[index]
-  if ((interval.start <= form["end-line"]) and (form.line <= interval["end"])) then
-    return true
-  else
-    return recurse(form, intervals, (index + 1))
-  end
+  return (((interval.start <= form["end-line"]) and (form.line <= interval["end"])) or recurse(form, intervals, (index + 1)))
 end
 local function overlaps_3f(form, intervals, index)
-  if (index > #intervals) then
-    return false
-  else
-    return overlaps_step(form, intervals, index, overlaps_3f)
-  end
+  return ((index <= #intervals) and overlaps_step(form, intervals, index, overlaps_3f))
 end
 local form_selected_3f
 do

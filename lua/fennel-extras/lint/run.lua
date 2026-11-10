@@ -10,11 +10,7 @@ local lint = require("fennel-extras.lint")
 local output = require("fennel-extras.lint.output")
 local exclusion_matcher = require("fennel-extras.lint.exclusion")
 local function matching_exclusion_3f(exclusion, findings, matcher, index)
-  if (index > #findings) then
-    return false
-  else
-    return (exclusion_matcher["matches?"](exclusion, findings[index], nil, matcher) or matching_exclusion_3f(exclusion, findings, matcher, (index + 1)))
-  end
+  return ((index <= #findings) and (exclusion_matcher["matches?"](exclusion, findings[index], nil, matcher) or matching_exclusion_3f(exclusion, findings, matcher, (index + 1))))
 end
 local function stale_message(exclusion, policy)
   local instances = ((exclusion.rule and policy.rules[exclusion.rule]) or (exclusion.rule and policy.design and policy.design[exclusion.rule]))
@@ -97,11 +93,7 @@ local function exclusion_path(exclusion)
   return exclusion.path
 end
 local function path_in_scope_3f(paths, path, matcher, index)
-  if (index > #paths) then
-    return false
-  else
-    return (matcher(paths[index], path) or path_in_scope_3f(paths, path, matcher, (index + 1)))
-  end
+  return ((index <= #paths) and (matcher(paths[index], path) or path_in_scope_3f(paths, path, matcher, (index + 1))))
 end
 local function append_scoped_exclusion(result, exclusion, paths, matcher)
   if ((paths == nil) or path_in_scope_3f(paths, exclusion_path(exclusion), matcher, 1)) then
@@ -160,11 +152,7 @@ local function diagnostics(findings, policy, config_path, scope_paths)
   return output.sort(append_stale_findings(source, stale))
 end
 local function has_errors_3f(findings, index)
-  if (index > #findings) then
-    return false
-  else
-    return ((findings[index].severity == "error") or has_errors_3f(findings, (index + 1)))
-  end
+  return ((index <= #findings) and ((findings[index].severity == "error") or has_errors_3f(findings, (index + 1))))
 end
 local function render(findings, format)
   if (format == "json") then

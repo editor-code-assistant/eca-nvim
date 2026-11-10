@@ -193,6 +193,39 @@
                                                    :exclusions []}]}})]
       (is (and (. result :ok) (= 0 (length (. result :findings))))))))
 
+(deftest child-count-not-counted-validation
+  (testing "accepts a non-empty not-counted string list"
+    (let [result (lint-error "(if ok value fallback)"
+                             {:path  "fnl/app.fnl"
+                              :rules {:child-count [{:severity   "warning"
+                                                     :applies-to {:forms ["if"]}
+                                                     :options    {:min-count   2
+                                                                  :max-count   2
+                                                                  :not-counted ["nil" "true" "false"]}
+                                                     :exclusions []}]}})]
+      (is (. result :ok))))
+  (testing "rejects an empty not-counted list"
+    (let [result (lint-error "(if ok value fallback)"
+                             {:path  "fnl/app.fnl"
+                              :rules {:child-count [{:severity   "warning"
+                                                     :applies-to {:forms ["if"]}
+                                                     :options    {:min-count   2
+                                                                  :max-count   2
+                                                                  :not-counted []}
+                                                     :exclusions []}]}})]
+      (is (not (. result :ok)))))
+  (testing "rejects nil-count together with not-counted"
+    (let [result (lint-error "(if ok value fallback)"
+                             {:path  "fnl/app.fnl"
+                              :rules {:child-count [{:severity   "warning"
+                                                     :applies-to {:forms ["if"]}
+                                                     :options    {:min-count   2
+                                                                  :max-count   2
+                                                                  :nil-count   false
+                                                                  :not-counted ["nil"]}
+                                                     :exclusions []}]}})]
+      (is (not (. result :ok))))))
+
 (deftest rule-instance-description-validation
   (testing "accepts a non-empty string description"
     (let [result (config-error {:lint {:rules {:forbidden-form [{:severity    "warning"
@@ -223,9 +256,8 @@
 (deftest strict-config-property
   (testing "the repository config loads with complete format and lint settings"
     (let [config       (load-module :fennel-extras.config)
-          loaded       (if (. config :module-missing)
-                         nil
-                         (config.load ".fnl-extras.fnl"))
+          loaded       (and (not (. config :module-missing))
+                             (config.load ".fnl-extras.fnl"))
           lint-rules   (and loaded (. loaded :lint) (. (. loaded :lint) :rules))
           design-rules (and loaded (. loaded :design) (. (. loaded :design) :rules))
           lint-names   ["forbidden-form"
@@ -266,24 +298,20 @@
 (deftest repository-exclusion-contract
   (testing "child-count macro exclusions consolidate to one path-only entry"
     (let [config     (load-module :fennel-extras.config)
-          loaded     (if (. config :module-missing)
-                       nil
-                       (config.load ".fnl-extras.fnl"))
+          loaded     (and (not (. config :module-missing))
+                           (config.load ".fnl-extras.fnl"))
           instances  (and loaded (. (. (. loaded :lint) :rules) :child-count))
           exclusions (and instances (. (. instances 2) :exclusions))]
       (is (and (= 1 (length exclusions))
                (= "^spec/eca/macros[.]fnlm$" (. (. exclusions 1) :path))))))
 
-  (testing "module-import uses exclusions for the macro file and has no exempt-files option"
+  (testing "module-import has empty exclusions after removing stale macro entries"
     (let [config    (load-module :fennel-extras.config)
-          loaded    (if (. config :module-missing)
-                      nil
-                      (config.load ".fnl-extras.fnl"))
+          loaded    (and (not (. config :module-missing))
+                          (config.load ".fnl-extras.fnl"))
           instances (and loaded (. (. (. loaded :lint) :rules) :module-import))]
       (is (and instances
                (= nil (. (. instances 2) :options :exempt-files))
-               (= "^spec/eca/macros[.]fnlm$"
-                  (. (. (. instances 2) :exclusions 1) :path))
+               (= 0 (length (. (. instances 2) :exclusions)))
                (= nil (. (. instances 3) :options :exempt-files))
-               (= "^spec/eca/macros[.]fnlm$"
-                  (. (. (. instances 3) :exclusions 1) :path)))))))
+               (= 0 (length (. (. instances 3) :exclusions))))))))

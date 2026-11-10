@@ -32,10 +32,11 @@
 
 (defn- legacy-config
   [key]
-  (let [value  (if (= key :extensions) [".fnl"] (if (or (= key :dotfiles)
-                                                        (= key :symlinks))
-                                                  false
-                                                  ["fnl"]))
+  (let [value  (if (= key :extensions)
+                  [".fnl"]
+                  (and (not (or (= key :dotfiles)
+                                (= key :symlinks)))
+                       ["fnl"]))
         result {}]
     (tset result key value)
     result))

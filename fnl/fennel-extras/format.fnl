@@ -251,10 +251,9 @@
 
 (defn- blank-lines-between?
   [lines start end]
-  (if (>= start end)
-    true
-    (and (= (. lines start) "")
-         (blank-lines-between? lines (+ start 1) end))))
+  (or (>= start end)
+      (and (= (. lines start) "")
+           (blank-lines-between? lines (+ start 1) end))))
 
 (defn- normalize-gap
   [lines left right count]
@@ -423,10 +422,9 @@
 
 (defn- lines-equal?
   [left right index allow-binding-whitespace?]
-  (if (> index (length left))
-    true
-    (and (line-equal? (. left index) (. right index) allow-binding-whitespace?)
-         (lines-equal? left right (+ index 1) allow-binding-whitespace?))))
+  (or (> index (length left))
+      (and (line-equal? (. left index) (. right index) allow-binding-whitespace?)
+           (lines-equal? left right (+ index 1) allow-binding-whitespace?))))
 
 (defn- replace-last-token
   [tokens token]
@@ -529,17 +527,15 @@
 
 (defn- continue-equal-entries
   [continue equal parser left right found-index]
-  (if found-index
-    (remove-and-continue continue equal parser left right found-index)
-    false))
+  (and found-index
+       (remove-and-continue continue equal parser left right found-index)))
 
 (defn- equal-entries?
   [equal parser left right]
-  (if (= (length left) 0)
-    true
-    (let [entry       (table.remove left 1)
-          found-index (matching-entry equal parser entry right)]
-      (continue-equal-entries equal-entries? equal parser left right found-index))))
+  (or (= (length left) 0)
+      (let [entry       (table.remove left 1)
+            found-index (matching-entry equal parser entry right)]
+        (continue-equal-entries equal-entries? equal parser left right found-index))))
 
 (defn- equal-table?
   [equal parser a b]
@@ -550,13 +546,12 @@
 
 (defn- equal-value
   [parser a b]
-  (if (not= (type a) (type b))
-    false
-    (if (= (type a) :table)
-      (if (or (symbol? a) (parser.comment? a))
-        (= (tostring a) (tostring b))
-        (equal-table? equal-value parser a b))
-      (= a b))))
+  (and (= (type a) (type b))
+       (if (= (type a) :table)
+         (if (or (symbol? a) (parser.comment? a))
+           (= (tostring a) (tostring b))
+           (equal-table? equal-value parser a b))
+         (= a b))))
 
 (defn- parse-all
   [parser source]
@@ -585,9 +580,8 @@
 
                              (let [left  (parse-all parser a)
                                    right (parse-all parser b)]
-                               (if (not= (length left) (length right))
-                                 false
-                                 (forms-equal? parser left right)))))]
+                               (and (= (length left) (length right))
+                                    (forms-equal? parser left right)))))]
 
 
     (and ok

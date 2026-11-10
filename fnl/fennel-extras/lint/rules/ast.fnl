@@ -139,10 +139,9 @@
 
 (defn- has-all-step
   [names required index]
-  (if (> index (length required))
-    true
-    (and (. names (. required index))
-         (has-all-step names required (+ index 1)))))
+  (or (> index (length required))
+      (and (. names (. required index))
+           (has-all-step names required (+ index 1)))))
 
 (defn has-all?
   [names required]
@@ -158,24 +157,22 @@
 (defn previous-meaningful-child
   [children previous-index]
   (let [previous (. children previous-index)]
-    (if (<= previous-index 0)
-      nil
-      (or (and (trivia? previous)
-               (previous-meaningful-child children (- previous-index 1)))
-          previous))))
+    (and (> previous-index 0)
+         (or (and (trivia? previous)
+                  (previous-meaningful-child children (- previous-index 1)))
+             previous))))
 
 (defn- previous-meaningful-index-step
   [children index recurse]
   (let [previous-index (- index 1)]
-    (if (trivia? (. children previous-index))
-      (recurse children previous-index recurse)
-      previous-index)))
+    (or (and (trivia? (. children previous-index))
+             (recurse children previous-index recurse))
+        previous-index)))
 
 (defn previous-meaningful-index
   [children index]
-  (if (<= index 1)
-    nil
-    (previous-meaningful-index-step children index previous-meaningful-index)))
+  (and (> index 1)
+       (previous-meaningful-index-step children index previous-meaningful-index)))
 
 (defn previous-meaningful
   [children index]

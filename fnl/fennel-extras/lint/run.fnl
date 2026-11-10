@@ -9,10 +9,9 @@
 
 (defn- matching-exclusion?
   [exclusion findings matcher index]
-  (if (> index (length findings))
-    false
-    (or (exclusion-matcher.matches? exclusion (. findings index) nil matcher)
-        (matching-exclusion? exclusion findings matcher (+ index 1)))))
+  (and (<= index (length findings))
+       (or (exclusion-matcher.matches? exclusion (. findings index) nil matcher)
+           (matching-exclusion? exclusion findings matcher (+ index 1)))))
 
 (defn- stale-message
   [exclusion policy]
@@ -102,10 +101,9 @@
 
 (defn- path-in-scope?
   [paths path matcher index]
-  (if (> index (length paths))
-    false
-    (or (matcher (. paths index) path)
-        (path-in-scope? paths path matcher (+ index 1)))))
+  (and (<= index (length paths))
+       (or (matcher (. paths index) path)
+           (path-in-scope? paths path matcher (+ index 1)))))
 
 (defn- append-scoped-exclusion
   [result exclusion paths matcher]
@@ -164,10 +162,9 @@
 
 (defn- has-errors?
   [findings index]
-  (if (> index (length findings))
-    false
-    (or (= (. (. findings index) :severity) "error")
-        (has-errors? findings (+ index 1)))))
+  (and (<= index (length findings))
+       (or (= (. (. findings index) :severity) "error")
+           (has-errors? findings (+ index 1)))))
 
 (defn- render
   [findings format]

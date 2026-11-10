@@ -205,7 +205,7 @@
              (vim.deep_equal {:forms ["if"]} (. instance :applies-to))
              (= 2 (. instance :options :min-count))
              (= 2 (. instance :options :max-count))
-             (= false (. instance :options :nil-count))))))
+             (vim.deep_equal ["nil" "true" "false"] (. instance :options :not-counted))))))
 
 (local removed-rules ["call-data-arg"
                       "module-style"

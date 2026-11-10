@@ -97,10 +97,9 @@
 
 (defn- path-present?
   [paths path index]
-  (if (> index (length paths))
-    false
-    (or (= path (. paths index))
-        (path-present? paths path (+ index 1)))))
+  (and (<= index (length paths))
+       (or (= path (. paths index))
+           (path-present? paths path (+ index 1)))))
 
 (defn- changed-file-result
   [file patch status]
@@ -174,4 +173,4 @@
     (values (changed-files-step {:root git-info.root :base (or parsed.base "HEAD") :files sources :plan git-info.plan}
                                 {:index 1 :result []})
             (scope-paths git-info.plan))
-    (values sources nil)))
+    (values sources (when (> (length parsed.paths) 0) parsed.paths))))

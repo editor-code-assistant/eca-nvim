@@ -46,10 +46,9 @@
 
 (defn- path-match-step
   [paths pattern path index]
-  (if (> index (length paths))
-    false
-    (or (path-match? pattern path (. paths index))
-        (path-match-step paths pattern path (+ index 1)))))
+  (and (<= index (length paths))
+       (or (path-match? pattern path (. paths index))
+           (path-match-step paths pattern path (+ index 1)))))
 
 (defn vim-path-matcher
   [workspace-paths]

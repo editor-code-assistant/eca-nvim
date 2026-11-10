@@ -48,11 +48,7 @@ local function append_all(target, items)
   return target
 end
 local function contains_3f(items, target, index)
-  if (index > #items) then
-    return false
-  else
-    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
-  end
+  return ((index <= #items) and ((items[index] == target) or contains_3f(items, target, (index + 1))))
 end
 local function evaluate_form(path, form, forms, policy)
   local node = form.node

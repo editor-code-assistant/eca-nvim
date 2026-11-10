@@ -44,11 +44,7 @@ do
   required_form_finding = _2amodule_2a["required-form-finding"]
 end
 local function contains_3f(items, target, index)
-  if (index > #items) then
-    return false
-  else
-    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
-  end
+  return ((index <= #items) and ((items[index] == target) or contains_3f(items, target, (index + 1))))
 end
 local function module_target(node)
   local head = list_head(node)
@@ -93,23 +89,23 @@ do
     local binding = (options.binding or "core")
     local forbidden = ((options.mode == "forbid") and not (target == options.module) and target and contains_3f(modules, target, 1))
     local required
-    local and_8_ = (options.mode == "require") and (target == options.module)
-    if and_8_ then
+    local and_7_ = (options.mode == "require") and (target == options.module)
+    if and_7_ then
       if import_info then
-        and_8_ = not has_all_3f(import_info.names, (options.forms or {}))
+        and_7_ = not has_all_3f(import_info.names, (options.forms or {}))
       else
-        and_8_ = not canonical_require_3f(head, children, req_children, binding)
+        and_7_ = not canonical_require_3f(head, children, req_children, binding)
       end
     end
-    required = and_8_
+    required = and_7_
     if (enabled_3f(policy, "module-import") and (forbidden or required)) then
-      local _10_
+      local _9_
       if forbidden then
-        _10_ = "forbidden module import"
+        _9_ = "forbidden module import"
       else
-        _10_ = "bind the required module canonically"
+        _9_ = "bind the required module canonically"
       end
-      return table.insert(findings, finding(path, finding_form(path, form, head, children), rule_severity(policy, "module-import"), "module-import", _10_, node))
+      return table.insert(findings, finding(path, finding_form(path, form, head, children), rule_severity(policy, "module-import"), "module-import", _9_, node))
     else
       return nil
     end

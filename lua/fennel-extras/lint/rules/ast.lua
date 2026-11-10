@@ -183,11 +183,7 @@ do
   import_macros_3f = _2amodule_2a["import-macros?"]
 end
 local function has_all_step(names, required, index)
-  if (index > #required) then
-    return true
-  else
-    return (names[required[index]] and has_all_step(names, required, (index + 1)))
-  end
+  return ((index > #required) or (names[required[index]] and has_all_step(names, required, (index + 1))))
 end
 local has_all_3f
 do
@@ -209,31 +205,19 @@ local previous_meaningful_child
 do
   local function previous_meaningful_child0(children, previous_index)
     local previous = children[previous_index]
-    if (previous_index <= 0) then
-      return nil
-    else
-      return ((trivia_3f(previous) and previous_meaningful_child0(children, (previous_index - 1))) or previous)
-    end
+    return ((previous_index > 0) and ((trivia_3f(previous) and previous_meaningful_child0(children, (previous_index - 1))) or previous))
   end
   _2amodule_2a["previous-meaningful-child"] = previous_meaningful_child0
   previous_meaningful_child = _2amodule_2a["previous-meaningful-child"]
 end
 local function previous_meaningful_index_step(children, index, recurse)
   local previous_index = (index - 1)
-  if trivia_3f(children[previous_index]) then
-    return recurse(children, previous_index, recurse)
-  else
-    return previous_index
-  end
+  return ((trivia_3f(children[previous_index]) and recurse(children, previous_index, recurse)) or previous_index)
 end
 local previous_meaningful_index
 do
   local function previous_meaningful_index0(children, index)
-    if (index <= 1) then
-      return nil
-    else
-      return previous_meaningful_index_step(children, index, previous_meaningful_index0)
-    end
+    return ((index > 1) and previous_meaningful_index_step(children, index, previous_meaningful_index0))
   end
   _2amodule_2a["previous-meaningful-index"] = previous_meaningful_index0
   previous_meaningful_index = _2amodule_2a["previous-meaningful-index"]

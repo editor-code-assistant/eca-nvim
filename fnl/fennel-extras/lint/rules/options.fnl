@@ -8,7 +8,7 @@
        {"forbidden-form"   ["module" "forms"]
         "required-form"    ["forms"]
         "module-import"    ["mode" "modules" "module" "binding" "forms"]
-        "child-count"      ["children" "max-count" "min-count" "nil-count"]
+        "child-count"      ["children" "max-count" "min-count" "nil-count" "not-counted"]
         "form-child-count" ["children" "max-count"]
         "file-size"        ["max-code-lines"]})
 
@@ -30,6 +30,7 @@
         "max-count"      :positive-integer
         "min-count"      :non-negative-integer
         "nil-count"      :boolean
+        "not-counted"    :non-empty-strings
         "nil-else"       :boolean
         "clauses"        :strings
         "bindings"       :strings
@@ -74,17 +75,19 @@
 
 (defn- strings-step
   [value index]
-  (if (> index (length value))
-    true
-    (and (= (type (. value index)) :string)
-         (strings-step value (+ index 1)))))
+  (or (> index (length value))
+      (and (= (type (. value index)) :string)
+           (strings-step value (+ index 1)))))
 
 (defn- strings?
   [value]
   (and (parse.sequence? value)
        (strings-step value 1)))
 
-
+(defn- non-empty-strings?
+  [value]
+  (and (strings? value)
+       (> (length value) 0)))
 
 (local validators
        {:string               (fn
@@ -93,12 +96,14 @@
 
 
         :strings              strings?
+        :non-empty-strings    non-empty-strings?
         :positive-integer     positive-integer?
         :non-negative-integer non-negative-integer?
         :boolean              boolean?})
 
 (local type-messages
        {:strings              " must be a list of strings"
+        :non-empty-strings    " must be a non-empty list of strings"
         :positive-integer     " must be a positive integer"
         :non-negative-integer " must be a non-negative integer"
         :boolean              " must be a boolean"
@@ -107,9 +112,8 @@
 (defn- option-type-valid?
   [kind value]
   (let [validator (. validators kind)]
-    (if validator
-      (validator value)
-      true)))
+    (or (and (not validator) true)
+        (and validator (validator value)))))
 
 (defn- option-type-message
   [kind option]
@@ -121,13 +125,12 @@
   (let [key   (. keys index)
         value (and key (. options key))
         kind  (and key (. (schema rule) key))]
-    (if (= key nil)
-      nil
-      (or (and (= kind nil)
-               {:unknown true :message (.. "unknown option " (tostring key))})
-          (and (not (option-type-valid? kind value))
-               {:message (option-type-message kind key)})
-          (first-option-error-step rule options keys (+ index 1))))))
+    (and key
+         (or (and (= kind nil)
+                  {:unknown true :message (.. "unknown option " (tostring key))})
+             (and (not (option-type-valid? kind value))
+                  {:message (option-type-message kind key)})
+             (first-option-error-step rule options keys (+ index 1))))))
 
 (defn- first-option-error
   [rule options]
@@ -159,9 +162,8 @@
 
 (defn validate
   [rule options]
-  (if (= options nil)
-    nil
-    (validate-present rule options)))
+  (and options
+       (validate-present rule options)))
 
 (defn normalized
   [overrides]

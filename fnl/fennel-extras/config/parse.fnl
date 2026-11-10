@@ -31,9 +31,8 @@
 (defn- marked-with?
   [value marker]
   (let [metadata (getmetatable value)]
-    (if metadata
-      (= (. metadata marker) true)
-      false)))
+    (and metadata
+         (= (. metadata marker) true))))
 
 (defn- sequence-table?
   [value]
@@ -44,15 +43,13 @@
 
 (defn sequence?
   [value]
-  (if (= (type value) :table)
-    (sequence-table? value)
-    false))
+  (and (= (type value) :table)
+       (sequence-table? value)))
 
 (defn- parsed-table?
   [value]
-  (if (= (type value) :table)
-    (marked-with? value table-marker)
-    false))
+  (and (= (type value) :table)
+       (marked-with? value table-marker)))
 
 (defn- error-at
   [message token]
@@ -60,12 +57,12 @@
 
 (defn- trivia?
   [child]
-  (if (and child child.kind)
-    (or (= child.kind :whitespace)
-        (= child.kind :newline)
-        (= child.kind :comment)
-        (= child.kind :tab))
-    false))
+  (and child
+       child.kind
+       (or (= child.kind :whitespace)
+           (= child.kind :newline)
+           (= child.kind :comment)
+           (= child.kind :tab))))
 
 (defn- append-meaningful-child
   [result child]
@@ -136,15 +133,13 @@
 (defn- convert-symbol
   [token]
   (let [text token.text]
-    (if (= (string.sub text 1 1) ":")
-      (string.sub text 2)
-      (if (= text "true")
-        true
-        (if (= text "false")
-          false
-          (if (= text "nil")
-            nil
-            (error (error-at "symbols are not allowed" token) 0)))))))
+    (or (and (= (string.sub text 1 1) ":")
+            (string.sub text 2))
+        (case text
+          "true" true
+          "false" false
+          "nil" nil
+          _ (error (error-at "symbols are not allowed" token) 0)))))
 
 (defn- convert-table-children
   [convert-fn children result]

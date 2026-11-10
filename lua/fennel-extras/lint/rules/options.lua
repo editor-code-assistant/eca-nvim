@@ -6,9 +6,9 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local option_names = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}}
+local option_names = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count", "not-counted"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}}
 local required_option_names = {["forbidden-form"] = {}, ["required-form"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}}
-local option_types = {module = "string", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
+local option_types = {module = "string", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["not-counted"] = "non-empty-strings", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string"}
 local schema
 do
   local function schema0(rule)
@@ -55,28 +55,23 @@ local function non_negative_integer_3f(value)
   return ((type(value) == "number") and (value == math.floor(value)) and (value >= 0))
 end
 local function strings_step(value, index)
-  if (index > #value) then
-    return true
-  else
-    return ((type(value[index]) == "string") and strings_step(value, (index + 1)))
-  end
+  return ((index > #value) or ((type(value[index]) == "string") and strings_step(value, (index + 1))))
 end
 local function strings_3f(value)
   return (parse["sequence?"](value) and strings_step(value, 1))
 end
+local function non_empty_strings_3f(value)
+  return (strings_3f(value) and (#value > 0))
+end
 local validators
-local function _2_(value)
+local function _1_(value)
   return (type(value) == "string")
 end
-validators = {string = _2_, strings = strings_3f, ["positive-integer"] = positive_integer_3f, ["non-negative-integer"] = non_negative_integer_3f, boolean = boolean_3f}
-local type_messages = {strings = " must be a list of strings", ["positive-integer"] = " must be a positive integer", ["non-negative-integer"] = " must be a non-negative integer", boolean = " must be a boolean", string = " must be a string"}
+validators = {string = _1_, strings = strings_3f, ["non-empty-strings"] = non_empty_strings_3f, ["positive-integer"] = positive_integer_3f, ["non-negative-integer"] = non_negative_integer_3f, boolean = boolean_3f}
+local type_messages = {strings = " must be a list of strings", ["non-empty-strings"] = " must be a non-empty list of strings", ["positive-integer"] = " must be a positive integer", ["non-negative-integer"] = " must be a non-negative integer", boolean = " must be a boolean", string = " must be a string"}
 local function option_type_valid_3f(kind, value)
   local validator = validators[kind]
-  if validator then
-    return validator(value)
-  else
-    return true
-  end
+  return ((not validator and true) or (validator and validator(value)))
 end
 local function option_type_message(kind, option)
   local message = type_messages[kind]
@@ -86,11 +81,7 @@ local function first_option_error_step(rule, options, keys, index)
   local key = keys[index]
   local value = (key and options[key])
   local kind = (key and schema(rule)[key])
-  if (key == nil) then
-    return nil
-  else
-    return (((kind == nil) and {unknown = true, message = ("unknown option " .. tostring(key))}) or (not option_type_valid_3f(kind, value) and {message = option_type_message(kind, key)}) or first_option_error_step(rule, options, keys, (index + 1)))
-  end
+  return (key and (((kind == nil) and {unknown = true, message = ("unknown option " .. tostring(key))}) or (not option_type_valid_3f(kind, value) and {message = option_type_message(kind, key)}) or first_option_error_step(rule, options, keys, (index + 1))))
 end
 local function first_option_error(rule, options)
   local keys = vim.tbl_keys(options)
@@ -121,11 +112,7 @@ end
 local validate
 do
   local function validate0(rule, options)
-    if (options == nil) then
-      return nil
-    else
-      return validate_present(rule, options)
-    end
+    return (options and validate_present(rule, options))
   end
   _2amodule_2a["validate"] = validate0
   validate = _2amodule_2a.validate

@@ -97,11 +97,7 @@ end
 local fnl_file_3f
 do
   local function fnl_file_3f0(path, extensions)
-    if (extensions == nil) then
-      return true
-    else
-      return extension_matches_any_3f(path, extensions)
-    end
+    return ((extensions == nil) or extension_matches_any_3f(path, extensions))
   end
   _2amodule_2a["fnl-file?"] = fnl_file_3f0
   fnl_file_3f = _2amodule_2a["fnl-file?"]
@@ -118,11 +114,7 @@ local function under_prefix_3f(path, prefix)
   return ((path == clean) or (string.sub(path, 1, (string.len(clean) + 1)) == (clean .. "/")))
 end
 local function excluded_result(path, prefix, result)
-  if under_prefix_3f(path, prefix) then
-    return true
-  else
-    return result
-  end
+  return (under_prefix_3f(path, prefix) or result)
 end
 local function excluded_any_3f(path, excludes, index, result)
   if (index > #excludes) then

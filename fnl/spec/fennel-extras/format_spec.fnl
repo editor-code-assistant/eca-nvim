@@ -62,73 +62,59 @@
         "(a)\n(b)"
         second-b
         "(a)\n(c)"]
-    {:indent-same        (if (. format :error)
-                           false
-                           (format.indent-only? same-a same-b))
-     :indent-string      (if (. format :error)
-                           true
-                           (format.indent-only? "(foo \"a\")" "(foo \"b\")"))
-     :indent-trailing    (if (. format :error)
-                           true
-                           (format.indent-only? "(foo)" "(foo) "))
-     :indent-lines       (if (. format :error)
-                           true
-                           (format.indent-only? "(foo)\n(bar)" "(foo)"))
-     :indent-char        (if (. format :error)
-                           true
-                           (format.indent-only? "(foo)" "(bar)"))
-     :binding-aligned    (if (. format :error)
-                           false
-                           (format.indent-only? "(let [a 1\n      long-name 2])"
+    {:indent-same        (and (not (. format :error))
+                                (format.indent-only? same-a same-b))
+     :indent-string      (or (. format :error)
+                               (format.indent-only? "(foo \"a\")" "(foo \"b\")"))
+     :indent-trailing    (or (. format :error)
+                               (format.indent-only? "(foo)" "(foo) "))
+     :indent-lines       (or (. format :error)
+                               (format.indent-only? "(foo)\n(bar)" "(foo)"))
+     :indent-char        (or (. format :error)
+                               (format.indent-only? "(foo)" "(bar)"))
+     :binding-aligned    (and (not (. format :error))
+                                (format.indent-only? "(let [a 1\n      long-name 2])"
                                                 "(let [a         1\n      long-name 2])"
                                                 true))
-     :binding-joined     (if (. format :error)
-                           true
-                           (format.indent-only? "(let [a 1\n      long-name 2])"
+     :binding-joined     (or (. format :error)
+                               (format.indent-only? "(let [a 1\n      long-name 2])"
                                                 "(let [a1\n      long-name 2])"
                                                 true))
-     :binding-string     (if (. format :error)
-                           true
-                           (format.indent-only? "(let [x \"a b\"])"
+     :binding-string     (or (. format :error)
+                               (format.indent-only? "(let [x \"a b\"])"
                                                 "(let [x \"a  b\"])"
                                                 true))
-     :newline-removed    (if (. format :error)
-                           true
-                           (format.indent-only? "(let [a 1\n b 2])"
+     :newline-removed    (or (. format :error)
+                               (format.indent-only? "(let [a 1\n b 2])"
                                                 "(let [a 1 b 2])"
                                                 true))
-     :newline-added      (if (. format :error)
-                           false
-                           (format.indent-only? "(let [a 1 b 2])"
+     :newline-added      (and (not (. format :error))
+                                (format.indent-only? "(let [a 1 b 2])"
                                                 "(let [a 1\n      b 2])"
                                                 true))
-     :blank-line-removed (if (. format :error)
-                           true
-                           (format.indent-only? "(f a\n\n  b)"
+     :blank-line-removed (or (. format :error)
+                               (format.indent-only? "(f a\n\n  b)"
                                                 "(f a\n  b)"
                                                 true))
-     :spaces-collapsed   (if (. format :error)
-                           false
-                           (format.indent-only? "(f a    b)"
+     :spaces-collapsed   (and (not (. format :error))
+                                (format.indent-only? "(f a    b)"
                                                 "(f a b)"
                                                 true))
-     :separation-removed (if (. format :error)
-                           true
-                           (format.indent-only? "(f a b)"
+     :separation-removed (or (. format :error)
+                               (format.indent-only? "(f a b)"
                                                 "(f ab)"
                                                 true))
-     :ast-same           (if (or (. format :error) (. parser :error))
-                           false
-                           (format.ast-equal? parser same-a same-b))
-     :ast-symbol         (if (or (. format :error) (. parser :error))
-                           true
-                           (format.ast-equal? parser symbol-a symbol-b))
-     :ast-comment        (if (or (. format :error) (. parser :error))
-                           true
-                           (format.ast-equal? parser comment-a comment-b))
-     :ast-second         (if (or (. format :error) (. parser :error))
-                           true
-                           (format.ast-equal? parser second-a second-b))}))
+     :ast-same           (and (not (or (. format :error) (. parser :error)))
+                                (format.ast-equal? parser same-a same-b))
+     :ast-symbol         (or (. format :error)
+                               (. parser :error)
+                               (format.ast-equal? parser symbol-a symbol-b))
+     :ast-comment        (or (. format :error)
+                               (. parser :error)
+                               (format.ast-equal? parser comment-a comment-b))
+     :ast-second         (or (. format :error)
+                               (. parser :error)
+                               (format.ast-equal? parser second-a second-b))}))
 
 (defn- format-call-body
   [format source config]
@@ -491,15 +477,12 @@
   []
   (let [parser (load-parser)
         format (load-format)]
-    {:same            (if (or (. parser :error) (. format :error))
-                        false
-                        (format.ast-equal? parser "{a 1}" "{a 1}"))
-     :different-value (if (or (. parser :error) (. format :error))
-                        false
-                        (format.ast-equal? parser "{a 1}" "{a 2}"))
-     :different-key   (if (or (. parser :error) (. format :error))
-                        false
-                        (format.ast-equal? parser "{a 1}" "{b 1}"))}))
+    {:same            (and (not (or (. parser :error) (. format :error)))
+                             (format.ast-equal? parser "{a 1}" "{a 1}"))
+     :different-value (and (not (or (. parser :error) (. format :error)))
+                             (format.ast-equal? parser "{a 1}" "{a 2}"))
+     :different-key   (and (not (or (. parser :error) (. format :error)))
+                             (format.ast-equal? parser "{a 1}" "{b 1}"))}))
 
 (deftest symbol-keyed-tables
   (testing "format-string preserves an unchanged symbol-keyed table"

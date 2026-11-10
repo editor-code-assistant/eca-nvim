@@ -115,11 +115,7 @@ local function git_plan(start, parsed)
   end
 end
 local function path_present_3f(paths, path, index)
-  if (index > #paths) then
-    return false
-  else
-    return ((path == paths[index]) or path_present_3f(paths, path, (index + 1)))
-  end
+  return ((index <= #paths) and ((path == paths[index]) or path_present_3f(paths, path, (index + 1))))
 end
 local function changed_file_result(file, patch, status)
   if (status == 0) then
@@ -208,7 +204,14 @@ do
     if parsed.changed then
       return changed_files_step({root = git_info.root, base = (parsed.base or "HEAD"), files = sources, plan = git_info.plan}, {index = 1, result = {}}), scope_paths(git_info.plan)
     else
-      return sources, nil
+      local function _17_()
+        if (#parsed.paths > 0) then
+          return parsed.paths
+        else
+          return nil
+        end
+      end
+      return sources, _17_()
     end
   end
   _2amodule_2a["lint-selection"] = lint_selection1

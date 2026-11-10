@@ -116,16 +116,14 @@
 (defn- overlaps-step
   [form intervals index recurse]
   (let [interval (. intervals index)]
-    (if (and (<= interval.start form.end-line)
+    (or (and (<= interval.start form.end-line)
              (<= form.line interval.end))
-      true
-      (recurse form intervals (+ index 1)))))
+        (recurse form intervals (+ index 1)))))
 
 (defn- overlaps?
   [form intervals index]
-  (if (> index (length intervals))
-    false
-    (overlaps-step form intervals index overlaps?)))
+  (and (<= index (length intervals))
+       (overlaps-step form intervals index overlaps?)))
 
 (defn form-selected?
   [form intervals]

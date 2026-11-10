@@ -14,10 +14,9 @@
 
 (defn- contains?
   [items target index]
-  (if (> index (length items))
-    false
-    (or (= (. items index) target)
-        (contains? items target (+ index 1)))))
+  (and (<= index (length items))
+       (or (= (. items index) target)
+           (contains? items target (+ index 1)))))
 
 (defn- module-target
   [node]

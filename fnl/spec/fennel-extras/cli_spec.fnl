@@ -2323,7 +2323,18 @@
                  (= (. result :expected) (. result :content)))))))
 
   (deftest lint-policy-cli-regressions
-    )
+    (testing "returns zero for a non-macro file"
+      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
+                                  {"a.fnl" "(when x nil)\\n"}
+                                  ["lint" "a.fnl"])]
+        (is (= 0 (. result :code)))))
+
+    (testing "does not report the macro exclusion as stale for a non-macro file"
+      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
+                                  {"a.fnl" "(when x nil)\\n"}
+                                  ["lint" "a.fnl"])
+            text   (table.concat (or (. result :lines) []) "\\n")]
+        (is (not (string.match text "stale exclusion"))))))
 
   (defn- missing-config-cli-scenario-body
     [root path command]

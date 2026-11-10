@@ -14,26 +14,14 @@ local function boolean_3f(value)
 end
 local function string_list_entry_3f(value, index)
   local item = value[index]
-  if (item == nil) then
-    return true
-  else
-    return ((type(item) == "string") and string_list_entry_3f(value, (index + 1)))
-  end
+  return ((item == nil) or ((type(item) == "string") and string_list_entry_3f(value, (index + 1))))
 end
 local function string_list_3f(value)
-  if parse["sequence?"](value) then
-    return string_list_entry_3f(value, 1)
-  else
-    return false
-  end
+  return (parse["sequence?"](value) and string_list_entry_3f(value, 1))
 end
 local function list_contains_entry_3f(items, name, index)
   local item = items[index]
-  if (item == nil) then
-    return false
-  else
-    return ((item == name) or list_contains_entry_3f(items, name, (index + 1)))
-  end
+  return ((item ~= nil) and ((item == name) or list_contains_entry_3f(items, name, (index + 1))))
 end
 local function list_contains_3f(items, name)
   return list_contains_entry_3f(items, name, 1)
@@ -78,11 +66,7 @@ end
 local function validate_entries(value, key)
   local next_key, item = next(value, key)
   local failure = (next_key and validate_entry(next_key, item))
-  if (next_key == nil) then
-    return nil
-  else
-    return (failure or validate_entries(value, next_key))
-  end
+  return (next_key and (failure or validate_entries(value, next_key)))
 end
 local function validate_table(value)
   if (type(value) == "table") then

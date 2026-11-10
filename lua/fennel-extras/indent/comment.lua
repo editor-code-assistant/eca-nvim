@@ -18,11 +18,7 @@ do
   first_code_token_after = _2amodule_2a["first-code-token-after"]
 end
 local function code_before_comment_step(before, prior, line_number, comment_token)
-  if ((prior.line == line_number) and (prior.col < comment_token.col) and (prior.kind == "open")) then
-    return false
-  else
-    return (before or ((prior.line == line_number) and (prior.col < comment_token.col) and not ((prior.kind == "whitespace") or (prior.kind == "newline") or (prior.kind == "comment"))))
-  end
+  return (not ((prior.line == line_number) and (prior.col < comment_token.col) and (prior.kind == "open")) and (before or ((prior.line == line_number) and (prior.col < comment_token.col) and not ((prior.kind == "whitespace") or (prior.kind == "newline") or (prior.kind == "comment")))))
 end
 local function code_before_comment_3f(tokens, line_number, comment_token)
   local before = false

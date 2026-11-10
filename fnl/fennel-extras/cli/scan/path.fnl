@@ -70,9 +70,8 @@
 
 (defn fnl-file?
   [path extensions]
-  (if (= extensions nil)
-    true
-    (extension-matches-any? path extensions)))
+  (or (= extensions nil)
+      (extension-matches-any? path extensions)))
 
 (defn- clean-prefix
   [prefix]
@@ -88,9 +87,8 @@
 
 (defn- excluded-result
   [path prefix result]
-  (if (under-prefix? path prefix)
-    true
-    result))
+  (or (under-prefix? path prefix)
+      result))
 
 (defn- excluded-any?
   [path excludes index result]

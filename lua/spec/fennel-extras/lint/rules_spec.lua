@@ -183,4 +183,53 @@ local function _18_()
   end
   return require("plenary.busted").it("allows a normal two-branch if", _25_)
 end
-return require("plenary.busted").describe("direct-child-arity", _18_)
+require("plenary.busted").describe("direct-child-arity", _18_)
+local function _26_()
+  local policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["not-counted"] = {"nil", "true", "false"}}, exclusions = {}}}}
+  local finding
+  local function _27_(source)
+    return identities(findings_for(source, "fnl/app.fnl", policy))
+  end
+  finding = _27_
+  local function _28_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1", "warning"}}
+    local actual_7_auto = finding("(defn run [] (if ok true fallback))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("excludes literal true from the direct count", _28_)
+  local function _29_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1", "warning"}}
+    local actual_7_auto = finding("(defn run [] (if ok false fallback))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("excludes literal false from the direct count", _29_)
+  local function _30_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1", "warning"}}
+    local actual_7_auto = finding("(defn run [] (if ok value nil))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("excludes literal nil from the direct count", _30_)
+  local function _31_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = finding("(defn run [] (if ok value fallback))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("preserves two counted branches", _31_)
+  local function _32_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1", "warning"}}
+    local actual_7_auto = finding("(defn run [] (if ok value fallback extra))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("enforces the maximum of two counted branches", _32_)
+end
+return require("plenary.busted").describe("direct-child-arity-not-counted", _26_)

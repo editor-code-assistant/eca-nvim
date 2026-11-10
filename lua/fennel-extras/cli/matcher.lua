@@ -51,20 +51,16 @@ local function path_match_3f(pattern, path, base)
   return (matches_pattern_3f(pattern, path) or (relative and matches_pattern_3f(pattern, relative)))
 end
 local function path_match_step(paths, pattern, path, index)
-  if (index > #paths) then
-    return false
-  else
-    return (path_match_3f(pattern, path, paths[index]) or path_match_step(paths, pattern, path, (index + 1)))
-  end
+  return ((index <= #paths) and (path_match_3f(pattern, path, paths[index]) or path_match_step(paths, pattern, path, (index + 1))))
 end
 local vim_path_matcher
 do
   local function vim_path_matcher0(workspace_paths)
     local paths = (workspace_paths or {})
-    local function _4_(pattern, path)
+    local function _3_(pattern, path)
       return path_match_step(paths, pattern, path, 1)
     end
-    return _4_
+    return _3_
   end
   _2amodule_2a["vim-path-matcher"] = vim_path_matcher0
   vim_path_matcher = _2amodule_2a["vim-path-matcher"]

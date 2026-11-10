@@ -145,3 +145,28 @@
 
     (testing "allows a normal two-branch if"
       (is (= [] (finding "(defn run [] (if ok value fallback))"))))))
+
+(deftest direct-child-arity-not-counted
+  (let [policy  {:child-count [{:severity   "warning"
+                                :applies-to {:forms ["if"]}
+                                :options    {:min-count   2
+                                             :max-count   2
+                                             :not-counted ["nil" "true" "false"]}
+                                :exclusions []}]}
+        finding (fn [source]
+                  (identities (findings-for source "fnl/app.fnl" policy)))]
+    (testing "excludes literal true from the direct count"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok true fallback))"))))
+    (testing "excludes literal false from the direct count"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok false fallback))"))))
+    (testing "excludes literal nil from the direct count"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok value nil))"))))
+    (testing "preserves two counted branches"
+      (is (= []
+             (finding "(defn run [] (if ok value fallback))"))))
+    (testing "enforces the maximum of two counted branches"
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+             (finding "(defn run [] (if ok value fallback extra))"))))))

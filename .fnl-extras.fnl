@@ -60,11 +60,11 @@
                             :options     {:children [:is] :max-count 1}
                             :exclusions  []}
                            {:severity    :error
-                            :description "keep conditionals explicit and predictable with two non-nil branches and no extra clauses"
+                            :description "keep conditionals explicit and predictable. Extract large bodies into private functions. Use `when` if possible."
                             :applies-to  {:forms [:if]}
-                            :options     {:min-count 2
-                                          :max-count 2
-                                          :nil-count false}
+                            :options     {:min-count   2
+                                          :max-count   2
+                                          :not-counted ["nil" "true" "false"]}
                             :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}]
           :module-import  [{:severity    :error
                             :description "standardize shared core access through the conventional core binding"
@@ -77,14 +77,14 @@
                                           :forms   [:deftest :testing :is]
                                           :modules [:spec.eca.macros]}
                             :options     {:mode :require}
-                            :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}
+                            :exclusions  []}
                            {:severity    :error
                             :description "avoid direct test-library coupling in specs by routing tests through project macros"
                             :applies-to  {:files   [:^spec/]
                                           :modules [:plenary.busted
                                                     :luassert]}
                             :options     {:mode :forbid}
-                            :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}]
+                            :exclusions  []}]
           :required-form  [{:severity    :error
                             :description "give each source file a stable module identity for imports and diagnostics"
                             :applies-to  {:files [:^fennel-extras/]

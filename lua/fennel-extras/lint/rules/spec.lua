@@ -39,33 +39,34 @@ local function nil_literal_3f(node)
   return (node and (node.kind == "symbol") and (node.text == "nil"))
 end
 local function contains_3f(items, target, index)
-  if (index > #items) then
-    return false
+  return ((index <= #items) and ((items[index] == target) or contains_3f(items, target, (index + 1))))
+end
+local function not_counted_literal_3f(node, options)
+  return (node and (node.kind == "symbol") and contains_3f((options["not-counted"] or {}), node.text, 1))
+end
+local function direct_count_step(children, options, index, result)
+  if (index > #children) then
+    return result
   else
-    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
+    local function _3_()
+      if not not_counted_literal_3f(children[index], options) then
+        return (result + 1)
+      else
+        return result
+      end
+    end
+    return direct_count_step(children, options, (index + 1), _3_())
   end
 end
-local function if_direct_count(children)
-  if ((#children - 2) > 0) then
-    return (#children - 2)
-  else
-    return 0
-  end
-end
-local function non_if_direct_count(children)
-  if ((#children - 1) > 0) then
-    return (#children - 1)
-  else
-    return 0
-  end
-end
-local function direct_count(node)
+local function direct_count(node, options)
   local children = meaningful_children(node)
+  local start
   if (list_head(node) == "if") then
-    return if_direct_count(children)
+    start = 3
   else
-    return non_if_direct_count(children)
+    start = 2
   end
+  return direct_count_step(children, options, start, 0)
 end
 local function direct_child_valid_3f(node, options)
   local children = meaningful_children(node)
@@ -73,10 +74,10 @@ local function direct_child_valid_3f(node, options)
   local missing = ((head == "if") and (#children == 3))
   local multi_clause = ((head == "if") and (#children > 4))
   local nil_else = ((head == "if") and (#children == 4) and nil_literal_3f(children[4]))
-  local count = direct_count(node)
+  local count = direct_count(node, options)
   local min = options["min-count"]
   local max = options["max-count"]
-  return (not missing and not multi_clause and (not nil_else or options["nil-count"]) and (count >= min) and (count <= max))
+  return (not missing and not multi_clause and (not nil_else or options["nil-count"] or contains_3f((options["not-counted"] or {}), "nil", 1)) and (count >= min) and (count <= max))
 end
 local function child_count_invalid_3f(node, options)
   if options.children then

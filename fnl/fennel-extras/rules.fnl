@@ -25,11 +25,11 @@
           value (. rule 2)
           index (. rule 3)]
       (if (= kind :block)
-        (if (and (integer? value) (>= value 0) (= index nil)) nil (error "invalid block rule"))
+        (when (not (and (integer? value) (>= value 0) (= index nil)))
+              (error "invalid block rule"))
         (if (= kind :inner)
-          (if (and (= value 0) (or (= index nil) (and (integer? index) (>= index 0))))
-            nil
-            (error "invalid inner rule"))
+          (when (not (and (= value 0) (or (= index nil) (and (integer? index) (>= index 0)))))
+                (error "invalid inner rule"))
           (error "unknown indentation rule"))))
     (error "invalid indentation rule")))
 
@@ -62,11 +62,10 @@
 
 (defn- validate-map
   [items rules?]
-  (if (= items nil)
-    nil
-    (if (= (type items) :table)
-      (validate-map-items items rules?)
-      (error "indentation configuration must be a table"))))
+  (when items
+        (if (= (type items) :table)
+          (validate-map-items items rules?)
+          (error "indentation configuration must be a table"))))
 
 (set resolve-name
      (fn
@@ -130,11 +129,10 @@
 
 (defn validate
   [config]
-  (if (= config nil)
-    nil
-    (if (= (type config) :table)
-      (validate-config-table config)
-      (error "indentation configuration must be a table"))))
+  (when config
+        (if (= (type config) :table)
+          (validate-config-table config)
+          (error "indentation configuration must be a table"))))
 
 (defn resolve
   [config name]

@@ -191,8 +191,8 @@ local function _25_()
   local rules = loaded.lint.rules
   local instance = rules["child-count"][2]
   local assert_28_auto = require("luassert")
-  local value_29_auto = (instance and vim.deep_equal({forms = {"if"}}, instance["applies-to"]) and (2 == instance.options["min-count"]) and (2 == instance.options["max-count"]) and (false == instance.options["nil-count"]))
-  assert_28_auto.is_truthy(value_29_auto, "(and instance (vim.deep_equal {:forms [\"if\"]} (. instance \"applies-to\")) (= 2 (. instance \"options\" \"min-count\")) (= 2 (. instance \"options\" \"max-count\")) (= false (. instance \"options\" \"nil-count\")))")
+  local value_29_auto = (instance and vim.deep_equal({forms = {"if"}}, instance["applies-to"]) and (2 == instance.options["min-count"]) and (2 == instance.options["max-count"]) and vim.deep_equal({"nil", "true", "false"}, instance.options["not-counted"]))
+  assert_28_auto.is_truthy(value_29_auto, "(and instance (vim.deep_equal {:forms [\"if\"]} (. instance \"applies-to\")) (= 2 (. instance \"options\" \"min-count\")) (= 2 (. instance \"options\" \"max-count\")) (vim.deep_equal [\"nil\" \"true\" \"false\"] (. instance \"options\" \"not-counted\")))")
   return true
 end
 require("plenary.busted").it("canonical config uses direct child-count for if arity", _25_)

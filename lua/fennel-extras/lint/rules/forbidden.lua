@@ -15,11 +15,7 @@ local finding = registry.finding
 local enabled_3f = registry["enabled?"]
 local rule_severity = registry["rule-severity"]
 local function contains_3f(items, target, index)
-  if (index > #items) then
-    return false
-  else
-    return ((items[index] == target) or contains_3f(items, target, (index + 1)))
-  end
+  return ((index <= #items) and ((items[index] == target) or contains_3f(items, target, (index + 1))))
 end
 local function module_target(node)
   local head = list_head(node)

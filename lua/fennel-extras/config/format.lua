@@ -11,11 +11,7 @@ local function integer_3f(value)
 end
 local function every_ipairs_3f(predicate, value, index)
   local item = value[index]
-  if (item == nil) then
-    return true
-  else
-    return (predicate(item) and every_ipairs_3f(predicate, value, (index + 1)))
-  end
+  return ((item == nil) or (predicate(item) and every_ipairs_3f(predicate, value, (index + 1))))
 end
 local function string_3f(value)
   return (type(value) == "string")
@@ -46,11 +42,7 @@ local function rule_list_3f(value)
 end
 local function rule_map_entries_3f(value, key)
   local next_key, next_value = next(value, key)
-  if (next_key == nil) then
-    return true
-  else
-    return ((type(next_key) == "string") and rule_list_3f(next_value) and rule_map_entries_3f(value, next_key))
-  end
+  return ((next_key == nil) or ((type(next_key) == "string") and rule_list_3f(next_value) and rule_map_entries_3f(value, next_key)))
 end
 local function rule_map_3f(value)
   return ((type(value) == "table") and rule_map_entries_3f(value, nil))

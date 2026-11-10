@@ -183,14 +183,41 @@ end
 require("plenary.busted").describe("strict-lint-options", _18_)
 local function _22_()
   local function _23_()
+    local result = lint_error("(if ok value fallback)", {path = "fnl/app.fnl", rules = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["not-counted"] = {"nil", "true", "false"}}, exclusions = {}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = result.ok
+    assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
+    return true
+  end
+  require("plenary.busted").it("accepts a non-empty not-counted string list", _23_)
+  local function _24_()
+    local result = lint_error("(if ok value fallback)", {path = "fnl/app.fnl", rules = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["not-counted"] = {}}, exclusions = {}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = not result.ok
+    assert_28_auto.is_truthy(value_29_auto, "(not (. result \"ok\"))")
+    return true
+  end
+  require("plenary.busted").it("rejects an empty not-counted list", _24_)
+  local function _25_()
+    local result = lint_error("(if ok value fallback)", {path = "fnl/app.fnl", rules = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["not-counted"] = {"nil"}, ["nil-count"] = false}, exclusions = {}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = not result.ok
+    assert_28_auto.is_truthy(value_29_auto, "(not (. result \"ok\"))")
+    return true
+  end
+  return require("plenary.busted").it("rejects nil-count together with not-counted", _25_)
+end
+require("plenary.busted").describe("child-count-not-counted-validation", _22_)
+local function _26_()
+  local function _27_()
     local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = "explain this rule", ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = result.ok
     assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
     return true
   end
-  require("plenary.busted").it("accepts a non-empty string description", _23_)
-  local function _24_()
+  require("plenary.busted").it("accepts a non-empty string description", _27_)
+  local function _28_()
     local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = 42, ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint.rules.forbidden-form[1].description must be a non-empty string"
@@ -198,8 +225,8 @@ local function _22_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-string description", _24_)
-  local function _25_()
+  require("plenary.busted").it("rejects a non-string description", _28_)
+  local function _29_()
     local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = "", ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "lint.rules.forbidden-form[1].description must be a non-empty string"
@@ -207,18 +234,13 @@ local function _22_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("rejects an empty description", _25_)
+  return require("plenary.busted").it("rejects an empty description", _29_)
 end
-require("plenary.busted").describe("rule-instance-description-validation", _22_)
-local function _26_()
-  local function _27_()
+require("plenary.busted").describe("rule-instance-description-validation", _26_)
+local function _30_()
+  local function _31_()
     local config = load_module("fennel-extras.config")
-    local loaded
-    if config["module-missing"] then
-      loaded = nil
-    else
-      loaded = config.load(".fnl-extras.fnl")
-    end
+    local loaded = (not config["module-missing"] and config.load(".fnl-extras.fnl"))
     local lint_rules = (loaded and loaded.lint and loaded.lint.rules)
     local design_rules = (loaded and loaded.design and loaded.design.rules)
     local lint_names = {"forbidden-form", "required-form", "module-import", "child-count", "file-size"}
@@ -228,11 +250,11 @@ local function _26_()
     assert_28_auto.is_truthy(value_29_auto, "(and loaded (. (. loaded \"format\") \"indent-width\") (. (. loaded \"workspace\") \"extensions\") (. (. loaded \"workspace\") \"paths\") (. (. loaded \"format\") \"indents\") (. (. loaded \"format\") \"format-as\") (. (. loaded \"format\") \"parser\") (. (. loaded \"format\") \"alignment\") (. loaded \"lint\") (= nil (. loaded \"design\")) (complete-rules? lint-rules lint-names 1))")
     return true
   end
-  return require("plenary.busted").it("the repository config loads with complete format and lint settings", _27_)
+  return require("plenary.busted").it("the repository config loads with complete format and lint settings", _31_)
 end
-require("plenary.busted").describe("strict-config-property", _26_)
-local function _29_()
-  local function _30_()
+require("plenary.busted").describe("strict-config-property", _30_)
+local function _32_()
+  local function _33_()
     local result = config_error({lint = {rules = {["control-layout"] = {{severity = "warning", ["applies-to"] = {forms = {"if", "when", "and", "or", "case", "match"}}, options = {}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown lint rule: control-layout"
@@ -240,8 +262,8 @@ local function _29_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("strict config rejects removed control-layout", _30_)
-  local function _31_()
+  require("plenary.busted").it("strict config rejects removed control-layout", _33_)
+  local function _34_()
     local result = config_error({lint = {rules = {["multiline-layout"] = {{severity = "warning", ["applies-to"] = {}, options = {clauses = {"case", "match", "case-try", "match-try"}, bindings = {"let", "when-let", "if-let", "with-open"}}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown lint rule: multiline-layout"
@@ -249,18 +271,13 @@ local function _29_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("strict config rejects removed multiline-layout", _31_)
+  return require("plenary.busted").it("strict config rejects removed multiline-layout", _34_)
 end
-require("plenary.busted").describe("removed-layout-rule-config-errors", _29_)
-local function _32_()
-  local function _33_()
+require("plenary.busted").describe("removed-layout-rule-config-errors", _32_)
+local function _35_()
+  local function _36_()
     local config = load_module("fennel-extras.config")
-    local loaded
-    if config["module-missing"] then
-      loaded = nil
-    else
-      loaded = config.load(".fnl-extras.fnl")
-    end
+    local loaded = (not config["module-missing"] and config.load(".fnl-extras.fnl"))
     local instances = (loaded and loaded.lint.rules["child-count"])
     local exclusions = (instances and instances[2].exclusions)
     local assert_28_auto = require("luassert")
@@ -268,21 +285,16 @@ local function _32_()
     assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (length exclusions)) (= \"^spec/eca/macros[.]fnlm$\" (. (. exclusions 1) \"path\")))")
     return true
   end
-  require("plenary.busted").it("child-count macro exclusions consolidate to one path-only entry", _33_)
-  local function _35_()
+  require("plenary.busted").it("child-count macro exclusions consolidate to one path-only entry", _36_)
+  local function _37_()
     local config = load_module("fennel-extras.config")
-    local loaded
-    if config["module-missing"] then
-      loaded = nil
-    else
-      loaded = config.load(".fnl-extras.fnl")
-    end
+    local loaded = (not config["module-missing"] and config.load(".fnl-extras.fnl"))
     local instances = (loaded and loaded.lint.rules["module-import"])
     local assert_28_auto = require("luassert")
-    local value_29_auto = (instances and (nil == instances[2].options["exempt-files"]) and ("^spec/eca/macros[.]fnlm$" == instances[2].exclusions[1].path) and (nil == instances[3].options["exempt-files"]) and ("^spec/eca/macros[.]fnlm$" == instances[3].exclusions[1].path))
-    assert_28_auto.is_truthy(value_29_auto, "(and instances (= nil (. (. instances 2) \"options\" \"exempt-files\")) (= \"^spec/eca/macros[.]fnlm$\" (. (. (. instances 2) \"exclusions\" 1) \"path\")) (= nil (. (. instances 3) \"options\" \"exempt-files\")) (= \"^spec/eca/macros[.]fnlm$\" (. (. (. instances 3) \"exclusions\" 1) \"path\")))")
+    local value_29_auto = (instances and (nil == instances[2].options["exempt-files"]) and (0 == #instances[2].exclusions) and (nil == instances[3].options["exempt-files"]) and (0 == #instances[3].exclusions))
+    assert_28_auto.is_truthy(value_29_auto, "(and instances (= nil (. (. instances 2) \"options\" \"exempt-files\")) (= 0 (length (. (. instances 2) \"exclusions\"))) (= nil (. (. instances 3) \"options\" \"exempt-files\")) (= 0 (length (. (. instances 3) \"exclusions\"))))")
     return true
   end
-  return require("plenary.busted").it("module-import uses exclusions for the macro file and has no exempt-files option", _35_)
+  return require("plenary.busted").it("module-import has empty exclusions after removing stale macro entries", _37_)
 end
-return require("plenary.busted").describe("repository-exclusion-contract", _32_)
+return require("plenary.busted").describe("repository-exclusion-contract", _35_)

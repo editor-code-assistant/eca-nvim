@@ -103,22 +103,22 @@
 
 (defn- canonical-missing-option-step
   [section name index option-values names option-index]
-  (if (> option-index (length names))
-    nil
-    (let [option-name (. names option-index)]
-      (or (and (= (. option-values option-name) nil)
-               {:message (.. "missing " section ".rules." name "[" index "].options." option-name)})
-          (canonical-missing-option-step section name index option-values names (+ option-index 1))))))
+  (when (<= option-index (length names))
+        (let [option-name (. names option-index)]
+          (or (and (= (. option-values option-name) nil)
+                   {:message (.. "missing " section ".rules." name "[" index "].options." option-name)})
+              (canonical-missing-option-step section name index option-values names (+ option-index 1))))))
 
 (defn- canonical-missing-applies-step
   [section name index applies options names option-index]
-  (if (> option-index (length names))
-    nil
-    (let [option-name (. names option-index)
-          key         (if (= option-name "module") :modules (if (= option-name "modules") :modules :forms))]
-      (or (and (= (. applies key) nil)
-               {:message (.. "missing " section ".rules." name "[" index "].applies-to." (tostring key))})
-          (canonical-missing-applies-step section name index applies options names (+ option-index 1))))))
+  (when (<= option-index (length names))
+        (let [option-name (. names option-index)
+              key         (or (and (= option-name "module") :modules)
+                               (and (= option-name "modules") :modules)
+                               :forms)]
+          (or (and (= (. applies key) nil)
+                   {:message (.. "missing " section ".rules." name "[" index "].applies-to." (tostring key))})
+              (canonical-missing-applies-step section name index applies options names (+ option-index 1))))))
 
 (defn- canonical-child-count-option-error
   [section name index instance]
@@ -133,8 +133,12 @@
                       {:message (.. prefix "min-count")})
                 (when (= options.max-count nil)
                       {:message (.. prefix "max-count")})
-                (when (= options.nil-count nil)
-                      {:message (.. prefix "nil-count")}))))))
+                (when (and (not= options.nil-count nil)
+                           (not= options.not-counted nil))
+                      {:message (.. prefix "nil-count and not-counted cannot both be set")})
+                (when (and (= options.nil-count nil)
+                           (= options.not-counted nil))
+                      {:message (.. prefix "nil-count or not-counted")}))))))
 
 (defn- canonical-missing-option-error
   [section name index instance]

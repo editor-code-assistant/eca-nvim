@@ -42,10 +42,9 @@
 
 (defn- excluded?
   [exclusions finding source matcher index]
-  (if (> index (length exclusions))
-    false
-    (or (exclusion-matcher.matches? (. exclusions index) finding source matcher)
-        (excluded? exclusions finding source matcher (+ index 1)))))
+  (and (<= index (length exclusions))
+       (or (exclusion-matcher.matches? (. exclusions index) finding source matcher)
+           (excluded? exclusions finding source matcher (+ index 1)))))
 
 (defn- branch-base
   [form suffix]
@@ -67,9 +66,8 @@
 
 (defn- selected-form?
   [forms target scope index]
-  (if (> index (length forms))
-    false
-    (selected-form-step forms target scope index selected-form?)))
+  (and (<= index (length forms))
+       (selected-form-step forms target scope index selected-form?)))
 
 (defn- selected-branch?
   [finding forms scope]
@@ -210,10 +208,9 @@
 (defn- regex-exclusion-error
   [exclusions matcher index]
   (let [entry (. exclusions index)]
-    (if (= entry nil)
-      nil
-      (or (regex-exclusion-error-entry entry matcher index)
-          (regex-exclusion-error exclusions matcher (+ index 1))))))
+    (and entry
+         (or (regex-exclusion-error-entry entry matcher index)
+             (regex-exclusion-error exclusions matcher (+ index 1))))))
 
 (defn- context-policy
   [context]

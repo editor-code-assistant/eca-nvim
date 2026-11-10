@@ -34,29 +34,30 @@
 
 (defn- contains?
   [items target index]
-  (if (> index (length items))
-    false
-    (or (= (. items index) target)
-        (contains? items target (+ index 1)))))
+  (and (<= index (length items))
+       (or (= (. items index) target)
+           (contains? items target (+ index 1)))))
 
-(defn- if-direct-count
-  [children]
-  (if (> (- (length children) 2) 0)
-    (- (length children) 2)
-    0))
+(defn- not-counted-literal?
+  [node options]
+  (and node
+       (= node.kind :symbol)
+       (contains? (or options.not-counted []) node.text 1)))
 
-(defn- non-if-direct-count
-  [children]
-  (if (> (- (length children) 1) 0)
-    (- (length children) 1)
-    0))
+(defn- direct-count-step
+  [children options index result]
+  (if (> index (length children))
+    result
+    (direct-count-step children options (+ index 1)
+                       (if (not (not-counted-literal? (. children index) options))
+                         (+ result 1)
+                         result))))
 
 (defn- direct-count
-  [node]
-  (let [children (meaningful-children node)]
-    (if (= (list-head node) "if")
-      (if-direct-count children)
-      (non-if-direct-count children))))
+  [node options]
+  (let [children (meaningful-children node)
+        start    (if (= (list-head node) "if") 3 2)]
+    (direct-count-step children options start 0)))
 
 (defn- direct-child-valid?
   [node options]
@@ -67,12 +68,14 @@
         nil-else     (and (= head "if")
                           (= (length children) 4)
                           (nil-literal? (. children 4)))
-        count        (direct-count node)
+        count        (direct-count node options)
         min          options.min-count
         max          options.max-count]
     (and (not missing)
          (not multi-clause)
-         (or (not nil-else) options.nil-count)
+         (or (not nil-else)
+             options.nil-count
+             (contains? (or options.not-counted []) "nil" 1))
          (>= count min)
          (<= count max))))
 

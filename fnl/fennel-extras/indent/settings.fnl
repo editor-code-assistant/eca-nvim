@@ -15,24 +15,21 @@
 (defn- string-list-entry?
   [value index]
   (let [item (. value index)]
-    (if (= item nil)
-      true
-      (and (= (type item) :string)
-           (string-list-entry? value (+ index 1))))))
+    (or (= item nil)
+        (and (= (type item) :string)
+             (string-list-entry? value (+ index 1))))))
 
 (defn- string-list?
   [value]
-  (if (parse.sequence? value)
-    (string-list-entry? value 1)
-    false))
+  (and (parse.sequence? value)
+       (string-list-entry? value 1)))
 
 (defn- list-contains-entry?
   [items name index]
   (let [item (. items index)]
-    (if (= item nil)
-      false
-      (or (= item name)
-          (list-contains-entry? items name (+ index 1))))))
+    (and (not= item nil)
+         (or (= item name)
+             (list-contains-entry? items name (+ index 1))))))
 
 (defn- list-contains?
   [items name]
@@ -76,9 +73,8 @@
   [value key]
   (let [(next-key item) (next value key)
         failure         (and next-key (validate-entry next-key item))]
-    (if (= next-key nil)
-      nil
-      (or failure (validate-entries value next-key)))))
+    (and next-key
+         (or failure (validate-entries value next-key)))))
 
 (defn- validate-table
   [value]

@@ -21,17 +21,17 @@ local function validate_rule(rule)
     local value = rule[2]
     local index = rule[3]
     if (kind == "block") then
-      if (integer_3f(value) and (value >= 0) and (index == nil)) then
-        return nil
-      else
+      if not (integer_3f(value) and (value >= 0) and (index == nil)) then
         return error("invalid block rule")
+      else
+        return nil
       end
     else
       if (kind == "inner") then
-        if ((value == 0) and ((index == nil) or (integer_3f(index) and (index >= 0)))) then
-          return nil
-        else
+        if not ((value == 0) and ((index == nil) or (integer_3f(index) and (index >= 0)))) then
           return error("invalid inner rule")
+        else
+          return nil
         end
       else
         return error("unknown indentation rule")
@@ -80,14 +80,14 @@ local function validate_map_items(items, rules_3f)
   return failure
 end
 local function validate_map(items, rules_3f)
-  if (items == nil) then
-    return nil
-  else
+  if items then
     if (type(items) == "table") then
       return validate_map_items(items, rules_3f)
     else
       return error("indentation configuration must be a table")
     end
+  else
+    return nil
   end
 end
 local function _14_(config, name, seen)
@@ -182,14 +182,14 @@ end
 local validate
 do
   local function validate0(config)
-    if (config == nil) then
-      return nil
-    else
+    if config then
       if (type(config) == "table") then
         return validate_config_table(config)
       else
         return error("indentation configuration must be a table")
       end
+    else
+      return nil
     end
   end
   _2amodule_2a["validate"] = validate0

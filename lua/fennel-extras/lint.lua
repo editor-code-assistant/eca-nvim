@@ -39,11 +39,7 @@ local function normalize_finding(finding)
   end
 end
 local function excluded_3f(exclusions, finding, source, matcher, index)
-  if (index > #exclusions) then
-    return false
-  else
-    return (exclusion_matcher["matches?"](exclusions[index], finding, source, matcher) or excluded_3f(exclusions, finding, source, matcher, (index + 1)))
-  end
+  return ((index <= #exclusions) and (exclusion_matcher["matches?"](exclusions[index], finding, source, matcher) or excluded_3f(exclusions, finding, source, matcher, (index + 1))))
 end
 local function branch_base(form, suffix)
   return string.gsub(form, suffix, "")
@@ -62,11 +58,7 @@ local function selected_form_step(forms, target, scope, index, recurse)
   end
 end
 local function selected_form_3f(forms, target, scope, index)
-  if (index > #forms) then
-    return false
-  else
-    return selected_form_step(forms, target, scope, index, selected_form_3f)
-  end
+  return ((index <= #forms) and selected_form_step(forms, target, scope, index, selected_form_3f))
 end
 local function selected_branch_3f(finding, forms, scope)
   local branch = branch_form(finding.form)
@@ -203,11 +195,7 @@ local function regex_exclusion_error_entry(entry, matcher, index)
 end
 local function regex_exclusion_error(exclusions, matcher, index)
   local entry = exclusions[index]
-  if (entry == nil) then
-    return nil
-  else
-    return (regex_exclusion_error_entry(entry, matcher, index) or regex_exclusion_error(exclusions, matcher, (index + 1)))
-  end
+  return (entry and (regex_exclusion_error_entry(entry, matcher, index) or regex_exclusion_error(exclusions, matcher, (index + 1))))
 end
 local function context_policy(context)
   return core.merge(context_lint_value(context), {matcher = context.matcher})

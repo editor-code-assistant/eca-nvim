@@ -1992,6 +1992,24 @@ local function _132_()
   end
   require("plenary.busted").describe("alignment-maps-cli", _197_)
   local function _199_()
+    local function _200_()
+      local result = lint_project("{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}", {["a.fnl"] = "(when x nil)\\n"}, {"lint", "a.fnl"})
+      local assert_5_auto = require("luassert")
+      local expected_6_auto = 0
+      local actual_7_auto = result.code
+      assert_5_auto.same(expected_6_auto, actual_7_auto)
+      return true
+    end
+    require("plenary.busted").it("returns zero for a non-macro file", _200_)
+    local function _201_()
+      local result = lint_project("{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}", {["a.fnl"] = "(when x nil)\\n"}, {"lint", "a.fnl"})
+      local text = table.concat((result.lines or {}), "\\n")
+      local assert_28_auto = require("luassert")
+      local value_29_auto = not string.match(text, "stale exclusion")
+      assert_28_auto.is_truthy(value_29_auto, "(not (string.match text \"stale exclusion\"))")
+      return true
+    end
+    return require("plenary.busted").it("does not report the macro exclusion as stale for a non-macro file", _201_)
   end
   require("plenary.busted").describe("lint-policy-cli-regressions", _199_)
   local function missing_config_cli_scenario_body(root, path, command)
@@ -2008,35 +2026,35 @@ local function _132_()
     vim.fn.mkdir((root .. "/.git"), "p")
     return missing_config_cli_scenario_body(root, path, command)
   end
-  local function _200_()
-    local function _201_()
+  local function _202_()
+    local function _203_()
       local result = missing_config_cli_scenario("format")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((2 == result.code) and string.match((result.lines[1] or ""), "missing .fnl%-extras%.fnl"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"missing .fnl%-extras%.fnl\"))")
       return true
     end
-    require("plenary.busted").it("format exits 2 with a clear missing config message", _201_)
-    local function _202_()
+    require("plenary.busted").it("format exits 2 with a clear missing config message", _203_)
+    local function _204_()
       local result = missing_config_cli_scenario("lint")
       local assert_28_auto = require("luassert")
       local value_29_auto = ((2 == result.code) and string.match((result.lines[1] or ""), "missing .fnl%-extras%.fnl"))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 2 (. result \"code\")) (string.match (or (. result \"lines\" 1) \"\") \"missing .fnl%-extras%.fnl\"))")
       return true
     end
-    return require("plenary.busted").it("lint exits 2 with a clear missing config message", _202_)
+    return require("plenary.busted").it("lint exits 2 with a clear missing config message", _204_)
   end
-  require("plenary.busted").describe("strict-cli-errors", _200_)
-  local function _203_()
-    local function _204_()
+  require("plenary.busted").describe("strict-cli-errors", _202_)
+  local function _205_()
+    local function _206_()
       local result = file_size_changed_mode_scenario()
       local assert_28_auto = require("luassert")
       local value_29_auto = ((0 == result.code) and (0 == result["changed-file-size"]) and (0 == result["unchanged-file-size"]))
       assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 0 (. result \"changed-file-size\")) (= 0 (. result \"unchanged-file-size\")))")
       return true
     end
-    return require("plenary.busted").it("changed scope applies path-only exclusions with regex path semantics", _204_)
+    return require("plenary.busted").it("changed scope applies path-only exclusions with regex path semantics", _206_)
   end
-  return require("plenary.busted").describe("changed-scope-exclusion-path-regex", _203_)
+  return require("plenary.busted").describe("changed-scope-exclusion-path-regex", _205_)
 end
 return require("plenary.busted").describe("lint-grammar", _132_)

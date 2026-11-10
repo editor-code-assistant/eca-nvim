@@ -316,11 +316,7 @@ local function apply_scalar_argument_break_rules(source, config, path, matcher)
   return result
 end
 local function blank_lines_between_3f(lines, start, _end)
-  if (start >= _end) then
-    return true
-  else
-    return ((lines[start] == "") and blank_lines_between_3f(lines, (start + 1), _end))
-  end
+  return ((start >= _end) or ((lines[start] == "") and blank_lines_between_3f(lines, (start + 1), _end)))
 end
 local function normalize_gap(lines, left, right, count)
   if blank_lines_between_3f(lines, (left + 1), right) then
@@ -376,10 +372,10 @@ local function normalize_same_level_gaps(source, config, path, matcher)
           end
         end
       end
-      local function _48_(left, right)
+      local function _47_(left, right)
         return (left.left["end"] > right.left["end"])
       end
-      table.sort(pairs, _48_)
+      table.sort(pairs, _47_)
       for _0, pair in ipairs(pairs) do
         if (pair.left["end"] == pair.right.start) then
           normalize_same_line_gap(lines, pair.left, pair.right, count)
@@ -487,17 +483,17 @@ local function token_text_equal_3f(left, right)
   end
 end
 local function token_sequences_equal_3f(left, right, index)
-  local and_60_ = (#left == #right)
-  if and_60_ then
+  local and_59_ = (#left == #right)
+  if and_59_ then
     local result = true
     for offset in ipairs(left) do
       local token = left[offset]
       local other = right[offset]
       result = (result and token_kind_equal_3f(token, other) and token_text_equal_3f(token, other))
     end
-    and_60_ = result
+    and_59_ = result
   end
-  return and_60_
+  return and_59_
 end
 local function binding_whitespace_equal_3f(left, right)
   local left_body = string.gsub(left, "^ *", "")
@@ -510,11 +506,7 @@ local function line_equal_3f(line, other, allow_binding_whitespace_3f)
   return ((line == other) or (other == (string.sub(other, 1, leading_spaces(other)) .. string.sub(line, (leading_spaces(line) + 1)))) or (allow_binding_whitespace_3f and binding_whitespace_equal_3f(line, other)) or ((other == "") and spaces_only_3f(line)))
 end
 local function lines_equal_3f(left, right, index, allow_binding_whitespace_3f)
-  if (index > #left) then
-    return true
-  else
-    return (line_equal_3f(left[index], right[index], allow_binding_whitespace_3f) and lines_equal_3f(left, right, (index + 1), allow_binding_whitespace_3f))
-  end
+  return ((index > #left) or (line_equal_3f(left[index], right[index], allow_binding_whitespace_3f) and lines_equal_3f(left, right, (index + 1), allow_binding_whitespace_3f)))
 end
 local function replace_last_token(tokens, token)
   table.remove(tokens)
@@ -594,20 +586,16 @@ local function remove_and_continue(continue, equal, parser, left, right, found_i
   return continue(equal, parser, left, right)
 end
 local function continue_equal_entries(continue, equal, parser, left, right, found_index)
-  if found_index then
-    return remove_and_continue(continue, equal, parser, left, right, found_index)
-  else
-    return false
-  end
+  return (found_index and remove_and_continue(continue, equal, parser, left, right, found_index))
 end
 local function equal_entries_3f(equal, parser, left, right)
-  if (#left == 0) then
-    return true
-  else
+  local or_64_ = (#left == 0)
+  if not or_64_ then
     local entry = table.remove(left, 1)
     local found_index = matching_entry(equal, parser, entry, right)
-    return continue_equal_entries(equal_entries_3f, equal, parser, left, right, found_index)
+    or_64_ = continue_equal_entries(equal_entries_3f, equal, parser, left, right, found_index)
   end
+  return or_64_
 end
 local function equal_table_3f(equal, parser, a, b)
   local left = entries(a)
@@ -615,19 +603,19 @@ local function equal_table_3f(equal, parser, a, b)
   return ((#left == #right) and equal_entries_3f(equal, parser, left, right))
 end
 local function equal_value(parser, a, b)
-  if (type(a) ~= type(b)) then
-    return false
-  else
+  local and_66_ = (type(a) == type(b))
+  if and_66_ then
     if (type(a) == "table") then
       if (symbol_3f(a) or parser["comment?"](a)) then
-        return (tostring(a) == tostring(b))
+        and_66_ = (tostring(a) == tostring(b))
       else
-        return equal_table_3f(equal_value, parser, a, b)
+        and_66_ = equal_table_3f(equal_value, parser, a, b)
       end
     else
-      return (a == b)
+      and_66_ = (a == b)
     end
   end
+  return and_66_
 end
 local function parse_all(parser, source)
   local iterator = parser.parser(source, "fennel-extras", {comments = true})
@@ -657,16 +645,12 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _73_()
+    local function _71_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
-      if (#left ~= #right) then
-        return false
-      else
-        return forms_equal_3f(parser, left, right)
-      end
+      return ((#left == #right) and forms_equal_3f(parser, left, right))
     end
-    ok, result = pcall(_73_)
+    ok, result = pcall(_71_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0

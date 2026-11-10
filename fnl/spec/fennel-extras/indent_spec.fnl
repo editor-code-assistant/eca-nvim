@@ -56,9 +56,8 @@
 (defn- idempotent?
   [source]
   (let [once (output-for source)]
-    (if (not= :string (type once))
-      false
-      (= once (output-for once)))))
+    (and (= :string (type once))
+         (= once (output-for once)))))
 
 (defn- error-summary-result
   [result]

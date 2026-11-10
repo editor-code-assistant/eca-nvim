@@ -12,10 +12,9 @@
 (defn- every-ipairs?
   [predicate value index]
   (let [item (. value index)]
-    (if (= item nil)
-      true
-      (and (predicate item)
-           (every-ipairs? predicate value (+ index 1))))))
+    (or (= item nil)
+        (and (predicate item)
+             (every-ipairs? predicate value (+ index 1))))))
 
 (defn- string?
   [value]
@@ -70,11 +69,10 @@
 (defn- rule-map-entries?
   [value key]
   (let [(next-key next-value) (next value key)]
-    (if (= next-key nil)
-      true
-      (and (= (type next-key) :string)
-           (rule-list? next-value)
-           (rule-map-entries? value next-key)))))
+    (or (= next-key nil)
+        (and (= (type next-key) :string)
+             (rule-list? next-value)
+             (rule-map-entries? value next-key)))))
 
 (defn- rule-map?
   [value]

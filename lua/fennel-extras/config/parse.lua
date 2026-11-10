@@ -25,11 +25,7 @@ local function plain_sequence_step(value, key, count, maximum)
 end
 local function marked_with_3f(value, marker)
   local metadata = getmetatable(value)
-  if metadata then
-    return (metadata[marker] == true)
-  else
-    return false
-  end
+  return (metadata and (metadata[marker] == true))
 end
 local function sequence_table_3f(value)
   local metadata = getmetatable(value)
@@ -42,31 +38,19 @@ end
 local sequence_3f
 do
   local function sequence_3f0(value)
-    if (type(value) == "table") then
-      return sequence_table_3f(value)
-    else
-      return false
-    end
+    return ((type(value) == "table") and sequence_table_3f(value))
   end
   _2amodule_2a["sequence?"] = sequence_3f0
   sequence_3f = _2amodule_2a["sequence?"]
 end
 local function parsed_table_3f(value)
-  if (type(value) == "table") then
-    return marked_with_3f(value, table_marker)
-  else
-    return false
-  end
+  return ((type(value) == "table") and marked_with_3f(value, table_marker))
 end
 local function error_at(message, token)
   return {message = message, line = token.line, col = token.col}
 end
 local function trivia_3f(child)
-  if (child and child.kind) then
-    return ((child.kind == "whitespace") or (child.kind == "newline") or (child.kind == "comment") or (child.kind == "tab"))
-  else
-    return false
-  end
+  return (child and child.kind and ((child.kind == "whitespace") or (child.kind == "newline") or (child.kind == "comment") or (child.kind == "tab")))
 end
 local function append_meaningful_child(result, child)
   if not trivia_3f(child) then
@@ -101,13 +85,13 @@ local function normalize_escaped_delimiters_step(state)
       if (in_string and (c == "\\")) then
         return normalize_escaped_delimiters_step({text = text, index = (index + 2), ["in-string"] = in_string, result = (result .. c .. next)})
       else
-        local _8_
+        local _4_
         if (c == "\"") then
-          _8_ = not in_string
+          _4_ = not in_string
         else
-          _8_ = in_string
+          _4_ = in_string
         end
-        return normalize_escaped_delimiters_step({text = text, index = (index + 1), ["in-string"] = _8_, result = (result .. c)})
+        return normalize_escaped_delimiters_step({text = text, index = (index + 1), ["in-string"] = _4_, result = (result .. c)})
       end
     end
   end
@@ -156,23 +140,20 @@ local function decode_string(token)
 end
 local function convert_symbol(token)
   local text = token.text
-  if (string.sub(text, 1, 1) == ":") then
-    return string.sub(text, 2)
-  else
+  local or_14_ = ((string.sub(text, 1, 1) == ":") and string.sub(text, 2))
+  if not or_14_ then
     if (text == "true") then
-      return true
+      or_14_ = true
+    elseif (text == "false") then
+      or_14_ = false
+    elseif (text == "nil") then
+      or_14_ = nil
     else
-      if (text == "false") then
-        return false
-      else
-        if (text == "nil") then
-          return nil
-        else
-          return error(error_at("symbols are not allowed", token), 0)
-        end
-      end
+      local _ = text
+      or_14_ = error(error_at("symbols are not allowed", token), 0)
     end
   end
+  return or_14_
 end
 local function convert_table_children(convert_fn, children, result)
   local i = 1
@@ -294,8 +275,8 @@ local function source_keyword_sequence_error(node, path)
 end
 local function source_rule_instance_error(node, path)
   if (node and (node.kind == "table")) then
-    local or_39_ = source_keyword_node_error(source_entry(node, ":severity"), (path .. ".severity"))
-    if not or_39_ then
+    local or_37_ = source_keyword_node_error(source_entry(node, ":severity"), (path .. ".severity"))
+    if not or_37_ then
       local exclusions = source_entry(node, ":exclusions")
       if (exclusions and (exclusions.kind == "sequence")) then
         local children = meaningful_children(exclusions.children)
@@ -313,15 +294,15 @@ local function source_rule_instance_error(node, path)
           index = (index + 1)
         end
         if failure then
-          or_39_ = nil
+          or_37_ = nil
         else
-          or_39_ = nil
+          or_37_ = nil
         end
       else
-        or_39_ = nil
+        or_37_ = nil
       end
     end
-    return or_39_
+    return or_37_
   else
     return nil
   end
@@ -361,7 +342,7 @@ local parse_string
 do
   local function parse_string0(text)
     local ok, result
-    local function _48_()
+    local function _46_()
       local root, reader_error = reader0.parse(normalize_escaped_delimiters(text))
       if reader_error then
         return {error = reader_error}
@@ -388,7 +369,7 @@ do
         end
       end
     end
-    ok, result = pcall(_48_)
+    ok, result = pcall(_46_)
     if not ok then
       return nil, result
     else
