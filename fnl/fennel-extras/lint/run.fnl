@@ -122,30 +122,6 @@
     result
     (scoped-exclusions-step exclusions paths matcher index result scoped-exclusions)))
 
-(defn- append-non-warning
-  [result finding]
-  (when (not (= finding.severity "warning"))
-        (table.insert result finding))
-  result)
-
-(defn- keep-non-warning-step
-  [findings index result recurse]
-  (let [finding (. findings index)]
-    (recurse findings (+ index 1) (append-non-warning result finding))))
-
-(defn- keep-non-warning
-  [findings index result]
-  (if (> index (length findings))
-    result
-    (keep-non-warning-step findings index result keep-non-warning)))
-
-(defn- diagnostic-source
-  [filtered policy stale scope-paths]
-  (if (and (> (length policy.exclusions) 0)
-           (or scope-paths (> (length stale) 0)))
-    (keep-non-warning filtered 1 [])
-    filtered))
-
 (defn- append-stale-findings
   [source stale]
   (each [_ finding (ipairs stale)]
@@ -156,9 +132,8 @@
   [findings policy config-path scope-paths]
   (let [exclusions   (scoped-exclusions policy.exclusions scope-paths policy.matcher 1 [])
         (filtered _) (exclusion-matcher.apply findings exclusions nil policy.matcher)
-        stale        (append-stale exclusions findings config-path policy.matcher policy 1 [])
-        source       (diagnostic-source filtered policy stale scope-paths)]
-    (output.sort (append-stale-findings source stale))))
+        stale        (append-stale exclusions findings config-path policy.matcher policy 1 [])]
+    (output.sort (append-stale-findings filtered stale))))
 
 (defn- has-errors?
   [findings index]

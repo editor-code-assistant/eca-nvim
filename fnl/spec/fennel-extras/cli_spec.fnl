@@ -144,8 +144,10 @@
 (defn- write-scenario-body
   [root good bad mode]
   (write-file (.. root "/.fnl-extras.fnl") (format-config ""))
-  (or (and (= mode :good) (write-good-scenario root good))
-      (and (= mode :formatted) (write-formatted-scenario root good))
+  (or (and (= mode
+              :good) (write-good-scenario root good))
+      (and (= mode
+              :formatted) (write-formatted-scenario root good))
       (write-error-scenario root good bad)))
 
 
@@ -211,9 +213,12 @@
 
 (defn- config-scenario-body
   [mode root src-file skip-file config-path]
-  (or (and (= mode :indent) (config-indent-scenario root src-file config-path))
-      (and (= mode :exclude) (config-exclude-scenario root src-file skip-file config-path))
-      (and (= mode :paths) (config-paths-scenario root src-file skip-file config-path))
+  (or (and (= mode
+              :indent) (config-indent-scenario root src-file config-path))
+      (and (= mode
+              :exclude) (config-exclude-scenario root src-file skip-file config-path))
+      (and (= mode
+              :paths) (config-paths-scenario root src-file skip-file config-path))
       (config-invalid-scenario root src-file config-path)))
 
 
@@ -333,10 +338,14 @@
 
   (testing "formats all files before writing and leaves the good file unchanged on error"
     (let [result (write-scenario :error)]
-      (is (and (= 2 (. result :code))
-               (= "(when x\ny)\n" (. result :good))
-               (= "(x" (. result :bad))
-               (= 1 (length (. result :lines)))
+      (is (and (= 2
+                  (. result :code))
+               (= "(when x\ny)\n"
+                  (. result :good))
+               (= "(x"
+                  (. result :bad))
+               (= 1
+                  (length (. result :lines)))
                (string.match (. result :lines 1) "^bad%.fnl:[0-9]+:[0-9]+: .*"))))))
 
 (deftest config
@@ -393,7 +402,8 @@
 (defn- extension-scenario-body
   [extension root path config-path]
   (write-file config-path (format-config (.. ":extensions [\"" extension "\"]")))
-  (or (and (= extension ".fnl") (extension-fnl-scenario root path config-path))
+  (or (and (= extension
+              ".fnl") (extension-fnl-scenario root path config-path))
       (extension-other-scenario root path config-path)))
 
 
@@ -527,7 +537,8 @@
 
 (defn- follow-directory-symlink-result
   [mode root link target]
-  (or (and (= mode :check) (follow-directory-symlink-check-result root target))
+  (or (and (= mode
+              :check) (follow-directory-symlink-check-result root target))
       (follow-directory-symlink-write-result root link target)))
 
 
@@ -574,7 +585,8 @@
 
 (defn- parser-scenario-args
   [mode]
-  (if (= mode :config)
+  (if (= mode
+         :config)
     ["format" "--check" "a.fnl"]
     ["format" "--check" "--parser" "eca.nfnl.fennel" "a.fnl"]))
 
@@ -638,9 +650,12 @@
 (defn- config-discovery-scenario-setup
   [mode config-path source-path]
   (write-file config-path
-              (if (= mode :mixed)
+              (if (= mode
+                     :mixed)
                 (.. (string.gsub (format-config ":dotfiles false") " :format " "\n:format ") "\n")
-                (if (or (= mode :enabled) (= mode :enabled-mixed))
+                (if (or (= mode
+                           :enabled) (= mode
+                                        :enabled-mixed))
                   (.. "{:workspace {:config true}\n"
                       ":format {:indent-width 2 :indents {} :parser false}\n"
                       ":lint {:rules {}}}\n")
@@ -651,11 +666,15 @@
 
 (defn- config-discovery-scenario-args
   [mode]
-  (if (= mode :check)
+  (if (= mode
+         :check)
     ["format" "--check"]
-    (if (= mode :explicit)
+    (if (= mode
+           :explicit)
       ["format" "--check" ".fnl-extras.fnl"]
-      (if (or (= mode :mixed) (= mode :enabled-mixed))
+      (if (or (= mode
+                 :mixed) (= mode
+                            :enabled-mixed))
         ["format" "--check" ".fnl-extras.fnl" "a.fnl"]
         ["format" "--write"]))))
 
@@ -784,7 +803,8 @@
   [root good]
   (let [result (run-cli root ["format" "--write"])]
     {:code        (. result :code)
-     :a-unchanged (= (read-file good) "(when x\ny)\n")}))
+     :a-unchanged (= (read-file good)
+                     "(when x\ny)\n")}))
 
 
 
@@ -853,7 +873,8 @@
 
 
                   (fn []
-                    (if (= mode :config)
+                    (if (= mode
+                           :config)
                       (dotfile-config-scenario root fnl-dir)
                       (dotfile-source-scenario root))))))
 
@@ -870,7 +891,8 @@
 
 (defn- symlink-file-scenario-args
   [mode]
-  (if (= mode :write)
+  (if (= mode
+         :write)
     ["format" "--write"]
     ["format" "--check" "fnl/link.fnl"]))
 
@@ -1091,7 +1113,8 @@
 
   (testing "includes the config file when workspace config inclusion is enabled"
     (let [result (config-discovery-scenario :enabled)]
-      (is (and (= 0 (. result :code))
+      (is (and (= 0
+                  (. result :code))
                (string.match (or (. result :lines 1) "") "fnl%-extras")))))
 
   (testing "excludes the config file from mixed explicit inputs when inclusion is enabled"
@@ -1104,7 +1127,8 @@
 
 (deftest edge-cases
   (testing "does not recurse through directory symlinks"
-    (is (= {:code 1 :lines ["fnl/a.fnl"]} (symlink-loop-scenario))))
+    (is (= {:code 1 :lines ["fnl/a.fnl"]}
+           (symlink-loop-scenario))))
 
   (testing "does not partially write files when a later write fails"
     (let [result (two-phase-write-scenario)]
@@ -1116,10 +1140,12 @@
 
   (testing "does not discover a dotfile config as source"
     ;; This documents the decision that configuration is data, not source; current glob behavior already passes it.
-    (is (= {:code 0 :lines []} (dotfile-scenario :config))))
+    (is (= {:code 0 :lines []}
+           (dotfile-scenario :config))))
 
   (testing "a format command without a config file exits two"
-    (is (= {:code 2 :lines ["config: missing .fnl-extras.fnl"]} (dotfile-scenario :source))))
+    (is (= {:code 2 :lines ["config: missing .fnl-extras.fnl"]}
+           (dotfile-scenario :source))))
 
   (testing "skips symlinked files during no-argument writes"
     (is (= {:code 0 :lines [] :link-type "link" :target "(when x\ny)\n"}
@@ -1247,7 +1273,8 @@
 
 (defn- fennel-value
   [value as-list?]
-  (if (= :table (type value))
+  (if (= :table
+         (type value))
     (let [list? (or as-list?
                     (and (> (length value) 0)
                          (vim.islist value)))
@@ -1256,14 +1283,18 @@
             (table.insert parts (if list?
                                   (fennel-value item)
                                   (.. ":" key " "
-                                      (if (and (= :string (type item))
-                                               (or (= key "severity") (= key "mode")))
+                                      (if (and (= :string
+                                                  (type item))
+                                               (or (= key
+                                                      "severity") (= key
+                                                                     "mode")))
                                         (.. ":" item)
                                         (fennel-value item (. fennel-sequence-keys key)))))))
       (.. (if list? "[" "{")
           (table.concat parts " ")
           (if list? "]" "}")))
-    (if (= :string (type value))
+    (if (= :string
+           (type value))
       (fennel-string value)
       (tostring value))))
 
@@ -1273,7 +1304,8 @@
   [config]
   (let [config-module (require :fennel-extras.config)
         parsed-result (config-module.parse-string config)]
-    (if (= nil parsed-result)
+    (if (= nil
+           parsed-result)
       config
       (let [lint         (or parsed-result.lint {})
             rules        (or lint.rules {})
@@ -1379,7 +1411,8 @@
         files  {"src/keep.fnl" "(if x 1 2)\n" "src/skip/no.fnl" "(if x 1 2)\n" "other.fnl" "(if x 1 2)\n"}]
     (lint-project config
                   files
-                  (if (= mode :default)
+                  (if (= mode
+                         :default)
                     ["lint" "--all"]
                     ["lint" "--all" "src/keep.fnl"]))))
 
@@ -1398,7 +1431,8 @@
                     (write-file config-path config)
                     (write-file (.. root "/a.fnl") "(when x\ny)\n")
                     (let [result (run-cli root
-                                          (if (= mode :mixed)
+                                          (if (= mode
+                                                 :mixed)
                                             ["lint" "--all" ".fnl-extras.fnl" "a.fnl"]
                                             ["lint" "--all"]))
                           lines  (or (. result :lines) [])]
@@ -1410,11 +1444,14 @@
 
 (defn- lint-output-config
   [mode]
-  (or (and (= mode :error)
+  (or (and (= mode
+              :error)
            "{:lint {:rules {\"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}]}}}")
-      (and (= mode :warning-error)
+      (and (= mode
+              :warning-error)
            "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :error :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}")
-      (and (= mode :off)
+      (and (= mode
+              :off)
            "{:lint {:rules {\"forbidden-form\" :off \"child-count\" :off}}}")
       "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}"))
 
@@ -1422,7 +1459,8 @@
 
 (defn- lint-output-source
   [mode]
-  (or (and (= mode :error) "(testing \"x\" (is 1) (is 2))\n")
+  (or (and (= mode
+              :error) "(testing \"x\" (is 1) (is 2))\n")
       "(if x (do (foo) (bar)) nil)\n"))
 
 
@@ -1437,16 +1475,20 @@
 
 (defn- lint-exclusion-config
   [mode]
-  (or (and (= mode :stale)
+  (or (and (= mode
+              :stale)
            "{:lint {:rules {\"forbidden-form\" :off}}
              :design {:rules {:child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
-      (and (= mode :disabled)
+      (and (= mode
+              :disabled)
            "{:lint {:rules {\"forbidden-form\" :off}}
              :design {:rules {:child-count [{:severity :off :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"}]}]}}}")
-      (and (= mode :per-rule)
+      (and (= mode
+              :per-rule)
            "{:lint {:rules {\"forbidden-form\" :off}}
              :design {:rules {:child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :code \"do\" :reason \"intentional per-rule exclusion\"}]}]}}}")
-      (and (= mode :general)
+      (and (= mode
+              :general)
            "{:lint {:rules {\"forbidden-form\" :off}}
              :design {:rules {:child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"intentional general exclusion\"}]}]}}}")
       "{:lint {:rules {\"forbidden-form\" :off}}
@@ -1496,7 +1538,8 @@
 
 (defn- lint-error-config
   [mode]
-  (if (= mode :config)
+  (if (= mode
+         :config)
     "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:nope true} :exclusions []}]}}}"
     "{:lint {:rules {:forbidden-form [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"))
 
@@ -1504,7 +1547,8 @@
 
 (defn- lint-error-source
   [mode]
-  (or (and (= mode :config) "(if x 1 2)\n")
+  (or (and (= mode
+              :config) "(if x 1 2)\n")
       "(if x"))
 
 
@@ -1520,42 +1564,54 @@
 (deftest lint-grammar
   (testing "omitting lint rules produces no findings"
     (let [result (lint-opt-in-scenario)]
-      (is (= {:code 0 :lines []} {:code (. result :code) :lines (. result :lines)}))))
+      (is (= {:code 0 :lines []}
+             {:code (. result :code) :lines (. result :lines)}))))
 
   (testing "accepts lint all with text output"
-    (is (= 0 (. (lint-grammar-scenario ["lint" "--all"]) :code))))
+    (is (= 0
+           (. (lint-grammar-scenario ["lint" "--all"]) :code))))
 
   (testing "accepts lint all with json output"
-    (is (= 0 (. (lint-grammar-scenario ["lint" "--all" "--format" "json"]) :code))))
+    (is (= 0
+           (. (lint-grammar-scenario ["lint" "--all" "--format" "json"]) :code))))
 
   (testing "rejects base together with all with exit two and a clear message"
     (let [result (lint-grammar-scenario ["lint" "--all" "--base" "HEAD"])]
-      (is (and (= 2 (. result :code)) (string.match (or (. result :lines 1) "") "base")))))
+      (is (and (= 2
+                  (. result :code)) (string.match (or (. result :lines 1) "") "base")))))
 
   (testing "rejects changed together with all with exit two"
-    (is (= 2 (. (lint-grammar-scenario ["lint" "--changed" "--all"]) :code))))
+    (is (= 2
+           (. (lint-grammar-scenario ["lint" "--changed" "--all"]) :code))))
 
   (testing "rejects unknown flags with exit two"
-    (is (= 2 (. (lint-grammar-scenario ["lint" "--wat"]) :code))))
+    (is (= 2
+           (. (lint-grammar-scenario ["lint" "--wat"]) :code))))
 
   (testing "rejects duplicate flags with exit two"
-    (is (= 2 (. (lint-grammar-scenario ["lint" "--all" "--all"]) :code))))
+    (is (= 2
+           (. (lint-grammar-scenario ["lint" "--all" "--all"]) :code))))
 
   (testing "rejects a missing format value with exit two"
-    (is (= 2 (. (lint-grammar-scenario ["lint" "--format"]) :code))))
+    (is (= 2
+           (. (lint-grammar-scenario ["lint" "--format"]) :code))))
 
   (testing "rejects an invalid format value with exit two"
-    (is (= 2 (. (lint-grammar-scenario ["lint" "--format" "yaml"]) :code))))
+    (is (= 2
+           (. (lint-grammar-scenario ["lint" "--format" "yaml"]) :code))))
 
   (testing "rejects formatter-only flags for lint"
-    (is (= 2 (. (lint-grammar-scenario ["lint" "--write"]) :code))))
+    (is (= 2
+           (. (lint-grammar-scenario ["lint" "--write"]) :code))))
 
   (deftest lint-discovery
     (testing "uses configured paths exclusions extensions and omits its config file"
-      (is (= [] (. (lint-discovery-scenario :default) :lines))))
+      (is (= []
+             (. (lint-discovery-scenario :default) :lines))))
 
     (testing "optional path arguments restrict lint all discovery"
-      (is (= [] (. (lint-discovery-scenario :explicit) :lines))))
+      (is (= []
+             (. (lint-discovery-scenario :explicit) :lines))))
 
     (testing "includes the config file when workspace config inclusion is enabled"
       (is (= {:code 1 :mentions-config true}
@@ -1580,7 +1636,8 @@
     (deftest lint-exclusions
       (testing "rejects an invalid regex before scanning source"
         (let [result (lint-invalid-regex-scenario)]
-          (is (= 2 (. result :code)))))
+          (is (= 2
+                 (. result :code)))))
 
 
 
@@ -1590,11 +1647,13 @@
     (deftest lint-errors-and-read-only
       (testing "returns exit two with a malformed lint configuration error"
         (let [result (lint-error-scenario :config)]
-          (is (= 2 (. result :code)))))
+          (is (= 2
+                 (. result :code)))))
 
       (testing "returns exit two with a source parse diagnostic"
         (let [result (lint-error-scenario :source)]
-          (is (and (= 2 (. result :code)) (string.match (or (. result :lines 1) "") "a%.fnl:[0-9]+:[0-9]+:")))))
+          (is (and (= 2
+                      (. result :code)) (string.match (or (. result :lines 1) "") "a%.fnl:[0-9]+:[0-9]+:")))))
 
 
 
@@ -1715,7 +1774,8 @@
           code  vim.v.shell_error]
       {:code       code
        :lines      lines
-       :timed-out? (= code 142)}))
+       :timed-out? (= code
+                      142)}))
 
 
 
@@ -1757,7 +1817,8 @@
 
   (defn- invalid-git-scenario-args
     [mode]
-    (or (and (= mode :all) ["lint" "--all"])
+    (or (and (= mode
+                :all) ["lint" "--all"])
         ["lint" "--changed"]))
 
 
@@ -1818,7 +1879,8 @@
 
   (defn- changed-source
     [which]
-    (if (= which :changed)
+    (if (= which
+           :changed)
       "(defn first []\n  (if z\n      (do\n        (foo)\n        (bar))\n      nil))\n\n(defn second []\n  (if y\n      (do\n        (baz)\n        (qux))\n      nil))\n"
       "(defn first []\n  (if x\n      (do\n        (foo)\n        (bar))\n      nil))\n\n(defn second []\n  (if y\n      (do\n        (baz)\n        (qux))\n      nil))\n"))
 
@@ -1869,22 +1931,29 @@
     (write-file source-path (changed-source :base))
     (git-run root ["add" "."])
     (git-run root ["commit" "-qm" "base"])
-    (when (or (= mode :modified) (= mode :subdir))
+    (when (or (= mode
+                 :modified) (= mode
+                               :subdir))
           (write-file source-path (changed-source :changed)))
-    (when (= mode :both)
+    (when (= mode
+             :both)
           (changed-mode-both root source-path))
-    (when (= mode :staged)
+    (when (= mode
+             :staged)
           (changed-mode-staged root source-path))
-    (when (= mode :untracked)
+    (when (= mode
+             :untracked)
           (write-file (.. root "/new file.fnl") "(defn new [] (if z (do (foo) (bar)) nil))\n"))
-    (when (= mode :rename)
+    (when (= mode
+             :rename)
           (changed-mode-rename root)))
 
 
 
   (defn- changed-mode-cwd
     [mode root subdir]
-    (or (and (= mode :subdir) subdir)
+    (or (and (= mode
+                :subdir) subdir)
         root))
 
 
@@ -2028,15 +2097,19 @@
 
   (defn- lint-error-mode-setup
     [mode root]
-    (or (and (= mode :git) (lint-error-repository-scenario root))
+    (or (and (= mode
+                :git) (lint-error-repository-scenario root))
         (lint-error-configured-scenario root)))
 
 
 
   (defn- lint-error-mode-args
     [mode]
-    (or (and (= mode :base) ["lint" "--base" "missing-ref"])
-        (and (or (= mode :changed) (= mode :git)) ["lint" "--changed"])
+    (or (and (= mode
+                :base) ["lint" "--base" "missing-ref"])
+        (and (or (= mode
+                    :changed) (= mode
+                                 :git)) ["lint" "--changed"])
         ["lint"]))
 
 
@@ -2066,9 +2139,12 @@
 
   (defn- stale-exclusion-config
     [mode]
-    (or (and (or (= mode :untouched) (= mode :all))
+    (or (and (or (= mode
+                    :untouched) (= mode
+                                   :all))
              "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
-        (and (= mode :modified)
+        (and (= mode
+                :modified)
              "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
         "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}"))
 
@@ -2083,9 +2159,12 @@
     (write-file gone-path "(if z (do (old) (code)) nil)\n")
     (git-run root ["add" "."])
     (git-run root ["commit" "-qm" "base"])
-    (or (and (or (= mode :untouched) (= mode :all))
+    (or (and (or (= mode
+                    :untouched) (= mode
+                                   :all))
              (write-file a-path "(if changed (do (foo) (bar)) nil)\n"))
-        (and (= mode :modified)
+        (and (= mode
+                :modified)
              (write-file a-path "(if changed (do (foo) (bar)) nil)\n"))
         (git-run root ["rm" "-q" "gone.fnl"])))
 
@@ -2093,7 +2172,8 @@
 
   (defn- stale-exclusion-args
     [mode]
-    (or (and (= mode :all) ["lint" "--all"])
+    (or (and (= mode
+                :all) ["lint" "--all"])
         ["lint" "--changed"]))
 
 
@@ -2136,7 +2216,8 @@
 
   (defn- shallow-clone-args
     [mode]
-    (or (and (= mode :all) ["lint" "--all"])
+    (or (and (= mode
+                :all) ["lint" "--all"])
         ["lint" "--changed"]))
 
 
@@ -2192,7 +2273,8 @@
     [root config warn config-text mode]
     (write-file config (lint-config config-text))
     (write-file warn "(if x (do (foo) (bar)) nil)\n")
-    (when (= mode :git)
+    (when (= mode
+             :git)
           (git-init root)
           (git-run root ["add" "."])
           (git-run root ["commit" "-qm" "base"])))
@@ -2271,11 +2353,14 @@
   (deftest align-bindings-cli
     (testing "check reports missing binding alignment and write fixes it"
       (let [result (align-bindings-cli-scenario)]
-        (is (and (= 1 (. result :check-code))
+        (is (and (= 1
+                    (. result :check-code))
                  (vim.deep_equal ["a.fnl"] (. result :check-lines))
-                 (= 0 (. result :write-code))
+                 (= 0
+                    (. result :write-code))
                  (vim.deep_equal ["a.fnl"] (. result :write-lines))
-                 (= (. result :expected) (. result :content)))))))
+                 (= (. result :expected)
+                    (. result :content)))))))
 
   (defn- alignment-maps-cli-setup
     [config-path path source]
@@ -2316,23 +2401,27 @@
   (deftest alignment-maps-cli
     (testing "check reports missing map alignment and write fixes it from alignment config"
       (let [result (alignment-maps-cli-scenario)]
-        (is (and (= 1 (. result :check-code))
+        (is (and (= 1
+                    (. result :check-code))
                  (vim.deep_equal ["a.fnl"] (. result :check-lines))
-                 (= 0 (. result :write-code))
+                 (= 0
+                    (. result :write-code))
                  (vim.deep_equal ["a.fnl"] (. result :write-lines))
-                 (= (. result :expected) (. result :content)))))))
+                 (= (. result :expected)
+                    (. result :content)))))))
 
   (deftest lint-policy-cli-regressions
     (testing "returns zero for a non-macro file"
       (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
-                                  {"a.fnl" "(when x nil)\\n"}
-                                  ["lint" "a.fnl"])]
-        (is (= 0 (. result :code)))))
+                                 {"a.fnl" "(when x nil)\\n"}
+                                 ["lint" "a.fnl"])]
+        (is (= 0
+               (. result :code)))))
 
     (testing "does not report the macro exclusion as stale for a non-macro file"
       (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
-                                  {"a.fnl" "(when x nil)\\n"}
-                                  ["lint" "a.fnl"])
+                                 {"a.fnl" "(when x nil)\\n"}
+                                 ["lint" "a.fnl"])
             text   (table.concat (or (. result :lines) []) "\\n")]
         (is (not (string.match text "stale exclusion"))))))
 
@@ -2360,19 +2449,53 @@
   (deftest strict-cli-errors
     (testing "format exits 2 with a clear missing config message"
       (let [result (missing-config-cli-scenario "format")]
-        (is (and (= 2 (. result :code))
+        (is (and (= 2
+                    (. result :code))
                  (string.match (or (. result :lines 1) "") "missing .fnl%-extras%.fnl")))))
 
     (testing "lint exits 2 with a clear missing config message"
       (let [result (missing-config-cli-scenario "lint")]
-        (is (and (= 2 (. result :code))
+        (is (and (= 2
+                    (. result :code))
                  (string.match (or (. result :lines 1) "") "missing .fnl%-extras%.fnl"))))))
 
   (deftest changed-scope-exclusion-path-regex
     (testing "changed scope applies path-only exclusions with regex path semantics"
       (let [result (file-size-changed-mode-scenario)]
-        (is (and (= 0 (. result :code))
-                 (= 0 (. result :changed-file-size))
-                 (= 0 (. result :unchanged-file-size)))))))
+        (is (and (= 0
+                    (. result :code))
+                 (= 1
+                    (. result :changed-file-size))
+                 (= 0
+                    (. result :unchanged-file-size)))))))
+
+  (deftest explicit-lint-scope-diagnostics
+    (testing "explicit lint paths keep selected-file warnings visible"
+      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
+                                 {"selected.fnl" "(if x 1)\n"
+                                  "other.fnl"    "(if y 1 2)\n"}
+                                 ["lint" "selected.fnl"])
+            text   (table.concat (or (. result :lines) []) "\n")]
+        (is (and (= 0
+                    (. result :code))
+                 (> (length (. result :lines)) 0)
+                 (string.match text "selected%.fnl:.*warning")))))
+
+    (testing "explicit lint paths ignore stale exclusions outside the selected scope"
+      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
+                                 {"selected.fnl" "(if x 1)\n"
+                                  "other.fnl"    "(if y 1 2)\n"}
+                                 ["lint" "selected.fnl"])
+            text   (table.concat (or (. result :lines) []) "\n")]
+        (is (not (string.match text "stale exclusion")))))
+
+    (testing "all lint paths preserve warnings"
+      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions []}]}}}"
+                                 {"selected.fnl" "(if x 1)\n"}
+                                 ["lint" "--all"])
+            text   (table.concat (or (. result :lines) []) "\n")]
+        (is (and (= 0
+                    (. result :code))
+                 (string.match text "selected%.fnl:.*warning child%-count"))))))
 
 )

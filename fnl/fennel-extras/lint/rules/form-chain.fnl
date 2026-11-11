@@ -90,7 +90,7 @@
 
 (defn- any-chain?
   [chain allowed-chains]
-  (accumulate [found false _ allowed (ipairs allowed-chains)]
+  (accumulate [found false _ allowed (ipairs (or allowed-chains []))]
               (or found (chain-matches? chain allowed))))
 
 (defn- node-form

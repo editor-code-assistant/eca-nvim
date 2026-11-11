@@ -1191,6 +1191,26 @@
                                                                    :exclusions []}]}}})]
         (is (and ok (not result) error))))
 
+    (testing "missing allowed chains is rejected as a structured error"
+      (let [(ok result error) (pcall config.validate
+                                     {:lint {:rules {:form-chain [{:severity   "error"
+                                                                   :applies-to {:forms ["local"]}
+                                                                   :options    {:exception [:top-level]}
+                                                                   :exclusions []}]}}})]
+        (is (and ok (not result) error))))
+
+    (testing "a form-chain policy without allowed chains does not crash runtime validation"
+      (let [(ok result error) (pcall (fn []
+                                       (findings-for-rule "(local value 1)"
+                                                          "fnl/app.fnl"
+                                                          "form-chain"
+                                                          {:form-chain [{:severity   "error"
+                                                                         :applies-to {:forms ["local"]}
+                                                                         :options    {}
+                                                                         :exclusions []}]})))]
+        (is (and ok result (= nil
+                              error)))))
+
     (testing "invalid forbidden-form exception shape is rejected"
       (each [_ exception (ipairs ["top-level" [:nested] [:top-level :nested]])]
             (let [(ok result error) (pcall config.validate

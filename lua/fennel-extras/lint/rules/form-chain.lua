@@ -87,7 +87,7 @@ local function chain_matches_3f(chain, allowed)
 end
 local function any_chain_3f(chain, allowed_chains)
   local found = false
-  for _, allowed in ipairs(allowed_chains) do
+  for _, allowed in ipairs((allowed_chains or {})) do
     found = (found or chain_matches_3f(chain, allowed))
   end
   return found

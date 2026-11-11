@@ -1166,6 +1166,26 @@ local function _142_()
     end
     require("plenary.busted").it("invalid chain shape is rejected as a structured error", _151_)
     local function _152_()
+      local ok, result, error = pcall(config.validate, {lint = {rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"local"}}, options = {exception = {"top-level"}}, exclusions = {}}}}}})
+      local assert_28_auto = require("luassert")
+      local value_29_auto = (ok and not result and error)
+      assert_28_auto.is_truthy(value_29_auto, "(and ok (not result) error)")
+      return true
+    end
+    require("plenary.busted").it("missing allowed chains is rejected as a structured error", _152_)
+    local function _153_()
+      local ok, result, error
+      local function _154_()
+        return findings_for_rule("(local value 1)", "fnl/app.fnl", "form-chain", {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"local"}}, options = {}, exclusions = {}}}})
+      end
+      ok, result, error = pcall(_154_)
+      local assert_28_auto = require("luassert")
+      local value_29_auto = (ok and result and (nil == error))
+      assert_28_auto.is_truthy(value_29_auto, "(and ok result (= nil error))")
+      return true
+    end
+    require("plenary.busted").it("a form-chain policy without allowed chains does not crash runtime validation", _153_)
+    local function _155_()
       for _, exception in ipairs({"top-level", {"nested"}, {"top-level", "nested"}}) do
         local ok, result, error = pcall(config.validate, {lint = {rules = {["forbidden-form"] = {{severity = "error", ["applies-to"] = {forms = {"local"}}, options = {exception = exception}, exclusions = {}}}}}})
         local assert_28_auto = require("luassert")
@@ -1174,63 +1194,63 @@ local function _142_()
       end
       return nil
     end
-    return require("plenary.busted").it("invalid forbidden-form exception shape is rejected", _152_)
+    return require("plenary.busted").it("invalid forbidden-form exception shape is rejected", _155_)
   end
   return require("plenary.busted").describe("form-chain-config-validation", _150_)
 end
 require("plenary.busted").describe("form-chain-first-body", _142_)
 local local_placement_rules = {["forbidden-form"] = {{severity = "error", ["applies-to"] = {forms = {"local"}}, options = {exception = {"top-level"}}, exclusions = {}}}, ["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"local"}}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {}}}}
-local function _153_()
-  local function _154_()
+local function _156_()
+  local function _157_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = findings_for_rule("(local value 1)", "fnl/app.fnl", "forbidden-form", local_placement_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("top-level local is allowed by the top-level exception", _154_)
-  local function _155_()
+  require("plenary.busted").it("top-level local is allowed by the top-level exception", _157_)
+  local function _158_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #findings_for_rule("(defn run [] (local value 1))", "fnl/app.fnl", "forbidden-form", local_placement_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("nested local is still reported", _155_)
+  return require("plenary.busted").it("nested local is still reported", _158_)
 end
-require("plenary.busted").describe("forbidden-form-top-level-exception", _153_)
-local function _156_()
-  local function _157_()
+require("plenary.busted").describe("forbidden-form-top-level-exception", _156_)
+local function _159_()
+  local function _160_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = forms_for("(local name (require :module))", "fnl/app.fnl", local_placement_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("top-level require local is allowed", _157_)
-  local function _158_()
+  require("plenary.busted").it("top-level require local is allowed", _160_)
+  local function _161_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = forms_for("(local name (import :module))", "fnl/app.fnl", local_placement_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("top-level import local is allowed", _158_)
-  local function _159_()
+  require("plenary.busted").it("top-level import local is allowed", _161_)
+  local function _162_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #findings_for_rule("(local value 1)", "fnl/app.fnl", "form-chain", {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"local"}}, options = {["allowed-chains"] = {{"def", "<form>"}}}, exclusions = {}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("top-level value local is rejected by the value policy", _159_)
-  local function _160_()
+  require("plenary.busted").it("top-level value local is rejected by the value policy", _162_)
+  local function _163_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
     local actual_7_auto = #findings_for_rule("(defn run [] (local name (require :module)))", "fnl/app.fnl", "form-chain", local_placement_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("nested require local is rejected", _160_)
+  return require("plenary.busted").it("nested require local is rejected", _163_)
 end
-return require("plenary.busted").describe("local-placement-policy", _156_)
+return require("plenary.busted").describe("local-placement-policy", _159_)

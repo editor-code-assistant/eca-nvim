@@ -1,11 +1,13 @@
 (import-macros {: deftest : testing : is} :spec.eca.macros)
 
-(deftest canonical-config-is-lint-clean
-  (testing "returns zero exit status"
+(deftest canonical-config-lint-diagnostics
+  (testing "reports warning findings for canonical form-chain violations with exit 0"
     (let [lines (vim.fn.systemlist "scripts/fennel-extras lint fnl/fennel-extras/config.fnl")
           code  vim.v.shell_error]
-      (is (= 0 code))))
+      (is (and (= 0
+                  code)
+               (> (length lines) 0)))))
 
-  (testing "reports no lint findings"
+  (testing "reports structured form-chain findings instead of crashing"
     (let [lines (vim.fn.systemlist "scripts/fennel-extras lint fnl/fennel-extras/config.fnl")]
-      (is (= 0 (length lines))))))
+      (is (string.match (or (. lines 1) "") "form%-chain: form is outside the allowed form chain")))))

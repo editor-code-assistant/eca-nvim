@@ -44,6 +44,11 @@
                             :options     {}
                             :exclusions  []}
                            {:severity    :warning
+                            :applies-to  {:files ["^fennel-extras/"]
+                                          :forms ["local"]}
+                            :options     {:exception [:top-level]}
+                            :exclusions  []}
+                           {:severity    :warning
                             :description "keep source data flow explicit by avoiding mutable bindings and open-ended loops"
                             :applies-to  {:files [:^fennel-extras/]
                                           :forms [:var :set :while]}
@@ -94,11 +99,7 @@
                                                            ["defn" "when" "<form>"]
                                                            ["defn" "fn" "<form>"]]}
                             :exclusions  []}
-                           {:severity    :off
-                            :applies-to {:files ["^fennel-extras/"] :forms ["local"]}
-                            :options     {:exception [:top-level]}
-                            :exclusions  []}
-                           {:severity    :off
+                           {:severity    :warning
                             :applies-to {:files ["^fennel-extras/"] :forms ["local"]}
                             :options     {:allowed-chains [["<form>"]]}
                             :exclusions  []}]

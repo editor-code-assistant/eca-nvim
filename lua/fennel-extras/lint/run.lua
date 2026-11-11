@@ -113,31 +113,6 @@ local function scoped_exclusions(exclusions, paths, matcher, index, result)
     return scoped_exclusions_step(exclusions, paths, matcher, index, result, scoped_exclusions)
   end
 end
-local function append_non_warning(result, finding)
-  if not (finding.severity == "warning") then
-    table.insert(result, finding)
-  else
-  end
-  return result
-end
-local function keep_non_warning_step(findings, index, result, recurse)
-  local finding = findings[index]
-  return recurse(findings, (index + 1), append_non_warning(result, finding))
-end
-local function keep_non_warning(findings, index, result)
-  if (index > #findings) then
-    return result
-  else
-    return keep_non_warning_step(findings, index, result, keep_non_warning)
-  end
-end
-local function diagnostic_source(filtered, policy, stale, scope_paths)
-  if ((#policy.exclusions > 0) and (scope_paths or (#stale > 0))) then
-    return keep_non_warning(filtered, 1, {})
-  else
-    return filtered
-  end
-end
 local function append_stale_findings(source, stale)
   for _, finding in ipairs(stale) do
     table.insert(source, finding)
@@ -148,8 +123,7 @@ local function diagnostics(findings, policy, config_path, scope_paths)
   local exclusions = scoped_exclusions(policy.exclusions, scope_paths, policy.matcher, 1, {})
   local filtered, _ = exclusion_matcher.apply(findings, exclusions, nil, policy.matcher)
   local stale = append_stale(exclusions, findings, config_path, policy.matcher, policy, 1, {})
-  local source = diagnostic_source(filtered, policy, stale, scope_paths)
-  return output.sort(append_stale_findings(source, stale))
+  return output.sort(append_stale_findings(filtered, stale))
 end
 local function has_errors_3f(findings, index)
   return ((index <= #findings) and ((findings[index].severity == "error") or has_errors_3f(findings, (index + 1))))

@@ -2049,12 +2049,42 @@ local function _132_()
     local function _206_()
       local result = file_size_changed_mode_scenario()
       local assert_28_auto = require("luassert")
-      local value_29_auto = ((0 == result.code) and (0 == result["changed-file-size"]) and (0 == result["unchanged-file-size"]))
-      assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 0 (. result \"changed-file-size\")) (= 0 (. result \"unchanged-file-size\")))")
+      local value_29_auto = ((0 == result.code) and (1 == result["changed-file-size"]) and (0 == result["unchanged-file-size"]))
+      assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (= 1 (. result \"changed-file-size\")) (= 0 (. result \"unchanged-file-size\")))")
       return true
     end
     return require("plenary.busted").it("changed scope applies path-only exclusions with regex path semantics", _206_)
   end
-  return require("plenary.busted").describe("changed-scope-exclusion-path-regex", _205_)
+  require("plenary.busted").describe("changed-scope-exclusion-path-regex", _205_)
+  local function _207_()
+    local function _208_()
+      local result = lint_project("{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}", {["selected.fnl"] = "(if x 1)\n", ["other.fnl"] = "(if y 1 2)\n"}, {"lint", "selected.fnl"})
+      local text = table.concat((result.lines or {}), "\n")
+      local assert_28_auto = require("luassert")
+      local value_29_auto = ((0 == result.code) and (#result.lines > 0) and string.match(text, "selected%.fnl:.*warning"))
+      assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (> (length (. result \"lines\")) 0) (string.match text \"selected%.fnl:.*warning\"))")
+      return true
+    end
+    require("plenary.busted").it("explicit lint paths keep selected-file warnings visible", _208_)
+    local function _209_()
+      local result = lint_project("{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}", {["selected.fnl"] = "(if x 1)\n", ["other.fnl"] = "(if y 1 2)\n"}, {"lint", "selected.fnl"})
+      local text = table.concat((result.lines or {}), "\n")
+      local assert_28_auto = require("luassert")
+      local value_29_auto = not string.match(text, "stale exclusion")
+      assert_28_auto.is_truthy(value_29_auto, "(not (string.match text \"stale exclusion\"))")
+      return true
+    end
+    require("plenary.busted").it("explicit lint paths ignore stale exclusions outside the selected scope", _209_)
+    local function _210_()
+      local result = lint_project("{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions []}]}}}", {["selected.fnl"] = "(if x 1)\n"}, {"lint", "--all"})
+      local text = table.concat((result.lines or {}), "\n")
+      local assert_28_auto = require("luassert")
+      local value_29_auto = ((0 == result.code) and string.match(text, "selected%.fnl:.*warning child%-count"))
+      assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (string.match text \"selected%.fnl:.*warning child%-count\"))")
+      return true
+    end
+    return require("plenary.busted").it("all lint paths preserve warnings", _210_)
+  end
+  return require("plenary.busted").describe("explicit-lint-scope-diagnostics", _207_)
 end
 return require("plenary.busted").describe("lint-grammar", _132_)
