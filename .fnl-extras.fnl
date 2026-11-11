@@ -85,6 +85,23 @@
                                                     :luassert]}
                             :options     {:mode :forbid}
                             :exclusions  []}]
+          :form-chain     [{:severity    :warning
+                            :description "Keep bindings at the start of the body so functions gather required data before executing logic."
+                            :applies-to  {:files ["^fennel-extras/"] :forms ["let"]}
+                            :options     {:allowed-chains [["def" "<form>"]
+                                                           ["defn" "<form>"]
+                                                           ["defn-" "<form>"]
+                                                           ["defn" "when" "<form>"]
+                                                           ["defn" "fn" "<form>"]]}
+                            :exclusions  []}
+                           {:severity    :off
+                            :applies-to {:files ["^fennel-extras/"] :forms ["local"]}
+                            :options     {:exception [:top-level]}
+                            :exclusions  []}
+                           {:severity    :off
+                            :applies-to {:files ["^fennel-extras/"] :forms ["local"]}
+                            :options     {:allowed-chains [["<form>"]]}
+                            :exclusions  []}]
           :required-form  [{:severity    :error
                             :description "give each source file a stable module identity for imports and diagnostics"
                             :applies-to  {:files [:^fennel-extras/]

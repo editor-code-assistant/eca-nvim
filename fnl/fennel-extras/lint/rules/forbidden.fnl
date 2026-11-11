@@ -43,13 +43,15 @@
              (contains? options.forms head 1)))))
 
 (defn findings
-  [result path form policy node rule-name]
-  (let [rule (or rule-name "forbidden-form")]
+  [result path form policy node rule-name top-level?]
+  (let [rule (or rule-name "forbidden-form")
+        options (registry.rule-options policy "forbidden-form")]
     (when (and (enabled? policy "forbidden-form")
                node
                (= node.kind :list)
                (list-head node)
-               (form-forbidden? node (registry.rule-options policy "forbidden-form")))
+               (not (and top-level? options.exception))
+               (form-forbidden? node options))
           (table.insert result
                         (finding path
                                  form

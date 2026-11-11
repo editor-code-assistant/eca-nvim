@@ -25,7 +25,7 @@ end
 local function _3_()
   local function _4_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = 5
+    local expected_6_auto = 6
     local actual_7_auto = #vim.tbl_keys(rules.defaults())
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

@@ -5,12 +5,13 @@
 (local parse (require :fennel-extras.config.parse))
 
 (local option-names
-       {"forbidden-form"   ["module" "forms"]
+       {"forbidden-form"   ["module" "forms" "exception"]
         "required-form"    ["forms"]
         "module-import"    ["mode" "modules" "module" "binding" "forms"]
         "child-count"      ["children" "max-count" "min-count" "nil-count" "not-counted"]
         "form-child-count" ["children" "max-count"]
-        "file-size"        ["max-code-lines"]})
+        "file-size"        ["max-code-lines"]
+        "form-chain"       ["allowed-chains"]})
 
 (local required-option-names
        {"forbidden-form"   []
@@ -18,11 +19,13 @@
         "module-import"    ["mode"]
         "child-count"      []
         "form-child-count" ["children" "max-count"]
-        "file-size"        ["max-code-lines"]})
+        "file-size"        ["max-code-lines"]
+        "form-chain"       ["allowed-chains"]})
 
 (local option-types
        {
         "module"         :string
+        "exception"      :exception
         "mode"           :string
         "modules"        :strings
         "forms"          :strings
@@ -36,7 +39,8 @@
         "bindings"       :strings
         "max-depth"      :positive-integer
         "max-code-lines" :positive-integer
-        "binding"        :string})
+        "binding"        :string
+        "allowed-chains" :chains})
 
 (defn schema
   [rule]
@@ -89,6 +93,19 @@
   (and (strings? value)
        (> (length value) 0)))
 
+(defn- chains?
+  [value]
+  (and (parse.sequence? value)
+       (> (length value) 0)
+       (accumulate [valid true _ chain (ipairs value)]
+                   (and valid (non-empty-strings? chain)))))
+
+(defn- exception?
+  [value]
+  (and (parse.sequence? value)
+       (= (length value) 1)
+       (= (. value 1) "top-level")))
+
 (local validators
        {:string               (fn
                                 [value]
@@ -97,6 +114,8 @@
 
         :strings              strings?
         :non-empty-strings    non-empty-strings?
+        :chains               chains?
+        :exception            exception?
         :positive-integer     positive-integer?
         :non-negative-integer non-negative-integer?
         :boolean              boolean?})
@@ -104,6 +123,7 @@
 (local type-messages
        {:strings              " must be a list of strings"
         :non-empty-strings    " must be a non-empty list of strings"
+        :chains               " must be a non-empty list of non-empty string lists"
         :positive-integer     " must be a positive integer"
         :non-negative-integer " must be a non-negative integer"
         :boolean              " must be a boolean"

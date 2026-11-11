@@ -11,7 +11,7 @@
 (defn- canonical-sequence-of-strings?
   [value]
   (and (sequence? value)
-       (let []
+       (do
          (var valid true)
          (each [_ item (ipairs value)]
                (when (not= (type item) :string)
@@ -30,14 +30,14 @@
 (defn- canonical-map-keys-error
   [value path allowed]
   (when (= (type value) :table)
-        (let [key (sorted-unknown-key value allowed)]
+        (do (local key (sorted-unknown-key value allowed))
           (when key
                 {:message (.. path "." (tostring key) ": unknown key")}))))
 
 (defn- canonical-contract-key-error
   [value allowed prefix]
   (when (= (type value) :table)
-        (let [key (sorted-unknown-key value allowed)]
+        (do (local key (sorted-unknown-key value allowed))
           (when key
                 {:message (.. prefix (tostring key))}))))
 
@@ -59,13 +59,13 @@
   [value path]
   (or (when (not (sequence? value))
             {:message (.. path " must be a list")})
-      (let []
+      (do
         (var failure nil)
         (each [index exclusion (ipairs value)]
               (when (= failure nil)
                     (if (not= (type exclusion) :table)
                       (set failure {:message (.. path "[" index "] must be a table")})
-                      (let [unknown (canonical-map-keys-error exclusion (.. path "[" index "]") {:path true})]
+                      (do (local unknown (canonical-map-keys-error exclusion (.. path "[" index "]") {:path true}))
                         (if unknown
                           (set failure unknown)
                           (when (not= (type exclusion.path) :string)
@@ -75,7 +75,7 @@
 (defn- canonical-options-error
   [name option-values path]
   (when (= (type option-values) :table)
-        (let [error (options.validate name option-values)]
+        (do (local error (options.validate name option-values))
           (when error
                 {:message (.. path ": " error.message)}))))
 
@@ -104,7 +104,7 @@
 (defn- canonical-missing-option-step
   [section name index option-values names option-index]
   (when (<= option-index (length names))
-        (let [option-name (. names option-index)]
+        (do (local option-name (. names option-index))
           (or (and (= (. option-values option-name) nil)
                    {:message (.. "missing " section ".rules." name "[" index "].options." option-name)})
               (canonical-missing-option-step section name index option-values names (+ option-index 1))))))
@@ -112,10 +112,10 @@
 (defn- canonical-missing-applies-step
   [section name index applies options names option-index]
   (when (<= option-index (length names))
-        (let [option-name (. names option-index)
-              key         (or (and (= option-name "module") :modules)
+        (do (local option-name (. names option-index))
+              (local key (or (and (= option-name "module") :modules)
                                (and (= option-name "modules") :modules)
-                               :forms)]
+                               :forms))
           (or (and (= (. applies key) nil)
                    {:message (.. "missing " section ".rules." name "[" index "].applies-to." (tostring key))})
               (canonical-missing-applies-step section name index applies options names (+ option-index 1))))))
@@ -124,8 +124,8 @@
   [section name index instance]
   (when (and (= name "child-count")
              (not= instance.severity "off"))
-        (let [options instance.options
-              prefix  (.. "missing " section ".rules." name "[" index "].options.")]
+        (do (local options instance.options)
+              (local prefix (.. "missing " section ".rules." name "[" index "].options."))
           (if options.children
             (when (= options.max-count nil)
                   {:message (.. prefix "max-count")})
@@ -152,7 +152,7 @@
                       (canonical-missing-option-step section name index instance.options ["binding"] 1)))
                 (canonical-missing-applies-step section name index instance.applies-to instance.options ["modules"] 1)))
           (or (canonical-missing-option-step section name index instance.options (registry.required-option-names name) 1)
-              (let [names (registry.applies-to-required-names name)]
+              (do (local names (registry.applies-to-required-names name))
                 (and names
                      (canonical-missing-applies-step section name index instance.applies-to instance.options names 1)))))))
 
@@ -189,13 +189,13 @@
   [section rules]
   (or (when (not= (type rules) :table)
             {:message (.. section ".rules must be a table")})
-      (let [name (accumulate [candidate nil key _ (pairs rules)]
-                             (canonical-rule-error-step rules key candidate))]
+      (do (local name (accumulate [candidate nil key _ (pairs rules)]
+                             (canonical-rule-error-step rules key candidate)))
         (when name
-              (let [instances (. rules name)
-                    allowed   (if (= section "design")
+              (do (local instances (. rules name))
+                    (local allowed (if (= section "design")
                                 (registry.design-rule-names)
-                                (registry.lint-rule-names))]
+                                (registry.lint-rule-names)))
                 (if (not= (type name) :string)
                   {:message (.. "unknown " section " rule: " (tostring name))}
                   (if (not (or (= name "form-child-count")
@@ -204,7 +204,7 @@
                     {:message (.. "unknown " section " rule: " name)}
                     (if (not (and (sequence? instances) (> (length instances) 0)))
                       {:message (.. section ".rules." name " must be a non-empty vector")}
-                      (let []
+                      (do
                         (var failure nil)
                         (each [index instance (ipairs instances)]
                               (when (= failure nil)

@@ -2,6 +2,7 @@
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local core (require :eca.nfnl.core))
+(local config (require :fennel-extras.config))
 (local exclusion (require :fennel-extras.lint.exclusion))
 
 (defn- load-lint
@@ -67,7 +68,8 @@
                 (tset clean key nil)))
     (when clean.module
           (set applies.modules clean.module)
-          (when (= rule "module-import")
+          (when (= rule
+                   "module-import")
                 (set clean.mode "require"))
           (set clean.module nil))
     {:applies-to applies :options clean}))
@@ -76,13 +78,16 @@
   []
   (let [policy {}]
     (each [rule instances (pairs all-severities)]
-          (let [scope    (if (= rule "form-child-count") {:files ["^fnl/spec/"] :forms ["testing"]} (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
+          (let [scope    (if (= rule
+                                "form-child-count") {:files ["^fnl/spec/"] :forms ["testing"]} (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {})))
                 severity (. (. instances 1) :severity)]
-            (if (= rule "module-import")
+            (if (= rule
+                   "module-import")
               (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :forms ["deftest" "testing" "is"] :modules "spec.eca.macros"} :options {:mode "require"} :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
                                  {:severity "error" :applies-to {:files ["^fnl/spec/"] :modules ["plenary.busted" "luassert"]} :options {:mode "forbid"} :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
                                  {:severity "error" :applies-to {:modules "eca.nfnl.core"} :options {:mode "require" :binding "core"} :exclusions []}])
-              (if (= rule "forbidden-form")
+              (if (= rule
+                     "forbidden-form")
                 (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :modules "module"} :options {} :exclusions []}
                                    {:severity severity :applies-to {:files ["^fnl/[^s]"] :forms ["var" "set" "while"]} :options {} :exclusions []}])
                 (tset policy rule [{:severity   severity
@@ -96,7 +101,9 @@
 
 (defn- compatibility-rule-value
   [rule severity]
-  (if (and (= :table (type severity)) (= :table (type (. severity 1))))
+  (if (and (= :table
+              (type severity)) (= :table
+                                  (type (. severity 1))))
     (icollect [_ entry (ipairs severity)]
               (let [raw  (if (and entry.options (> (length (vim.tbl_keys entry.options)) 0))
                            entry.options
@@ -109,7 +116,8 @@
                                          data.applies-to)
                  :options    data.options
                  :exclusions (or entry.exclusions [])}))
-    (if (= :table (type severity))
+    (if (= :table
+           (type severity))
       (let [raw  (if (and severity.options (> (length (vim.tbl_keys severity.options)) 0))
                    severity.options
                    (. all-options rule))
@@ -356,7 +364,8 @@
     (if (or (. result :module-missing) (. result :value-nil?))
       result
       (icollect [_ finding (ipairs result)]
-                (when (= (. finding :rule) rule)
+                (when (= (. finding :rule)
+                         rule)
                       [(. finding :rule) (. finding :form) (. finding :severity)])))))
 
 
@@ -655,7 +664,8 @@
 
 (deftest lint-repo-properties
   (testing "cli implementation files are clean"
-    (is (= [] (. (repo-scenario nil) :cli-files)))) )
+    (is (= []
+           (. (repo-scenario nil) :cli-files)))) )
 
 (defn- context-base
   [ctx]
@@ -712,13 +722,16 @@
                           {:path "fnl/app.fnl"}))))
 
   (testing "the shared compatibility policy enables all retained rules"
-    (is (= 5 (policy-size (all-enabled-policy))))) )
+    (is (= 5
+           (policy-size (all-enabled-policy))))) )
 
 (defn- first-finding-form
   [findings rule]
   (var result nil)
   (each [_ finding (ipairs findings)]
-        (when (and (= result nil) (= (. finding :rule) rule))
+        (when (and (= result
+                      nil) (= (. finding :rule)
+                              rule))
               (set result (. finding :form))))
   result)
 
@@ -744,7 +757,8 @@
                           [(. finding :line) (. finding :code)])]
     (is (= []
            (icollect [_ finding (ipairs summary)]
-                     (when (= (. finding 1) 17)
+                     (when (= (. finding 1)
+                              17)
                            finding))))))
 
 
@@ -770,7 +784,8 @@
     (if (or (. result :module-missing) (. result :value-nil?))
       result
       (icollect [_ finding (ipairs result)]
-                (when (= (. finding :rule) "forbidden-form")
+                (when (= (. finding :rule)
+                         "forbidden-form")
                       (. finding :form))))))
 
 
@@ -846,7 +861,8 @@
     (if (or (. result :module-missing) (. result :value-nil?))
       result
       (icollect [_ finding (ipairs result)]
-                (when (= (. finding :rule) "file-size")
+                (when (= (. finding :rule)
+                         "file-size")
                       finding)))))
 
 
@@ -854,7 +870,8 @@
 
 (deftest file-size
   (testing "does not report a spec file"
-    (is (= 0 (length (file-size-findings (repeated-code 4) "fnl/spec/app_spec.fnl" {} 3 nil)))))
+    (is (= 0
+           (length (file-size-findings (repeated-code 4) "fnl/spec/app_spec.fnl" {} 3 nil)))))
 
 
 
@@ -897,7 +914,8 @@
     (if (or (. result :module-missing) (. result :value-nil?))
       result
       (icollect [_ finding (ipairs result)]
-                (when (= (. finding :rule) rule)
+                (when (= (. finding :rule)
+                         rule)
                       finding)))))
 
 
@@ -920,7 +938,9 @@
         data   (canonical-rule-data rule merged)]
     {rule [{:severity   "warning"
             :applies-to (core.merge (if target
-                                      (if (or (= target :all) (= target "all")) {} {:files [target]})
+                                      (if (or (= target
+                                                 :all) (= target
+                                                          "all")) {} {:files [target]})
                                       (if (and (. source-rules rule) (. spec-rules rule)) {}
                                         (if (. source-rules rule) {:files ["^fnl/[^s]"]} (if (. spec-rules rule) {:files ["^fnl/spec/"]} {}))))
                                     data.applies-to)
@@ -1023,8 +1043,10 @@
                                               "fnl/spec/app_spec.fnl"
                                               "forbidden-form"
                                               {:forms ["namespace"]})]
-        (is (and (= 1 (length namespace-result))
-                 (= 0 (length module-result)))))))
+        (is (and (= 1
+                    (length namespace-result))
+                 (= 0
+                    (length module-result)))))))
 
 )
 
@@ -1052,7 +1074,8 @@
                                                                :applies-to {}
                                                                :options    {}
                                                                :exclusions []}]})]
-      (is (= (length absent-result) (length empty-result)))))
+      (is (= (length absent-result)
+             (length empty-result)))))
 
   (testing "file-level findings retain a nil node with moved file selectors"
     (let [result (check-source-exact "(module app)\n(local x 1)"
@@ -1061,8 +1084,10 @@
                                                    :applies-to {:files ["^fnl/app[.]fnl$"]}
                                                    :options    {:max-code-lines 1}
                                                    :exclusions []}]})]
-      (is (and (= 1 (length result))
-               (= nil (. result 1 :node))))))
+      (is (and (= 1
+                  (length result))
+               (= nil
+                  (. result 1 :node))))))
 
 )
 
@@ -1090,3 +1115,142 @@
 
 (deftest module-selector-vector-compatibility
 )
+
+(local form-chain-rules
+       {:form-chain [{:severity   "error"
+                      :applies-to {:forms ["let"]}
+                      :options    {:allowed-chains [["def" "<form>"]
+                                                    ["defn" "<form>"]
+                                                    ["defn-" "<form>"]
+                                                    ["defn" "when" "<form>"]
+                                                    ["defn" "fn" "<form>"]]}
+                      :exclusions []}]})
+
+(local multiple-form-chain-rules
+       {:form-chain [{:severity   "error"
+                      :applies-to {:forms ["let" "local"]}
+                      :options    {:allowed-chains [["def" "<form>"]]}
+                      :exclusions []}]})
+
+(deftest form-chain-first-body
+  (testing "a direct first-body let is allowed"
+    (is (= []
+           (findings-for-rule "(def value (let [x 1] x))"
+                              "fnl/app.fnl"
+                              "form-chain"
+                              form-chain-rules))))
+
+  (testing "a let after another body form is rejected"
+    (is (= 1
+           (length (findings-for-rule "(def value (print \"before\") (let [x 1] x))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      form-chain-rules)))))
+
+  (testing "let through first-body when is allowed"
+    (is (= []
+           (findings-for-rule "(defn value [] (when ready (let [x 1] x)))"
+                              "fnl/app.fnl"
+                              "form-chain"
+                              form-chain-rules))))
+
+  (testing "let through first-body fn is allowed"
+    (is (= []
+           (findings-for-rule "(defn value [] (fn [] (let [x 1] x)))"
+                              "fnl/app.fnl"
+                              "form-chain"
+                              form-chain-rules))))
+
+  (testing "nested when is rejected"
+    (is (= 1
+           (length (findings-for-rule "(defn value [] (when ready (when later (let [x 1] x))))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      form-chain-rules)))))
+
+  (testing "later when is rejected"
+    (is (= 1
+           (length (findings-for-rule "(defn value [] (when ready (print \"before\") (let [x 1] x)))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      form-chain-rules)))))
+
+  (testing "each selected form target is evaluated"
+    (is (= 1
+           (length (findings-for-rule "(def value (let [x 1] x) (local y 2))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      multiple-form-chain-rules)))))
+
+  (deftest form-chain-config-validation
+    (testing "invalid chain shape is rejected as a structured error"
+      (let [(ok result error) (pcall config.validate
+                                     {:lint {:rules {:form-chain [{:severity   "error"
+                                                                   :applies-to {:forms ["let"]}
+                                                                   :options    {:allowed-chains [["def" 42]]}
+                                                                   :exclusions []}]}}})]
+        (is (and ok (not result) error))))
+
+    (testing "invalid forbidden-form exception shape is rejected"
+      (each [_ exception (ipairs ["top-level" [:nested] [:top-level :nested]])]
+            (let [(ok result error) (pcall config.validate
+                                           {:lint {:rules {:forbidden-form [{:severity   "error"
+                                                                             :applies-to {:forms ["local"]}
+                                                                             :options    {:exception exception}
+                                                                             :exclusions []}]}}})]
+              (is (and (not ok) (or result error))))))))
+
+(local local-placement-rules
+       {:forbidden-form [{:severity   "error"
+                          :applies-to {:forms ["local"]}
+                          :options    {:exception [:top-level]}
+                          :exclusions []}]
+        :form-chain     [{:severity   "error"
+                          :applies-to {:forms ["local"]}
+                          :options    {:allowed-chains [["<form>"]]}
+                          :exclusions []}]} )
+
+(deftest forbidden-form-top-level-exception
+  (testing "top-level local is allowed by the top-level exception"
+    (is (= []
+           (findings-for-rule "(local value 1)"
+                              "fnl/app.fnl"
+                              "forbidden-form"
+                              local-placement-rules))))
+
+  (testing "nested local is still reported"
+    (is (= 1
+           (length (findings-for-rule "(defn run [] (local value 1))"
+                                      "fnl/app.fnl"
+                                      "forbidden-form"
+                                      local-placement-rules))))))
+
+(deftest local-placement-policy
+  (testing "top-level require local is allowed"
+    (is (= []
+           (forms-for "(local name (require :module))"
+                      "fnl/app.fnl"
+                      local-placement-rules))))
+
+  (testing "top-level import local is allowed"
+    (is (= []
+           (forms-for "(local name (import :module))"
+                      "fnl/app.fnl"
+                      local-placement-rules))))
+
+  (testing "top-level value local is rejected by the value policy"
+    (is (= 1
+           (length (findings-for-rule "(local value 1)"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      {:form-chain [{:severity   "error"
+                                                     :applies-to {:forms ["local"]}
+                                                     :options    {:allowed-chains [["def" "<form>"]]}
+                                                     :exclusions []}]})))))
+
+  (testing "nested require local is rejected"
+    (is (= 1
+           (length (findings-for-rule "(defn run [] (local name (require :module)))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      local-placement-rules))))))

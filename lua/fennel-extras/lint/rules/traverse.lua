@@ -37,7 +37,7 @@ local function collect_executable_children(node, result, mode, recurse, predicat
   return state
 end
 local function executable_node_result(node, result, mode, predicate)
-  if ((mode == 0) and predicate(node)) then
+  if ((mode ~= "quoted") and predicate(node)) then
     return core.concat(result, {node})
   else
     return result

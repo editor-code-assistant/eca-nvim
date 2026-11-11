@@ -9,6 +9,10 @@ local alignment = require("fennel-extras.indent.settings")
 local allowed_keys = {indents = true, ["format-as"] = true, ["indent-width"] = true, alignment = true}
 local resolve_name = nil
 local alias_rule = nil
+local function capture_values(f)
+  local a, b, c = f()
+  return {a, b, c}
+end
 local function error(message)
   return {message = message}
 end
@@ -110,7 +114,14 @@ local function _17_(config, name, seen)
   else
     local target = config["format-as"][name]
     seen[name] = true
-    local rule, err, found = resolve_name(config, target, seen)
+    local captured_values
+    local function _18_()
+      return resolve_name(config, target, seen)
+    end
+    captured_values = capture_values(_18_)
+    local rule = captured_values[1]
+    local err = captured_values[2]
+    local found = captured_values[3]
     seen[name] = nil
     if err then
       return nil, err
@@ -158,7 +169,13 @@ local function validate_config_table(config)
   if (failure == nil) then
     for name, _ in pairs((config["format-as"] or {})) do
       if (failure == nil) then
-        local _0, err = resolve_name(config, name, {})
+        local captured_values
+        local function _28_()
+          return resolve_name(config, name, {})
+        end
+        captured_values = capture_values(_28_)
+        local _0 = captured_values[1]
+        local err = captured_values[2]
         if err then
           failure = err
         else

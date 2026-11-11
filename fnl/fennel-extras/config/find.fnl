@@ -18,7 +18,7 @@
   (let [uv (or (and vim vim.loop) (and vim vim.uv))]
     (if uv
       (not= nil (uv.fs_stat path))
-      (let [file (io.open path :r)]
+      (do (local file (io.open path :r))
         (or (and file (close-file file))
             false)))))
 
@@ -43,7 +43,7 @@
   (let [candidate (join-path dir ".fnl-extras.fnl")]
     (or (and (exists? candidate) candidate)
         (when (not (git-marker? dir))
-              (let [parent (parent-dir dir)]
+              (do (local parent (parent-dir dir))
                 (when parent
                       (find-in parent)))))))
 

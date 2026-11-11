@@ -13,6 +13,10 @@ local split = require("fennel-extras.indent.split")
 local comments = require("fennel-extras.indent.comment")
 local settings = require("fennel-extras.indent.settings")
 local format_config = require("fennel-extras.config.format")
+local function capture_values(f)
+  local a, b, c = f()
+  return {a, b, c}
+end
 local function append_line(lines, source, start, _end)
   table.insert(lines, string.sub(source, start, (_end - 1)))
   return (_end + 1)
@@ -316,7 +320,13 @@ local function reindent_once(source, config)
   if error then
     return nil, nil, error
   else
-    local lines, final_newline = split_lines(source)
+    local captured_values
+    local function _38_()
+      return split_lines(source)
+    end
+    captured_values = capture_values(_38_)
+    local lines = captured_values[1]
+    local final_newline = captured_values[2]
     local nodes = {}
     local tokens = {}
     collect_node(tree, nodes, tokens, 0)
@@ -326,25 +336,25 @@ local function reindent_once(source, config)
       table.insert(output, process_line(line_number, line, nodes, tokens, config))
       line_number = (line_number + 1)
     end
-    local _38_
+    local _39_
     if final_newline then
-      _38_ = "\n"
+      _39_ = "\n"
     else
-      _38_ = ""
+      _39_ = ""
     end
-    return (table.concat(output, "\n") .. _38_), tree, nil
+    return (table.concat(output, "\n") .. _39_), tree, nil
   end
 end
 local function alignment_source(source, tree, alignment)
   local lines, final_newline = split_lines(source)
   local aligned = align.apply(lines, tree, alignment)
-  local _41_
+  local _42_
   if final_newline then
-    _41_ = "\n"
+    _42_ = "\n"
   else
-    _41_ = ""
+    _42_ = ""
   end
-  return (table.concat(aligned, "\n") .. _41_)
+  return (table.concat(aligned, "\n") .. _42_)
 end
 local function alignment_pass(source, config, alignment)
   local plain, tree, error = reindent_once(source, config)
@@ -352,7 +362,14 @@ local function alignment_pass(source, config, alignment)
     return nil, error
   else
     local aligned = alignment_source(plain, tree, alignment)
-    local result, _, result_error = reindent_once(aligned, config)
+    local captured_values
+    local function _44_()
+      return reindent_once(aligned, config)
+    end
+    captured_values = capture_values(_44_)
+    local result = captured_values[1]
+    local _ = captured_values[2]
+    local result_error = captured_values[3]
     return result, result_error
   end
 end
@@ -377,7 +394,13 @@ local function split_and_align(source, config, alignment)
   if error then
     return nil, error
   else
-    local result, result_error = alignment_fixed_point(prepared, config, alignment, 3)
+    local captured_values
+    local function _48_()
+      return alignment_fixed_point(prepared, config, alignment, 3)
+    end
+    captured_values = capture_values(_48_)
+    local result = captured_values[1]
+    local result_error = captured_values[2]
     if result_error then
       return nil, result_error
     else
@@ -400,7 +423,14 @@ do
         if (alignment.bindings or alignment.maps or alignment.clauses or alignment["split-bindings"] or alignment["collapse-padding"]) then
           return split_and_align(source, config, alignment)
         else
-          local result, _, error = reindent_once(source, config)
+          local captured_values
+          local function _51_()
+            return reindent_once(source, config)
+          end
+          captured_values = capture_values(_51_)
+          local result = captured_values[1]
+          local _ = captured_values[2]
+          local error = captured_values[3]
           return result, error
         end
       end

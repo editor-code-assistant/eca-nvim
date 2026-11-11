@@ -9,6 +9,10 @@
 (local sequence-marker :fennel-extras-sequence)
 (local table-marker :fennel-extras-table)
 
+(defn- capture-values
+  [f]
+  (let [(a b c) (f)] [a b c]))
+
 (defn- marked-sequence
   [value]
   (setmetatable value {sequence-marker true}))
@@ -88,8 +92,8 @@
         result    state.result]
     (if (> index (string.len text))
       result
-      (let [c    (string.sub text index index)
-            next (string.sub text (+ index 1) (+ index 1))]
+      (do (local c (string.sub text index index))
+            (local next (string.sub text (+ index 1) (+ index 1)))
         (if (and (not in-string) (= c "\\") (= next "\""))
           (normalize-escaped-delimiters-step {:text text :index (+ index 2) :in-string in-string :result (.. result next)})
           (if (and in-string (= c "\\"))
@@ -113,21 +117,21 @@
         result []]
     (var i 2)
     (while (< i n)
-           (let [c (string.sub text i i)]
-             (if (= c "\\")
-               (let [escaped (string.sub text (+ i 1) (+ i 1))]
-                 (if (= escaped "\"")
-                   (table.insert result "\"")
-                   (if (= escaped "\\")
-                     (table.insert result "\\")
-                     (if (= escaped "n")
-                       (table.insert result "\n")
-                       (if (= escaped "t")
-                         (table.insert result "\t")
-                         (append-unsupported-escape result escaped)))))
-                 (set i (+ i 2)))
-               (let [_ (append-decoded-char result c)]
-                 (set i (+ i 1))))))
+           (local c (string.sub text i i))
+           (if (= c "\\")
+             (do (local escaped (string.sub text (+ i 1) (+ i 1)))
+               (if (= escaped "\"")
+                 (table.insert result "\"")
+                 (if (= escaped "\\")
+                   (table.insert result "\\")
+                   (if (= escaped "n")
+                     (table.insert result "\n")
+                     (if (= escaped "t")
+                       (table.insert result "\t")
+                       (append-unsupported-escape result escaped)))))
+               (set i (+ i 2)))
+             (do (local _ (append-decoded-char result c))
+               (set i (+ i 1)))))
     (table.concat result)))
 
 (defn- convert-symbol
@@ -146,8 +150,8 @@
   (var i 1)
   (var failure nil)
   (while (and (<= i (length children)) (not failure))
-         (let [(key key-error)     (convert-fn (. children i))
-               (value value-error) (convert-fn (rawget children (+ i 1)))]
+         (do (local captured-values (capture-values (fn [] (convert-fn (. children i))))) (local key (. captured-values 1)) (local key-error (. captured-values 2))
+               (local captured-values (capture-values (fn [] (convert-fn (rawget children (+ i 1)))))) (local value (. captured-values 1)) (local value-error (. captured-values 2))
            (if key-error
              (set failure key-error)
              (if value-error
@@ -159,20 +163,20 @@
 (defn- convert
   [node]
   (if (= node.kind :table)
-    (let [children (meaningful-children node.children)
-          result   {}]
+    (do (local children (meaningful-children node.children))
+          (local result {})
       (if (= (math.fmod (length children) 2) 1)
         (error (error-at "table must contain key/value pairs" node.open) 0)
-        (let [failure (convert-table-children convert children result)]
+        (do (local failure (convert-table-children convert children result))
           (if failure
             (error failure 0)
             (marked-table result)))))
     (if (= node.kind :sequence)
-      (let [result []]
+      (do (local result [])
         (var failure nil)
         (each [_ child (ipairs (meaningful-children node.children))]
               (when (not failure)
-                    (let [(value error) (convert child)]
+                    (do (local captured-values (capture-values (fn [] (convert child)))) (local value (. captured-values 1)) (local error (. captured-values 2))
                       (if error
                         (set failure error)
                         (table.insert result value)))))
@@ -186,7 +190,7 @@
           (if (= node.kind :symbol)
             (convert-symbol node)
             (if (= node.kind :number)
-              (let [(clean) (string.gsub node.text "_" "")]
+              (do (local clean (string.gsub node.text "_" ""))
                 (tonumber clean))
               (if (= node.kind :prefix)
                 (error (error-at "reader prefixes are not allowed" node) 0)
@@ -220,7 +224,7 @@
 (defn- source-keyword-sequence-error
   [node path]
   (when (and node (= node.kind :sequence))
-        (let [children (meaningful-children node.children)]
+        (do (local children (meaningful-children node.children))
           (var failure nil)
           (var index 1)
           (while (and (<= index (length children)) (= failure nil))
@@ -232,13 +236,13 @@
   [node path]
   (when (and node (= node.kind :table))
         (or (source-keyword-node-error (source-entry node ":severity") (.. path ".severity"))
-            (let [exclusions (source-entry node ":exclusions")]
+            (do (local exclusions (source-entry node ":exclusions"))
               (when (and exclusions (= exclusions.kind :sequence))
-                    (let [children (meaningful-children exclusions.children)]
+                    (do (local children (meaningful-children exclusions.children))
                       (var index 1)
                       (var failure nil)
                       (while (and (<= index (length children)) (= failure nil))
-                             (let [exclusion (. children index)]
+                             (do (local exclusion (. children index))
                                (set failure (when (= exclusion.kind :table)
                                                   (source-entry exclusion ":path"))))
                              (set index (+ index 1)))
@@ -251,16 +255,16 @@
         lint  (and top (= top.kind :table) (source-entry top ":lint"))
         rules (and lint (= lint.kind :table) (source-entry lint ":rules"))]
     (when (and rules (= rules.kind :table))
-          (let [children (meaningful-children rules.children)]
+          (do (local children (meaningful-children rules.children))
             (var index 1)
             (var failure nil)
             (while (and (<= index (length children)) (= failure nil))
-                   (let [rule      (. children index)
-                         instances (. children (+ index 1))
-                         rule-path (.. "lint.rules[" index "]")]
+                   (do (local rule (. children index))
+                         (local instances (. children (+ index 1)))
+                         (local rule-path (.. "lint.rules[" index "]"))
                      (set failure (source-keyword-node-error rule rule-path))
                      (when (and (= failure nil) instances (= instances.kind :sequence))
-                           (let [instance-children (meaningful-children instances.children)]
+                           (do (local instance-children (meaningful-children instances.children))
                              (var instance-index 1)
                              (while (and (<= instance-index (length instance-children)) (= failure nil))
                                     (set failure (source-rule-instance-error (. instance-children instance-index)
@@ -274,21 +278,23 @@
   (let [(ok result) (pcall (fn
                              []
 
-                             (let [(root reader-error) (reader.parse (normalize-escaped-delimiters text))]
-                               (if reader-error
-                                 {:error reader-error}
-                                 (let [children (meaningful-children root.children)]
-                                   (if (= (length children) 0)
-                                     {:error {:message "expected one top-level table" :line 1 :col 1}}
-                                     (if (> (length children) 1)
-                                       {:error (error-at "expected exactly one top-level form" (. children 2))}
-                                       (let [top (. children 1)]
-                                         (if (= top.kind :table)
-                                           (let [source-error (canonical-source-error {:children [top]})]
-                                             (if source-error
-                                               {:error source-error}
-                                               {:value (convert top)}))
-                                           {:error (error-at "top-level form must be a table" (or top.open top))})))))))))]
+                             (local captured-values (capture-values (fn [] (reader.parse (normalize-escaped-delimiters text)))))
+                             (local root (. captured-values 1))
+                             (local reader-error (. captured-values 2))
+                             (if reader-error
+                               {:error reader-error}
+                               (do (local children (meaningful-children root.children))
+                                 (if (= (length children) 0)
+                                   {:error {:message "expected one top-level table" :line 1 :col 1}}
+                                   (if (> (length children) 1)
+                                     {:error (error-at "expected exactly one top-level form" (. children 2))}
+                                     (do (local top (. children 1))
+                                       (if (= top.kind :table)
+                                         (do (local source-error (canonical-source-error {:children [top]}))
+                                           (if source-error
+                                             {:error source-error}
+                                             {:value (convert top)}))
+                                         {:error (error-at "top-level form must be a table" (or top.open top))}))))))))]
 
     (if (not ok)
       (values nil result)

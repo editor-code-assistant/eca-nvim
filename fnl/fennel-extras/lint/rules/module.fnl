@@ -19,9 +19,9 @@
 (defn required-form-finding
   [path source policy]
   (if (enabled? policy "required-form")
-    (let [options (registry.rule-options policy "required-form")
-          found   (accumulate [result false _ form (ipairs (root-forms source))]
-                              (or result (= (list-head (or form.node form)) (. options.forms 1))))]
+    (do (local options (registry.rule-options policy "required-form"))
+          (local found (accumulate [result false _ form (ipairs (root-forms source))]
+                              (or result (= (list-head (or form.node form)) (. options.forms 1)))))
       (if (not found)
         [{:kind "finding" :path path :line 1 :col 1 :end-line 1 :end-col 1 :severity (rule-severity policy "required-form") :rule "required-form" :form (.. path " > file") :message "file must contain a required top-level form" :node nil}]
         []))

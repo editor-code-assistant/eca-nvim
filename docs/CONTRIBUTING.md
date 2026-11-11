@@ -158,12 +158,15 @@ The lint rules are:
 | `module-import` | `:mode` plus `:modules` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
 | `child-count` | named mode: `:children`, `:max-count`; direct mode: `:min-count`, `:max-count`, and exactly one of `:nil-count` or non-empty string-list `:not-counted` |
 | `file-size` | `:max-code-lines` |
+| `form-chain` | `:allowed-chains` |
 
 #### Rule options
 
 Put each rule's direct, typed options inside its instance. Required values are explicit; for example, the `file-size` instance in `.fnl-extras.fnl` uses `:max-code-lines 300`. `:max-code-lines` is not a top-level `:lint` option, and options must not be wrapped in `:flags`.
 
 For direct-mode `child-count`, `:not-counted` is a non-empty list of exact literal symbol names. Matching literal symbol children are removed before applying `:min-count` and `:max-count`. Use either `:not-counted` or the legacy boolean `:nil-count`, not both. Structural checks for missing or multiple `if` branches still apply.
+
+`form-chain` selects target forms through `:applies-to {:forms [...]}`. Each configured chain uses the reserved string `"<form>"` for the selected target. Each target must be the first executable body form along one configured outer-to-inner chain. Quoted data is ignored while quasiquote/unquote traversal keeps its existing executable semantics. For example, the canonical source rule uses `:allowed-chains [["def" "<form>"] ["defn" "<form>"] ["defn-" "<form>"] ["defn" "when" "<form>"] ["defn" "fn" "<form>"]]` for `let` forms. The canonical description is: `Keep bindings at the start of the body so functions gather required data before executing logic.` Each selected target form is evaluated independently.
 
 #### Exclusions
 

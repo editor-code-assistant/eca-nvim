@@ -5,6 +5,10 @@ do
   pkg_1_auto.loaded["fennel-extras.reader"] = {}
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.reader"]
 end
+local function capture_values(f)
+  local a, b, c = f()
+  return {a, b, c}
+end
 local function token(kind, text, line, col)
   return {kind = kind, text = text, line = line, col = col}
 end
@@ -73,7 +77,13 @@ local function scan_string(source, i)
       end
     else
       if (c == "\"") then
-        local new_closed, new_j = close_string(j)
+        local captured_values
+        local function _4_()
+          return close_string(j)
+        end
+        captured_values = capture_values(_4_)
+        local new_closed = captured_values[1]
+        local new_j = captured_values[2]
         closed = new_closed
         j = new_j
       else
@@ -133,7 +143,13 @@ local function advance_position(text, line, col)
     local n = string.len(text)
     while (j <= n) do
       if (string.sub(text, j, j) == "\n") then
-        local new_line, new_col = advance_line(current_line, current_col)
+        local captured_values
+        local function _10_()
+          return advance_line(current_line, current_col)
+        end
+        captured_values = capture_values(_10_)
+        local new_line = captured_values[1]
+        local new_col = captured_values[2]
         current_line = new_line
         current_col = new_col
       else
@@ -153,7 +169,13 @@ local function next_token(source, i, line, col)
     kind = classify(string.sub(source, i, i))
   end
   if (kind == "string") then
-    local _end, result = scan_string(source, i)
+    local captured_values
+    local function _13_()
+      return scan_string(source, i)
+    end
+    captured_values = capture_values(_13_)
+    local _end = captured_values[1]
+    local result = captured_values[2]
     if _end then
       return token("string", string.sub(source, i, _end), line, col), (_end + 1)
     else
@@ -168,13 +190,13 @@ local function next_token(source, i, line, col)
   elseif (kind == "atom") then
     local _end = scan_atom(source, i)
     local text = string.sub(source, i, _end)
-    local _12_
+    local _15_
     if number_3f(text) then
-      _12_ = "number"
+      _15_ = "number"
     else
-      _12_ = "symbol"
+      _15_ = "symbol"
     end
-    return token(_12_, text, line, col), (_end + 1)
+    return token(_15_, text, line, col), (_end + 1)
   elseif (kind == "open") then
     return token("open", string.sub(source, i, i), line, col), (i + 1)
   elseif (kind == "close") then
@@ -199,20 +221,20 @@ local function next_token(source, i, line, col)
 end
 local function push_open_node(node, stack, tok)
   local child
-  local _17_
+  local _20_
   do
-    local case_16_ = tok.text
-    if (case_16_ == "(") then
-      _17_ = "list"
-    elseif (case_16_ == "[") then
-      _17_ = "sequence"
-    elseif (case_16_ == "{") then
-      _17_ = "table"
+    local case_19_ = tok.text
+    if (case_19_ == "(") then
+      _20_ = "list"
+    elseif (case_19_ == "[") then
+      _20_ = "sequence"
+    elseif (case_19_ == "{") then
+      _20_ = "table"
     else
-      _17_ = nil
+      _20_ = nil
     end
   end
-  child = {kind = _17_, open = tok, children = {}}
+  child = {kind = _20_, open = tok, children = {}}
   table.insert(node.children, child)
   return table.insert(stack, {node = child, open = tok})
 end
@@ -236,12 +258,24 @@ do
     local error = nil
     while ((i <= n) and not error) do
       local old_i = i
-      local tok, end_or_error = next_token(source, i, line, col)
+      local captured_values
+      local function _25_()
+        return next_token(source, i, line, col)
+      end
+      captured_values = capture_values(_25_)
+      local tok = captured_values[1]
+      local end_or_error = captured_values[2]
       if tok then
         if (end_or_error <= old_i) then
           error = {message = "tokenizer made no progress", line = line, col = col}
         else
-          local new_line, new_col = advance_token(tokens, tok, line, col)
+          local captured_values0
+          local function _26_()
+            return advance_token(tokens, tok, line, col)
+          end
+          captured_values0 = capture_values(_26_)
+          local new_line = captured_values0[1]
+          local new_col = captured_values0[2]
           line = new_line
           col = new_col
           i = end_or_error

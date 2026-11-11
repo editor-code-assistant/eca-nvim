@@ -12,6 +12,8 @@ local module_rule = require("fennel-extras.lint.rules.module")
 local spec_rule = require("fennel-extras.lint.rules.spec")
 local forbidden_rule = require("fennel-extras.lint.rules.forbidden")
 local size_rule = require("fennel-extras.lint.rules.size")
+local form_chain_rule = require("fennel-extras.lint.rules.form-chain")
+local traverse = require("fennel-extras.lint.rules.traverse")
 local root_forms = ast["root-forms"]
 local list_head = ast["list-head"]
 local import_macros_3f = ast["import-macros?"]
@@ -63,7 +65,7 @@ local function evaluate_form(path, form, forms, policy)
   else
   end
   if enabled_3f(policy, "forbidden-form") then
-    forbidden_rule.findings(findings, path, form, policy, node, "forbidden-form")
+    forbidden_rule.findings(findings, path, form, policy, node, "forbidden-form", true)
   else
   end
   if (node and enabled_3f(policy, "module-import")) then
@@ -72,11 +74,41 @@ local function evaluate_form(path, form, forms, policy)
   end
   return findings
 end
-local function append_form_findings(all, path, forms, policy)
+local function same_node_3f(left, right)
+  return (left and right and (left.kind == right.kind) and (left.open.line == right.open.line) and (left.open.col == right.open.col))
+end
+local function append_exception_findings(all, path, forms, policy, source)
+  if (enabled_3f(policy, "forbidden-form") and policy.options and policy.options.exception) then
+    local function _6_(node)
+      return (node.kind == "list")
+    end
+    for _, node in ipairs(traverse["executable-nodes"](source, _6_)) do
+      local _7_
+      do
+        local found = false
+        for _0, form in ipairs(forms) do
+          found = (found or same_node_3f(form.node, node))
+        end
+        _7_ = found
+      end
+      if not _7_ then
+        local form = {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (path .. " > " .. (list_head(node) or "form")), node = node}
+        if (list_head(node) == "local") then
+          table.insert(all, finding(path, form, rule_severity(policy, "forbidden-form"), "forbidden-form", "forbidden form", node))
+        else
+        end
+      else
+      end
+    end
+  else
+  end
+  return all
+end
+local function append_form_findings(all, path, forms, policy, source)
   for _, form in ipairs(forms) do
     append_all(all, evaluate_form(path, form, forms, policy))
   end
-  return all
+  return append_exception_findings(all, path, forms, policy, source)
 end
 local function append_file_size_findings(findings, path, policy, source)
   if enabled_3f(policy, "file-size") then
@@ -88,8 +120,12 @@ end
 local function check_result(path, forms, policy, source, state)
   local findings = append_file_size_findings({}, path, policy, source)
   local findings0 = append_all(findings, module_rule["required-form-finding"](path, source, policy))
-  local findings1 = append_form_findings(findings0, path, forms, policy)
-  return findings1
+  local findings1 = append_form_findings(findings0, path, forms, policy, source)
+  if enabled_3f(policy, "form-chain") then
+    return append_all(findings1, form_chain_rule.findings(path, forms, policy, source, "form-chain"))
+  else
+    return findings1
+  end
 end
 local function check_instance(path, forms, policy, source, instance)
   local instance_policy = registry["evaluator-policy"](policy, instance.rule, instance.value)

@@ -38,7 +38,7 @@
 
 (defn- executable-node-result
   [node result mode predicate]
-  (if (and (= mode 0) (predicate node))
+  (if (and (not= mode :quoted) (predicate node))
     (core.concat result [node])
     result))
 

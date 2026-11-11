@@ -9,6 +9,10 @@
 (var resolve-name nil)
 (var alias-rule nil)
 
+(defn- capture-values
+  [f]
+  (let [(a b c) (f)] [a b c]))
+
 (defn- error
   [message]
   {:message message})
@@ -21,9 +25,9 @@
 (defn- validate-rule
   [rule]
   (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
-    (let [kind  (. rule 1)
-          value (. rule 2)
-          index (. rule 3)]
+    (do (local kind (. rule 1))
+          (local value (. rule 2))
+          (local index (. rule 3))
       (if (= kind :block)
         (when (not (and (integer? value) (>= value 0) (= index nil)))
               (error "invalid block rule"))
@@ -71,13 +75,13 @@
      (fn
        [config name seen]
 
-       (let [indents (or (. config :indents) {})
-             aliases (or (. config :format-as) {})]
-         (if (. indents name)
-           (values (. indents name) nil true)
-           (if (. aliases name)
-             (alias-rule config name seen)
-             (values nil nil false))))))
+       (local indents (or (. config :indents) {}))
+       (local aliases (or (. config :format-as) {}))
+       (if (. indents name)
+         (values (. indents name) nil true)
+         (if (. aliases name)
+           (alias-rule config name seen)
+           (values nil nil false)))))
 
 (set alias-rule
      (fn
@@ -85,15 +89,18 @@
 
        (if (. seen name)
          (values nil (error "format-as alias cycle"))
-         (let [target (. (. config :format-as) name)]
-           (tset seen name true)
-           (let [(rule err found) (resolve-name config target seen)]
-             (tset seen name nil)
-             (if err
-               (values nil err)
-               (if found
-                 (values rule nil true)
-                 (values nil (error "format-as target has no indentation rule")))))))))
+                  (do (local target (. (. config :format-as) name))
+                    (tset seen name true)
+                    (local captured-values (capture-values (fn [] (resolve-name config target seen))))
+                    (local rule (. captured-values 1))
+                    (local err (. captured-values 2))
+                    (local found (. captured-values 3))
+                    (tset seen name nil)
+                    (if err
+                      (values nil err)
+                      (if found
+                        (values rule nil true)
+                        (values nil (error "format-as target has no indentation rule"))))))))
 
 (defn- validate-alignment
   [config]
@@ -110,7 +117,7 @@
   (when (= failure nil)
         (set failure (validate-map (. config :format-as) false)))
   (when (= failure nil)
-        (let [width (. config :indent-width)]
+        (do (local width (. config :indent-width))
           (when (and (not= width nil) (not (and (integer? width) (> width 0))))
                 (set failure (error "indent-width must be a positive integer")))))
   (when (= failure nil)
@@ -118,7 +125,7 @@
   (when (= failure nil)
         (each [name _ (pairs (or (. config :format-as) {}))]
               (when (= failure nil)
-                    (let [(_ err) (resolve-name config name {})]
+                    (do (local captured-values (capture-values (fn [] (resolve-name config name {})))) (local _ (. captured-values 1)) (local err (. captured-values 2))
                       (when err
                             (set failure err))))))
   (when (= failure nil)

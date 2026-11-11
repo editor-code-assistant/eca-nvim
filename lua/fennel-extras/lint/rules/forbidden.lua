@@ -41,9 +41,10 @@ local function form_forbidden_3f(node, options)
 end
 local findings
 do
-  local function findings0(result, path, form, policy, node, rule_name)
+  local function findings0(result, path, form, policy, node, rule_name, top_level_3f)
     local rule = (rule_name or "forbidden-form")
-    if (enabled_3f(policy, "forbidden-form") and node and (node.kind == "list") and list_head(node) and form_forbidden_3f(node, registry["rule-options"](policy, "forbidden-form"))) then
+    local options = registry["rule-options"](policy, "forbidden-form")
+    if (enabled_3f(policy, "forbidden-form") and node and (node.kind == "list") and list_head(node) and not (top_level_3f and options.exception) and form_forbidden_3f(node, options)) then
       table.insert(result, finding(path, form, rule_severity(policy, rule), rule, "forbidden form", finding_node(node)))
     else
     end

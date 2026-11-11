@@ -18,7 +18,7 @@
 
 (deftest defaults
   (testing "all retained lint rules are off by default"
-    (is (= 5 (length (vim.tbl_keys (rules.defaults)))))))
+    (is (= 6 (length (vim.tbl_keys (rules.defaults)))))))
 
 (deftest forbidden-form
   (testing "forbids a selected module target"

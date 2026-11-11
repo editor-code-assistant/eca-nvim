@@ -9,6 +9,10 @@ local reader = require("fennel-extras.reader")
 local reader0 = require("fennel-extras.reader")
 local sequence_marker = "fennel-extras-sequence"
 local table_marker = "fennel-extras-table"
+local function capture_values(f)
+  local a, b, c = f()
+  return {a, b, c}
+end
 local function marked_sequence(value)
   return setmetatable(value, {[sequence_marker] = true})
 end
@@ -160,8 +164,20 @@ local function convert_table_children(convert_fn, children, result)
   local failure = nil
   while ((i <= #children) and not failure) do
     do
-      local key, key_error = convert_fn(children[i])
-      local value, value_error = convert_fn(rawget(children, (i + 1)))
+      local captured_values
+      local function _20_()
+        return convert_fn(children[i])
+      end
+      captured_values = capture_values(_20_)
+      local key = captured_values[1]
+      local key_error = captured_values[2]
+      local captured_values0
+      local function _21_()
+        return convert_fn(rawget(children, (i + 1)))
+      end
+      captured_values0 = capture_values(_21_)
+      local value = captured_values0[1]
+      local value_error = captured_values0[2]
       if key_error then
         failure = key_error
       else
@@ -196,7 +212,13 @@ local function convert(node)
       local failure = nil
       for _, child in ipairs(meaningful_children(node.children)) do
         if not failure then
-          local value, error = convert(child)
+          local captured_values
+          local function _26_()
+            return convert(child)
+          end
+          captured_values = capture_values(_26_)
+          local value = captured_values[1]
+          local error = captured_values[2]
           if error then
             failure = error
           else
@@ -275,8 +297,8 @@ local function source_keyword_sequence_error(node, path)
 end
 local function source_rule_instance_error(node, path)
   if (node and (node.kind == "table")) then
-    local or_37_ = source_keyword_node_error(source_entry(node, ":severity"), (path .. ".severity"))
-    if not or_37_ then
+    local or_40_ = source_keyword_node_error(source_entry(node, ":severity"), (path .. ".severity"))
+    if not or_40_ then
       local exclusions = source_entry(node, ":exclusions")
       if (exclusions and (exclusions.kind == "sequence")) then
         local children = meaningful_children(exclusions.children)
@@ -294,15 +316,15 @@ local function source_rule_instance_error(node, path)
           index = (index + 1)
         end
         if failure then
-          or_37_ = nil
+          or_40_ = nil
         else
-          or_37_ = nil
+          or_40_ = nil
         end
       else
-        or_37_ = nil
+        or_40_ = nil
       end
     end
-    return or_37_
+    return or_40_
   else
     return nil
   end
@@ -342,8 +364,14 @@ local parse_string
 do
   local function parse_string0(text)
     local ok, result
-    local function _46_()
-      local root, reader_error = reader0.parse(normalize_escaped_delimiters(text))
+    local function _47_()
+      local captured_values
+      local function _48_()
+        return reader0.parse(normalize_escaped_delimiters(text))
+      end
+      captured_values = capture_values(_48_)
+      local root = captured_values[1]
+      local reader_error = captured_values[2]
       if reader_error then
         return {error = reader_error}
       else
@@ -369,7 +397,7 @@ do
         end
       end
     end
-    ok, result = pcall(_46_)
+    ok, result = pcall(_47_)
     if not ok then
       return nil, result
     else

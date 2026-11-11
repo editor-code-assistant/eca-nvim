@@ -9,6 +9,10 @@ local indent = require("fennel-extras.indent")
 local reader = require("fennel-extras.reader")
 local settings = require("fennel-extras.indent.settings")
 local rules = require("fennel-extras.rules")
+local function capture_values(f)
+  local a, b, c = f()
+  return {a, b, c}
+end
 local function split_lines(source)
   local lines = {}
   local start = 1
@@ -603,26 +607,32 @@ local function equal_table_3f(equal, parser, a, b)
   return ((#left == #right) and equal_entries_3f(equal, parser, left, right))
 end
 local function equal_value(parser, a, b)
-  local and_66_ = (type(a) == type(b))
-  if and_66_ then
+  local and_65_ = (type(a) == type(b))
+  if and_65_ then
     if (type(a) == "table") then
       if (symbol_3f(a) or parser["comment?"](a)) then
-        and_66_ = (tostring(a) == tostring(b))
+        and_65_ = (tostring(a) == tostring(b))
       else
-        and_66_ = equal_table_3f(equal_value, parser, a, b)
+        and_65_ = equal_table_3f(equal_value, parser, a, b)
       end
     else
-      and_66_ = (a == b)
+      and_65_ = (a == b)
     end
   end
-  return and_66_
+  return and_65_
 end
 local function parse_all(parser, source)
   local iterator = parser.parser(source, "fennel-extras", {comments = true})
   local forms = {}
   local done = false
   while not done do
-    local ok, form = iterator()
+    local captured_values
+    local function _68_()
+      return iterator()
+    end
+    captured_values = capture_values(_68_)
+    local ok = captured_values[1]
+    local form = captured_values[2]
     if ok then
       table.insert(forms, form)
     else

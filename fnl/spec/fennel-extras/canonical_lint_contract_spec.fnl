@@ -115,7 +115,8 @@
                                                                      :exclusions []}]}}})]
             (is (not (. result :ok)))))))
 
-(testing "the canonical source keeps rule vectors inline and has no empty forbidden-form placeholder"
+(deftest canonical-source-keeps-rule-vectors-inline
+  (testing "the canonical source keeps rule vectors inline and has no empty forbidden-form placeholder"
   (let [file   (assert (io.open ".fnl-extras.fnl" :r))
         source (file:read "*a")]
     (file:close)
@@ -123,17 +124,21 @@
              (string.find source ":rules")
              (string.find source ":forbidden%-form%s+%[%{")
              (not (string.find source ":forbidden%-form%s+%[%{:%s*severity%s+:%s*off%s+%}%]"))))))
+  )
 
-(testing "the canonical source has no trailing blank lines"
+(deftest canonical-source-has-no-trailing-blank-lines
+  (testing "the canonical source has no trailing blank lines"
   (let [file   (assert (io.open ".fnl-extras.fnl" :r))
         source (file:read "*a")]
     (file:close)
     (is (not (string.find source "\n\n$")))))
+  )
 
 (deftest canonical-module-selectors-are-vectors
   (let [loaded (config.load ".fnl-extras.fnl")
         rules  (. loaded :lint :rules)]
-    (is (and (vim.deep_equal ["module"]
+    (testing "canonical module selectors are vectors"
+      (is (and (vim.deep_equal ["module"]
                              (. rules :forbidden-form 1 :applies-to :modules))
              (vim.deep_equal ["eca.nfnl.core"]
                              (. rules :module-import 1 :applies-to :modules))
@@ -141,7 +146,7 @@
                              (. rules :module-import 2 :applies-to :modules))
              (vim.deep_equal ["plenary.busted" "luassert"]
                              (. rules :module-import 3 :applies-to :modules))
-             true))))
+             true)))))
 
 (deftest canonical-module-selector-cardinality
   (testing "forbidden-form rejects multiple semantic singleton modules"
@@ -197,7 +202,8 @@
 
 )
 
-(testing "canonical config uses direct child-count for if arity"
+(deftest canonical-config-uses-direct-child-count
+  (testing "canonical config uses direct child-count for if arity"
   (let [loaded   (config.load ".fnl-extras.fnl")
         rules    (. loaded :lint :rules)
         instance (. rules :child-count 2)]
@@ -205,9 +211,10 @@
              (vim.deep_equal {:forms ["if"]} (. instance :applies-to))
              (= 2 (. instance :options :min-count))
              (= 2 (. instance :options :max-count))
-             (vim.deep_equal ["nil" "true" "false"] (. instance :options :not-counted))))))
+                                       (vim.deep_equal ["nil" "true" "false"] (. instance :options :not-counted))))))
+                                         )
 
-(local removed-rules ["call-data-arg"
+                          (local removed-rules ["call-data-arg"
                       "module-style"
                       "unused-and-or"
                       "function-shape"
