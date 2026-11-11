@@ -29,17 +29,21 @@
   (and (= (type value) :number)
        (= value (math.floor value))))
 
+(defn- valid-rule-values?
+  [rule]
+  (let [kind  (. rule 1)
+        value (. rule 2)
+        index (. rule 3)]
+    (if (= kind :block)
+      (and (integer? value) (>= value 0) (= index nil))
+      (and (= kind :inner)
+           (and (= value 0)
+                (or (= index nil) (and (integer? index) (>= index 0))))))))
+
 (defn- valid-rule?
   [rule]
   (and (= (type rule) :table) (= (type (. rule 1)) :string)
-       (let [kind  (. rule 1)
-             value (. rule 2)
-             index (. rule 3)]
-         (if (= kind :block)
-           (and (integer? value) (>= value 0) (= index nil))
-           (and (= kind :inner)
-                (and (= value 0)
-                     (or (= index nil) (and (integer? index) (>= index 0)))))))))
+       (valid-rule-values? rule)))
 
 (defn- valid-rule-list-step
   [value index]
@@ -92,18 +96,26 @@
       (and (. tbl :design)
            (lint-config.design-error (. tbl :design)))))
 
+(defn- workspace-key
+  [workspace]
+  (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}]
+    (accumulate [candidate nil name _ (pairs workspace)]
+                (if (and (not (. allowed name))
+                         (or (= candidate nil)
+                             (< (tostring name) (tostring candidate))))
+                  name
+                  candidate))))
+
+(defn- workspace-key-error-result
+  [workspace]
+  (let [key (workspace-key workspace)]
+    (when key
+          {:message (.. "unknown workspace key: " key)})))
+
 (defn- workspace-key-error
   [workspace]
-  (when (= (type workspace) :table)
-        (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}
-              key     (accumulate [candidate nil name _ (pairs workspace)]
-                                  (if (and (not (. allowed name))
-                                           (or (= candidate nil)
-                                               (< (tostring name) (tostring candidate))))
-                                    name
-                                    candidate))]
-          (when key
-                {:message (.. "unknown workspace key: " key)}))))
+  (and (= (type workspace) :table)
+       (workspace-key-error-result workspace)))
 
 (defn- workspace-error
   [tbl]
@@ -224,22 +236,31 @@
   [tbl]
   (validate-table-result tbl (unknown-config-error tbl)))
 
+(defn- validate-format-fragment
+  [tbl]
+  (let [failure (format-fragment-error tbl)]
+    (validation-result tbl failure)))
+
 (defn validate
   [tbl]
   (if (not= (type tbl) :table)
     (values nil {:message "configuration must be a table"})
     (if (or (. tbl :workspace) (. tbl :format) (. tbl :lint) (. tbl :design))
       (validate-canonical-table tbl)
-      (let [failure (format-fragment-error tbl)]
-        (validation-result tbl failure)))))
+      (validate-format-fragment tbl))))
+
+(defn- append-canonical-exclusion
+  [result rule index exclusion]
+  (let [copy {}]
+    (each [key value (pairs exclusion)]
+          (tset copy key value))
+    (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index)))
+  result)
 
 (defn- append-canonical-instance-exclusions
   [result rule index instance]
   (each [_ exclusion (ipairs (or instance.exclusions []))]
-        (let [copy {}]
-          (each [key value (pairs exclusion)]
-                (tset copy key value))
-          (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index))))
+        (append-canonical-exclusion result rule index exclusion))
   result)
 
 (defn- append-canonical-rule-exclusions
@@ -255,6 +276,21 @@
           (append-canonical-rule-exclusions result rule instances))
     result))
 
+(defn- normalize-lint-rules
+  [rules]
+  (let [normalized (if (and (. rules "form-child-count")
+                            (. rules "child-count"))
+                     (core.assoc rules "form-child-count" nil)
+                     rules)]
+    normalized))
+
+(defn- valid-lint-policy-result
+  [cfg rules design]
+  (let [normalized (normalize-lint-rules rules)]
+    {:rules      normalized
+     :design     (and cfg.design {:rules design})
+     :exclusions (canonical-exclusions normalized)}))
+
 (defn- valid-lint-policy
   [cfg]
   (let [rules  (core.merge (or (and cfg.lint cfg.lint.rules) {}))
@@ -262,13 +298,7 @@
     (each [rule instances (pairs (or design {}))]
           (when (= (. rules rule) nil)
                 (tset rules rule instances)))
-    (let [normalized (if (and (. rules "form-child-count")
-                              (. rules "child-count"))
-                       (core.assoc rules "form-child-count" nil)
-                       rules)]
-      {:rules      normalized
-       :design     (and cfg.design {:rules design})
-       :exclusions (canonical-exclusions normalized)})))
+    (valid-lint-policy-result cfg rules design)))
 
 (defn- lint-policy-valid
   [valid]
@@ -287,18 +317,24 @@
   [start-dir]
   (find-config.find start-dir))
 
+(defn- parse-loaded-text
+  [text]
+  (let [(ok parsed-or-error) (pcall (fn
+                                      []
+                                      (parse-string text)))]
+    (if (not ok)
+      (values nil parsed-or-error)
+      (validate parsed-or-error))))
+
+(defn- read-file-text
+  [file]
+  (let [text (file:read "*a")]
+    (file:close)
+    text))
+
 (defn load
   [path]
   (let [file (io.open path :r)]
     (if (not file)
       (values nil {:message (.. "could not read config file: " path)})
-      (let [text (file:read "*a")]
-        (file:close)
-        (let [(ok parsed-or-error) (pcall (fn
-                                            []
-                                            (parse-string text)))]
-
-
-          (if (not ok)
-            (values nil parsed-or-error)
-            (validate parsed-or-error)))))))
+      (parse-loaded-text (read-file-text file)))))
