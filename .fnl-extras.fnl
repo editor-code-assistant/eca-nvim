@@ -65,12 +65,18 @@
                             :options     {:children [:is] :max-count 1}
                             :exclusions  []}
                            {:severity    :error
-                            :description "keep conditionals explicit and predictable. Extract large bodies into private functions. Use `when` if possible."
+                            :description "keep multi-branch if forms simple by extracting complex logic into private functions"
                             :applies-to  {:forms [:if]}
                             :options     {:min-count   2
                                           :max-count   2
                                           :not-counted ["nil" "true" "false"]}
-                            :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}]
+                            :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}
+                           {:severity    :error
+                            :description "keep or expressions free of nested when forms by extracting complex logic into private functions"
+                            :applies-to  {:files ["^spec/"] :forms [:or]}
+                            :options     {:children [:when]
+                                          :max-count 0}
+                            :exclusions  []}]
           :module-import  [{:severity    :error
                             :description "standardize shared core access through the conventional core binding"
                             :applies-to  {:modules [:eca.nfnl.core]}

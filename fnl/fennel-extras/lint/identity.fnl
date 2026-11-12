@@ -13,6 +13,7 @@
            segment
            (= head "if")
            (= head "testing")
+           (= head "or")
            (= node.kind :sequence)
            (= node.kind :table))))
 

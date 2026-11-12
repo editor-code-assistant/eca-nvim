@@ -9,7 +9,7 @@ local core = require("eca.nfnl.core")
 local reader = require("fennel-extras.reader")
 local naming = require("fennel-extras.lint.identity.naming")
 local function interesting_node_3f(node, segment, head, top_level_3f, skip_identity_3f)
-  return (not skip_identity_3f and (top_level_3f or segment or (head == "if") or (head == "testing") or (node.kind == "sequence") or (node.kind == "table")))
+  return (not skip_identity_3f and (top_level_3f or segment or (head == "if") or (head == "testing") or (head == "or") or (node.kind == "sequence") or (node.kind == "table")))
 end
 local function branch_node_3f(branch_segment, node, skip_identity_3f)
   return (not skip_identity_3f and branch_segment and (naming["list-head"](node) ~= "is"))

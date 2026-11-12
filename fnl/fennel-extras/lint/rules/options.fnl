@@ -30,7 +30,7 @@
         "modules"        :strings
         "forms"          :strings
         "children"       :strings
-        "max-count"      :positive-integer
+        "max-count"      :non-negative-integer
         "min-count"      :non-negative-integer
         "nil-count"      :boolean
         "not-counted"    :non-empty-strings

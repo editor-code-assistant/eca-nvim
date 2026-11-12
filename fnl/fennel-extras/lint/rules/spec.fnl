@@ -19,6 +19,69 @@
     (count-child-forms node children (+ index 1)
                        (+ result (count-is node 1 0 (list-head node) (. children index))))))
 
+(defn- executable-child?
+  [node]
+  (and node
+       (not= node.kind :prefix)))
+
+(defn- append-executable-child
+  [result child depth]
+  (when (executable-child? child)
+        (table.insert result {:node child :depth depth})))
+
+(defn- function-form?
+  [node]
+  (and (= node.kind :list)
+       (or (= (list-head node) "fn")
+           (= (list-head node) "defn")
+           (= (list-head node) "defn-"))))
+
+(defn- collect-executable-children-step
+  [children index result depth recursive? recurse]
+  (if (> index (length children))
+    result
+    (let [child (. children index)]
+      (if (ast.quoted-child? children index)
+        (recurse children (+ index 1) result depth recursive? recurse)
+        (do
+         (append-executable-child result child depth)
+         (if (and (= child.kind :list)
+                  (or recursive? (function-form? child)))
+           (let [nested (recurse (meaningful-children child) 2 result (+ depth 1) recursive? recurse)]
+             (recurse children (+ index 1) nested depth recursive? recurse))
+           (recurse children (+ index 1) result depth recursive? recurse)))))))
+
+(defn- collect-executable-children
+  [node start recursive?]
+  (collect-executable-children-step (meaningful-children node) start [] 0 recursive? collect-executable-children-step))
+
+(defn- name-in?
+  [names target index]
+  (and (<= index (length names))
+       (or (= (. names index) target)
+           (name-in? names target (+ index 1)))))
+
+(defn- named-child-count-step
+  [children names index result recurse]
+  (if (> index (length children))
+    result
+    (if (ast.quoted-child? children index)
+      (recurse children names (+ index 1) result recurse)
+      (let [node   (. children index)
+            nested (if (= node.kind :list)
+                     (recurse (meaningful-children node) names 2 result recurse)
+                     result)]
+        (recurse children names (+ index 1)
+                 (if (and (= node.kind :list)
+                          (name-in? names (list-head node) 1))
+                   (+ nested 1)
+                   nested)
+                 recurse)))))
+
+(defn- named-child-count
+  [node names]
+  (named-child-count-step (meaningful-children node) names 2 0 named-child-count-step))
+
 (defn form-child-count-finding
   [findings path form policy node]
   (let [options (rule-options policy "form-child-count")
@@ -44,20 +107,23 @@
        (= node.kind :symbol)
        (contains? (or options.not-counted []) node.text 1)))
 
-(defn- direct-count-step
+(defn- executable-count-step
   [children options index result]
   (if (> index (length children))
     result
-    (direct-count-step children options (+ index 1)
-                       (if (not (not-counted-literal? (. children index) options))
-                         (+ result 1)
-                         result))))
+    (let [child (. children index)]
+      (executable-count-step children options (+ index 1)
+                              (if (not (not-counted-literal? child.node options))
+                                (+ result 1)
+                                result)))))
 
 (defn- direct-count
   [node options]
-  (let [children (meaningful-children node)
-        start    (if (= (list-head node) "if") 3 2)]
-    (direct-count-step children options start 0)))
+  (let [start (if (= (list-head node) "if") 3 2)]
+    (executable-count-step (collect-executable-children node start false)
+                           options
+                           1
+                           0)))
 
 (defn- direct-child-valid?
   [node options]
@@ -82,7 +148,7 @@
 (defn- child-count-invalid?
   [node options]
   (if options.children
-    (not= (count-child-forms node options.children 1 0) options.max-count)
+    (not= (named-child-count node options.children) options.max-count)
     (not (direct-child-valid? node options))))
 
 (defn child-count-finding

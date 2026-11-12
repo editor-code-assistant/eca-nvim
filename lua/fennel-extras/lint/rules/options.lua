@@ -8,7 +8,7 @@ end
 local parse = require("fennel-extras.config.parse")
 local option_names = {["forbidden-form"] = {"module", "forms", "exception"}, ["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count", "not-counted"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {"allowed-chains"}}
 local required_option_names = {["forbidden-form"] = {}, ["required-form"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {"allowed-chains"}}
-local option_types = {module = "string", exception = "exception", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["not-counted"] = "non-empty-strings", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string", ["allowed-chains"] = "chains"}
+local option_types = {module = "string", exception = "exception", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "non-negative-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["not-counted"] = "non-empty-strings", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string", ["allowed-chains"] = "chains"}
 local schema
 do
   local function schema0(rule)
