@@ -3,19 +3,18 @@
 (module fennel-extras.lint.rules.registry)
 
 (local core (require :eca.nfnl.core))
-(local lint-rule-name-list ["forbidden-form" "required-form" "module-import" "child-count" "file-size" "form-chain"])
+(local lint-rule-name-list ["required-form" "module-import" "child-count" "file-size" "form-chain"])
 (local design-rule-name-list [])
 (local rule-name-list lint-rule-name-list)
-(local default-rule-name-list ["forbidden-form" "required-form" "module-import" "form-child-count" "file-size" "form-chain"])
+(local default-rule-name-list ["required-form" "module-import" "form-child-count" "file-size" "form-chain"])
 (local ast (require :fennel-extras.lint.rules.ast))
 (local options (require :fennel-extras.lint.rules.options))
 (local rule-properties {:required-form {:scope :file} :file-size {:scope :file}})
 (local semantic-applies-to
-       {"forbidden-form" ["module" "forms"]
-        "required-form"  ["forms"]
-        "module-import"  ["module" "modules" "forms"]
-        "child-count"    ["forms"]
-        "form-chain"     ["forms"]})
+       {"required-form" ["forms"]
+        "module-import" ["module" "modules" "forms"]
+        "child-count"   ["forms"]
+        "form-chain"    ["forms"]})
 (local required-semantic-applies-to
        {"required-form"    ["forms"]})
 
@@ -120,9 +119,8 @@
   [rule instance]
   (let [options   (core.merge (or instance.options {}))
         applies   (or instance.applies-to {})
-        singleton (or (= rule "forbidden-form")
-                      (and (= rule "module-import")
-                           (= options.mode "require")))]
+        singleton (and (= rule "module-import")
+                       (= options.mode "require"))]
     (accumulate [result options _ name (ipairs (or (. semantic-applies-to rule) []))]
                 (let [value (semantic-option-value applies name singleton)]
                   (if (or (= value nil)

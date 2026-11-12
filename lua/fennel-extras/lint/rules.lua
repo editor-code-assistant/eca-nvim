@@ -10,17 +10,13 @@ local ast = require("fennel-extras.lint.rules.ast")
 local registry = require("fennel-extras.lint.rules.registry")
 local module_rule = require("fennel-extras.lint.rules.module")
 local spec_rule = require("fennel-extras.lint.rules.spec")
-local forbidden_rule = require("fennel-extras.lint.rules.forbidden")
 local size_rule = require("fennel-extras.lint.rules.size")
 local form_chain_rule = require("fennel-extras.lint.rules.form-chain")
-local traverse = require("fennel-extras.lint.rules.traverse")
 local root_forms = ast["root-forms"]
 local list_head = ast["list-head"]
 local import_macros_3f = ast["import-macros?"]
 local has_module_import_3f = ast["has-module-import?"]
 local enabled_3f = registry["enabled?"]
-local finding = registry.finding
-local rule_severity = registry["rule-severity"]
 local defaults
 do
   local function defaults0()
@@ -64,51 +60,17 @@ local function evaluate_form(path, form, forms, policy)
     spec_rule["child-count-finding"](findings, path, form, policy, node)
   else
   end
-  if enabled_3f(policy, "forbidden-form") then
-    forbidden_rule.findings(findings, path, form, policy, node, "forbidden-form", true)
-  else
-  end
   if (node and enabled_3f(policy, "module-import")) then
     module_rule["module-import-finding"](findings, path, form, head, node, policy)
   else
   end
   return findings
 end
-local function same_node_3f(left, right)
-  return (left and right and (left.kind == right.kind) and (left.open.line == right.open.line) and (left.open.col == right.open.col))
-end
-local function append_exception_findings(all, path, forms, policy, source)
-  if (enabled_3f(policy, "forbidden-form") and policy.options and policy.options.exception) then
-    local function _6_(node)
-      return (node.kind == "list")
-    end
-    for _, node in ipairs(traverse["executable-nodes"](source, _6_)) do
-      local _7_
-      do
-        local found = false
-        for _0, form in ipairs(forms) do
-          found = (found or same_node_3f(form.node, node))
-        end
-        _7_ = found
-      end
-      if not _7_ then
-        local form = {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (path .. " > " .. (list_head(node) or "form")), node = node}
-        if (list_head(node) == "local") then
-          table.insert(all, finding(path, form, rule_severity(policy, "forbidden-form"), "forbidden-form", "forbidden form", node))
-        else
-        end
-      else
-      end
-    end
-  else
-  end
-  return all
-end
 local function append_form_findings(all, path, forms, policy, source)
   for _, form in ipairs(forms) do
     append_all(all, evaluate_form(path, form, forms, policy))
   end
-  return append_exception_findings(all, path, forms, policy, source)
+  return all
 end
 local function append_file_size_findings(findings, path, policy, source)
   if enabled_3f(policy, "file-size") then
@@ -133,10 +95,10 @@ local function check_instance(path, forms, policy, source, instance)
   local result = check_result(path, forms, instance_policy, source, state)
   local tbl_26_ = {}
   local i_27_ = 0
-  for _, finding0 in ipairs(result) do
+  for _, finding in ipairs(result) do
     local val_28_
-    if registry["instance-applies-to?"](instance.rule, instance.value, finding0, policy.matcher) then
-      local with_instance = core.assoc(finding0, "instance", instance.index)
+    if registry["instance-applies-to?"](instance.rule, instance.value, finding, policy.matcher) then
+      local with_instance = core.assoc(finding, "instance", instance.index)
       if instance.value.description then
         val_28_ = core.assoc(with_instance, "description", instance.value.description)
       else
@@ -154,8 +116,8 @@ local function check_instance(path, forms, policy, source, instance)
   return tbl_26_
 end
 local function append_instance_findings(result, path, forms, policy, source, instance)
-  for _, finding0 in ipairs(check_instance(path, forms, policy, source, instance)) do
-    table.insert(result, finding0)
+  for _, finding in ipairs(check_instance(path, forms, policy, source, instance)) do
+    table.insert(result, finding)
   end
   return result
 end

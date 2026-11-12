@@ -13,7 +13,8 @@
 (defn- error-message
   [result]
   (let [error (. result :error)]
-    (if (= :table (type error))
+    (if (= :table
+           (type error))
       (. error :message)
       error)))
 
@@ -23,56 +24,58 @@
   (testing "a top-level spec-files key is rejected"
     (let [result (validation {:lint {:spec-files ["^spec/"] :rules {}}})]
       (is (and (not (. result :ok))
-               (= "unknown lint key: spec-files" (error-message result)))))))
+               (= "unknown lint key: spec-files"
+                  (error-message result)))))))
 
 (deftest canonical-applies-to
   (testing "files, forms, and modules are accepted"
-    (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
-                                                               :applies-to {:files   ["^fnl/"]
-                                                                            :forms   ["require"]
-                                                                            :modules ["plenary.busted"]}
-                                                               :options    {}
-                                                               :exclusions []}]}}})]
+    (let [result (validation {:lint {:rules {:form-chain [{:severity   "warning"
+                                                           :applies-to {:files   ["^fnl/"]
+                                                                        :forms   ["require"]
+                                                                        :modules ["plenary.busted"]}
+                                                           :options    {:allowed-chains [["<form>"]]}
+                                                           :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
 
   (testing "contexts is rejected"
-    (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
-                                                               :applies-to {:contexts ["all"]}
-                                                               :options    {:module "require"}
-                                                               :exclusions []}]}}})]
+    (let [result (validation {:lint {:rules {:form-chain [{:severity   "warning"
+                                                           :applies-to {:contexts ["all"]}
+                                                           :options    {:module "require"}
+                                                           :exclusions []}]}}})]
       (is (and (not (. result :ok))
                (= "unknown applies-to key: contexts"
                   (error-message result)))))))
 
 (deftest canonical-exclusions
   (testing "path-only exclusions are accepted"
-    (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
-                                                               :applies-to {:forms ["if"]}
-                                                               :options    {}
-                                                               :exclusions [{:path "^spec/"}]}]}}})]
+    (let [result (validation {:lint {:rules {:form-chain [{:severity   "warning"
+                                                           :applies-to {:forms ["if"]}
+                                                           :options    {:allowed-chains [["<form>"]]}
+                                                           :exclusions [{:path "^spec/"}]}]}}})]
       (is (and (. result :ok) (. result :value)))))
 
   (testing "old exclusion keys are rejected"
     (let [base     {:severity   "warning"
                     :applies-to {:forms ["if"]}
-                    :options    {}}
+                    :options    {:allowed-chains [["<form>"]]}}
           keys     [:reason :code :form]
           rejected (icollect [_ key (ipairs keys)]
                              (let [exclusion {:path "^spec/"}]
                                (tset exclusion key "old contract")
-                               (let [result (validation {:lint {:rules {:forbidden-form
+                               (let [result (validation {:lint {:rules {:form-chain
                                                                         [{:severity   base.severity
                                                                           :applies-to base.applies-to
                                                                           :options    base.options
                                                                           :exclusions [exclusion]}]}}})]
                                  (and (not (. result :ok)) (error-message result)))))]
-      (is (= 3 (length rejected)))))
+      (is (= 3
+             (length rejected)))))
 
   (testing "non-string path values are rejected"
-    (let [result (validation {:lint {:rules {:forbidden-form [{:severity   "warning"
-                                                               :applies-to {:forms ["if"]}
-                                                               :options    {}
-                                                               :exclusions [{:path ["^spec/"]}]}]}}})]
+    (let [result (validation {:lint {:rules {:form-chain [{:severity   "warning"
+                                                           :applies-to {:forms ["if"]}
+                                                           :options    {:allowed-chains [["<form>"]]}
+                                                           :exclusions [{:path ["^spec/"]}]}]}}})]
       (is (not (. result :ok)))))
 
   (testing "module-import rejects exempt-files and accepts a path-only exclusion"

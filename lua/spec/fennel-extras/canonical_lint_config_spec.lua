@@ -25,7 +25,7 @@ end
 require("plenary.busted").describe("canonical-rule-shape", _2_)
 local function _4_()
   local function _5_()
-    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {files = {"^fnl/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {files = {"^fnl/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
@@ -33,7 +33,7 @@ local function _4_()
   end
   require("plenary.busted").it("files, forms, and modules are accepted", _5_)
   local function _6_()
-    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {contexts = {"all"}}, options = {module = "require"}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {contexts = {"all"}}, options = {module = "require"}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and ("unknown applies-to key: contexts" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= \"unknown applies-to key: contexts\" (error-message result)))")
@@ -44,7 +44,7 @@ end
 require("plenary.busted").describe("canonical-applies-to", _4_)
 local function _7_()
   local function _8_()
-    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = "^spec/"}}}}}}})
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {{path = "^spec/"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
@@ -52,7 +52,7 @@ local function _7_()
   end
   require("plenary.busted").it("path-only exclusions are accepted", _8_)
   local function _9_()
-    local base = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}}
+    local base = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"<form>"}}}}
     local keys = {"reason", "code", "form"}
     local rejected
     do
@@ -63,7 +63,7 @@ local function _7_()
         do
           local exclusion = {path = "^spec/"}
           exclusion[key] = "old contract"
-          local result = validation({lint = {rules = {["forbidden-form"] = {{severity = base.severity, ["applies-to"] = base["applies-to"], options = base.options, exclusions = {exclusion}}}}}})
+          local result = validation({lint = {rules = {["form-chain"] = {{severity = base.severity, ["applies-to"] = base["applies-to"], options = base.options, exclusions = {exclusion}}}}}})
           val_28_ = (not result.ok and error_message(result))
         end
         if (nil ~= val_28_) then
@@ -82,7 +82,7 @@ local function _7_()
   end
   require("plenary.busted").it("old exclusion keys are rejected", _9_)
   local function _11_()
-    local result = validation({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {}, exclusions = {{path = {"^spec/"}}}}}}}})
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {{path = {"^spec/"}}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = not result.ok
     assert_28_auto.is_truthy(value_29_auto, "(not (. result \"ok\"))")

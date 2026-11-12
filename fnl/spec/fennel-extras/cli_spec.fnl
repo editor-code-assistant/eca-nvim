@@ -1218,10 +1218,10 @@
 
 (local lint-rule-options
        {"module-import"    ":applies-to {:files [\"^spec/\"] :modules \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"]} :options {:mode \"require\"}"
-        "forbidden-form"   ":applies-to {:files [\"^spec/\"] :modules \"module\"} :options {}"
+        "form-chain"       ":applies-to {:files [\"^spec/\"] :modules \"module\"} :options {}"
         "module-import"    ":applies-to {:files [\"^spec/\"] :modules [\"plenary.busted\" \"luassert\"]} :options {:mode \"forbid\"}"
         "form-child-count" ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}"
-        "forbidden-form"   ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}"
+        "form-chain"       ":applies-to {:files [\"^[^s]\"] :forms [\"var\" \"set\" \"while\"]} :options {}"
         "file-size"        ":applies-to {:files [\"^[^s]\"]} :options {:max-code-lines 300}"
         "module-import"    ":applies-to {:modules \"eca.nfnl.core\"} :options {:binding \"core\"}"
        })
@@ -1391,7 +1391,7 @@
 
 (defn- lint-grammar-scenario
   [args]
-  (lint-project "{:lint {:rules {:forbidden-form [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"
+  (lint-project "{:lint {:rules {:form-chain [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"
                 {"a.fnl" "(if x 1 2)\n"}
                 args))
 
@@ -1407,7 +1407,7 @@
 
 (defn- lint-discovery-scenario
   [mode]
-  (let [config "{:workspace {:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"]} :lint {:rules {:forbidden-form [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"
+  (let [config "{:workspace {:paths [\"src\"] :exclude [\"src/skip\"] :extensions [\".fnl\"]} :lint {:rules {:form-chain [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"
         files  {"src/keep.fnl" "(if x 1 2)\n" "src/skip/no.fnl" "(if x 1 2)\n" "other.fnl" "(if x 1 2)\n"}]
     (lint-project config
                   files
@@ -1446,14 +1446,14 @@
   [mode]
   (or (and (= mode
               :error)
-           "{:lint {:rules {\"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}]}}}")
+           "{:lint {:rules {\"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}]}}}")
       (and (= mode
               :warning-error)
-           "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :error :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}")
+           "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :error :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}")
       (and (= mode
               :off)
-           "{:lint {:rules {\"forbidden-form\" :off \"child-count\" :off}}}")
-      "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}"))
+           "{:lint {:rules {\"form-chain\" :off \"child-count\" :off}}}")
+      "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}"))
 
 
 
@@ -1477,21 +1477,21 @@
   [mode]
   (or (and (= mode
               :stale)
-           "{:lint {:rules {\"forbidden-form\" :off}}
+           "{:lint {:rules {\"form-chain\" :off}}
              :design {:rules {:child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
       (and (= mode
               :disabled)
-           "{:lint {:rules {\"forbidden-form\" :off}}
+           "{:lint {:rules {\"form-chain\" :off}}
              :design {:rules {:child-count [{:severity :off :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"disabled rule\"}]}]}}}")
       (and (= mode
               :per-rule)
-           "{:lint {:rules {\"forbidden-form\" :off}}
+           "{:lint {:rules {\"form-chain\" :off}}
              :design {:rules {:child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :code \"do\" :reason \"intentional per-rule exclusion\"}]}]}}}")
       (and (= mode
               :general)
-           "{:lint {:rules {\"forbidden-form\" :off}}
+           "{:lint {:rules {\"form-chain\" :off}}
              :design {:rules {:child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :reason \"intentional general exclusion\"}]}]}}}")
-      "{:lint {:rules {\"forbidden-form\" :off}}
+      "{:lint {:rules {\"form-chain\" :off}}
         :design {:rules {:child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"a.fnl\" :code \"do\" :reason \"intentional multi-step branch\"}]}]}}}"))
 
 
@@ -1506,7 +1506,7 @@
 
 (defn- lint-normalized-testing-exclusion-scenario
   []
-  (lint-project "{:lint {:rules {\"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions [{:path \"a.fnl\" :reason \"intentional test shape\"}]}]}}}"
+  (lint-project "{:lint {:rules {\"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions [{:path \"a.fnl\" :reason \"intentional test shape\"}]}]}}}"
                 {"a.fnl" "(testing \"two\" (is true) (is true))\n"}
                 ["lint" "--all"]))
 
@@ -1522,7 +1522,7 @@
 
 (defn- lint-invalid-regex-scenario
   []
-  (lint-project "{:lint {:rules {:forbidden-form [{:severity :off :applies-to {} :options {} :exclusions [{:path \"[\" :reason \"bad regex\"]}]}}}"
+  (lint-project "{:lint {:rules {:form-chain [{:severity :off :applies-to {} :options {} :exclusions [{:path \"[\" :reason \"bad regex\"]}]}}}"
                 {"a.fnl" "(if\n"}
                 ["lint" "--all"]))
 
@@ -1540,8 +1540,8 @@
   [mode]
   (if (= mode
          :config)
-    "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:nope true} :exclusions []}]}}}"
-    "{:lint {:rules {:forbidden-form [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"))
+    "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:nope true} :exclusions []}]}}}"
+    "{:lint {:rules {:form-chain [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"))
 
 
 
@@ -1733,7 +1733,7 @@
           config        (.. root "/.fnl-extras.fnl")
           first-file    (.. root "/a.fnl")
           second-file   (.. root "/b.fnl")
-          config-text   "{:lint {:rules {\"module-import\" :off \"child-count\" :off \"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+          config-text   "{:lint {:rules {\"module-import\" :off \"child-count\" :off \"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"
           first-source  "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
           second-source "(testing \"c\" (is 1) (is 2))\\n"]
       (vim.fn.mkdir root "p")
@@ -1752,7 +1752,7 @@
           config        (.. root "/.fnl-extras.fnl")
           first-file    (.. root "/a.fnl")
           second-file   (.. root "/b.fnl")
-          config-text   "{:lint {:rules {\"module-import\" :off \"child-count\" :off \"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"
+          config-text   "{:lint {:rules {\"module-import\" :off \"child-count\" :off \"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"
           first-source  "(testing \"a\" (is 1) (is 2))\\n(testing \"b\" (is 1) (is 2))\\n"
           second-source "(testing \"c\" (is 1) (is 2))\\n"]
       (vim.fn.mkdir root "p")
@@ -1825,7 +1825,7 @@
 
   (defn- invalid-git-scenario-body
     [mode root]
-    (let [_      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"forbidden-form\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
+    (let [_      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"form-chain\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"))
           _      (write-file (.. root "/a.fnl") "(if x 1 2)\\n")
           result (bounded-cli root (invalid-git-scenario-args mode))
           line   (or (. result :lines 1) "")]
@@ -1851,7 +1851,7 @@
   (defn- unborn-git-scenario-body
     [mode root]
     (let [_      (git-init root)
-          _      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off \"child-count\" :off \"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
+          _      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off \"child-count\" :off \"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"))
           _      (write-file (.. root "/a.fnl") "(testing \"x\") (import-macros {: testing : is} :spec.eca.macros)\n")
           result (bounded-cli root (invalid-git-scenario-args mode))]
       {:code       (. result :code)
@@ -1873,7 +1873,7 @@
 
   (defn- changed-config
     []
-    "{:lint {:rules {\"module-import\" :off \"child-count\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"forbidden-form\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}")
+    "{:lint {:rules {\"module-import\" :off \"child-count\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"form-chain\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}")
 
 
 
@@ -2080,7 +2080,7 @@
   (defn- lint-error-repository-scenario
     [root]
     (write-file (.. root "/.fnl-extras.fnl")
-                (lint-config "{:lint {:rules {:forbidden-form [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"))
+                (lint-config "{:lint {:rules {:form-chain [{:severity :off :applies-to {} :options {} :exclusions []}]}}}"))
     (write-file (.. root "/a.fnl") "(if x 1 2)\n"))
 
 
@@ -2088,7 +2088,7 @@
   (defn- lint-error-configured-scenario
     [root]
     (let [_ (git-init root)
-          _ (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"forbidden-form\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"))
+          _ (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"form-chain\" :off \"form-child-count\" :off \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"))
           _ (write-file (.. root "/a.fnl") "(if x 1 2)\n")
           _ (git-run root ["add" "."])]
       (git-run root ["commit" "-qm" "base"])))
@@ -2142,11 +2142,11 @@
     (or (and (or (= mode
                     :untouched) (= mode
                                    :all))
-             "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
+             "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
         (and (= mode
                 :modified)
-             "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
-        "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}"))
+             "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}")
+        "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions [{:path \"missing[.]fnl\" :reason \"old intentional branch\"}]}]}}}"))
 
 
 
@@ -2253,7 +2253,7 @@
     [mode]
     (let [source        (vim.fn.tempname)
           clone         (vim.fn.tempname)
-          config        "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}"
+          config        "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}]}}}"
           clone-command (.. "git clone --depth 1 "
                             (vim.fn.shellescape (.. "file://" source))
                             " "
@@ -2293,7 +2293,7 @@
     (let [root        (vim.fn.tempname)
           config      (.. root "/.fnl-extras.fnl")
           warn        (.. root "/warning.fnl")
-          config-text "{:lint {:rules {\"module-import\" :off \"child-count\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"]
+          config-text "{:lint {:rules {\"module-import\" :off \"child-count\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"]
       (vim.fn.mkdir root "p")
       (with-cleanup (fn [] (vim.fn.delete root "rf"))
 
@@ -2329,7 +2329,7 @@
           config      (.. root "/.fnl-extras.fnl")
           warn        (.. root "/warning.fnl")
           error       (.. root "/error.fnl")
-          config-text "{:lint {:rules {\"module-import\" :off \"child-count\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"forbidden-form\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"forbidden-form\" :off}}}"]
+          config-text "{:lint {:rules {\"module-import\" :off \"child-count\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {} :exclusions []}] \"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"]
       (vim.fn.mkdir root "p")
       (with-cleanup (fn [] (vim.fn.delete root "rf"))
 
@@ -2412,14 +2412,14 @@
 
   (deftest lint-policy-cli-regressions
     (testing "returns zero for a non-macro file"
-      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
+      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
                                  {"a.fnl" "(when x nil)\\n"}
                                  ["lint" "a.fnl"])]
         (is (= 0
                (. result :code)))))
 
     (testing "does not report the macro exclusion as stale for a non-macro file"
-      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
+      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
                                  {"a.fnl" "(when x nil)\\n"}
                                  ["lint" "a.fnl"])
             text   (table.concat (or (. result :lines) []) "\\n")]
@@ -2471,7 +2471,7 @@
 
   (deftest explicit-lint-scope-diagnostics
     (testing "explicit lint paths keep selected-file warnings visible"
-      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
+      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
                                  {"selected.fnl" "(if x 1)\n"
                                   "other.fnl"    "(if y 1 2)\n"}
                                  ["lint" "selected.fnl"])
@@ -2482,7 +2482,7 @@
                  (string.match text "selected%.fnl:.*warning")))))
 
     (testing "explicit lint paths ignore stale exclusions outside the selected scope"
-      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
+      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
                                  {"selected.fnl" "(if x 1)\n"
                                   "other.fnl"    "(if y 1 2)\n"}
                                  ["lint" "selected.fnl"])
@@ -2490,7 +2490,7 @@
         (is (not (string.match text "stale exclusion")))))
 
     (testing "all lint paths preserve warnings"
-      (let [result (lint-project "{:lint {:rules {\"forbidden-form\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions []}]}}}"
+      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions []}]}}}"
                                  {"selected.fnl" "(if x 1)\n"}
                                  ["lint" "--all"])
             text   (table.concat (or (. result :lines) []) "\n")]

@@ -46,10 +46,6 @@
         "fn" 3 "lambda" 3 "λ" 3 "deftest" 3
         "when" 3 "when-let" 3 "if-let" 3 "with-open" 3 "testing" 3})
 
-(defn- body-start
-  [head children]
-  (. body-starts head))
-
 (defn- executable-children
   [node mode]
   (let [result []]
@@ -70,28 +66,77 @@
 (defn- first-body-child
   [node mode]
   (let [head  (ast.list-head node)
-        start (body-start head (ast.meaningful-children node))]
+        start (. body-starts head)]
     (when start
           (let [meaningful (ast.meaningful-children node)
                 candidate  (. meaningful start)
                 raw-index  (and candidate (meaningful-index node.children candidate 1))]
             (and raw-index (first-body-child-step node mode raw-index))))))
 
-(defn- chain-matches-step?
-  [chain allowed index]
-  (or (> index (length allowed))
-      (and (= (. chain index) (. allowed index))
-           (chain-matches-step? chain allowed (+ index 1)))))
+(defn- contains?
+  [items target index]
+  (and (<= index (length (or items [])))
+       (or (= (. items index) target)
+           (contains? items target (+ index 1)))))
+
+(defn- root-chain?
+  [pattern]
+  (contains? pattern "<root>" 1))
+
+(defn- match-step
+  [subject pattern between subject-index pattern-index matched-step?]
+  (if (> pattern-index (length pattern))
+    (> subject-index (length subject))
+    (let [expected (. pattern pattern-index)
+          actual   (. subject subject-index)]
+      (or (and (= expected "<root>")
+               (= subject-index 1)
+               (match-step subject pattern between (+ subject-index 1) (+ pattern-index 1) true))
+          (and (= expected "<form>")
+               (= subject-index (length subject))
+               (= actual "<form>")
+               (match-step subject pattern between (+ subject-index 1) (+ pattern-index 1) true))
+          (and (= expected actual)
+               (match-step subject pattern between (+ subject-index 1) (+ pattern-index 1) true))
+          (and matched-step?
+               actual
+               (contains? between actual 1)
+               (match-step subject pattern between (+ subject-index 1) pattern-index true))))))
 
 (defn- chain-matches?
-  [chain allowed]
-  (and (= (length chain) (length allowed))
-       (chain-matches-step? chain allowed 1)))
+  [chain pattern forms-between root-count]
+  (if (root-chain? pattern)
+    (or (and (= (length pattern) 2)
+             (= (. pattern 1) "<root>")
+             (= (. pattern 2) "<form>")
+             (or (= (length chain) 1)
+                 (and (= (length chain) 0)
+                      (> (or root-count 0) 1))))
+        (match-step (core.concat chain ["<form>"]) pattern (or forms-between []) 1 1 false))
+    (match-step (core.concat chain ["<form>"]) pattern (or forms-between []) 1 1 false)))
 
 (defn- any-chain?
-  [chain allowed-chains]
-  (accumulate [found false _ allowed (ipairs (or allowed-chains []))]
-              (or found (chain-matches? chain allowed))))
+  [chain chains forms-between root-count]
+  (accumulate [found false _ pattern (ipairs (or chains []))]
+              (or found (chain-matches? chain pattern forms-between root-count))))
+
+(defn- forbidden-root-target?
+  [chain target pattern root-count]
+  (and (= root-count 1)
+       (= (length chain) 1)
+       (= (. pattern 1) "<root>")
+       (= (. pattern 2) target)
+       (= (. pattern 3) "<form>")))
+
+(defn- forbidden-chain?
+  [chain target pattern forms-between root-count]
+  (or (chain-matches? chain pattern forms-between root-count)
+      (forbidden-root-target? chain target pattern root-count)))
+
+(defn- any-forbidden-chain?
+  [chain target chains forms-between root-count]
+  (accumulate [found false _ pattern (ipairs (or chains []))]
+              (or found (forbidden-chain? chain target pattern forms-between root-count))))
 
 (defn- node-form
   [forms node index]
@@ -123,10 +168,10 @@
   [node mode chain path forms policy rule result]
   (let [head       (ast.list-head node)
         next-chain (core.concat chain [head])
-        target?    (and (= head (or policy.options.target))
-                        (not (any-chain? (core.concat chain ["<form>"])
-                                         policy.options.allowed-chains)))]
-    (when target?
+        target?    (= head (or policy.options.target))
+        allowed?   (any-chain? chain policy.options.allowed-chains policy.options.forms-between policy.options.root-count)
+        forbidden? (any-forbidden-chain? chain head policy.options.forbidden-chains policy.options.forms-between policy.options.root-count)]
+    (when (and target? (or (not allowed?) forbidden?))
           (append-finding result path forms node policy rule))
     (each [_ child (ipairs (executable-children node mode))]
           (let [child-node  child.node
@@ -145,7 +190,9 @@
           (each [_ target (ipairs (or policy.options.forms []))]
                 (let [target-policy (core.assoc policy
                                                 :options
-                                                (core.assoc policy.options :target target))]
+                                                (core.assoc (core.assoc policy.options :target target)
+                                                            :root-count
+                                                            (length (ast.root-forms source))))]
                   (each [index child (ipairs (or root.children []))]
                         (let [mode (child-mode root index 0)]
                           (when (and (container? child) (not= mode :quoted))

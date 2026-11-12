@@ -6,14 +6,14 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.registry"]
 end
 local core = require("eca.nfnl.core")
-local lint_rule_name_list = {"forbidden-form", "required-form", "module-import", "child-count", "file-size", "form-chain"}
+local lint_rule_name_list = {"required-form", "module-import", "child-count", "file-size", "form-chain"}
 local design_rule_name_list = {}
 local rule_name_list = lint_rule_name_list
-local default_rule_name_list = {"forbidden-form", "required-form", "module-import", "form-child-count", "file-size", "form-chain"}
+local default_rule_name_list = {"required-form", "module-import", "form-child-count", "file-size", "form-chain"}
 local ast = require("fennel-extras.lint.rules.ast")
 local options = require("fennel-extras.lint.rules.options")
 local rule_properties = {["required-form"] = {scope = "file"}, ["file-size"] = {scope = "file"}}
-local semantic_applies_to = {["forbidden-form"] = {"module", "forms"}, ["required-form"] = {"forms"}, ["module-import"] = {"module", "modules", "forms"}, ["child-count"] = {"forms"}, ["form-chain"] = {"forms"}}
+local semantic_applies_to = {["required-form"] = {"forms"}, ["module-import"] = {"module", "modules", "forms"}, ["child-count"] = {"forms"}, ["form-chain"] = {"forms"}}
 local required_semantic_applies_to = {["required-form"] = {"forms"}}
 local defaults
 do
@@ -174,7 +174,7 @@ end
 local function normalized_options(rule, instance)
   local options0 = core.merge((instance.options or {}))
   local applies = (instance["applies-to"] or {})
-  local singleton = ((rule == "forbidden-form") or ((rule == "module-import") and (options0.mode == "require")))
+  local singleton = ((rule == "module-import") and (options0.mode == "require"))
   local result = options0
   for _, name in ipairs((semantic_applies_to[rule] or {})) do
     local value = semantic_option_value(applies, name, singleton)

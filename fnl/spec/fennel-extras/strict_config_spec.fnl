@@ -68,7 +68,8 @@
 
 (defn- error-value
   [value]
-  (if (= :table (type value))
+  (if (= :table
+         (type value))
     (. value :message)
     value))
 
@@ -104,19 +105,24 @@
 (defn- missing-message?
   [result path]
   (or (and (. result :ok)
-           (= nil (. result :findings))
-           (= (.. "missing " path) (. result :message)))
+           (= nil
+              (. result :findings))
+           (= (.. "missing " path)
+              (. result :message)))
       (and (not (. result :ok))
-           (= (.. "missing " path) (. result :message)))))
+           (= (.. "missing " path)
+              (. result :message)))))
 
 
 
 (defn- complete-rule?
   [entry rules names index recurse]
   (let [instance (. entry 1)]
-    (and (= (type entry) :table)
+    (and (= (type entry)
+            :table)
          (> (length entry) 0)
-         (= (type instance) :table)
+         (= (type instance)
+            :table)
          (not= (. instance :severity) nil)
          (not= (. instance :options) nil)
          (not= (. instance :applies-to) nil)
@@ -170,10 +176,10 @@
   (testing "an enabled rule reports the canonical applies-to path"
     (let [result (lint-error "(module a)"
                              {:path  "fnl/a.fnl"
-                              :rules {:forbidden-form [{:severity   "warning"
-                                                        :options    {}
-                                                        :exclusions []}]}})]
-      (is (= "lint.rules.forbidden-form[1].applies-to must be a table"
+                              :rules {:form-chain [{:severity   "warning"
+                                                    :options    {:allowed-chains []}
+                                                    :exclusions []}]}})]
+      (is (= "lint.rules.form-chain[1].applies-to must be a table"
              (. result :message)))))
 
   (testing "an enabled rule reports missing option values"
@@ -191,7 +197,8 @@
                                                    :applies-to {}
                                                    :options    {}
                                                    :exclusions []}]}})]
-      (is (and (. result :ok) (= 0 (length (. result :findings))))))))
+      (is (and (. result :ok) (= 0
+                                 (length (. result :findings))))))))
 
 (deftest child-count-not-counted-validation
   (testing "accepts a non-empty not-counted string list"
@@ -204,6 +211,7 @@
                                                                   :not-counted ["nil" "true" "false"]}
                                                      :exclusions []}]}})]
       (is (. result :ok))))
+
   (testing "rejects an empty not-counted list"
     (let [result (lint-error "(if ok value fallback)"
                              {:path  "fnl/app.fnl"
@@ -214,6 +222,7 @@
                                                                   :not-counted []}
                                                      :exclusions []}]}})]
       (is (not (. result :ok)))))
+
   (testing "rejects nil-count together with not-counted"
     (let [result (lint-error "(if ok value fallback)"
                              {:path  "fnl/app.fnl"
@@ -228,44 +237,43 @@
 
 (deftest rule-instance-description-validation
   (testing "accepts a non-empty string description"
-    (let [result (config-error {:lint {:rules {:forbidden-form [{:severity    "warning"
-                                                                 :description "explain this rule"
-                                                                 :applies-to  {}
-                                                                 :options     {}
-                                                                 :exclusions  []}]}}})]
+    (let [result (config-error {:lint {:rules {:form-chain [{:severity    "warning"
+                                                             :description "explain this rule"
+                                                             :applies-to  {}
+                                                             :options     {:allowed-chains []}
+                                                             :exclusions  []}]}}})]
       (is (. result :ok))))
 
   (testing "rejects a non-string description"
-    (let [result (config-error {:lint {:rules {:forbidden-form [{:severity    "warning"
-                                                                 :description 42
-                                                                 :applies-to  {}
-                                                                 :options     {}
-                                                                 :exclusions  []}]}}})]
-      (is (= "lint.rules.forbidden-form[1].description must be a non-empty string"
+    (let [result (config-error {:lint {:rules {:form-chain [{:severity    "warning"
+                                                             :description 42
+                                                             :applies-to  {}
+                                                             :options     {:allowed-chains []}
+                                                             :exclusions  []}]}}})]
+      (is (= "lint.rules.form-chain[1].description must be a non-empty string"
              (. result :message)))))
 
   (testing "rejects an empty description"
-    (let [result (config-error {:lint {:rules {:forbidden-form [{:severity    "warning"
-                                                                 :description ""
-                                                                 :applies-to  {}
-                                                                 :options     {}
-                                                                 :exclusions  []}]}}})]
-      (is (= "lint.rules.forbidden-form[1].description must be a non-empty string"
+    (let [result (config-error {:lint {:rules {:form-chain [{:severity    "warning"
+                                                             :description ""
+                                                             :applies-to  {}
+                                                             :options     {:allowed-chains []}
+                                                             :exclusions  []}]}}})]
+      (is (= "lint.rules.form-chain[1].description must be a non-empty string"
              (. result :message))))))
 
 (deftest strict-config-property
   (testing "the repository config loads with complete format and lint settings"
     (let [config       (load-module :fennel-extras.config)
           loaded       (and (not (. config :module-missing))
-                             (config.load ".fnl-extras.fnl"))
+                            (config.load ".fnl-extras.fnl"))
           lint-rules   (and loaded (. loaded :lint) (. (. loaded :lint) :rules))
           design-rules (and loaded (. loaded :design) (. (. loaded :design) :rules))
-          lint-names   ["forbidden-form"
-                        "required-form"
+          lint-names   ["required-form"
                         "module-import"
                         "child-count"
                         "file-size"
-                        ]
+                        "form-chain"]
           design-names []]
       (is (and loaded
                (. (. loaded :format) :indent-width)
@@ -276,16 +284,18 @@
                (. (. loaded :format) :parser)
                (. (. loaded :format) :alignment)
                (. loaded :lint)
-               (= nil (. loaded :design))
+               (= nil
+                  (. loaded :design))
                (complete-rules? lint-rules lint-names 1))))))
 
 (deftest removed-layout-rule-config-errors
   (testing "strict config rejects removed control-layout"
     (let [result (config-error {:lint {:rules {"control-layout" [{:severity   "warning"
                                                                   :applies-to {:forms ["if" "when" "and" "or" "case" "match"]}
-                                                                  :options    {}
+                                                                  :options    {:allowed-chains []}
                                                                   :exclusions []}]}}})]
-      (is (= "unknown lint rule: control-layout" (. result :message)))))
+      (is (= "unknown lint rule: control-layout"
+             (. result :message)))))
 
   (testing "strict config rejects removed multiline-layout"
     (let [result (config-error {:lint {:rules {"multiline-layout" [{:severity   "warning"
@@ -293,25 +303,32 @@
                                                                     :options    {:clauses  ["case" "match" "case-try" "match-try"]
                                                                                  :bindings ["let" "when-let" "if-let" "with-open"]}
                                                                     :exclusions []}]}}})]
-      (is (= "unknown lint rule: multiline-layout" (. result :message))))))
+      (is (= "unknown lint rule: multiline-layout"
+             (. result :message))))))
 
 (deftest repository-exclusion-contract
   (testing "child-count macro exclusions consolidate to one path-only entry"
     (let [config     (load-module :fennel-extras.config)
           loaded     (and (not (. config :module-missing))
-                           (config.load ".fnl-extras.fnl"))
+                          (config.load ".fnl-extras.fnl"))
           instances  (and loaded (. (. (. loaded :lint) :rules) :child-count))
           exclusions (and instances (. (. instances 2) :exclusions))]
-      (is (and (= 1 (length exclusions))
-               (= "^spec/eca/macros[.]fnlm$" (. (. exclusions 1) :path))))))
+      (is (and (= 1
+                  (length exclusions))
+               (= "^spec/eca/macros[.]fnlm$"
+                  (. (. exclusions 1) :path))))))
 
   (testing "module-import has empty exclusions after removing stale macro entries"
     (let [config    (load-module :fennel-extras.config)
           loaded    (and (not (. config :module-missing))
-                          (config.load ".fnl-extras.fnl"))
+                         (config.load ".fnl-extras.fnl"))
           instances (and loaded (. (. (. loaded :lint) :rules) :module-import))]
       (is (and instances
-               (= nil (. (. instances 2) :options :exempt-files))
-               (= 0 (length (. (. instances 2) :exclusions)))
-               (= nil (. (. instances 3) :options :exempt-files))
-               (= 0 (length (. (. instances 3) :exclusions))))))))
+               (= nil
+                  (. (. instances 2) :options :exempt-files))
+               (= 0
+                  (length (. (. instances 2) :exclusions)))
+               (= nil
+                  (. (. instances 3) :options :exempt-files))
+               (= 0
+                  (length (. (. instances 3) :exclusions))))))))

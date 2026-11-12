@@ -26,17 +26,21 @@
 (defn- error-message
   [result]
   (let [error (. result :error)]
-    (if (= :table (type error))
+    (if (= :table
+           (type error))
       (. error :message)
       error)))
 
 (defn- legacy-config
   [key]
-  (let [value  (if (= key :extensions)
-                  [".fnl"]
-                  (and (not (or (= key :dotfiles)
-                                (= key :symlinks)))
-                       ["fnl"]))
+  (let [value  (if (= key
+                      :extensions)
+                 [".fnl"]
+                 (and (not (or (= key
+                                  :dotfiles)
+                               (= key
+                                  :symlinks)))
+                      ["fnl"]))
         result {}]
     (tset result key value)
     result))
@@ -64,13 +68,16 @@
                (vim.deep_equal ["fnl"] (. value :workspace :paths))
                (vim.deep_equal ["fnl/generated"] (. value :workspace :exclude))
                (vim.deep_equal [".fnl" ".fnlm"] (. value :workspace :extensions))
-               (= false (. value :workspace :dotfiles))
-               (= false (. value :workspace :symlinks))))))
+               (= false
+                  (. value :workspace :dotfiles))
+               (= false
+                  (. value :workspace :symlinks))))))
 
   (testing "workspace config inclusion accepts a boolean"
     (let [result (validation {:workspace {:config true}})]
       (is (and (. result :ok)
-               (= true (. result :value :workspace :config))))))
+               (= true
+                  (. result :value :workspace :config))))))
 
   (testing "workspace config inclusion rejects non-booleans"
     (let [result (validation {:workspace {:config 1}})]
@@ -101,22 +108,23 @@
     (let [root   (vim.fn.tempname)
           config (.. root "/.fnl-extras.fnl")
           path   (.. root "/fnl/spec/example.fnl")
-          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:forbidden-form [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {} :exclusions []}]}}}"
+          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:form-chain [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {:allowed-chains [[\"<form>\"]]} :exclusions []}]}}}"
           _      (vim.fn.mkdir (.. root "/fnl/spec") "p")
           _      (vim.fn.mkdir (.. root "/.git") "p")
           _      (write-file config text)
           _      (write-file path "(var x 1)\\n")
           result (run-cli root ["lint" "--all"])]
       (vim.fn.delete root "rf")
-      (is (= 0 (. result :code))))))
+      (is (= 0
+             (. result :code))))))
 
 (deftest workspace-public-contract-rejections
   (testing "contexts is not a public applies-to selector"
-    (let [value  {:lint {:rules {:forbidden-form [{:severity   "warning"
-                                                   :applies-to {:contexts ["source"]
-                                                                :forms    ["var" "set" "while"]}
-                                                   :options    {}
-                                                   :exclusions []}]}}}
+    (let [value  {:lint {:rules {:form-chain [{:severity   "warning"
+                                               :applies-to {:contexts ["source"]
+                                                            :forms    ["var" "set" "while"]}
+                                               :options    {}
+                                               :exclusions []}]}}}
           result (validation value)]
       (is (and (not (. result :ok))
                (= "unknown applies-to key: contexts"

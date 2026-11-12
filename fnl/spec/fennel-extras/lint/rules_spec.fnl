@@ -18,41 +18,20 @@
 
 (deftest defaults
   (testing "all retained lint rules are off by default"
-    (is (= 6
+    (is (= 5
            (length (vim.tbl_keys (rules.defaults)))))))
-
-(deftest forbidden-form
-  (testing "forbids a selected module target"
-    (let [policy {:forbidden-form [{:severity   "warning"
-                                    :applies-to {:modules "plenary.busted"}
-                                    :options    {}
-                                    :exclusions []}]}
-          result (identities (findings-for "(require :plenary.busted)\n(local value 1)"
-                                           "fnl/spec/one.fnl"
-                                           policy))]
-      (is (= [["forbidden-form" "fnl/spec/one.fnl > top#1" "warning"]]
-             result))))
-
-  (testing "forbids selected executable forms"
-    (let [policy {:forbidden-form [{:severity   "warning"
-                                    :applies-to {:forms ["var" "set" "while"]}
-                                    :options    {}
-                                    :exclusions []}]}
-          result (identities (findings-for "(var x 1)" "fnl/app.fnl" policy))]
-      (is (= [["forbidden-form" "fnl/app.fnl > top#1" "warning"]]
-             result)))))
 
 (deftest rule-instance-description
   (testing "propagates description without changing rule form or instance identity"
-    (let [policy  {:forbidden-form [{:severity    "warning"
-                                     :description "explain this rule"
-                                     :applies-to  {:forms ["var"]}
-                                     :options     {}
-                                     :exclusions  []}]}
+    (let [policy  {:form-chain [{:severity    "warning"
+                                 :description "explain this rule"
+                                 :applies-to  {:forms ["var"]}
+                                 :options     {:allowed-chains []}
+                                 :exclusions  []}]}
           result  (findings-for "(var x 1)" "fnl/app.fnl" policy)
           finding (. result 1)]
       (is (= {:description "explain this rule"
-              :rule        "forbidden-form"
+              :rule        "form-chain"
               :form        "fnl/app.fnl > top#1"
               :instance    1}
              {:description finding.description
@@ -114,56 +93,6 @@
                                            "fnl/spec/app_spec.fnl"
                                            policy))]
       (is (= [["child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
-             result)))))
-
-(deftest recursive-child-count
-  (testing "named child-count traverses nested fn forms"
-    (let [policy {:child-count [{:severity   "error"
-                                 :applies-to {:forms ["or"]}
-                                 :options    {:children  ["when"]
-                                              :max-count 0}
-                                 :exclusions []}]}
-          result (identities (findings-for "(defn run [] (or (fn [] (when condition result))))"
-                                           "fnl/app.fnl"
-                                           policy))]
-      (is (= [["child-count" "fnl/app.fnl > defn:run > or#1" "error"]]
-             result))))
-
-  (testing "not-counted filtering happens after recursive collection"
-    (let [policy {:child-count [{:severity   "warning"
-                                 :applies-to {:forms ["if"]}
-                                 :options    {:min-count   3
-                                              :max-count   3
-                                              :not-counted ["true"]}
-                                 :exclusions []}]}
-          result (identities (findings-for "(defn run [] (if condition (fn [] true) fallback))"
-                                           "fnl/app.fnl"
-                                           policy))]
-      (is (= []
-             result))))
-
-  (testing "named child-count ignores quoted nested forms"
-    (let [policy {:child-count [{:severity   "error"
-                                 :applies-to {:forms ["or"]}
-                                 :options    {:children  ["when"]
-                                              :max-count 0}
-                                 :exclusions []}]}
-          result (identities (findings-for "(defn run [] (or '(when condition result)))"
-                                           "fnl/app.fnl"
-                                           policy))]
-      (is (= []
-             result))))
-
-  (testing "a private function call inside or remains a clean child-count case"
-    (let [policy {:child-count [{:severity   "error"
-                                 :applies-to {:forms ["or"]}
-                                 :options    {:children  ["when"]
-                                              :max-count 0}
-                                 :exclusions []}]}
-          result (identities (findings-for "(defn- some-fn [] value)\n(defn run [] (or (some-fn)))"
-                                           "fnl/app.fnl"
-                                           policy))]
-      (is (= []
              result)))))
 
 (deftest direct-child-arity

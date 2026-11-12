@@ -156,9 +156,9 @@ end
 require("plenary.busted").describe("strict-config-shape", _12_)
 local function _18_()
   local function _19_()
-    local result = lint_error("(module a)", {path = "fnl/a.fnl", rules = {["forbidden-form"] = {{severity = "warning", options = {}, exclusions = {}}}}})
+    local result = lint_error("(module a)", {path = "fnl/a.fnl", rules = {["form-chain"] = {{severity = "warning", options = {["allowed-chains"] = {}}, exclusions = {}}}}})
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "lint.rules.forbidden-form[1].applies-to must be a table"
+    local expected_6_auto = "lint.rules.form-chain[1].applies-to must be a table"
     local actual_7_auto = result.message
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -210,7 +210,7 @@ end
 require("plenary.busted").describe("child-count-not-counted-validation", _22_)
 local function _26_()
   local function _27_()
-    local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = "explain this rule", ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
+    local result = config_error({lint = {rules = {["form-chain"] = {{severity = "warning", description = "explain this rule", ["applies-to"] = {}, options = {["allowed-chains"] = {}}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = result.ok
     assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")
@@ -218,18 +218,18 @@ local function _26_()
   end
   require("plenary.busted").it("accepts a non-empty string description", _27_)
   local function _28_()
-    local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = 42, ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
+    local result = config_error({lint = {rules = {["form-chain"] = {{severity = "warning", description = 42, ["applies-to"] = {}, options = {["allowed-chains"] = {}}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "lint.rules.forbidden-form[1].description must be a non-empty string"
+    local expected_6_auto = "lint.rules.form-chain[1].description must be a non-empty string"
     local actual_7_auto = result.message
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
   require("plenary.busted").it("rejects a non-string description", _28_)
   local function _29_()
-    local result = config_error({lint = {rules = {["forbidden-form"] = {{severity = "warning", description = "", ["applies-to"] = {}, options = {}, exclusions = {}}}}}})
+    local result = config_error({lint = {rules = {["form-chain"] = {{severity = "warning", description = "", ["applies-to"] = {}, options = {["allowed-chains"] = {}}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "lint.rules.forbidden-form[1].description must be a non-empty string"
+    local expected_6_auto = "lint.rules.form-chain[1].description must be a non-empty string"
     local actual_7_auto = result.message
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -243,7 +243,7 @@ local function _30_()
     local loaded = (not config["module-missing"] and config.load(".fnl-extras.fnl"))
     local lint_rules = (loaded and loaded.lint and loaded.lint.rules)
     local design_rules = (loaded and loaded.design and loaded.design.rules)
-    local lint_names = {"forbidden-form", "required-form", "module-import", "child-count", "file-size"}
+    local lint_names = {"required-form", "module-import", "child-count", "file-size", "form-chain"}
     local design_names = {}
     local assert_28_auto = require("luassert")
     local value_29_auto = (loaded and loaded.format["indent-width"] and loaded.workspace.extensions and loaded.workspace.paths and loaded.format.indents and loaded.format["format-as"] and loaded.format.parser and loaded.format.alignment and loaded.lint and (nil == loaded.design) and complete_rules_3f(lint_rules, lint_names, 1))
@@ -255,7 +255,7 @@ end
 require("plenary.busted").describe("strict-config-property", _30_)
 local function _32_()
   local function _33_()
-    local result = config_error({lint = {rules = {["control-layout"] = {{severity = "warning", ["applies-to"] = {forms = {"if", "when", "and", "or", "case", "match"}}, options = {}, exclusions = {}}}}}})
+    local result = config_error({lint = {rules = {["control-layout"] = {{severity = "warning", ["applies-to"] = {forms = {"if", "when", "and", "or", "case", "match"}}, options = {["allowed-chains"] = {}}, exclusions = {}}}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = "unknown lint rule: control-layout"
     local actual_7_auto = result.message

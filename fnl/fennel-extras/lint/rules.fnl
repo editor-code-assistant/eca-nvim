@@ -7,18 +7,13 @@
 (local registry (require :fennel-extras.lint.rules.registry))
 (local module-rule (require :fennel-extras.lint.rules.module))
 (local spec-rule (require :fennel-extras.lint.rules.spec))
-(local forbidden-rule (require :fennel-extras.lint.rules.forbidden))
 (local size-rule (require :fennel-extras.lint.rules.size))
 (local form-chain-rule (require :fennel-extras.lint.rules.form-chain))
-(local traverse (require :fennel-extras.lint.rules.traverse))
-
 (local root-forms ast.root-forms)
 (local list-head ast.list-head)
 (local import-macros? ast.import-macros?)
 (local has-module-import? ast.has-module-import?)
 (local enabled? registry.enabled?)
-(local finding registry.finding)
-(local rule-severity registry.rule-severity)
 
 (defn defaults
   []
@@ -60,48 +55,15 @@
           (spec-rule.form-child-count-finding findings path form policy node))
     (when (enabled? policy "child-count")
           (spec-rule.child-count-finding findings path form policy node))
-    (when (enabled? policy "forbidden-form")
-          (forbidden-rule.findings findings path form policy node "forbidden-form" true))
     (when (and node (enabled? policy "module-import"))
           (module-rule.module-import-finding findings path form head node policy))
     findings))
-
-(defn- same-node?
-  [left right]
-  (and left right
-       (= left.kind right.kind)
-       (= left.open.line right.open.line)
-       (= left.open.col right.open.col)))
-
-(defn- append-exception-findings
-  [all path forms policy source]
-  (when (and (enabled? policy "forbidden-form")
-             policy.options
-             policy.options.exception)
-        (each [_ node (ipairs (traverse.executable-nodes source (fn [node]
-                                                                     (= node.kind :list))))]
-              (when (not (accumulate [found false _ form (ipairs forms)]
-                                      (or found (same-node? form.node node))))
-                    (let [form {:line node.open.line
-                                :col node.open.col
-                                :end-line node.close.line
-                                :end-col (+ node.close.col 1)
-                                :form (.. path " > " (or (list-head node) "form"))
-                                :node node}]
-                      (when (= (list-head node) "local")
-                        (table.insert all
-                                      (finding path form
-                                               (rule-severity policy "forbidden-form")
-                                               "forbidden-form"
-                                               "forbidden form"
-                                               node)))))))
-  all)
 
 (defn- append-form-findings
   [all path forms policy source]
   (each [_ form (ipairs forms)]
         (append-all all (evaluate-form path form forms policy)))
-  (append-exception-findings all path forms policy source))
+  all)
 
 (defn- append-file-size-findings
   [findings path policy source]

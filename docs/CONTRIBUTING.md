@@ -62,20 +62,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                       :options    {:before 1}}]}
  :lint
  {:rules
-  {:forbidden-form
-   [{:severity   :off
-     :applies-to {}
-     :options    {}
-     :exclusions []}
-    {:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:module "module"}
-     :exclusions []}
-    {:severity   :warning
-     :applies-to {:files ["^fennel-extras/"]}
-     :options    {:forms ["var" "set" "while"]}
-     :exclusions []}]
-   :file-size
+  :file-size
    [{:severity   :warning
      :applies-to {:files ["^fennel-extras/"]}
      :options    {:max-code-lines 300}
@@ -153,20 +140,19 @@ The lint rules are:
 
 | Rule | Options |
 | --- | --- |
-| `forbidden-form` | `:module`, `:forms` |
 | `required-form` | `:forms` |
 | `module-import` | `:mode` plus `:modules` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
 | `child-count` | named mode: `:children`, `:max-count`; direct mode: `:min-count`, `:max-count`, and exactly one of `:nil-count` or non-empty string-list `:not-counted` |
 | `file-size` | `:max-code-lines` |
-| `form-chain` | `:allowed-chains` |
+| `form-chain` | `:allowed-chains`, `:forms-between`, `:forbidden-chains` |
 
 #### Rule options
 
 Put each rule's direct, typed options inside its instance. Required values are explicit; for example, the `file-size` instance in `.fnl-extras.fnl` uses `:max-code-lines 300`. `:max-code-lines` is not a top-level `:lint` option, and options must not be wrapped in `:flags`.
 
-For named-mode `child-count`, `:children` is a non-empty list of form names and `:max-count` is the exact number required. Matching forms are collected recursively through all executable descendants, including nested `fn` and `defn` forms; traversal does not stop at a function boundary. Quoted data is ignored. For direct-mode `child-count`, `:not-counted` is a non-empty list of exact literal symbol names. Matching literal symbol children are removed after recursive collection and before applying `:min-count` and `:max-count`. Use either `:not-counted` or the legacy boolean `:nil-count`, not both. Structural checks for missing or multiple multi-branch `if` branches still apply.
+For direct-mode `child-count`, `:not-counted` is a non-empty list of exact literal symbol names. Matching literal symbol children are removed before applying `:min-count` and `:max-count`. Use either `:not-counted` or the legacy boolean `:nil-count`, not both. Structural checks for missing or multiple `if` branches still apply.
 
-`form-chain` selects target forms through `:applies-to {:forms [...]}`. Each configured chain uses the reserved string `"<form>"` for the selected target. Each target must be the first executable body form along one configured outer-to-inner chain. Quoted data is ignored while quasiquote/unquote traversal keeps its existing executable semantics. For example, the canonical source rule uses `:allowed-chains [["def" "<form>"] ["defn" "<form>"] ["defn-" "<form>"] ["defn" "when" "<form>"] ["defn" "fn" "<form>"]]` for `let` forms. The canonical description is: `Keep bindings at the start of the body so functions gather required data before executing logic.` Each selected target form is evaluated independently.
+`form-chain` selects target forms through `:applies-to {:forms [...]}`. Each configured chain uses the reserved string `"<form>"` for the selected target. The reserved string `"<root>"` anchors a chain to a source-root form. Each target must be the first executable body form along one configured outer-to-inner chain. `:forms-between` lists executable forms that may occur one or more times between the explicit chain steps. `:forbidden-chains` reports targets matching any forbidden chain even when an allowed chain also matches. Quoted data is ignored while quasiquote/unquote traversal keeps its existing executable semantics. For example, the canonical source rule uses `:allowed-chains [["def" "<form>"] ["defn" "<form>"] ["defn-" "<form>"] ["defn" "when" "<form>"] ["defn" "fn" "<form>"]]` for `let` forms. The canonical description is: `Keep bindings at the start of the body so functions gather required data before executing logic.` Each selected target form is evaluated independently.
 
 #### Exclusions
 

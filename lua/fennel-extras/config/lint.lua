@@ -143,7 +143,7 @@ local function canonical_legacy_selector_error(instance, path)
 end
 local function canonical_singleton_module_error(name, instance, path)
   local modules = ((type(instance["applies-to"]) == "table") and instance["applies-to"].modules)
-  local singular = ((name == "forbidden-form") or ((name == "module-import") and (type(instance.options) == "table") and (instance.options.mode == "require")))
+  local singular = ((name == "module-import") and (type(instance.options) == "table") and (instance.options.mode == "require"))
   if (singular and sequence_3f(modules) and (#modules > 1)) then
     return {message = (path .. ".modules must contain at most one module")}
   else

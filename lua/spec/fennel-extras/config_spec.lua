@@ -798,7 +798,7 @@ local function _110_()
   local function _111_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
-    local actual_7_auto = validate_summary({lint = {rules = {["forbidden-form"] = {{severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = "plenary.busted"}, options = {}, exclusions = {}}}}}})
+    local actual_7_auto = validate_summary({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = "plenary.busted"}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {}}}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -806,14 +806,14 @@ local function _110_()
   local function _112_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["has-message"] = true, ["value?"] = false}
-    local actual_7_auto = validate_summary({lint = {rules = {["forbidden-form"] = {severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}}, options = {module = "plenary.busted"}, exclusions = {}}}}})
+    local actual_7_auto = validate_summary({lint = {rules = {["form-chain"] = {severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}}, options = {module = "plenary.busted"}, exclusions = {}}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
   require("plenary.busted").it("rejects a direct rule map", _112_)
   local function _113_()
-    local first = "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true :module 1} :exclusions []}]}}}"
-    local second = "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}"
+    local first = "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:unknown true :allowed-chains 1} :exclusions []}]}}}"
+    local second = "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:allowed-chains 1 :unknown true} :exclusions []}]}}}"
     local first_message = validation_error_message(first)
     local second_message = validation_error_message(second)
     local assert_5_auto = require("luassert")
@@ -824,15 +824,16 @@ local function _110_()
   end
   require("plenary.busted").it("reports option errors deterministically", _113_)
   local function _114_()
-    local message = validation_error_message("{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}")
-    local assert_28_auto = require("luassert")
-    local value_29_auto = string.match(message, "module must be a string")
-    assert_28_auto.is_truthy(value_29_auto, "(string.match message \"module must be a string\")")
+    local message = validation_error_message("{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:allowed-chains 1 :unknown true} :exclusions []}]}}}")
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "lint.rules.form-chain[1].options: allowed-chains must be a non-empty list of non-empty string lists"
+    local actual_7_auto = message
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
   require("plenary.busted").it("reports the lexicographically first invalid option", _114_)
   local function _115_()
-    local message = validation_error_message("{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")
+    local message = validation_error_message("{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")
     local assert_28_auto = require("luassert")
     local value_29_auto = string.match(message, "unknown option unknown")
     assert_28_auto.is_truthy(value_29_auto, "(string.match message \"unknown option unknown\")")

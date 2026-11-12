@@ -42,32 +42,47 @@
             err   (. result :error)]
         (if include-location?
           {:value?      (not= nil value)
-           :has-message (and (= nil value)
+           :has-message (and (= nil
+                                value)
                              err
-                             (= :table (type err))
-                             (= :string (type (. err :message))))
+                             (= :table
+                                (type err))
+                             (= :string
+                                (type (. err :message))))
            :line        (and err (. err :line))
            :col         (and err (. err :col))}
           {:value?      (not= nil value)
-           :has-message (and (= nil value)
+           :has-message (and (= nil
+                                value)
                              err
-                             (= :table (type err))
-                             (= :string (type (. err :message))))})))))
+                             (= :table
+                                (type err))
+                             (= :string
+                                (type (. err :message))))})))))
 
 (defn- canonical-fragment
   [value]
-  (if (and (= :table (type value))
-           (= nil (. value :workspace))
-           (= nil (. value :format))
-           (= nil (. value :lint)))
+  (if (and (= :table
+              (type value))
+           (= nil
+              (. value :workspace))
+           (= nil
+              (. value :format))
+           (= nil
+              (. value :lint)))
     (let [workspace {}
           format    {}]
       (each [key item (pairs value)]
-            (if (or (= key :paths)
-                    (= key :exclude)
-                    (= key :extensions)
-                    (= key :dotfiles)
-                    (= key :symlinks))
+            (if (or (= key
+                       :paths)
+                    (= key
+                       :exclude)
+                    (= key
+                       :extensions)
+                    (= key
+                       :dotfiles)
+                    (= key
+                       :symlinks))
               (tset workspace key item)
               (tset format key item)))
       {:workspace workspace :format format :lint {:rules {}}})
@@ -75,7 +90,8 @@
 
 (defn- complete-config
   [value]
-  (if (= :table (type value))
+  (if (= :table
+         (type value))
     (vim.tbl_deep_extend "force"
                          {:workspace {:paths      ["fnl"]
                                       :extensions [".fnl" ".fnlm"]}
@@ -95,10 +111,13 @@
 
         {:value?      (and ok (not= nil result))
          :has-message (and ok
-                           (= nil result)
+                           (= nil
+                              result)
                            err
-                           (= :table (type err))
-                           (= :string (type (. err :message))))}))))
+                           (= :table
+                              (type err))
+                           (= :string
+                              (type (. err :message))))}))))
 
 (defn- validation-call
   [config value]
@@ -111,7 +130,8 @@
 (defn- validation-message
   [config value]
   (let [(ok result err) (validation-call config value)]
-    (when (and ok (= result nil) err)
+    (when (and ok (= result
+                     nil) err)
           (. err :message))))
 
 (defn- validation-error-message-raw
@@ -132,17 +152,20 @@
   [config value]
   (let [(ok result err) (validation-call config value)]
     {:crashed? (not ok)
-     :message  (and ok (= nil result) err (. err :message))}))
+     :message  (and ok (= nil
+                          result) err (. err :message))}))
 
 (defn- validation-result
   [config value]
-  (if (or (. config :module-missing) (= value nil))
+  (if (or (. config :module-missing) (= value
+                                        nil))
     {:crashed? false :message nil}
     (validation-summary config value)))
 
 (defn- parsed-value
   [text-or-value]
-  (if (= :string (type text-or-value))
+  (if (= :string
+         (type text-or-value))
     (parse-value text-or-value)
     text-or-value))
 
@@ -161,8 +184,10 @@
       config
       (let [(ok policy err) (pcall (fn [] (config.lint-policy value)))]
 
-        {:value-nil? (and ok (= nil policy))
-         :message    (and ok (= nil policy) err (. err :message))}))))
+        {:value-nil? (and ok (= nil
+                                policy))
+         :message    (and ok (= nil
+                                policy) err (. err :message))}))))
 
 (defn- lint-policy-value
   [value]
@@ -183,9 +208,11 @@
       config
       (let [(ok result err) (pcall (fn [] (config.validate value)))
 
-            message         (and ok (= nil result) err (. err :message))]
+            message         (and ok (= nil
+                                       result) err (. err :message))]
         {:unknown-key? (and message
-                            (= "unknown lint key: " (string.sub message 1 18)))}))))
+                            (= "unknown lint key: "
+                               (string.sub message 1 18)))}))))
 
 (defn- write-file
   [path text]
@@ -238,10 +265,13 @@
 
                                         {:value?      (and ok (not= nil value))
                                          :has-message (and ok
-                                                           (= nil value)
+                                                           (= nil
+                                                              value)
                                                            err
-                                                           (= :table (type err))
-                                                           (= :string (type (. err :message))))})))}))))
+                                                           (= :table
+                                                              (type err))
+                                                           (= :string
+                                                              (type (. err :message))))})))}))))
 
 (deftest parse-string
   (testing "parses a realistic data-only configuration and converts keywords to strings"
@@ -304,11 +334,13 @@
 (deftest find-load
   (testing "find returns a config in the start directory"
     (let [result (find-load-scenario)]
-      (is (= (. result :root-config) (. result :start)))))
+      (is (= (. result :root-config)
+             (. result :start)))))
 
   (testing "find returns the nearest config in a parent directory"
     (let [result (find-load-scenario)]
-      (is (= (. result :config-path) (. result :parent)))))
+      (is (= (. result :config-path)
+             (. result :parent)))))
 
   (testing "find stops at a .git directory"
     (is (nil? (. (find-load-scenario) :stopped))))
@@ -330,19 +362,23 @@
 
   (testing "rejects zero indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width 0}")]
-      (is (= "indent-width must be a positive integer" message))))
+      (is (= "indent-width must be a positive integer"
+             message))))
 
   (testing "rejects negative indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width -1}")]
-      (is (= "indent-width must be a positive integer" message))))
+      (is (= "indent-width must be a positive integer"
+             message))))
 
   (testing "rejects non-integer indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width 2.5}")]
-      (is (= "indent-width must be a positive integer" message))))
+      (is (= "indent-width must be a positive integer"
+             message))))
 
   (testing "rejects string indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width \"4\"}")]
-      (is (= "indent-width must be a positive integer" message))))
+      (is (= "indent-width must be a positive integer"
+             message))))
 )
 
 (deftest exact-formatter-configuration
@@ -547,17 +583,17 @@
 (deftest lint-configuration
   (testing "accepts a canonical lint rule instance"
     (is (= {:value? true :has-message false}
-           (validate-summary {:lint {                                     :rules      {:forbidden-form
+           (validate-summary {:lint {                                     :rules      {:form-chain
                                                                                        [{:severity   :warning
                                                                                          :applies-to {:files   ["^spec/"]
                                                                                                       :forms   ["require"]
                                                                                                       :modules "plenary.busted"}
-                                                                                         :options    {}
+                                                                                         :options    {:allowed-chains [["<form>"]]}
                                                                                          :exclusions []}]}}}))))
 
   (testing "rejects a direct rule map"
     (is (= {:value? false :has-message true}
-           (validate-summary {:lint {                                     :rules      {:forbidden-form
+           (validate-summary {:lint {                                     :rules      {:form-chain
                                                                                        {:severity   :warning
                                                                                         :applies-to {:files ["^spec/"]
                                                                                                      :forms ["require"]}
@@ -565,18 +601,20 @@
                                                                                         :exclusions []}}}}))))
 
   (testing "reports option errors deterministically"
-    (let [first          "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true :module 1} :exclusions []}]}}}"
-          second         "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}"
+    (let [first          "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:unknown true :allowed-chains 1} :exclusions []}]}}}"
+          second         "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:allowed-chains 1 :unknown true} :exclusions []}]}}}"
           first-message  (validation-error-message first)
           second-message (validation-error-message second)]
-      (is (= first-message second-message))))
+      (is (= first-message
+             second-message))))
 
   (testing "reports the lexicographically first invalid option"
-    (let [message (validation-error-message "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:module 1 :unknown true} :exclusions []}]}}}")]
-      (is (string.match message "module must be a string"))))
+    (let [message (validation-error-message "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:allowed-chains 1 :unknown true} :exclusions []}]}}}")]
+      (is (= "lint.rules.form-chain[1].options: allowed-chains must be a non-empty list of non-empty string lists"
+             message))))
 
   (testing "unknown options include the rule name"
-    (let [message (validation-error-message "{:lint {:rules {:forbidden-form [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")]
+    (let [message (validation-error-message "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")]
       (is (string.match message "unknown option unknown")))))
 
 (deftest lint-policy
@@ -604,21 +642,21 @@
                           "defn-"   "fn"
                           "testing" "deftest"}
               :newline   [{:applies-to {:files ["^fennel-extras/"]
-                                         :forms ["fn" "defn" "defn-"]}
-                            :options    {:after-header       0
-                                         :between-same-level 1
-                                         :break-after-n-args [[1 1] [2 1]]}}
-                           {:applies-to {:forms ["testing"]}
-                            :options    {:before 0}}
-                           {:applies-to {:files ["^spec/"]
-                                         :forms ["deftest"]}
-                            :options    {:after-header 0}}
-                           {:applies-to {:files ["^spec/"]
-                                         :forms ["testing"]}
-                            :options    {:between-same-level 1}}
-                           {:applies-to {:files ["^spec/"]
-                                         :forms ["="]}
-                            :options    {:break-after-args 1}}]}
-             {:indents (. format :indents)
+                                        :forms ["fn" "defn" "defn-"]}
+                           :options    {:after-header       0
+                                        :between-same-level 1
+                                        :break-after-n-args [[1 1] [2 1]]}}
+                          {:applies-to {:forms ["testing"]}
+                           :options    {:before 0}}
+                          {:applies-to {:files ["^spec/"]
+                                        :forms ["deftest"]}
+                           :options    {:after-header 0}}
+                          {:applies-to {:files ["^spec/"]
+                                        :forms ["testing"]}
+                           :options    {:between-same-level 1}}
+                          {:applies-to {:files ["^spec/"]
+                                        :forms ["="]}
+                           :options    {:break-after-args 1}}]}
+             {:indents   (. format :indents)
               :format-as (. format :format-as)
-              :newline (. format :newline)})))))
+              :newline   (. format :newline)})))))
