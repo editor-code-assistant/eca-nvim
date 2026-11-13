@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (local tab-bar (require :eca.ui.widgets.tab-bar))
 
 (deftest state
@@ -9,7 +9,8 @@
       (widget.add-tab {:id :logs :label "Logs"})
       (widget.select-tab :logs)
       (widget.remove-tab :logs)
-      (is (= :chat (. (widget.get-state) :active-id))))))
+      (is (= :chat
+             (. (widget.get-state) :active-id))))))
 
 (deftest render
   (testing "writes tabline options with active and inactive tab formatting"

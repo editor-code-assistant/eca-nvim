@@ -1,5 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 ;; Unit 4 output contract decisions:
@@ -245,7 +244,8 @@
                        :overlong-three {:message (. cases :overlong-three) :json [(.. prefix replacement replacement replacement suffix)]}}]
       (each [key message (pairs cases)]
             (tset actual key (json-case message)))
-      (is (= expected actual))))
+      (is (= expected
+             actual))))
 
   (testing "preserves invalid UTF-8 bytes in text output"
     (let [message (.. "a" (string.char 255) "b")]
@@ -254,7 +254,8 @@
              (text-lines [(finding {:message message})])))))
 
   (testing "returns one JSON object per diagnostic without embedded newlines"
-    (is (= 2 (length (json-lines [(finding {}) (stale-exclusion {})]))))))
+    (is (= 2
+           (length (json-lines [(finding {}) (stale-exclusion {})]))))))
 
 (deftest ordering-and-purity
   (testing "sorts by path line column severity rule form and message"
@@ -270,9 +271,13 @@
           before (diagnostic-signatures input)
           first  (sorted input)
           second (sorted input)]
-      (is (and (= before (diagnostic-signatures input))
-               (= (diagnostic-signatures first) (diagnostic-signatures second))
-               (not (= input first))))))
+      (is (and (= before
+                  (diagnostic-signatures input))
+               (= (diagnostic-signatures first)
+                  (diagnostic-signatures second))
+               (not (= input
+                       first))))))
 
   (testing "returns an empty list for empty input"
-    (is (= [] (sorted [])))))
+    (is (= []
+           (sorted [])))))

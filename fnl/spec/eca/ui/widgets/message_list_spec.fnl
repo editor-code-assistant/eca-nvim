@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- with-cleanup
@@ -76,4 +76,5 @@
 
 (deftest append-message
   (testing "finishes an active stream before starting the next stream"
-    (is (= true (. (append-after-streaming-scenario) :ok)))))
+    (is (= true
+           (. (append-after-streaming-scenario) :ok)))))

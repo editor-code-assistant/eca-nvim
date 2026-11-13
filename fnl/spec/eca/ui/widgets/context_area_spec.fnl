@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 (local context-area (require :eca.ui.widgets.context-area))
 
@@ -47,7 +47,8 @@
     (let [widget (context-area.create 1)]
       (widget.add {:text "@file" :hl-group :EcaContextFile})
       (widget.remove "@file")
-      (is (= false (widget.has-items?))))))
+      (is (= false
+             (widget.has-items?))))))
 
 (deftest render
   (testing "writes the context line and highlight and returns its line count"

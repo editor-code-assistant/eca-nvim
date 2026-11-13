@@ -55,9 +55,11 @@
                  (set error {:message "carriage return is not allowed" :offset (+ j 1)})
                  (set j (+ j 2))))
              (if (= c "\"")
-               (do (local captured-values (capture-values (fn [] (close-string j)))) (local new-closed (. captured-values 1)) (local new-j (. captured-values 2))
-                 (set closed new-closed)
-                 (set j new-j))
+               (do (local captured-values (capture-values (fn
+                                                            []
+                                                            (close-string j)))) (local new-closed (. captured-values 1)) (local new-j (. captured-values 2))
+                   (set closed new-closed)
+                   (set j new-j))
                (if (= c "\r")
                  (set error {:message "carriage return is not allowed" :offset j})
                  (set j (+ j 1))))))
@@ -115,13 +117,15 @@
   (var current-line line)
   (var current-col col)
   (do (local n (string.len text))
-    (while (<= j n)
-           (if (= (string.sub text j j) "\n")
-             (do (local captured-values (capture-values (fn [] (advance-line current-line current-col)))) (local new-line (. captured-values 1)) (local new-col (. captured-values 2))
-               (set current-line new-line)
-               (set current-col new-col))
-             (set current-col (+ current-col 1)))
-           (set j (+ j 1))))
+      (while (<= j n)
+             (if (= (string.sub text j j) "\n")
+               (do (local captured-values (capture-values (fn
+                                                            []
+                                                            (advance-line current-line current-col)))) (local new-line (. captured-values 1)) (local new-col (. captured-values 2))
+                   (set current-line new-line)
+                   (set current-col new-col))
+               (set current-col (+ current-col 1)))
+             (set j (+ j 1))))
   (values current-line current-col))
 
 (defn- next-token
@@ -130,20 +134,22 @@
         kind     (if shebang? :comment (classify (string.sub source i i)))]
     (case kind
       :string
-      (do (local captured-values (capture-values (fn [] (scan-string source i)))) (local end (. captured-values 1)) (local result (. captured-values 2))
-        (if end
-          (values (token :string (string.sub source i end) line col) (+ end 1))
-          (values nil {:message result.message :line line :col col})))
+      (do (local captured-values (capture-values (fn
+                                                   []
+                                                   (scan-string source i)))) (local end (. captured-values 1)) (local result (. captured-values 2))
+          (if end
+            (values (token :string (string.sub source i end) line col) (+ end 1))
+            (values nil {:message result.message :line line :col col})))
       :comment
       (do (local end (scan-comment source i))
-        (values (token :comment (string.sub source i end) line col) (+ end 1)))
+          (values (token :comment (string.sub source i end) line col) (+ end 1)))
       :whitespace
       (do (local end (scan-whitespace source i))
-        (values (token :whitespace (string.sub source i end) line col) (+ end 1)))
+          (values (token :whitespace (string.sub source i end) line col) (+ end 1)))
       :atom
       (do (local end (scan-atom source i))
-            (local text (string.sub source i end))
-        (values (token (if (number? text) :number :symbol) text line col) (+ end 1)))
+          (local text (string.sub source i end))
+          (values (token (if (number? text) :number :symbol) text line col) (+ end 1)))
       :open
       (values (token :open (string.sub source i i) line col) (+ i 1))
       :close
@@ -189,16 +195,20 @@
     (var error nil)
     (while (and (<= i n) (not error))
            (local old-i i)
-           (local captured-values (capture-values (fn [] (next-token source i line col))))
+           (local captured-values (capture-values (fn
+                                                    []
+                                                    (next-token source i line col))))
            (local tok (. captured-values 1))
            (local end-or-error (. captured-values 2))
            (if tok
              (if (<= end-or-error old-i)
                (set error {:message "tokenizer made no progress" :line line :col col})
-               (do (local captured-values (capture-values (fn [] (advance-token tokens tok line col)))) (local new-line (. captured-values 1)) (local new-col (. captured-values 2))
-                 (set line new-line)
-                 (set col new-col)
-                 (set i end-or-error)))
+               (do (local captured-values (capture-values (fn
+                                                            []
+                                                            (advance-token tokens tok line col)))) (local new-line (. captured-values 1)) (local new-col (. captured-values 2))
+                   (set line new-line)
+                   (set col new-col)
+                   (set i end-or-error)))
              (set error end-or-error)))
     (if error
       (values nil error)
@@ -224,28 +234,28 @@
     (if error
       (values nil error)
       (do (local root {:kind :root :children []})
-            (local stack [{:node root :open nil}])
-        (var failure nil)
-        (each [_ tok (ipairs tokens)]
-              (when (not failure)
-                    (do (local frame (. stack (length stack)))
+          (local stack [{:node root :open nil}])
+          (var failure nil)
+          (each [_ tok (ipairs tokens)]
+                (when (not failure)
+                      (do (local frame (. stack (length stack)))
                           (local node frame.node)
-                      (if (= tok.kind :open)
-                        (push-open-node node stack tok)
-                        (if (= tok.kind :close)
-                          (if (= (length stack) 1)
-                            (set failure {:message "unexpected closing delimiter" :line tok.line :col tok.col})
-                            (do (local top (. stack (length stack)))
-                              (if (= tok.text (matching-close top.open.text))
-                                (close-matching-node stack tok)
-                                (set failure {:message "mismatched closing delimiter" :line tok.line :col tok.col}))))
-                          (table.insert node.children tok))))))
-        (if failure
-          (values nil failure)
-          (if (> (length stack) 1)
-            (do (local top (. stack (length stack)))
-              (fail "missing closing delimiter" top.open.line top.open.col))
-            root))))))
+                          (if (= tok.kind :open)
+                            (push-open-node node stack tok)
+                            (if (= tok.kind :close)
+                              (if (= (length stack) 1)
+                                (set failure {:message "unexpected closing delimiter" :line tok.line :col tok.col})
+                                (do (local top (. stack (length stack)))
+                                    (if (= tok.text (matching-close top.open.text))
+                                      (close-matching-node stack tok)
+                                      (set failure {:message "mismatched closing delimiter" :line tok.line :col tok.col}))))
+                              (table.insert node.children tok))))))
+          (if failure
+            (values nil failure)
+            (if (> (length stack) 1)
+              (do (local top (. stack (length stack)))
+                  (fail "missing closing delimiter" top.open.line top.open.col))
+              root))))))
 
 (defn- stringify-container
   [stringify node buffer]

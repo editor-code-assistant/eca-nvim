@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local config (require :fennel-extras.config))
@@ -23,7 +23,7 @@
                                                      :forms   ["require"]
                                                      :modules ["plenary.busted"]}
                                         :options    {:mode "forbid"}
-                                        :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}]}}})
+                                        :exclusions [{:path "^fennel-extras/macros/test[.]fnlm$"}]}]}}})
 
 (deftest canonical-applies-to-contract
   (testing "rule instances with files, forms, and modules validate"
@@ -36,7 +36,7 @@
                                                               :applies-to {:contexts ["spec"]}
                                                               :options    {:mode    "forbid"
                                                                            :modules ["plenary.busted"]}
-                                                              :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}]}}})]
+                                                              :exclusions [{:path "^fennel-extras/macros/test[.]fnlm$"}]}]}}})]
       (is (and (not (. result :ok))
                (= nil
                   (. result :value))
@@ -146,7 +146,7 @@
     (testing "canonical module selectors are vectors"
       (is (and (vim.deep_equal ["eca.nfnl.core"]
                                (. rules :module-import 1 :applies-to :modules))
-               (vim.deep_equal ["spec.eca.macros"]
+               (vim.deep_equal ["fennel-extras.macros.test"]
                                (. rules :module-import 2 :applies-to :modules))
                (vim.deep_equal ["plenary.busted" "luassert"]
                                (. rules :module-import 3 :applies-to :modules))

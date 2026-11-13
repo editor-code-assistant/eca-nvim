@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- load-indent
@@ -82,8 +82,11 @@
       (let [(ok value err) (pcall (fn [] (indent.reindent source config)))]
 
         {:value?         (and ok (not= nil value))
-         :has-message    (and ok (= nil value) (not= nil err) (= :string (type (. err :message))))
-         :returned-error (and ok value (= nil value) err)}))))
+         :has-message    (and ok (= nil
+                                    value) (not= nil err) (= :string
+                                                             (type (. err :message))))
+         :returned-error (and ok value (= nil
+                                          value) err)}))))
 
 (deftest rule-semantics
   (testing "applies inner zero to every continuation line"

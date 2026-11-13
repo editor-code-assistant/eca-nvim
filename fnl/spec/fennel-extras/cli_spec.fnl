@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- load-cli
@@ -1217,7 +1217,7 @@
 
 
 (local lint-rule-options
-       {"module-import"    ":applies-to {:files [\"^spec/\"] :modules \"spec.eca.macros\" :forms [\"deftest\" \"testing\" \"is\"]} :options {:mode \"require\"}"
+       {"module-import"    ":applies-to {:files [\"^spec/\"] :modules \"fennel-extras.macros.test\" :forms [\"deftest\" \"testing\" \"is\"]} :options {:mode \"require\"}"
         "form-chain"       ":applies-to {:files [\"^spec/\"] :modules \"module\"} :options {}"
         "module-import"    ":applies-to {:files [\"^spec/\"] :modules [\"plenary.busted\" \"luassert\"]} :options {:mode \"forbid\"}"
         "form-child-count" ":applies-to {:forms [\"testing\"]} :options {:children [\"is\"] :max-count 1}"
@@ -1852,7 +1852,7 @@
     [mode root]
     (let [_      (git-init root)
           _      (write-file (.. root "/.fnl-extras.fnl") (lint-config "{:lint {:rules {\"module-import\" :off \"child-count\" :off \"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"))
-          _      (write-file (.. root "/a.fnl") "(testing \"x\") (import-macros {: testing : is} :spec.eca.macros)\n")
+          _      (write-file (.. root "/a.fnl") "(testing \"x\") (import-macros {: testing : is} :fennel-extras.macros.test)\n")
           result (bounded-cli root (invalid-git-scenario-args mode))]
       {:code       (. result :code)
        :lines      (. result :lines)
@@ -2412,14 +2412,14 @@
 
   (deftest lint-policy-cli-regressions
     (testing "returns zero for a non-macro file"
-      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
+      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^fennel-extras/macros/test[.]fnlm$\"}]}]}}}"
                                  {"a.fnl" "(when x nil)\\n"}
                                  ["lint" "a.fnl"])]
         (is (= 0
                (. result :code)))))
 
     (testing "does not report the macro exclusion as stale for a non-macro file"
-      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}"
+      (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^fennel-extras/macros/test[.]fnlm$\"}]}]}}}"
                                  {"a.fnl" "(when x nil)\\n"}
                                  ["lint" "a.fnl"])
             text   (table.concat (or (. result :lines) []) "\\n")]

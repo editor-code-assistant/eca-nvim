@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local config (require :fennel-extras.config))
@@ -80,14 +80,14 @@
 
   (testing "module-import rejects exempt-files and accepts a path-only exclusion"
     (let [old-result (validation {:lint {:rules {:module-import [{:severity   "error"
-                                                                  :applies-to {:modules ["spec.eca.macros"]}
+                                                                  :applies-to {:modules ["fennel-extras.macros.test"]}
                                                                   :options    {:mode         "require"
                                                                                :binding      "macros"
                                                                                :exempt-files ["^spec/"]}
                                                                   :exclusions []}]}}})
           new-result (validation {:lint {:rules {:module-import [{:severity   "error"
-                                                                  :applies-to {:modules ["spec.eca.macros"]}
+                                                                  :applies-to {:modules ["fennel-extras.macros.test"]}
                                                                   :options    {:mode    "require"
                                                                                :binding "macros"}
-                                                                  :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}]}}})]
+                                                                  :exclusions [{:path "^fennel-extras/macros/test[.]fnlm$"}]}]}}})]
       (is (and (not (. old-result :ok)) (. new-result :ok) (. new-result :value))))))

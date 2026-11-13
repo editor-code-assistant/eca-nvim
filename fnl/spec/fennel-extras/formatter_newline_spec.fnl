@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local format (require :fennel-extras.format))
@@ -157,12 +157,12 @@
                                              config))))))
 
 (deftest scalar-break-after-args
-  (let [config {:indent-width 2
-                :parser       false
-                :indents      {"=" [[:inner 0]]}
-                :newline      [{:applies-to {:files ["^spec/"]
-                                             :forms ["="]}
-                                :options    {:break-after-args 1}}]}
+  (let [config      {:indent-width 2
+                     :parser       false
+                     :indents      {"=" [[:inner 0]]}
+                     :newline      [{:applies-to {:files ["^spec/"]
+                                                  :forms ["="]}
+                                     :options    {:break-after-args 1}}]}
         path-config (doto config (tset :path "spec/fennel-extras/formatter_newline_spec.fnl"))]
 
     (testing "break-after-args inserts one break between adjacent direct arguments"
@@ -198,7 +198,8 @@
                                   :options    {:after 1}}]}
           source "(my-fn []\ntrue)\n(foo)"
           result (formatted-with-config format source config)]
-      (is (= "(my-fn []\n  true)\n(foo)" result)))))
+      (is (= "(my-fn []\n  true)\n(foo)"
+             result)))))
 
 (deftest file-scoped-newline-membership
   (let [config {:indent-width 2

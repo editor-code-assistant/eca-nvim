@@ -1590,7 +1590,7 @@ local function _132_()
   local function unborn_git_scenario_body(mode, root)
     local _ = git_init(root)
     local _0 = write_file((root .. "/.fnl-extras.fnl"), lint_config("{:lint {:rules {\"module-import\" :off \"child-count\" :off \"form-chain\" :off :form-child-count [{:severity :error :applies-to {:forms [\"testing\"]} :options { :children [\"is\"] :max-count 1} :exclusions []}] \"module-import\" :off \"module-import\" :off \"form-chain\" :off}}}"))
-    local _1 = write_file((root .. "/a.fnl"), "(testing \"x\") (import-macros {: testing : is} :spec.eca.macros)\n")
+    local _1 = write_file((root .. "/a.fnl"), "(testing \"x\") (import-macros {: testing : is} :fennel-extras.macros.test)\n")
     local result = bounded_cli(root, invalid_git_scenario_args(mode))
     return {code = result.code, lines = result.lines, ["timed-out?"] = result["timed-out?"]}
   end
@@ -1993,7 +1993,7 @@ local function _132_()
   require("plenary.busted").describe("alignment-maps-cli", _197_)
   local function _199_()
     local function _200_()
-      local result = lint_project("{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}", {["a.fnl"] = "(when x nil)\\n"}, {"lint", "a.fnl"})
+      local result = lint_project("{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^fennel-extras/macros/test[.]fnlm$\"}]}]}}}", {["a.fnl"] = "(when x nil)\\n"}, {"lint", "a.fnl"})
       local assert_5_auto = require("luassert")
       local expected_6_auto = 0
       local actual_7_auto = result.code
@@ -2002,7 +2002,7 @@ local function _132_()
     end
     require("plenary.busted").it("returns zero for a non-macro file", _200_)
     local function _201_()
-      local result = lint_project("{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^spec/eca/macros[.]fnlm$\"}]}]}}}", {["a.fnl"] = "(when x nil)\\n"}, {"lint", "a.fnl"})
+      local result = lint_project("{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"^fennel-extras/macros/test[.]fnlm$\"}]}]}}}", {["a.fnl"] = "(when x nil)\\n"}, {"lint", "a.fnl"})
       local text = table.concat((result.lines or {}), "\\n")
       local assert_28_auto = require("luassert")
       local value_29_auto = not string.match(text, "stale exclusion")

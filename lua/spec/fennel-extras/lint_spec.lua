@@ -15,7 +15,7 @@ local matcher = require("fennel-extras.cli.matcher")
 local registry = require("fennel-extras.lint.rules.registry")
 local source_rules = {["form-chain"] = true, ["file-size"] = true}
 local spec_rules = {["module-import"] = true, ["required-form"] = true, ["form-child-count"] = true}
-local all_options = {["required-form"] = {forms = {"module"}}, ["module-import"] = {mode = "forbid", modules = {"plenary.busted", "luassert"}, exclusions = {{path = "^fnl/spec/eca/macros[.]fnlm$"}}}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["form-chain"] = {["allowed-chains"] = {}}, ["file-size"] = {["max-code-lines"] = 300}}
+local all_options = {["required-form"] = {forms = {"module"}}, ["module-import"] = {mode = "forbid", modules = {"plenary.busted", "luassert"}, exclusions = {{path = "^fnl/fennel-extras/macros/test[.]fnlm$"}}}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["form-chain"] = {["allowed-chains"] = {}}, ["file-size"] = {["max-code-lines"] = 300}}
 local canonical_selectors = {["required-form"] = {forms = {"module"}}}
 local canonical_options = {["file-size"] = {["max-code-lines"] = 300}, ["form-child-count"] = {children = {"is"}, ["max-count"] = 1}, ["form-chain"] = {["allowed-chains"] = {}}}
 local function canonical_rule_data(rule, options)
@@ -59,7 +59,7 @@ local function all_enabled_policy()
     end
     local severity = instances[1].severity
     if (rule == "module-import") then
-      policy[rule] = {{severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, forms = {"deftest", "testing", "is"}, modules = "spec.eca.macros"}, options = {mode = "require"}, exclusions = {{path = "^fnl/spec/eca/macros[.]fnlm$"}}}, {severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, modules = {"plenary.busted", "luassert"}}, options = {mode = "forbid"}, exclusions = {{path = "^fnl/spec/eca/macros[.]fnlm$"}}}, {severity = "error", ["applies-to"] = {modules = "eca.nfnl.core"}, options = {mode = "require", binding = "core"}, exclusions = {}}}
+      policy[rule] = {{severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, forms = {"deftest", "testing", "is"}, modules = "fennel-extras.macros.test"}, options = {mode = "require"}, exclusions = {{path = "^fnl/fennel-extras/macros/test[.]fnlm$"}}}, {severity = "error", ["applies-to"] = {files = {"^fnl/spec/"}, modules = {"plenary.busted", "luassert"}}, options = {mode = "forbid"}, exclusions = {{path = "^fnl/fennel-extras/macros/test[.]fnlm$"}}}, {severity = "error", ["applies-to"] = {modules = "eca.nfnl.core"}, options = {mode = "require", binding = "core"}, exclusions = {}}}
     else
       policy[rule] = {{severity = severity, ["applies-to"] = core.merge(scope, (canonical_selectors[rule] or {})), options = (canonical_options[rule] or {}), exclusions = {}}}
     end
@@ -418,7 +418,7 @@ local function _48_()
   local function _49_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
-    local actual_7_auto = forms_for("(import-macros {: deftest : testing : is} :spec.eca.macros)", "fnl/spec/app_spec.fnl", nil)
+    local actual_7_auto = forms_for("(import-macros {: deftest : testing : is} :fennel-extras.macros.test)", "fnl/spec/app_spec.fnl", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -426,7 +426,7 @@ local function _48_()
   local function _50_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1", "error"}}
-    local actual_7_auto = forms_for("(import-macros {: deftest : testing} :spec.eca.macros)", "fnl/spec/app_spec.fnl", nil)
+    local actual_7_auto = forms_for("(import-macros {: deftest : testing} :fennel-extras.macros.test)", "fnl/spec/app_spec.fnl", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -450,7 +450,7 @@ local function _48_()
   local function _53_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
-    local actual_7_auto = findings_for_rule("'(import-macros {: deftest : testing : is} :spec.eca.macros)", "fnl/spec/app_spec.fnl", "module-import")
+    local actual_7_auto = findings_for_rule("'(import-macros {: deftest : testing : is} :fennel-extras.macros.test)", "fnl/spec/app_spec.fnl", "module-import")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -458,7 +458,7 @@ local function _48_()
   local function _54_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
-    local actual_7_auto = findings_for_rule("(do (import-macros {: deftest : testing : is} :spec.eca.macros))\n(deftest run (testing \"works\" (is true)))", "fnl/spec/x_spec.fnl", "module-import")
+    local actual_7_auto = findings_for_rule("(do (import-macros {: deftest : testing : is} :fennel-extras.macros.test))\n(deftest run (testing \"works\" (is true)))", "fnl/spec/x_spec.fnl", "module-import")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -482,7 +482,7 @@ local function _48_()
   local function _57_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
-    local actual_7_auto = forms_for("(module app)\n(import-macros {: deftest : testing : is} :spec.eca.macros)", "fnl/spec/app_spec.fnl", nil)
+    local actual_7_auto = forms_for("(module app)\n(import-macros {: deftest : testing : is} :fennel-extras.macros.test)", "fnl/spec/app_spec.fnl", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -507,7 +507,7 @@ local function _48_()
     local function _61_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {}
-      local actual_7_auto = forms_for("(require :plenary.busted)\n(require \"luassert\")", "fnl/spec/eca/macros.fnlm", nil)
+      local actual_7_auto = forms_for("(require :plenary.busted)\n(require \"luassert\")", "fnl/fennel-extras/macros/test.fnlm", nil)
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
@@ -526,7 +526,7 @@ local function _48_()
     local function _64_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {}
-      local actual_7_auto = forms_for("(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (is true)))", "fnl/spec/app_spec.fnl", nil)
+      local actual_7_auto = forms_for("(import-macros {: deftest : testing : is} :fennel-extras.macros.test)\n(deftest run (testing \"one\" (is true)))", "fnl/spec/app_spec.fnl", nil)
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
@@ -534,7 +534,7 @@ local function _48_()
     local function _65_()
       local assert_5_auto = require("luassert")
       local expected_6_auto = {}
-      local actual_7_auto = forms_for("(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (let [x 1] (is (= x 1)))))", "fnl/spec/app_spec.fnl", nil)
+      local actual_7_auto = forms_for("(import-macros {: deftest : testing : is} :fennel-extras.macros.test)\n(deftest run (testing \"one\" (let [x 1] (is (= x 1)))))", "fnl/spec/app_spec.fnl", nil)
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
     end
@@ -684,8 +684,8 @@ local function first_finding_form(findings, rule)
   return result
 end
 local function _83_()
-  local source = read_source("fnl/spec/eca/macros.fnlm")
-  local result = check_source_with_matcher(source, "fnl/spec/eca/macros.fnlm", {["child-count"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["nil-count"] = false}, exclusions = {}}}}, {{rule = "child-count", code = "^[(]if has-message", reason = "syntax-quoted AST children are structural data, not semantic if branches"}})
+  local source = read_source("fnl/fennel-extras/macros/test.fnlm")
+  local result = check_source_with_matcher(source, "fnl/fennel-extras/macros/test.fnlm", {["child-count"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["nil-count"] = false}, exclusions = {}}}}, {{rule = "child-count", code = "^[(]if has-message", reason = "syntax-quoted AST children are structural data, not semantic if branches"}})
   local summary
   do
     local tbl_26_ = {}

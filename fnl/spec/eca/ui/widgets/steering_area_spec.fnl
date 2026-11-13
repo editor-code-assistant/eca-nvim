@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 (local steering-area (require :eca.ui.widgets.steering-area))
 
@@ -14,7 +14,8 @@
   (testing "tracks queued steering items"
     (let [widget (steering-area.create 1)]
       (widget.set-items ["check this"])
-      (is (= ["check this"] (. (widget.get-state) :items))))))
+      (is (= ["check this"]
+             (. (widget.get-state) :items))))))
 
 (deftest render
   (testing "writes the steering line, virtual text, extmarks, and cursor state"

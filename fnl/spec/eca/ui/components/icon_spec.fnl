@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (local icon (require :eca.ui.components.icon))
 
 (deftest render
@@ -7,4 +7,5 @@
            (icon.render {:name :success}))))
 
   (testing "direct text overrides the named icon"
-    (is (= "custom" (. (icon.render {:name :success :text "custom"}) :text)))))
+    (is (= "custom"
+           (. (icon.render {:name :success :text "custom"}) :text)))))

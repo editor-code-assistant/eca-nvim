@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- load-reader
@@ -58,8 +58,10 @@
 
                   (when (or (not ok)
                             (not token-ok)
-                            (= nil parsed)
-                            (= nil tokens)
+                            (= nil
+                               parsed)
+                            (= nil
+                               tokens)
                             (not= source (reader.to-string parsed))
                             (not= source (token-text tokens)))
                         (table.insert failures path)))))))
@@ -123,7 +125,8 @@
         (if (not ok)
           {:value? true :has-message false}
           {:value?      (not= nil result)
-           :has-message (and err (= :string (type (. err :message))))
+           :has-message (and err (= :string
+                                    (type (. err :message))))
            :line        (and err (. err :line))
            :col         (and err (. err :col))})))))
 
@@ -142,11 +145,13 @@
 
 (deftest round-trip
   (testing "all Fennel sources round-trip through parsing and tokenization"
-    (is (= [] (round-trip-scenario)))))
+    (is (= []
+           (round-trip-scenario)))))
 
 (deftest structure
   (testing "a string containing delimiters, semicolon, and an escaped quote is one string token"
-    (is (= [:string] (kinds-for "\"a) ; \\\" b\""))))
+    (is (= [:string]
+           (kinds-for "\"a) ; \\\" b\""))))
 
   (testing "a multi-line string is one string token"
     (is (= [:string]
@@ -186,14 +191,16 @@ line two\""))))
            (kinds-for ":kw a.b:c ?. & ... 0x1F 1e3 1_000 -2.5"))))
 
   (testing "a comment before a close delimiter is a child of that list"
-    (is (= :comment (comment-child-kind))))
+    (is (= :comment
+           (comment-child-kind))))
 
   (testing "a leading shebang line is one comment token"
     (is (= [:comment :newline :symbol]
            (kinds-for "#!/usr/bin/env fennel\nfoo"))))
 
   (testing "nested delimiters produce list, sequence, and table nodes"
-    (is (= [:list :sequence :table] (nested-kinds)))))
+    (is (= [:list :sequence :table]
+           (nested-kinds)))))
 
 (deftest fail-closed
   (testing "an extra close delimiter returns an error at line 2 column 5"

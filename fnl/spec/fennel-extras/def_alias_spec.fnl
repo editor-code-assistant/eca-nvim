@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local config (require :fennel-extras.config))
@@ -40,21 +40,21 @@
                           :binding-forms    ["let" "when-let" "if-let" "with-open"]
                           :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
               :newline   [{:applies-to {:files ["^fennel-extras/"]
-                                         :forms ["fn" "defn" "defn-"]}
-                            :options    {:after-header       0
-                                         :between-same-level 1
-                                         :break-after-n-args [[1 1] [2 1]]}}
-                           {:applies-to {:forms ["testing"]}
-                            :options    {:before 0}}
-                           {:applies-to {:files ["^spec/"]
-                                         :forms ["deftest"]}
-                            :options    {:after-header 0}}
-                           {:applies-to {:files ["^spec/"]
-                                         :forms ["testing"]}
-                            :options    {:between-same-level 1}}
-                           {:applies-to {:files ["^spec/"]
-                                         :forms ["="]}
-                            :options    {:break-after-args 1}}]}
+                                        :forms ["fn" "defn" "defn-"]}
+                           :options    {:after-header       0
+                                        :between-same-level 1
+                                        :break-after-n-args [[1 1] [2 1]]}}
+                          {:applies-to {:forms ["testing"]}
+                           :options    {:before 0}}
+                          {:applies-to {:files ["^spec/"]
+                                        :forms ["deftest"]}
+                           :options    {:after-header 0}}
+                          {:applies-to {:files ["^spec/"]
+                                        :forms ["testing"]}
+                           :options    {:between-same-level 1}}
+                          {:applies-to {:files ["^spec/"]
+                                        :forms ["="]}
+                           :options    {:break-after-args 1}}]}
              {:indents   (. format-config :indents)
               :format-as (. format-config :format-as)
               :alignment (. format-config :alignment)

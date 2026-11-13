@@ -26,15 +26,15 @@
   [rule]
   (if (and (= (type rule) :table) (= (type (. rule 1)) :string))
     (do (local kind (. rule 1))
-          (local value (. rule 2))
-          (local index (. rule 3))
-      (if (= kind :block)
-        (when (not (and (integer? value) (>= value 0) (= index nil)))
-              (error "invalid block rule"))
-        (if (= kind :inner)
-          (when (not (and (= value 0) (or (= index nil) (and (integer? index) (>= index 0)))))
-                (error "invalid inner rule"))
-          (error "unknown indentation rule"))))
+        (local value (. rule 2))
+        (local index (. rule 3))
+        (if (= kind :block)
+          (when (not (and (integer? value) (>= value 0) (= index nil)))
+                (error "invalid block rule"))
+          (if (= kind :inner)
+            (when (not (and (= value 0) (or (= index nil) (and (integer? index) (>= index 0)))))
+                  (error "invalid inner rule"))
+            (error "unknown indentation rule"))))
     (error "invalid indentation rule")))
 
 (defn- validate-rule-items
@@ -89,18 +89,20 @@
 
        (if (. seen name)
          (values nil (error "format-as alias cycle"))
-                  (do (local target (. (. config :format-as) name))
-                    (tset seen name true)
-                    (local captured-values (capture-values (fn [] (resolve-name config target seen))))
-                    (local rule (. captured-values 1))
-                    (local err (. captured-values 2))
-                    (local found (. captured-values 3))
-                    (tset seen name nil)
-                    (if err
-                      (values nil err)
-                      (if found
-                        (values rule nil true)
-                        (values nil (error "format-as target has no indentation rule"))))))))
+         (do (local target (. (. config :format-as) name))
+             (tset seen name true)
+             (local captured-values (capture-values (fn
+                                                      []
+                                                      (resolve-name config target seen))))
+             (local rule (. captured-values 1))
+             (local err (. captured-values 2))
+             (local found (. captured-values 3))
+             (tset seen name nil)
+             (if err
+               (values nil err)
+               (if found
+                 (values rule nil true)
+                 (values nil (error "format-as target has no indentation rule"))))))))
 
 (defn- validate-alignment
   [config]
@@ -118,16 +120,18 @@
         (set failure (validate-map (. config :format-as) false)))
   (when (= failure nil)
         (do (local width (. config :indent-width))
-          (when (and (not= width nil) (not (and (integer? width) (> width 0))))
-                (set failure (error "indent-width must be a positive integer")))))
+            (when (and (not= width nil) (not (and (integer? width) (> width 0))))
+                  (set failure (error "indent-width must be a positive integer")))))
   (when (= failure nil)
         (set failure (validate-alignment config)))
   (when (= failure nil)
         (each [name _ (pairs (or (. config :format-as) {}))]
               (when (= failure nil)
-                    (do (local captured-values (capture-values (fn [] (resolve-name config name {})))) (local _ (. captured-values 1)) (local err (. captured-values 2))
-                      (when err
-                            (set failure err))))))
+                    (do (local captured-values (capture-values (fn
+                                                                 []
+                                                                 (resolve-name config name {})))) (local _ (. captured-values 1)) (local err (. captured-values 2))
+                        (when err
+                              (set failure err))))))
   (when (= failure nil)
         (each [name _ (pairs (or config.indents {}))]
               (when (and (= failure nil) (. (or (. config :format-as) {}) name))

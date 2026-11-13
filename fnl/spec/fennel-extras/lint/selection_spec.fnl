@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- load-selection
@@ -55,7 +55,8 @@
            (parse-name-status "R100\tfnl/old.fnl\0fnl/new.fnl\0C75\tfnl/source.fnl\0fnl/copy.fnl\0"))))
 
   (testing "returns an empty list for empty name-status output"
-    (is (= [] (parse-name-status "")))))
+    (is (= []
+           (parse-name-status "")))))
 
 (deftest untracked
   (testing "parses NUL-separated untracked paths including spaces and tabs"
@@ -63,7 +64,8 @@
            (parse-untracked "fnl/new file.fnl\0fnl/tab\tfile.fnl\0"))))
 
   (testing "returns an empty list for empty untracked output"
-    (is (= [] (parse-untracked "")))))
+    (is (= []
+           (parse-untracked "")))))
 
 (deftest hunks
   (testing "parses added and changed new-side line intervals"

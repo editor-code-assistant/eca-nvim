@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- load-indent
@@ -56,19 +56,24 @@
 (defn- idempotent?
   [source]
   (let [once (output-for source)]
-    (and (= :string (type once))
-         (= once (output-for once)))))
+    (and (= :string
+            (type once))
+         (= once
+            (output-for once)))))
 
 (defn- error-summary-result
   [result]
   {:value?         (and (. result :ok) (not= nil (. result :value)))
    :has-message    (and (. result :ok)
-                        (= nil (. result :value))
+                        (= nil
+                           (. result :value))
                         (not= nil (. result :error))
-                        (= :string (type (. (. result :error) :message))))
+                        (= :string
+                           (type (. (. result :error) :message))))
    :returned-error (and (. result :ok)
                         (. result :value)
-                        (= nil (. result :value))
+                        (= nil
+                           (. result :value))
                         (. result :error))})
 
 (defn- error-summary
@@ -94,9 +99,14 @@
         value (. result :value)
         err   (. result :error)]
     {:ok?         ok
-     :result-nil? (= nil value)
-     :has-message (and ok (= nil value) err (= :table (type err)) (= :string (type (. err :message))))
-     :message     (and ok (= nil value) err (. err :message))}))
+     :result-nil? (= nil
+                     value)
+     :has-message (and ok (= nil
+                             value) err (= :table
+                                           (type err)) (= :string
+                                                          (type (. err :message))))
+     :message     (and ok (= nil
+                             value) err (. err :message))}))
 
 (defn- alignment-error-summary
   [alignment]
@@ -218,7 +228,8 @@
     (each [_ path (ipairs (file-paths))]
           (let [source (read-source path)
                 once   (reindent-direct source config)]
-            (if (= nil once)
+            (if (= nil
+                   once)
               (table.insert failures (.. "error: " path))
               (let [twice (reindent-direct once config)]
                 (when (not= once twice)
@@ -236,7 +247,8 @@
     (is (idempotent? "(foo\n (bar x\n y))")))
 
   (testing "one direct reindent pass is idempotent for every project source"
-    (is (= [] (repo-idempotence-failures))))
+    (is (= []
+           (repo-idempotence-failures))))
 
   (testing "unbalanced input returns a structured reader error"
     (is (= {:value? false :has-message true}

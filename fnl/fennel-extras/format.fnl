@@ -72,12 +72,12 @@
                   (table.insert stack {:start token.line :head nil})
                   (if (= token.kind :symbol)
                     (do (local top (. stack (length stack)))
-                      (when (and top (= top.head nil))
-                            (set top.head token.text)))
+                        (when (and top (= top.head nil))
+                              (set top.head token.text)))
                     (when (= token.kind :close)
                           (do (local top (table.remove stack))
-                            (when (and top top.head)
-                                  (table.insert result {:head top.head :start top.start :end token.line}))))))))
+                              (when (and top top.head)
+                                    (table.insert result {:head top.head :start top.start :end token.line}))))))))
     (table.sort result (fn
                          [left right]
                          (> left.start right.start)))
@@ -95,23 +95,23 @@
           (each [_ token (ipairs tokens)]
                 (if (= token.kind :open)
                   (do (local parent (or (. stack (length stack)) root))
-                        (local form {:start     token.line
-                                :start-col token.col
-                                :head      nil
-                                :parent    parent
-                                :children  []})
-                    (table.insert stack form)
-                    (table.insert groups form))
+                      (local form {:start     token.line
+                                   :start-col token.col
+                                   :head      nil
+                                   :parent    parent
+                                   :children  []})
+                      (table.insert stack form)
+                      (table.insert groups form))
                   (if (= token.kind :symbol)
                     (do (local top (. stack (length stack)))
-                      (when (and top (= top.head nil))
-                            (set top.head token.text)))
+                        (when (and top (= top.head nil))
+                              (set top.head token.text)))
                     (when (= token.kind :close)
                           (do (local top (table.remove stack))
-                            (when (and top top.head)
-                                  (set top.end token.line)
-                                  (set top.end-col token.col)
-                                  (table.insert top.parent.children top))))))))
+                              (when (and top top.head)
+                                    (set top.end token.line)
+                                    (set top.end-col token.col)
+                                    (table.insert top.parent.children top))))))))
     groups))
 
 (defn- max-break
@@ -141,31 +141,31 @@
           (each [_ token (ipairs tokens)]
                 (if (= token.kind :open)
                   (do (local parent (. stack (length stack)))
-                    (when (and parent parent.head)
-                          (table.insert parent.children {:line token.line :col token.col}))
-                    (table.insert stack {:start token.line :head nil :children []}))
+                      (when (and parent parent.head)
+                            (table.insert parent.children {:line token.line :col token.col}))
+                      (table.insert stack {:start token.line :head nil :children []}))
                   (if (= token.kind :close)
                     (do (local top (table.remove stack))
-                      (when (and top
-                                 (= top.start span.start)
-                                 (= top.head span.head))
-                            (each [_ entry (ipairs entries)]
-                                  (local offset (if (or (= span.head "defn") (= span.head "defn-")) 1 0))
-                                  (local child (. top.children (+ (. entry 1) offset)))
-                                  (when child
-                                        (table.insert positions {:line  child.line
-                                                                 :col   child.col
-                                                                 :count (. entry 2)})))))
-                  (do (local top-index (length stack))
-                      (local top (. stack top-index))
-                      (when (and top (= token.kind :symbol))
-                            (if (= top.head nil)
-                              (do
-                               (table.remove stack top-index)
-                               (table.insert stack {:start    top.start
-                                                    :head     token.text
-                                                    :children top.children}))
-                              (table.insert top.children {:line token.line :col token.col}))))))))
+                        (when (and top
+                                   (= top.start span.start)
+                                   (= top.head span.head))
+                              (each [_ entry (ipairs entries)]
+                                    (local offset (if (or (= span.head "defn") (= span.head "defn-")) 1 0))
+                                    (local child (. top.children (+ (. entry 1) offset)))
+                                    (when child
+                                          (table.insert positions {:line  child.line
+                                                                   :col   child.col
+                                                                   :count (. entry 2)})))))
+                    (do (local top-index (length stack))
+                        (local top (. stack top-index))
+                        (when (and top (= token.kind :symbol))
+                              (if (= top.head nil)
+                                (do
+                                 (table.remove stack top-index)
+                                 (table.insert stack {:start    top.start
+                                                      :head     token.text
+                                                      :children top.children}))
+                                (table.insert top.children {:line token.line :col token.col}))))))))
     positions))
 
 (defn- break-after-args-positions
@@ -177,33 +177,33 @@
           (each [_ token (ipairs tokens)]
                 (if (= token.kind :open)
                   (do (local parent (. stack (length stack)))
-                    (when (and parent parent.head)
-                          (table.insert parent.children {:line token.line :col token.col}))
-                    (table.insert stack {:start token.line :head nil :children []}))
+                      (when (and parent parent.head)
+                            (table.insert parent.children {:line token.line :col token.col}))
+                      (table.insert stack {:start token.line :head nil :children []}))
                   (if (= token.kind :close)
                     (do (local top (table.remove stack))
-                      (when (and top
-                                 (= top.start span.start)
-                                 (= top.head span.head))
-                            (for [index 2 (length top.children)]
-                                 (local child (. top.children index))
-                                 (table.insert positions {:line   child.line
-                                                          :col    child.col
-                                                          :indent (- (. (. top.children 1) :col) 1)
-                                                          :count  count}))))
+                        (when (and top
+                                   (= top.start span.start)
+                                   (= top.head span.head))
+                              (for [index 2 (length top.children)]
+                                   (local child (. top.children index))
+                                   (table.insert positions {:line   child.line
+                                                            :col    child.col
+                                                            :indent (- (. (. top.children 1) :col) 1)
+                                                            :count  count}))))
                     (do (local top-index (length stack))
-                          (local top (. stack top-index))
-                      (when (and top
-                                 (or (= token.kind :symbol)
-                                     (= token.kind :string)
-                                     (= token.kind :number)))
-                            (if (= top.head nil)
-                              (do
-                               (table.remove stack top-index)
-                               (table.insert stack {:start    top.start
-                                                    :head     token.text
-                                                    :children top.children}))
-                              (table.insert top.children {:line token.line :col token.col}))))))))
+                        (local top (. stack top-index))
+                        (when (and top
+                                   (or (= token.kind :symbol)
+                                       (= token.kind :string)
+                                       (= token.kind :number)))
+                              (if (= top.head nil)
+                                (do
+                                 (table.remove stack top-index)
+                                 (table.insert stack {:start    top.start
+                                                      :head     token.text
+                                                      :children top.children}))
+                                (table.insert top.children {:line token.line :col token.col}))))))))
     positions))
 
 (defn- insert-breaks
@@ -219,7 +219,7 @@
           (local line (. lines position.line))
           (local prefix (string.sub line 1 (- position.col 1)))
           (local suffix (.. (string.rep " " (or position.indent 0))
-                     (string.sub line position.col)))
+                            (string.sub line position.col)))
           (when (and line
                      (> (string.len (string.gsub prefix "%s+$" "")) 0)
                      (> (string.len suffix) 0))
@@ -233,25 +233,25 @@
   [source config path matcher]
   (accumulate [result source _ rule (ipairs (newline-rules config))]
               (do (local entries (. rule :options :break-after-n-args))
-                (if entries
-                  (accumulate [result result _ span (ipairs (form-spans result))]
-                              (if (rule-selected? rule path matcher span.head)
-                                (insert-breaks result
-                                               (break-after-n-args-positions result span entries))
-                                result))
-                  result))))
+                  (if entries
+                    (accumulate [result result _ span (ipairs (form-spans result))]
+                                (if (rule-selected? rule path matcher span.head)
+                                  (insert-breaks result
+                                                 (break-after-n-args-positions result span entries))
+                                  result))
+                    result))))
 
 (defn- apply-scalar-argument-break-rules
   [source config path matcher]
   (accumulate [result source _ rule (ipairs (newline-rules config))]
               (do (local count (. rule :options :break-after-args))
-                (if count
-                  (accumulate [result result _ span (ipairs (form-spans result))]
-                              (if (rule-selected? rule path matcher span.head)
-                                (insert-breaks result
-                                               (break-after-args-positions result span count))
-                                result))
-                  result))))
+                  (if count
+                    (accumulate [result result _ span (ipairs (form-spans result))]
+                                (if (rule-selected? rule path matcher span.head)
+                                  (insert-breaks result
+                                                 (break-after-args-positions result span count))
+                                  result))
+                    result))))
 
 (defn- blank-lines-between?
   [lines start end]
@@ -263,50 +263,50 @@
   [lines left right count]
   (when (blank-lines-between? lines (+ left 1) right)
         (do (local existing (- right left 1))
-          (if (> existing count)
-            (for [_ 1 (- existing count)]
-                 (table.remove lines (+ left 1)))
-            (for [_ 1 (- count existing)]
-                 (table.insert lines (+ left 1) ""))))))
+            (if (> existing count)
+              (for [_ 1 (- existing count)]
+                   (table.remove lines (+ left 1)))
+              (for [_ 1 (- count existing)]
+                   (table.insert lines (+ left 1) ""))))))
 
 (defn- normalize-same-line-gap
   [lines left right count]
   (when (> count 0)
         (do (local line (. lines right.start))
-              (local prefix (string.gsub (string.sub line 1 (- right.start-col 1)) "%s+$" ""))
-              (local suffix (string.sub line right.start-col))
-              (local indent (string.rep " " (- left.start-col 1)))
-          (tset lines right.start prefix)
-          (for [offset 1 count]
-               (table.insert lines (+ right.start offset) ""))
-          (tset lines (+ right.start count 1) (.. indent suffix)))))
+            (local prefix (string.gsub (string.sub line 1 (- right.start-col 1)) "%s+$" ""))
+            (local suffix (string.sub line right.start-col))
+            (local indent (string.rep " " (- left.start-col 1)))
+            (tset lines right.start prefix)
+            (for [offset 1 count]
+                 (table.insert lines (+ right.start offset) ""))
+            (tset lines (+ right.start count 1) (.. indent suffix)))))
 
 (defn- normalize-same-level-gaps
   [source config path matcher]
   (accumulate [result source _ rule (ipairs (newline-rules config))]
               (do (local count (. rule :options :between-same-level))
-                (if (= count nil)
-                  result
-                  (do (local lines (split-lines result))
+                  (if (= count nil)
+                    result
+                    (do (local lines (split-lines result))
                         (local pairs [])
-                    (each [_ group (ipairs (same-level-form-groups result))]
-                          (local children group.children)
-                          (for [index 1 (- (length children) 1)]
-                               (local left (. children index))
-                               (local right (. children (+ index 1)))
-                               (when (and (rule-selected? rule path matcher left.head)
-                                          (rule-selected? rule path matcher right.head))
-                                     (table.insert pairs {:left  left
-                                                          :right right}))))
-                    (table.sort pairs
-                                (fn
-                                  [left right]
-                                  (> left.left.end right.left.end)))
-                    (each [_ pair (ipairs pairs)]
-                          (if (= pair.left.end pair.right.start)
-                            (normalize-same-line-gap lines pair.left pair.right count)
-                            (normalize-gap lines pair.left.end pair.right.start count)))
-                    (table.concat lines "\n"))))))
+                        (each [_ group (ipairs (same-level-form-groups result))]
+                              (local children group.children)
+                              (for [index 1 (- (length children) 1)]
+                                   (local left (. children index))
+                                   (local right (. children (+ index 1)))
+                                   (when (and (rule-selected? rule path matcher left.head)
+                                              (rule-selected? rule path matcher right.head))
+                                         (table.insert pairs {:left  left
+                                                              :right right}))))
+                        (table.sort pairs
+                                    (fn
+                                      [left right]
+                                      (> left.left.end right.left.end)))
+                        (each [_ pair (ipairs pairs)]
+                              (if (= pair.left.end pair.right.start)
+                                (normalize-same-line-gap lines pair.left pair.right count)
+                                (normalize-gap lines pair.left.end pair.right.start count)))
+                        (table.concat lines "\n"))))))
 
 (defn- apply-newline-rules
   [source config path matcher]
@@ -319,11 +319,11 @@
           (local after (or (. rule :options :after) 0))
           (local after-header (or (. rule :options :after-header) 0))
           (each [_ span (ipairs spans)]
-                  (when (rule-selected? rule path matcher span.head)
-                        (max-break breaks (preceding-break-index lines (- span.start 1)) before)
-                        (when (< span.end (length lines))
-                              (max-break breaks span.end after))
-                        (do (local header-line (form-header-line lines span))
+                (when (rule-selected? rule path matcher span.head)
+                      (max-break breaks (preceding-break-index lines (- span.start 1)) before)
+                      (when (< span.end (length lines))
+                            (max-break breaks span.end after))
+                      (do (local header-line (form-header-line lines span))
                           (when (and header-line (< header-line span.end))
                                 (if (and (not= (. rule :options :after-header) nil)
                                          (= after-header 0))
@@ -332,16 +332,16 @@
                                   (max-break breaks header-line after-header)))))))
     (local output [])
     (local limit (if (and (> (length lines) 1)
-                    (= (. lines (length lines)) ""))
-             (+ 1 (preceding-break-index lines (- (length lines) 1)))
-             (preceding-break-index lines (length lines))))
-      (each [index line (ipairs lines)]
-            (when (and (<= index limit)
-                       (not (. removals index)))
-                  (table.insert output line)
-                  (do (local count (or (. breaks index) 0))
-                        (local existing (blank-run-after lines index))
-                        (local needed (- count existing))
+                          (= (. lines (length lines)) ""))
+                   (+ 1 (preceding-break-index lines (- (length lines) 1)))
+                   (preceding-break-index lines (length lines))))
+    (each [index line (ipairs lines)]
+          (when (and (<= index limit)
+                     (not (. removals index)))
+                (table.insert output line)
+                (do (local count (or (. breaks index) 0))
+                    (local existing (blank-run-after lines index))
+                    (local needed (- count existing))
                     (when (> needed 0)
                           (for [_ 1 needed]
                                (table.insert output ""))))))
@@ -399,10 +399,10 @@
   (and (= (length left) (length right))
        (accumulate [result true offset (ipairs left)]
                    (do (local token (. left offset))
-                         (local other (. right offset))
-                     (and result
-                          (token-kind-equal? token other)
-                          (token-text-equal? token other))))))
+                       (local other (. right offset))
+                       (and result
+                            (token-kind-equal? token other)
+                            (token-text-equal? token other))))))
 
 (defn- binding-whitespace-equal?
   [left right]
@@ -538,8 +538,8 @@
   [equal parser left right]
   (or (= (length left) 0)
       (do (local entry (table.remove left 1))
-            (local found-index (matching-entry equal parser entry right))
-        (continue-equal-entries equal-entries? equal parser left right found-index))))
+          (local found-index (matching-entry equal parser entry right))
+          (continue-equal-entries equal-entries? equal parser left right found-index))))
 
 (defn- equal-table?
   [equal parser a b]
@@ -563,7 +563,9 @@
         forms    []]
     (var done false)
     (while (not done)
-           (local captured-values (capture-values (fn [] (iterator))))
+           (local captured-values (capture-values (fn
+                                                    []
+                                                    (iterator))))
            (local ok (. captured-values 1))
            (local form (. captured-values 2))
            (if ok
@@ -643,10 +645,10 @@
     (if error
       (values nil error)
       (do (local scalar-broken (apply-scalar-argument-break-rules out config path matcher))
-            (local normalized (normalize-same-level-gaps scalar-broken config path matcher))
-            (local newlines (apply-newline-rules normalized config path matcher))
-            (local output (normalize-same-level-gaps newlines config path matcher))
-        (validated-output source parser alignment output config)))))
+          (local normalized (normalize-same-level-gaps scalar-broken config path matcher))
+          (local newlines (apply-newline-rules normalized config path matcher))
+          (local output (normalize-same-level-gaps newlines config path matcher))
+          (validated-output source parser alignment output config)))))
 
 (defn format-string
   [source opts]

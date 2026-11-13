@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 (local context-bar (require :eca.ui.widgets.context-bar))
 
@@ -43,7 +43,8 @@
       (widget.add {:text "@file" :hl-group :EcaContextFile})
       (widget.add {:text "@file" :hl-group :EcaContextFile})
       (widget.clear)
-      (is (= 0 (length (. (widget.get-state) :items)))))))
+      (is (= 0
+             (length (. (widget.get-state) :items)))))))
 
 (deftest render
   (testing "writes the context line and highlight through the public renderer"

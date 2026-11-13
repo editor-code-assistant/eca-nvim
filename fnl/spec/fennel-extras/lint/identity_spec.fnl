@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- load-identity
@@ -30,7 +30,8 @@
   [forms form-id]
   (var result nil)
   (each [_ form (ipairs forms)]
-        (when (= form-id (. form :form))
+        (when (= form-id
+                 (. form :form))
               (set result form)))
   result)
 
@@ -74,7 +75,8 @@
     (if (. identity :module-missing)
       identity
       (let [(value err) (identity.forms source path)]
-        {:value-nil? (= nil value)
+        {:value-nil? (= nil
+                        value)
          :message    (and err (. err :message))
          :line       (and err (. err :line))
          :col        (and err (. err :col))}))))
@@ -158,7 +160,8 @@
     (let [before (form-by-id "(module app)\n(defn run [] (if a b c))" "fnl/app.fnl" "fnl/app.fnl > module:app > defn:run > if#1")
           after  (form-by-id "(defn other [] 1)\n(module app)\n(defn run [] (if a b c))" "fnl/app.fnl" "fnl/app.fnl > module:app > defn:run > if#1")]
       (is (and (not (. before :module-missing))
-               (= (. before :form) (. after :form)))))))
+               (= (. before :form)
+                  (. after :form)))))))
 
 (deftest reader-boundaries
   (testing "comments and strings containing delimiters do not create forms"
@@ -386,4 +389,5 @@
 
 (deftest identity-repo-properties
   (testing "identity form values are unique in every project Fennel source"
-    (is (= [] (repo-duplicates)))))
+    (is (= []
+           (repo-duplicates)))))

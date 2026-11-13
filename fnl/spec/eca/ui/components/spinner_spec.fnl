@@ -1,9 +1,10 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (local spinner (require :eca.ui.components.spinner))
 
 (deftest render
   (testing "exposes the number of frames"
-    (is (= 10 (spinner.frame-count))))
+    (is (= 10
+           (spinner.frame-count))))
 
   (testing "wraps the zero-based frame index"
     (is (= ["⠋" "⠋"]

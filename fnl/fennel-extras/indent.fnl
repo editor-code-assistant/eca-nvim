@@ -49,10 +49,10 @@
   (var count 0)
   (var i 1)
   (do (local n (string.len text))
-    (while (<= i n)
-           (when (= (string.sub text i i) "\n")
-                 (set count (+ count 1)))
-           (set i (+ i 1))))
+      (while (<= i n)
+             (when (= (string.sub text i i) "\n")
+                   (set count (+ count 1)))
+             (set i (+ i 1))))
   count)
 
 (defn- string-on-line?
@@ -119,14 +119,14 @@
   (each [_ entry (ipairs rule)]
         (when (= result nil)
               (do (local kind (. entry 1))
-                    (local value (. entry 2))
-                    (local selected (. entry 3))
-                (if (and (= kind :inner)
-                         (= value 0)
-                         (or (= selected nil) (= selected arg-index)))
-                  (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
-                  (when (and (= kind :block) (>= arg-index value))
-                        (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
+                  (local value (. entry 2))
+                  (local selected (. entry 3))
+                  (if (and (= kind :inner)
+                           (= value 0)
+                           (or (= selected nil) (= selected arg-index)))
+                    (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
+                    (when (and (= kind :block) (>= arg-index value))
+                          (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
   result)
 
 (defn- block-argument-index
@@ -146,12 +146,12 @@
   [node first-token line-number config]
   (when (and node (= node.kind :list) (> line-number node.open.line))
         (do (local children (helpers.nontrivia-children node))
-              (local head (. children 1))
-          (when (and head (= head.kind :symbol))
-                (do (local rule (or (rules.resolve config head.text) (custom-rule config head.text)))
+            (local head (. children 1))
+            (when (and head (= head.kind :symbol))
+                  (do (local rule (or (rules.resolve config head.text) (custom-rule config head.text)))
                       (local arg-index (argument-index node first-token))
-                  (when (and rule arg-index)
-                        (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
+                      (when (and rule arg-index)
+                            (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
 
 (defn- started-before?
   [child line-number]
@@ -164,24 +164,24 @@
     (if (= first-token.kind :close)
       (or (. node.open :line-indent) (. node.open :out-col))
       (do (local children (helpers.nontrivia-children node))
-            (local first-child (. children 1))
-            (local second-child (. children 2))
-        (if (= first-child nil)
-          (+ (. node.open :out-col) 1)
-          (if (and (= node.kind :list) (= first-child.kind :symbol))
-            (if (and second-child (started-before? second-child line-number))
-              (+ (. (helpers.child-start second-child) :out-col)
-                 (if (and (= (. node.open :line) 2)
-                          (= (. node.open :col) 2)
-                          (= line-number 3))
+          (local first-child (. children 1))
+          (local second-child (. children 2))
+          (if (= first-child nil)
+            (+ (. node.open :out-col) 1)
+            (if (and (= node.kind :list) (= first-child.kind :symbol))
+              (if (and second-child (started-before? second-child line-number))
+                (+ (. (helpers.child-start second-child) :out-col)
+                   (if (and (= (. node.open :line) 2)
+                            (= (. node.open :col) 2)
+                            (= line-number 3))
                                1
                                0))
+                (if (started-before? first-child line-number)
+                  (. (helpers.child-start first-child) :out-col)
+                  (+ (. node.open :out-col) 1)))
               (if (started-before? first-child line-number)
                 (. (helpers.child-start first-child) :out-col)
-                (+ (. node.open :out-col) 1)))
-            (if (started-before? first-child line-number)
-              (. (helpers.child-start first-child) :out-col)
-              (+ (. node.open :out-col) 1))))))))
+                (+ (. node.open :out-col) 1))))))))
 
 (defn- indent-for
   [node first-token line-number config]
@@ -258,26 +258,28 @@
                           (> (helpers.leading-spaces line) 20))))
           (process-unchanged-line line-number line tokens)
           (do (local indent (line-indent node first-token line-number tokens nodes config))
-                (local spaces (helpers.leading-spaces line))
-                (local body (string.sub line (+ spaces 1)))
-            (assign-output-columns tokens line-number line indent true)
-            (.. (string.rep " " indent) body)))))))
+              (local spaces (helpers.leading-spaces line))
+              (local body (string.sub line (+ spaces 1)))
+              (assign-output-columns tokens line-number line indent true)
+              (.. (string.rep " " indent) body)))))))
 
 (defn- reindent-once
   [source config]
   (let [(tree error) (reader.parse source)]
     (if error
       (values nil nil error)
-      (do (local captured-values (capture-values (fn [] (split-lines source)))) (local lines (. captured-values 1)) (local final-newline (. captured-values 2))
-            (local nodes [])
-            (local tokens [])
-        (collect-node tree nodes tokens 0)
-        (local output [])
-        (var line-number 1)
-        (each [_ line (ipairs lines)]
-              (table.insert output (process-line line-number line nodes tokens config))
-              (set line-number (+ line-number 1)))
-        (values (.. (table.concat output "\n") (if final-newline "\n" "")) tree nil)))))
+      (do (local captured-values (capture-values (fn
+                                                   []
+                                                   (split-lines source)))) (local lines (. captured-values 1)) (local final-newline (. captured-values 2))
+          (local nodes [])
+          (local tokens [])
+          (collect-node tree nodes tokens 0)
+          (local output [])
+          (var line-number 1)
+          (each [_ line (ipairs lines)]
+                (table.insert output (process-line line-number line nodes tokens config))
+                (set line-number (+ line-number 1)))
+          (values (.. (table.concat output "\n") (if final-newline "\n" "")) tree nil)))))
 
 (defn- alignment-source
   [source tree alignment]
@@ -291,8 +293,10 @@
     (if error
       (values nil error)
       (do (local aligned (alignment-source plain tree alignment))
-            (local captured-values (capture-values (fn [] (reindent-once aligned config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local result-error (. captured-values 3))
-        (values result result-error)))))
+          (local captured-values (capture-values (fn
+                                                   []
+                                                   (reindent-once aligned config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local result-error (. captured-values 3))
+          (values result result-error)))))
 
 (defn- fixed-point-result
   [source config alignment rounds result recurse]
@@ -313,10 +317,12 @@
   (let [(prepared error edits) (split.split source alignment)]
     (if error
       (values nil error)
-      (do (local captured-values (capture-values (fn [] (alignment-fixed-point prepared config alignment 3)))) (local result (. captured-values 1)) (local result-error (. captured-values 2))
-        (if result-error
-          (values nil result-error)
-          (values result nil))))))
+      (do (local captured-values (capture-values (fn
+                                                   []
+                                                   (alignment-fixed-point prepared config alignment 3)))) (local result (. captured-values 1)) (local result-error (. captured-values 2))
+          (if result-error
+            (values nil result-error)
+            (values result nil))))))
 
 (defn reindent
   [source config]
@@ -327,11 +333,13 @@
       (if config-error
         (values nil config-error)
         (do (local alignment (settings.resolve config))
-          (if (or alignment.bindings
-                  alignment.maps
-                  alignment.clauses
-                  alignment.split-bindings
-                  alignment.collapse-padding)
-            (split-and-align source config alignment)
-            (do (local captured-values (capture-values (fn [] (reindent-once source config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local error (. captured-values 3))
-              (values result error))))))))
+            (if (or alignment.bindings
+                    alignment.maps
+                    alignment.clauses
+                    alignment.split-bindings
+                    alignment.collapse-padding)
+              (split-and-align source config alignment)
+              (do (local captured-values (capture-values (fn
+                                                           []
+                                                           (reindent-once source config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local error (. captured-values 3))
+                  (values result error))))))))

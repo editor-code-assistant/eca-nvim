@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- with-cleanup
@@ -78,9 +78,11 @@
                       {:name  :nvim_open_win
                        :value (fn [_ _ _] 22)}
                       {:name  :nvim_buf_is_valid
-                       :value (fn [buf] (= 11 buf))}
+                       :value (fn [buf] (= 11
+                                           buf))}
                       {:name  :nvim_win_is_valid
-                       :value (fn [win] (= 22 win))}
+                       :value (fn [win] (= 22
+                                           win))}
                       {:name  :nvim_win_close
                        :value (fn [_ _] nil)}
                       {:name  :nvim_buf_set_name
@@ -122,7 +124,9 @@
   (let [state (create-chat-ui-scenario)]
 
     (testing "opens and exposes its buffer through the public API"
-      (is (= {:open? true :buf 11} state.opened)))
+      (is (= {:open? true :buf 11}
+             state.opened)))
 
     (testing "close makes the public open state false"
-      (is (= false state.closed)))))
+      (is (= false
+             state.closed)))))

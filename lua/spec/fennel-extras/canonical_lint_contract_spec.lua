@@ -13,7 +13,7 @@ local function error_message(result)
     return error
   end
 end
-local canonical_rule = {lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {mode = "forbid"}, exclusions = {{path = "^spec/eca/macros[.]fnlm$"}}}}}}}
+local canonical_rule = {lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {mode = "forbid"}, exclusions = {{path = "^fennel-extras/macros/test[.]fnlm$"}}}}}}}
 local function _2_()
   local function _3_()
     local result = validation(canonical_rule)
@@ -24,7 +24,7 @@ local function _2_()
   end
   require("plenary.busted").it("rule instances with files, forms, and modules validate", _3_)
   local function _4_()
-    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {mode = "forbid", modules = {"plenary.busted"}}, exclusions = {{path = "^spec/eca/macros[.]fnlm$"}}}}}}})
+    local result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {contexts = {"spec"}}, options = {mode = "forbid", modules = {"plenary.busted"}}, exclusions = {{path = "^fennel-extras/macros/test[.]fnlm$"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and (nil == result.value) and ("unknown applies-to key: contexts" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= nil (. result \"value\")) (= \"unknown applies-to key: contexts\" (error-message result)))")
@@ -124,8 +124,8 @@ local function _18_()
   local rules = loaded.lint.rules
   local function _19_()
     local assert_28_auto = require("luassert")
-    local value_29_auto = (vim.deep_equal({"eca.nfnl.core"}, rules["module-import"][1]["applies-to"].modules) and vim.deep_equal({"spec.eca.macros"}, rules["module-import"][2]["applies-to"].modules) and vim.deep_equal({"plenary.busted", "luassert"}, rules["module-import"][3]["applies-to"].modules) and true)
-    assert_28_auto.is_truthy(value_29_auto, "(and (vim.deep_equal [\"eca.nfnl.core\"] (. rules \"module-import\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"spec.eca.macros\"] (. rules \"module-import\" 2 \"applies-to\" \"modules\")) (vim.deep_equal [\"plenary.busted\" \"luassert\"] (. rules \"module-import\" 3 \"applies-to\" \"modules\")) true)")
+    local value_29_auto = (vim.deep_equal({"eca.nfnl.core"}, rules["module-import"][1]["applies-to"].modules) and vim.deep_equal({"fennel-extras.macros.test"}, rules["module-import"][2]["applies-to"].modules) and vim.deep_equal({"plenary.busted", "luassert"}, rules["module-import"][3]["applies-to"].modules) and true)
+    assert_28_auto.is_truthy(value_29_auto, "(and (vim.deep_equal [\"eca.nfnl.core\"] (. rules \"module-import\" 1 \"applies-to\" \"modules\")) (vim.deep_equal [\"fennel-extras.macros.test\"] (. rules \"module-import\" 2 \"applies-to\" \"modules\")) (vim.deep_equal [\"plenary.busted\" \"luassert\"] (. rules \"module-import\" 3 \"applies-to\" \"modules\")) true)")
     return true
   end
   return require("plenary.busted").it("canonical module selectors are vectors", _19_)

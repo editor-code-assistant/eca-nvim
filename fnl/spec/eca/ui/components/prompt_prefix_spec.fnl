@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (local prompt-prefix (require :eca.ui.components.prompt-prefix))
 
 (deftest render

@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 (local prompt-area (require :eca.ui.widgets.prompt-area))
 
@@ -44,4 +44,5 @@
                               result (do (widget.set-text-internal "first\nsecond")
                                          (widget.render 0)
                                          (widget.get-text))]
-                          (is (= "first\nsecond" result))))))))
+                          (is (= "first\nsecond"
+                                 result))))))))

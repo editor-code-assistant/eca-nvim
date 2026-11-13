@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (defn- load-format
@@ -63,58 +63,58 @@
         second-b
         "(a)\n(c)"]
     {:indent-same        (and (not (. format :error))
-                                (format.indent-only? same-a same-b))
+                              (format.indent-only? same-a same-b))
      :indent-string      (or (. format :error)
-                               (format.indent-only? "(foo \"a\")" "(foo \"b\")"))
+                             (format.indent-only? "(foo \"a\")" "(foo \"b\")"))
      :indent-trailing    (or (. format :error)
-                               (format.indent-only? "(foo)" "(foo) "))
+                             (format.indent-only? "(foo)" "(foo) "))
      :indent-lines       (or (. format :error)
-                               (format.indent-only? "(foo)\n(bar)" "(foo)"))
+                             (format.indent-only? "(foo)\n(bar)" "(foo)"))
      :indent-char        (or (. format :error)
-                               (format.indent-only? "(foo)" "(bar)"))
+                             (format.indent-only? "(foo)" "(bar)"))
      :binding-aligned    (and (not (. format :error))
-                                (format.indent-only? "(let [a 1\n      long-name 2])"
-                                                "(let [a         1\n      long-name 2])"
-                                                true))
+                              (format.indent-only? "(let [a 1\n      long-name 2])"
+                                                   "(let [a         1\n      long-name 2])"
+                                                   true))
      :binding-joined     (or (. format :error)
-                               (format.indent-only? "(let [a 1\n      long-name 2])"
-                                                "(let [a1\n      long-name 2])"
-                                                true))
+                             (format.indent-only? "(let [a 1\n      long-name 2])"
+                                                  "(let [a1\n      long-name 2])"
+                                                  true))
      :binding-string     (or (. format :error)
-                               (format.indent-only? "(let [x \"a b\"])"
-                                                "(let [x \"a  b\"])"
-                                                true))
+                             (format.indent-only? "(let [x \"a b\"])"
+                                                  "(let [x \"a  b\"])"
+                                                  true))
      :newline-removed    (or (. format :error)
-                               (format.indent-only? "(let [a 1\n b 2])"
-                                                "(let [a 1 b 2])"
-                                                true))
+                             (format.indent-only? "(let [a 1\n b 2])"
+                                                  "(let [a 1 b 2])"
+                                                  true))
      :newline-added      (and (not (. format :error))
-                                (format.indent-only? "(let [a 1 b 2])"
-                                                "(let [a 1\n      b 2])"
-                                                true))
+                              (format.indent-only? "(let [a 1 b 2])"
+                                                   "(let [a 1\n      b 2])"
+                                                   true))
      :blank-line-removed (or (. format :error)
-                               (format.indent-only? "(f a\n\n  b)"
-                                                "(f a\n  b)"
-                                                true))
+                             (format.indent-only? "(f a\n\n  b)"
+                                                  "(f a\n  b)"
+                                                  true))
      :spaces-collapsed   (and (not (. format :error))
-                                (format.indent-only? "(f a    b)"
-                                                "(f a b)"
-                                                true))
+                              (format.indent-only? "(f a    b)"
+                                                   "(f a b)"
+                                                   true))
      :separation-removed (or (. format :error)
-                               (format.indent-only? "(f a b)"
-                                                "(f ab)"
-                                                true))
+                             (format.indent-only? "(f a b)"
+                                                  "(f ab)"
+                                                  true))
      :ast-same           (and (not (or (. format :error) (. parser :error)))
-                                (format.ast-equal? parser same-a same-b))
+                              (format.ast-equal? parser same-a same-b))
      :ast-symbol         (or (. format :error)
-                               (. parser :error)
-                               (format.ast-equal? parser symbol-a symbol-b))
+                             (. parser :error)
+                             (format.ast-equal? parser symbol-a symbol-b))
      :ast-comment        (or (. format :error)
-                               (. parser :error)
-                               (format.ast-equal? parser comment-a comment-b))
+                             (. parser :error)
+                             (format.ast-equal? parser comment-a comment-b))
      :ast-second         (or (. format :error)
-                               (. parser :error)
-                               (format.ast-equal? parser second-a second-b))}))
+                             (. parser :error)
+                             (format.ast-equal? parser second-a second-b))}))
 
 (defn- format-call-body
   [format source config]
@@ -129,8 +129,10 @@
   [result]
   {:value?      (and (. result :ok) (not= nil (. result :value)))
    :has-message (and (. result :error)
-                     (= :table (type (. result :error)))
-                     (= :string (type (. (. result :error) :message))))
+                     (= :table
+                        (type (. result :error)))
+                     (= :string
+                        (type (. (. result :error) :message))))
    :message     (and (. result :error) (. (. result :error) :message))
    :value       (. result :value)})
 
@@ -213,7 +215,8 @@
 (defn- format-file-scenario
   [format parser config path source format-failures idempotence-failures indent-failures ast-failures]
   (let [(ok formatted err) (format-file-call format parser config source)]
-    (if (or (not ok) (= nil formatted) err)
+    (if (or (not ok) (= nil
+                        formatted) err)
       (table.insert format-failures path)
       (record-format-success format parser config path source formatted idempotence-failures indent-failures ast-failures))))
 
@@ -382,16 +385,20 @@
   (let [scenario (repo-scenario)]
 
     (testing "format-string succeeds for every project Fennel source"
-      (is (= [] (. scenario :format))))
+      (is (= []
+             (. scenario :format))))
 
     (testing "format-string is idempotent for every project Fennel source"
-      (is (= [] (. scenario :idempotence))))
+      (is (= []
+             (. scenario :idempotence))))
 
     (testing "formatted output passes indent-only verification for every project source"
-      (is (= [] (. scenario :indent))))
+      (is (= []
+             (. scenario :indent))))
 
     (testing "formatted output preserves ASTs for every project source"
-      (is (= [] (. scenario :ast))))
+      (is (= []
+             (. scenario :ast))))
 
     (testing "hand-styled files identify the expected migration targets"
       (is (= ["fnl/eca/ui/widgets/footer-bar.fnl"
@@ -462,7 +469,9 @@
         value (. result :value)
         err   (. result :error)]
     {:value?      (and ok (not= nil value))
-     :has-message (and ok (= nil value) err (= :string (type (. err :message))))
+     :has-message (and ok (= nil
+                             value) err (= :string
+                                           (type (. err :message))))
      :value       value}))
 
 (defn- format-summary-with-parser
@@ -478,11 +487,11 @@
   (let [parser (load-parser)
         format (load-format)]
     {:same            (and (not (or (. parser :error) (. format :error)))
-                             (format.ast-equal? parser "{a 1}" "{a 1}"))
+                           (format.ast-equal? parser "{a 1}" "{a 1}"))
      :different-value (and (not (or (. parser :error) (. format :error)))
-                             (format.ast-equal? parser "{a 1}" "{a 2}"))
+                           (format.ast-equal? parser "{a 1}" "{a 2}"))
      :different-key   (and (not (or (. parser :error) (. format :error)))
-                             (format.ast-equal? parser "{a 1}" "{b 1}"))}))
+                           (format.ast-equal? parser "{a 1}" "{b 1}"))}))
 
 (deftest symbol-keyed-tables
   (testing "format-string preserves an unchanged symbol-keyed table"
@@ -546,11 +555,13 @@
 (deftest alignment-regressions
   (testing "alignment preserves normal reindentation without binding vectors"
     (let [result (alignment-regression-scenario)]
-      (is (= (. result :simple-off) (. result :simple-on)))))
+      (is (= (. result :simple-off)
+             (. result :simple-on)))))
 
   (testing "alignment preserves custom if indentation"
     (let [result (alignment-regression-scenario)]
-      (is (= "(if a\n  b\n  c)" (. result :if-on)))))
+      (is (= "(if a\n  b\n  c)"
+             (. result :if-on)))))
 
   (testing "alignment applies binding alignment and unrelated reindentation"
     (let [result (alignment-regression-scenario)]
@@ -564,11 +575,13 @@
 
   (testing "alignment output is idempotent for mixed reindentation"
     (let [result (alignment-regression-scenario)]
-      (is (= (. result :mixed-on) (. result :mixed-idempotent)))))
+      (is (= (. result :mixed-on)
+             (. result :mixed-idempotent)))))
 
   (testing "alignment output is idempotent for multiline moved values"
     (let [result (alignment-regression-scenario)]
-      (is (= (. result :value-on) (. result :value-idempotent))))))
+      (is (= (. result :value-on)
+             (. result :value-idempotent))))))
 
 (defn- stale-leading-whitespace-scenario
   []
@@ -650,11 +663,13 @@
 
   (testing "alignment remains idempotent after correcting stale indentation"
     (let [result (stale-leading-whitespace-scenario)]
-      (is (= (. result :mixed-on) (. result :mixed-idempotent)))))
+      (is (= (. result :mixed-on)
+             (. result :mixed-idempotent)))))
 
   (testing "alignment matches normal formatting when no pairs are alignable"
     (let [result (stale-leading-whitespace-scenario)]
-      (is (= (. result :no-pairs-off) (. result :no-pairs-on))))))
+      (is (= (. result :no-pairs-off)
+             (. result :no-pairs-on))))))
 
 (defn- leading-space-count
   [line]
@@ -666,7 +681,8 @@
         (close-text closes) (string.gsub line "[)]" "")]
     (and open-text
          close-text
-         (= opens closes))))
+         (= opens
+            closes))))
 
 (defn- multiline-if-branch-violations
   [source]
@@ -797,7 +813,8 @@
                 (table.insert violations path)
                 (each [_ violation (ipairs (multiline-if-branch-violations (. result :value)))]
                       (table.insert violations (.. path ":" (tostring (. violation :line))))))))
-      (is (= [] violations)))))
+      (is (= []
+             violations)))))
 
 (deftest align-bindings
   (testing "aligns let bindings to the longest single-line name"
@@ -857,7 +874,8 @@
           "(let [a 1 b 2\n      long-name 3\n      c 4]\n  a)"
           once  (. (format-summary source {:align-bindings true}) :value)
           twice (. (format-summary once {:align-bindings true}) :value)]
-      (is (and once twice (= once twice)))))
+      (is (and once twice (= once
+                             twice)))))
 
   (testing "aligns a destructuring map name by its full source width"
     (is (= "(let [{: x}     (f)\n      long-name 2]\n  x)"
@@ -892,7 +910,8 @@
                               :binding-forms    ["let"]
                               :clause-forms     ["case"]}}
           result (format-summary source config)]
-      (is (= source (. result :value))))))
+      (is (= source
+             (. result :value))))))
 
 (deftest align-binding-clauses
   (testing "aligns case clauses to the longest single-line pattern"
@@ -955,7 +974,8 @@
 
   (testing "align-bindings false preserves the case sample byte-for-byte"
     (let [source "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))"]
-      (is (= source (. (format-summary source {}) :value)))))
+      (is (= source
+             (. (format-summary source {}) :value)))))
 
   (testing "clause alignment is idempotent on a mixed sample"
     (let [source
@@ -965,7 +985,8 @@
                   true}
           once   (. (format-summary source config) :value)
           twice  (. (format-summary once config) :value)]
-      (is (= once twice)))))
+      (is (= once
+             twice)))))
 
 (deftest block-one-indentation
   (testing "configured block-one if indents every own-line argument by two spaces"
@@ -1089,7 +1110,8 @@
   (testing "alignment is idempotent"
     (let [first  (. (format-summary "(let [a 1 bb 2]\n  a)" {:align-bindings true}) :value)
           second (. (format-summary first {:align-bindings true}) :value)]
-      (is (= first second))))
+      (is (= first
+             second))))
 
   (testing "preserves a one-line map with a multi-byte key already single-spaced"
     (is (= "(local function-heads {:defn true :defn- true :fn true :lambda true :λ true})"
@@ -1178,7 +1200,8 @@
           (. (format-summary once {:align-bindings true}) :value)
           expected
           "(defn- parse-lint-args\n  [args]\n  (let [result              {:a 1}\n        state               (lint-state args 2 result)\n        (final-state error) (parse-lint-loop state)]\n    (parse-lint-result final-state error)))"]
-      (is (= [expected once] [once twice])))))
+      (is (= [expected once]
+             [once twice])))))
 
 (deftest configurable-alignment
   (testing "maps alignment aligns maps"
@@ -1239,7 +1262,8 @@
           source "(let [a 1 b 2]\n  a)\n{:a 1\n :long 2}"
           once   (. (format-summary source config) :value)
           twice  (. (format-summary once config) :value)]
-      (is (= once twice)))))
+      (is (= once
+             twice)))))
 
 (deftest exact-alias-alignment-membership
   (testing "an exact alias uses target indentation without inheriting clause alignment membership"

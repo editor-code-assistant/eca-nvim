@@ -281,8 +281,8 @@ local function _35_()
     local instances = (loaded and loaded.lint.rules["child-count"])
     local exclusions = (instances and instances[2].exclusions)
     local assert_28_auto = require("luassert")
-    local value_29_auto = ((1 == #exclusions) and ("^spec/eca/macros[.]fnlm$" == exclusions[1].path))
-    assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (length exclusions)) (= \"^spec/eca/macros[.]fnlm$\" (. (. exclusions 1) \"path\")))")
+    local value_29_auto = ((1 == #exclusions) and ("^fennel-extras/macros" == exclusions[1].path))
+    assert_28_auto.is_truthy(value_29_auto, "(and (= 1 (length exclusions)) (= \"^fennel-extras/macros\" (. (. exclusions 1) \"path\")))")
     return true
   end
   require("plenary.busted").it("child-count macro exclusions consolidate to one path-only entry", _36_)

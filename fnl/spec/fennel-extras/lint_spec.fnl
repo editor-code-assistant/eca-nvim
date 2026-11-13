@@ -1,4 +1,4 @@
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
 (local core (require :eca.nfnl.core))
@@ -30,7 +30,7 @@
 
 (local all-options
        {"required-form"    {:forms ["module"]}
-        "module-import"    {:mode "forbid" :modules ["plenary.busted" "luassert"] :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
+        "module-import"    {:mode "forbid" :modules ["plenary.busted" "luassert"] :exclusions [{:path "^fnl/fennel-extras/macros/test[.]fnlm$"}]}
         "form-child-count" {:children ["is"] :max-count 1}
         "form-chain"       {:allowed-chains []}
         "file-size"        {:max-code-lines 300}})
@@ -69,8 +69,8 @@
                 severity (. (. instances 1) :severity)]
             (if (= rule
                    "module-import")
-              (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :forms ["deftest" "testing" "is"] :modules "spec.eca.macros"} :options {:mode "require"} :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
-                                 {:severity "error" :applies-to {:files ["^fnl/spec/"] :modules ["plenary.busted" "luassert"]} :options {:mode "forbid"} :exclusions [{:path "^fnl/spec/eca/macros[.]fnlm$"}]}
+              (tset policy rule [{:severity "error" :applies-to {:files ["^fnl/spec/"] :forms ["deftest" "testing" "is"] :modules "fennel-extras.macros.test"} :options {:mode "require"} :exclusions [{:path "^fnl/fennel-extras/macros/test[.]fnlm$"}]}
+                                 {:severity "error" :applies-to {:files ["^fnl/spec/"] :modules ["plenary.busted" "luassert"]} :options {:mode "forbid"} :exclusions [{:path "^fnl/fennel-extras/macros/test[.]fnlm$"}]}
                                  {:severity "error" :applies-to {:modules "eca.nfnl.core"} :options {:mode "require" :binding "core"} :exclusions []}])
               (tset policy rule [{:severity   severity
                                   :applies-to (core.merge scope (or (. canonical-selectors rule) {}))
@@ -488,13 +488,13 @@
 (deftest spec-shape
   (testing "the approved spec macro import is clean"
     (is (= []
-           (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)"
+           (forms-for "(import-macros {: deftest : testing : is} :fennel-extras.macros.test)"
                       "fnl/spec/app_spec.fnl"
                       nil))))
 
   (testing "a spec macro import missing is is reported"
     (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
-           (forms-for "(import-macros {: deftest : testing} :spec.eca.macros)"
+           (forms-for "(import-macros {: deftest : testing} :fennel-extras.macros.test)"
                       "fnl/spec/app_spec.fnl"
                       nil))))
 
@@ -510,13 +510,13 @@
 
   (testing "a prefixed spec macro import is reported"
     (is (= []
-           (findings-for-rule "'(import-macros {: deftest : testing : is} :spec.eca.macros)"
+           (findings-for-rule "'(import-macros {: deftest : testing : is} :fennel-extras.macros.test)"
                               "fnl/spec/app_spec.fnl"
                               "module-import"))))
 
   (testing "a nested spec macro import is reported"
     (is (= []
-           (findings-for-rule "(do (import-macros {: deftest : testing : is} :spec.eca.macros))\n(deftest run (testing \"works\" (is true)))"
+           (findings-for-rule "(do (import-macros {: deftest : testing : is} :fennel-extras.macros.test))\n(deftest run (testing \"works\" (is true)))"
                               "fnl/spec/x_spec.fnl"
                               "module-import"))))
 
@@ -532,7 +532,7 @@
 
   (testing "a module form in a spec is reported at that form"
     (is (= []
-           (forms-for "(module app)\n(import-macros {: deftest : testing : is} :spec.eca.macros)"
+           (forms-for "(module app)\n(import-macros {: deftest : testing : is} :fennel-extras.macros.test)"
                       "fnl/spec/app_spec.fnl"
                       nil))))
 
@@ -548,7 +548,7 @@
     (testing "the spec macro implementation may require test libraries directly"
       (is (= []
              (forms-for "(require :plenary.busted)\n(require \"luassert\")"
-                        "fnl/spec/eca/macros.fnlm"
+                        "fnl/fennel-extras/macros/test.fnlm"
                         nil))))
 
     (testing "direct test-library requires are not a non-spec finding"
@@ -560,13 +560,13 @@
   (deftest form-child-count
     (testing "one direct is in testing is clean"
       (is (= []
-             (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (is true)))"
+             (forms-for "(import-macros {: deftest : testing : is} :fennel-extras.macros.test)\n(deftest run (testing \"one\" (is true)))"
                         "fnl/spec/app_spec.fnl"
                         nil))))
 
     (testing "one is inside a let wrapper is clean"
       (is (= []
-             (forms-for "(import-macros {: deftest : testing : is} :spec.eca.macros)\n(deftest run (testing \"one\" (let [x 1] (is (= x 1)))))"
+             (forms-for "(import-macros {: deftest : testing : is} :fennel-extras.macros.test)\n(deftest run (testing \"one\" (let [x 1] (is (= x 1)))))"
                         "fnl/spec/app_spec.fnl"
                         nil))))
 
@@ -713,9 +713,9 @@
 
 
 (testing "narrows syntax-quoted if exclusion without hiding executable if findings"
-  (let [source  (read-source "fnl/spec/eca/macros.fnlm")
+  (let [source  (read-source "fnl/fennel-extras/macros/test.fnlm")
         result  (check-source-with-matcher source
-                                           "fnl/spec/eca/macros.fnlm"
+                                           "fnl/fennel-extras/macros/test.fnlm"
                                            {:child-count [{:severity   "error"
                                                            :applies-to {:forms ["if"]}
                                                            :options    {:min-count 2

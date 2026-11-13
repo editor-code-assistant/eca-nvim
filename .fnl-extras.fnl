@@ -53,7 +53,7 @@
                            :options     {:min-count   2
                                          :max-count   2
                                          :not-counted ["nil" "true" "false"]}
-                           :exclusions  [{:path "^spec/eca/macros[.]fnlm$"}]}]
+                           :exclusions  [{:path "^fennel-extras/macros"}]}]
           :module-import [{:severity    :error
                            :description "standardize shared core access through the conventional core binding"
                            :applies-to  {:modules ["eca.nfnl.core"]}
@@ -63,7 +63,7 @@
                            :description "keep test declarations and assertions on the project macro layer for a consistent test DSL"
                            :applies-to  {:files   ["^spec/"]
                                          :forms   ["deftest" "testing" "is"]
-                                         :modules ["spec.eca.macros"]}
+                                         :modules ["fennel-extras.macros.test"]}
                            :options     {:mode "require"}
                            :exclusions  []}
                           {:severity    :error
@@ -97,4 +97,4 @@
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["module"]}
                            :options     {}
-                           :exclusions  []}]}}}
+                           :exclusions  [{:path "^fennel-extras/macros"}]}]}}}

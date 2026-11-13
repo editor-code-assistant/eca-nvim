@@ -19,8 +19,8 @@
     (if uv
       (not= nil (uv.fs_stat path))
       (do (local file (io.open path :r))
-        (or (and file (close-file file))
-            false)))))
+          (or (and file (close-file file))
+              false)))))
 
 (defn- git-marker?
   [dir]
@@ -44,8 +44,8 @@
     (or (and (exists? candidate) candidate)
         (when (not (git-marker? dir))
               (do (local parent (parent-dir dir))
-                (when parent
-                      (find-in parent)))))))
+                  (when parent
+                        (find-in parent)))))))
 
 (defn find
   [start-dir]

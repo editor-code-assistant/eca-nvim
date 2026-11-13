@@ -84,14 +84,14 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
     {:severity   :error
      :applies-to {:files ["^spec/"]}
      :options    {:mode   :require
-                  :module "spec.eca.macros"
+                  :module "fennel-extras.macros.test"
                   :forms  ["deftest" "testing" "is"]}
-     :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}
-    {:severity   :error
-     :applies-to {:files ["^spec/"]}
-     :options    {:mode    :forbid
-                  :modules ["plenary.busted" "luassert"]}
-     :exclusions [{:path "^spec/eca/macros[.]fnlm$"}]}]
+          :exclusions []}
+         {:severity   :error
+          :applies-to {:files ["^spec/"]}
+          :options    {:mode    :forbid
+                       :modules ["plenary.busted" "luassert"]}
+          :exclusions []}]
    :required-form
    [{:severity   :error
      :applies-to {:files ["^fennel-extras/"]}
@@ -276,10 +276,12 @@ The footer bar is a reference example:
 
 ## Tests
 
-Specs use plenary busted and luassert through the project macros in `fnl/spec/eca/macros.fnlm`. It is the only file that references the test and assertion libraries, so they can be swapped later.
+General project macros live in `fnl/fennel-extras/macros.fnlm`; test-only macros live in `fnl/fennel-extras/macros/test.fnlm`. Keep test-library dependencies out of the general module. `cond` accepts ordered condition/value pairs and an optional final `:else` fallback.
+
+Specs use plenary busted and luassert through the project macros in `fnl/fennel-extras/macros/test.fnlm`. It is the only file that references the test and assertion libraries, so they can be swapped later.
 
 ```fennel
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 ```
 
 Specs do not require `plenary.busted` or `luassert` directly.

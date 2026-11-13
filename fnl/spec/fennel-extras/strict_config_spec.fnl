@@ -1,5 +1,5 @@
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
-(import-macros {: deftest : testing : is} :spec.eca.macros)
+(import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 
 (defn- load-module
   [name]
@@ -315,7 +315,7 @@
           exclusions (and instances (. (. instances 2) :exclusions))]
       (is (and (= 1
                   (length exclusions))
-               (= "^spec/eca/macros[.]fnlm$"
+               (= "^fennel-extras/macros"
                   (. (. exclusions 1) :path))))))
 
   (testing "module-import has empty exclusions after removing stale macro entries"
