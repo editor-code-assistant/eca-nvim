@@ -7,6 +7,22 @@ on:
     branches: [ main ]
 
 jobs:
+  compile-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Neovim
+      uses: rhysd/action-setup-vim@v1
+      with:
+        neovim: true
+
+    - name: Check compiled Lua is in sync with Fennel sources
+      run: make check-compiled
+
+    - name: Check Fennel formatting
+      run: make fmt-check
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -19,7 +35,40 @@ jobs:
     - name: Install Neovim
       uses: rhysd/action-setup-vim@v1
       with:
-        neovim: true
+        neovim: ${{ matrix.neovim_version }}
 
     - name: Run tests
       run: make test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Lua
+      uses: leafo/gh-actions-lua@v13
+
+    - name: Install LuaRocks
+      uses: leafo/gh-actions-luarocks@v6
+
+    - name: Install fennel-ls
+      run: luarocks install fennel-ls 0.2.1-1
+
+    - name: Run lint
+      run: make lint
+
+  style:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Neovim
+      uses: rhysd/action-setup-vim@v1
+      with:
+        neovim: true
+
+    - name: Run style lint
+      run: make style STYLE_FLAGS="--base ${{ github.event.pull_request.base.sha }}"

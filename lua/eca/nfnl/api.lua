@@ -14,22 +14,22 @@ local M = define("eca.nfnl.api")
 M["find-orphans"] = function(_2_)
   local passive_3f = _2_["passive?"]
   local dir = _2_.dir
-  local config0 = _2_.config
+  local given_config = _2_.config
   local root_dir = _2_["root-dir"]
   local cfg = _2_.cfg
   local dir0 = (dir or vim.fn.getcwd())
   local function _3_()
-    if config0 then
-      return {config = config0, ["root-dir"] = root_dir, cfg = cfg}
+    if given_config then
+      return {config = given_config, ["root-dir"] = root_dir, cfg = cfg}
     else
-      return config0["find-and-load"](dir0)
+      return config["find-and-load"](dir0)
     end
   end
   local _let_4_ = _3_()
-  local config1 = _let_4_.config
+  local config0 = _let_4_.config
   local root_dir0 = _let_4_["root-dir"]
   local cfg0 = _let_4_.cfg
-  if config1 then
+  if config0 then
     local orphan_files = gc["find-orphan-lua-files"]({["root-dir"] = root_dir0, cfg = cfg0})
     if core["empty?"](orphan_files) then
       if not passive_3f then
@@ -75,13 +75,21 @@ end
 M["compile-file"] = function(_14_)
   local path = _14_.path
   local dir = _14_.dir
-  local dir0 = (dir or vim.fn.getcwd())
-  local _let_15_ = config["find-and-load"](dir0)
-  local config0 = _let_15_.config
-  local root_dir = _let_15_["root-dir"]
-  local cfg = _let_15_.cfg
+  local expanded = vim.fn.expand((path or "%"))
+  local path0 = fs["absolute-path"](expanded)
+  local or_15_ = dir
+  if not or_15_ then
+    if str["blank?"](expanded) then
+      or_15_ = vim.fn.getcwd()
+    else
+      or_15_ = fs.basename(path0)
+    end
+  end
+  local _let_17_ = config["find-and-load"](or_15_)
+  local config0 = _let_17_.config
+  local root_dir = _let_17_["root-dir"]
+  local cfg = _let_17_.cfg
   if config0 then
-    local path0 = fs["absolute-path"](vim.fn.expand((path or "%")))
     local result = compile["into-file"]({["root-dir"] = root_dir, cfg = cfg, path = path0, source = core.slurp(path0), ["batch?"] = true})
     notify.info("Compilation complete.\n", result)
     return result
@@ -92,10 +100,10 @@ M["compile-file"] = function(_14_)
 end
 M["compile-all-files"] = function(dir)
   local dir0 = (dir or vim.fn.getcwd())
-  local _let_17_ = config["find-and-load"](dir0)
-  local config0 = _let_17_.config
-  local root_dir = _let_17_["root-dir"]
-  local cfg = _let_17_.cfg
+  local _let_19_ = config["find-and-load"](dir0)
+  local config0 = _let_19_.config
+  local root_dir = _let_19_["root-dir"]
+  local cfg = _let_19_.cfg
   if config0 then
     local results = compile["all-files"]({["root-dir"] = root_dir, cfg = cfg})
     notify.info("Compilation complete.\n", results)

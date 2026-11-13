@@ -1,0 +1,28 @@
+(fn
+  expand-cond
+  [args count has-else index form]
+  (assert-compile (or (= index (- count 1))
+                      (not (= (. args index) :else)))
+                  "(cond) expects :else only as the final condition"
+                  form)
+  (if (= index (- count 1))
+    (if has-else
+      (. args (+ index 1))
+      (list 'if (. args index) (. args (+ index 1))))
+    (list 'if
+          (. args index)
+          (. args (+ index 1))
+          (expand-cond args count has-else (+ index 2) form))))
+
+(fn
+  cond
+  [form ...]
+  (local args (pack form ...))
+  (local count (. args :n))
+  (local has-else (= (. args (- count 1)) :else))
+  (assert-compile (and (> count 0) (= 0 (% count 2)))
+                  "(cond) expects condition/value pairs with an optional final :else fallback"
+                  form)
+  (expand-cond args count has-else 1 form))
+
+{: cond}
