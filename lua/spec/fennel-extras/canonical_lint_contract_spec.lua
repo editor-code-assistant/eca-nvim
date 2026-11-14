@@ -199,13 +199,37 @@ local function _27_()
   return require("plenary.busted").it("canonical config uses direct child-count for if arity", _28_)
 end
 require("plenary.busted").describe("canonical-config-uses-direct-child-count", _27_)
+local function _29_()
+  local function _30_()
+    local loaded = config.load(".fnl-extras.fnl")
+    local rules = loaded.lint.rules
+    local instance = rules["form-chain"][3]
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (instance and ("warning" == instance.severity) and ("Keep or operands simple; extract conditional logic into private functions." == instance.description) and vim.deep_equal({"when", "when-let", "if", "if-let", "cond", "case"}, instance["applies-to"].forms) and (nil == instance.options["forms-between"]) and vim.deep_equal({{"or", "form"}, {"or", "forms-between", "form"}}, instance.options["forbidden-chains"]))
+    assert_28_auto.is_truthy(value_29_auto, "(and instance (= \"warning\" (. instance \"severity\")) (= \"Keep or operands simple; extract conditional logic into private functions.\" (. instance \"description\")) (vim.deep_equal [\"when\" \"when-let\" \"if\" \"if-let\" \"cond\" \"case\"] (. instance \"applies-to\" \"forms\")) (= nil (. instance \"options\" \"forms-between\")) (vim.deep_equal [[\"or\" \"form\"] [\"or\" \"forms-between\" \"form\"]] (. instance \"options\" \"forbidden-chains\")))")
+    return true
+  end
+  return require("plenary.busted").it("canonical config forbids direct and indirect or chains for conditional forms", _30_)
+end
+require("plenary.busted").describe("canonical-config-uses-or-form-chain", _29_)
+local function _31_()
+  local function _32_()
+    local loaded = config.load(".fnl-extras.fnl").format.alignment["clause-forms"]
+    local assert_28_auto = require("luassert")
+    local value_29_auto = vim.deep_equal({"case", "cond", "match", "case-try", "match-try", "if"}, loaded)
+    assert_28_auto.is_truthy(value_29_auto, "(vim.deep_equal [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"] loaded)")
+    return true
+  end
+  return require("plenary.busted").it("canonical formatter aligns cond clauses alongside case", _32_)
+end
+require("plenary.busted").describe("canonical-config-aligns-cond-clauses", _31_)
 local removed_rules = {"call-data-arg", "module-style", "unused-and-or", "function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation", "forbidden-form"}
 local retained_rules = {"child-count", "module-import", "required-form", "file-size", "form-chain"}
 local function removed_rule_instance()
   return {severity = "warning", ["applies-to"] = {}, options = {}, exclusions = {}}
 end
-local function _29_()
-  local function _30_()
+local function _33_()
+  local function _34_()
     local rules = config.load(".fnl-extras.fnl").lint.rules
     local assert_28_auto = require("luassert")
     local value_29_auto
@@ -219,11 +243,11 @@ local function _29_()
     assert_28_auto.is_truthy(value_29_auto, "(accumulate [absent true _ rule (ipairs removed-rules)] (and absent (= nil (. rules rule))))")
     return true
   end
-  return require("plenary.busted").it("canonical config omits every removed rule", _30_)
+  return require("plenary.busted").it("canonical config omits every removed rule", _34_)
 end
-require("plenary.busted").describe("canonical-config-removed-rules", _29_)
-local function _31_()
-  local function _32_()
+require("plenary.busted").describe("canonical-config-removed-rules", _33_)
+local function _35_()
+  local function _36_()
     local assert_28_auto = require("luassert")
     local value_29_auto
     do
@@ -241,11 +265,11 @@ local function _31_()
     assert_28_auto.is_truthy(value_29_auto, "(accumulate [valid true _ rule (ipairs removed-rules)] (let [rules\n {}\n _\n (tset rules rule [(removed-rule-instance)])\n result\n (validation {:lint {:rules rules}})] (and valid (not (. result \"ok\")) (= (.. \"unknown lint rule: \" rule) (error-message result)))))")
     return true
   end
-  return require("plenary.busted").it("canonical lint config rejects every removed rule name", _32_)
+  return require("plenary.busted").it("canonical lint config rejects every removed rule name", _36_)
 end
-require("plenary.busted").describe("lint-validation-removed-rules", _31_)
-local function _33_()
-  local function _34_()
+require("plenary.busted").describe("lint-validation-removed-rules", _35_)
+local function _37_()
+  local function _38_()
     local assert_28_auto = require("luassert")
     local value_29_auto
     do
@@ -263,35 +287,35 @@ local function _33_()
     assert_28_auto.is_truthy(value_29_auto, "(accumulate [valid true _ rule (ipairs removed-rules)] (let [rules\n {}\n _\n (tset rules rule [(removed-rule-instance)])\n result\n (validation {:design {:rules rules}})] (and valid (not (. result \"ok\")) (= (.. \"unknown design rule: \" rule) (error-message result)))))")
     return true
   end
-  return require("plenary.busted").it("canonical design config rejects every removed rule name", _34_)
+  return require("plenary.busted").it("canonical design config rejects every removed rule name", _38_)
 end
-require("plenary.busted").describe("design-validation-removed-rules", _33_)
-local function _35_()
-  local function _36_()
+require("plenary.busted").describe("design-validation-removed-rules", _37_)
+local function _39_()
+  local function _40_()
     local names = registry["rule-names"]()
     local defaults = registry.defaults()
     local assert_28_auto = require("luassert")
     local value_29_auto
-    local _37_
+    local _41_
     do
       local absent = true
       for _, rule in ipairs(removed_rules) do
         absent = (absent and (nil == defaults[rule]) and not vim.tbl_contains(names, rule))
       end
-      _37_ = absent
+      _41_ = absent
     end
-    local and_38_ = _37_
-    if and_38_ then
+    local and_42_ = _41_
+    if and_42_ then
       local present = true
       for _, rule in ipairs(retained_rules) do
         present = (present and vim.tbl_contains(names, rule))
       end
-      and_38_ = present
+      and_42_ = present
     end
-    value_29_auto = and_38_
+    value_29_auto = and_42_
     assert_28_auto.is_truthy(value_29_auto, "(and (accumulate [absent true _ rule (ipairs removed-rules)] (and absent (= nil (. defaults rule)) (not (vim.tbl_contains names rule)))) (accumulate [present true _ rule (ipairs retained-rules)] (and present (vim.tbl_contains names rule))))")
     return true
   end
-  return require("plenary.busted").it("the runtime registry omits removed rules and retains supported rules", _36_)
+  return require("plenary.busted").it("the runtime registry omits removed rules and retains supported rules", _40_)
 end
-return require("plenary.busted").describe("runtime-registry-removed-rules", _35_)
+return require("plenary.busted").describe("runtime-registry-removed-rules", _39_)

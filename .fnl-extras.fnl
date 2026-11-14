@@ -19,7 +19,7 @@
                             :split-bindings   true
                             :collapse-padding true
                             :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                            :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
+                            :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}
              :newline      [{:applies-to {:files ["^fennel-extras/"]
                                           :forms ["fn" "defn" "defn-"]}
                              :options    {:after-header       0
@@ -82,15 +82,23 @@
                           {:severity    :warning
                            :description "Keep bindings at the start of the body so functions gather required data before executing logic."
                            :applies-to  {:files ["^fennel-extras/"] :forms ["let"]}
-                           :options     {:allowed-chains [["def" "<form>"]
-                                                          ["defn" "<form>"]
-                                                          ["defn-" "<form>"]
-                                                          ["defn" "when" "<form>"]
-                                                          ["defn" "fn" "<form>"]]}
+                           :options     {:allowed-chains [["def" :form]
+                                                          ["defn" :form]
+                                                          ["defn-" :form]
+                                                          ["defn" "when" :form]
+                                                          ["defn" "fn" :form]]}
+                           :exclusions  []}
+                          {:severity    :warning
+                           :description "Keep or operands simple; extract conditional logic into private functions."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["when" "when-let" "if" "if-let" "cond" "case"]}
+                           :options     {:forbidden-chains [["or" :form]
+                                                            ["or" :forms-between :form]]}
                            :exclusions  []}
                           {:severity   :warning
                            :applies-to {:files ["^fennel-extras/"] :forms ["local"]}
-                           :options    {:allowed-chains [["<form>"]]}
+                           :options    {:allowed-chains [[:root :form "require"]
+                                                         [:root :form "import"]]}
                            :exclusions []}]
           :required-form [{:severity    :error
                            :description "give each source file a stable module identity for imports and diagnostics"

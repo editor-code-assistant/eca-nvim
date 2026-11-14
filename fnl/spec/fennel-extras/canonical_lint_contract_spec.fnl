@@ -212,6 +212,29 @@
                (vim.deep_equal ["nil" "true" "false"] (. instance :options :not-counted))))))
 )
 
+(deftest canonical-config-uses-or-form-chain
+  (testing "canonical config forbids direct and indirect or chains for conditional forms"
+    (let [loaded   (config.load ".fnl-extras.fnl")
+          rules    (. loaded :lint :rules)
+          instance (. rules :form-chain 3)]
+      (is (and instance
+               (= "warning"
+                  (. instance :severity))
+               (= "Keep or operands simple; extract conditional logic into private functions."
+                  (. instance :description))
+               (vim.deep_equal ["when" "when-let" "if" "if-let" "cond" "case"]
+                               (. instance :applies-to :forms))
+               (= nil
+                  (. instance :options :forms-between))
+               (vim.deep_equal [["or" :form]
+                                ["or" :forms-between :form]]
+                               (. instance :options :forbidden-chains)))))))
+
+(deftest canonical-config-aligns-cond-clauses
+  (testing "canonical formatter aligns cond clauses alongside case"
+    (let [loaded (. (config.load ".fnl-extras.fnl") :format :alignment :clause-forms)]
+      (is (vim.deep_equal ["case" "cond" "match" "case-try" "match-try" "if"] loaded)))))
+
 (local removed-rules ["call-data-arg"
                       "module-style"
                       "unused-and-or"

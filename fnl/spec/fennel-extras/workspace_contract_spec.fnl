@@ -108,7 +108,7 @@
     (let [root   (vim.fn.tempname)
           config (.. root "/.fnl-extras.fnl")
           path   (.. root "/fnl/spec/example.fnl")
-          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:form-chain [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {:allowed-chains [[\"<form>\"]]} :exclusions []}]}}}"
+          text   "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:form-chain [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {:allowed-chains [[:form]]} :exclusions []}]}}}"
           _      (vim.fn.mkdir (.. root "/fnl/spec") "p")
           _      (vim.fn.mkdir (.. root "/.git") "p")
           _      (write-file config text)

@@ -938,26 +938,24 @@
 (local form-chain-rules
        {:form-chain [{:severity   "error"
                       :applies-to {:forms ["let"]}
-                      :options    {:allowed-chains [["def" "<form>"]
-                                                    ["defn" "<form>"]
-                                                    ["defn-" "<form>"]
-                                                    ["defn" "when" "<form>"]
-                                                    ["defn" "fn" "<form>"]]}
+                      :options    {:allowed-chains [["def" :form]
+                                                    ["defn" :form]
+                                                    ["defn-" :form]
+                                                    ["defn" "when" :form]
+                                                    ["defn" "fn" :form]]}
                       :exclusions []}]})
 
 (local multiple-form-chain-rules
        {:form-chain [{:severity   "error"
                       :applies-to {:forms ["let" "local"]}
-                      :options    {:allowed-chains [["def" "<form>"]]}
+                      :options    {:allowed-chains [["def" :form]]}
                       :exclusions []}]})
-
-
-
 
 (local local-placement-rules
        {:form-chain [{:severity   "error"
                       :applies-to {:forms ["local"]}
-                      :options    {:allowed-chains [["<form>"]]}
+                      :options    {:allowed-chains [[:root :form "require"]
+                                                    [:root :form "import"]]}
                       :exclusions []}]})
 
 (deftest local-placement-policy
@@ -980,7 +978,7 @@
                                       "form-chain"
                                       {:form-chain [{:severity   "error"
                                                      :applies-to {:forms ["local"]}
-                                                     :options    {:allowed-chains [["def" "<form>"]]}
+                                                     :options    {:allowed-chains [["def" :form]]}
                                                      :exclusions []}]})))))
 
   (testing "nested require local is rejected"
@@ -993,35 +991,88 @@
 (local unified-form-chain-rules
        {:form-chain [{:severity   "error"
                       :applies-to {:forms ["let" "local"]}
-                      :options    {:allowed-chains   [["<root>" "<form>"]]
+                      :options    {:allowed-chains   [[:root :form]]
                                    :forms-between    ["when" "fn"]
-                                   :forbidden-chains [["<root>" "local" "<form>"]]
-                                   }
+                                   :forbidden-chains [[:root "local" :form]]}
                       :exclusions []}]})
 
+(deftest form-chain-config-validation
+  (testing "invalid chain shape is rejected as a structured error"
+    (let [(ok result error) (pcall config.validate
+                                   {:lint {:rules {:form-chain [{:severity   "error"
+                                                                 :applies-to {:forms ["let"]}
+                                                                 :options    {:allowed-chains [["def" 42]]}
+                                                                 :exclusions []}]}}})]
+      (is (and ok (not result) error))))
 
+  (testing "keyword chain markers are accepted"
+    (let [(ok result error) (pcall config.validate
+                                   {:lint {:rules {:form-chain [{:severity   "error"
+                                                                 :applies-to {:forms ["local"]}
+                                                                 :options    {:allowed-chains [[:root :form "require"]
+                                                                                               [:root :form "import"]]}
+                                                                 :exclusions []}]}}})]
+      (is (and ok result (= nil
+                            error)))))
 
-(testing "child-count and form-chain policies can coexist without changing counts"
-  (let [result (check-source-exact "(testing \"one\" (is (= 1 1)) (is (= 2 2)))"
-                                   "fnl/spec/app_spec.fnl"
-                                   {:child-count [{:severity   "error"
-                                                   :applies-to {:forms ["testing"]}
-                                                   :options    {:children ["is"] :max-count 1}
-                                                   :exclusions []}]
-                                    :form-chain  [{:severity   "error"
-                                                   :applies-to {:forms ["is"]}
-                                                   :options    {:allowed-chains   [["testing" "<form>"]]
-                                                                :forms-between    []
-                                                                :forbidden-chains []}
-                                                   :exclusions []}]})]
+  (testing "legacy string placeholder chain markers are rejected"
+    (let [(ok result error) (pcall config.validate
+                                   {:lint {:rules {:form-chain [{:severity   "error"
+                                                                 :applies-to {:forms ["local"]}
+                                                                 :options    {:allowed-chains [["<root>" "<form>"]]}
+                                                                 :exclusions []}]}}})]
+      (is (and ok (not result) error)))))
+
+(deftest unified-form-chain-semantics
+  (testing ":root anchors matching at source-root forms"
+    (is (= []
+           (findings-for-rule "(def value (let [x 1] x))\n(def other (local y 2))"
+                              "fnl/app.fnl"
+                              "form-chain"
+                              unified-form-chain-rules))))
+
+  (testing ":form expands independently for each selected applies-to form"
     (is (= 2
-           (length result)))))
+           (length (findings-for-rule "(def value (print \"before\") (let [x 1] x) (local y 2))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      unified-form-chain-rules)))))
+
+  (testing ":forms-between matches one or more executable intermediate forms"
+    (is (= []
+           (findings-for-rule "(defn value [] (when ready (when later (let [x 1] x))))"
+                              "fnl/app.fnl"
+                              "form-chain"
+                              unified-form-chain-rules))))
+
+  (testing ":forbidden-chains reports matching paths"
+    (is (= 1
+           (length (findings-for-rule "(def value (local y 2))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      unified-form-chain-rules)))))
+
+  (testing "child-count and form-chain policies can coexist without changing counts"
+    (let [result (check-source-exact "(testing \"one\" (is (= 1 1)) (is (= 2 2)))"
+                                     "fnl/spec/app_spec.fnl"
+                                     {:child-count [{:severity   "error"
+                                                     :applies-to {:forms ["testing"]}
+                                                     :options    {:children ["is"] :max-count 1}
+                                                     :exclusions []}]
+                                      :form-chain  [{:severity   "error"
+                                                     :applies-to {:forms ["is"]}
+                                                     :options    {:allowed-chains   [["testing" :form]]
+                                                                  :forms-between    []
+                                                                  :forbidden-chains []}
+                                                     :exclusions []}]})]
+      (is (= 2
+             (length result))))))
 
 (deftest form-chain-regressions
   (testing ":forms-between only skips after a matched explicit step"
     (let [rules {:form-chain [{:severity   "error"
                                :applies-to {:forms ["let"]}
-                               :options    {:allowed-chains [["defn" "when" "<form>"]]
+                               :options    {:allowed-chains [["defn" "when" :form]]
                                             :forms-between  ["fn"]}
                                :exclusions []}]}]
       (is (= 1
@@ -1033,7 +1084,7 @@
   (testing ":forms-between matches intermediate forms after an explicit step"
     (let [rules {:form-chain [{:severity   "error"
                                :applies-to {:forms ["let"]}
-                               :options    {:allowed-chains [["defn" "when" "<form>"]]
+                               :options    {:allowed-chains [["defn" "when" :form]]
                                             :forms-between  ["when"]}
                                :exclusions []}]}]
       (is (= 0

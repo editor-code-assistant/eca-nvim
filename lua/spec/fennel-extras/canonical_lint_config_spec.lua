@@ -25,7 +25,7 @@ end
 require("plenary.busted").describe("canonical-rule-shape", _2_)
 local function _4_()
   local function _5_()
-    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {files = {"^fnl/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {}}}}}})
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {files = {"^fnl/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {["allowed-chains"] = {{"form"}}}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
@@ -44,7 +44,7 @@ end
 require("plenary.busted").describe("canonical-applies-to", _4_)
 local function _7_()
   local function _8_()
-    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {{path = "^spec/"}}}}}}})
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"form"}}}, exclusions = {{path = "^spec/"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
@@ -52,7 +52,7 @@ local function _7_()
   end
   require("plenary.busted").it("path-only exclusions are accepted", _8_)
   local function _9_()
-    local base = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"<form>"}}}}
+    local base = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"form"}}}}
     local keys = {"reason", "code", "form"}
     local rejected
     do
@@ -82,7 +82,7 @@ local function _7_()
   end
   require("plenary.busted").it("old exclusion keys are rejected", _9_)
   local function _11_()
-    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {{path = {"^spec/"}}}}}}}})
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"form"}}}, exclusions = {{path = {"^spec/"}}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = not result.ok
     assert_28_auto.is_truthy(value_29_auto, "(not (. result \"ok\"))")

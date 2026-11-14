@@ -107,7 +107,7 @@ local function _12_()
     local root = vim.fn.tempname()
     local config0 = (root .. "/.fnl-extras.fnl")
     local path = (root .. "/fnl/spec/example.fnl")
-    local text = "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:form-chain [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {:allowed-chains [[\"<form>\"]]} :exclusions []}]}}}"
+    local text = "{:workspace {:paths [\"fnl\"] :exclude [] :extensions [\".fnl\"] :dotfiles false :symlinks false} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {:form-chain [{:severity :warning :applies-to {:files [\"^fnl/spec/\"] :forms [\"var\" \"set\" \"while\"]} :options {:allowed-chains [[:form]]} :exclusions []}]}}}"
     local _ = vim.fn.mkdir((root .. "/fnl/spec"), "p")
     local _0 = vim.fn.mkdir((root .. "/.git"), "p")
     local _1 = write_file(config0, text)

@@ -62,9 +62,9 @@ local function format_config(body)
   end
   local format
   if workspace_3f then
-    format = "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}"
+    format = "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]}}"
   else
-    format = ("{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]} " .. body .. "}")
+    format = ("{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]} " .. body .. "}")
   end
   return ("{:workspace " .. workspace .. " :format " .. format .. " :lint {:rules {}}}")
 end
@@ -212,7 +212,7 @@ local function align_bindings_cli_scenario_result(root, path, expected)
   return {["check-code"] = check_result.code, ["check-lines"] = check_result.lines, ["write-code"] = write_result.code, ["write-lines"] = write_result.lines, content = read_file(path), expected = expected}
 end
 local function align_bindings_cli_scenario_body(root, path, config_path, source, expected)
-  write_file(config_path, "{:indent-width 2 :indents {} :parser false :alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
+  write_file(config_path, "{:indent-width 2 :indents {} :parser false :alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
   write_file(path, source)
   return align_bindings_cli_scenario_result(root, path, expected)
 end
@@ -1959,7 +1959,7 @@ local function _132_()
   end
   require("plenary.busted").describe("align-bindings-cli", _195_)
   local function alignment_maps_cli_setup(config_path, path, source)
-    write_file(config_path, "{:indent-width 2 :indents {} :parser false :alignment {:bindings false :maps true :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
+    write_file(config_path, "{:indent-width 2 :indents {} :parser false :alignment {:bindings false :maps true :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
     return write_file(path, source)
   end
   local function alignment_maps_cli_scenario_body(root, config_path, path, source, expected)

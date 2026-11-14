@@ -73,15 +73,32 @@
                 raw-index  (and candidate (meaningful-index node.children candidate 1))]
             (and raw-index (first-body-child-step node mode raw-index))))))
 
+(defn- first-executable-head
+  [node mode]
+  (let [children (executable-children node mode)
+        child    (. children 1)]
+    (and child (ast.list-head child.node))))
+
 (defn- contains?
   [items target index]
   (and (<= index (length (or items [])))
        (or (= (. items index) target)
            (contains? items target (+ index 1)))))
 
+(defn- root-marker?
+  [value]
+  (or (= value :root)
+      (= value "root")))
+
+(defn- form-marker?
+  [value]
+  (or (= value :form)
+      (= value "form")))
+
 (defn- root-chain?
   [pattern]
-  (contains? pattern "<root>" 1))
+  (or (contains? pattern :root 1)
+      (contains? pattern "root" 1)))
 
 (defn- match-step
   [subject pattern between subject-index pattern-index matched-step?]
@@ -89,12 +106,15 @@
     (> subject-index (length subject))
     (let [expected (. pattern pattern-index)
           actual   (. subject subject-index)]
-      (or (and (= expected "<root>")
+      (or (and (root-marker? expected)
                (= subject-index 1)
-               (match-step subject pattern between (+ subject-index 1) (+ pattern-index 1) true))
-          (and (= expected "<form>")
-               (= subject-index (length subject))
-               (= actual "<form>")
+               (match-step subject pattern between (if (= (length pattern) 2)
+                                                     (+ subject-index 1)
+                                                     subject-index)
+                           (+ pattern-index 1)
+                           true))
+          (and (form-marker? expected)
+               actual
                (match-step subject pattern between (+ subject-index 1) (+ pattern-index 1) true))
           (and (= expected actual)
                (match-step subject pattern between (+ subject-index 1) (+ pattern-index 1) true))
@@ -103,30 +123,54 @@
                (contains? between actual 1)
                (match-step subject pattern between (+ subject-index 1) pattern-index true))))))
 
+(defn- root-chain-match?
+  [chain pattern forms-between root-count]
+  (or (and (= (length pattern) 2)
+           (root-marker? (. pattern 1))
+           (form-marker? (. pattern 2))
+           (or (= (length chain) 1)
+               (and (= (length chain) 0)
+                    (> (or root-count 0) 1))))
+      (match-step (if (form-marker? (. pattern (length pattern)))
+                    (core.concat chain [:form])
+                    chain)
+                  pattern
+                  (or forms-between [])
+                  1
+                  1
+                  false)))
+
 (defn- chain-matches?
   [chain pattern forms-between root-count]
-  (if (root-chain? pattern)
-    (or (and (= (length pattern) 2)
-             (= (. pattern 1) "<root>")
-             (= (. pattern 2) "<form>")
-             (or (= (length chain) 1)
-                 (and (= (length chain) 0)
-                      (> (or root-count 0) 1))))
-        (match-step (core.concat chain ["<form>"]) pattern (or forms-between []) 1 1 false))
-    (match-step (core.concat chain ["<form>"]) pattern (or forms-between []) 1 1 false)))
+  (and (not (contains? chain :not-first 1))
+       (if (root-chain? pattern)
+         (root-chain-match? chain pattern forms-between root-count)
+         (match-step (core.concat chain [:form]) pattern (or forms-between []) 1 1 false))))
 
 (defn- any-chain?
   [chain chains forms-between root-count]
   (accumulate [found false _ pattern (ipairs (or chains []))]
               (or found (chain-matches? chain pattern forms-between root-count))))
 
+(defn- subject-chain-matches?
+  [subject pattern forms-between root-count]
+  (and (not (contains? subject :not-first 1))
+       (if (root-chain? pattern)
+         (root-chain-match? subject pattern forms-between root-count)
+         (match-step (core.concat subject [:form]) pattern (or forms-between []) 1 1 false))))
+
+(defn- any-subject-chain?
+  [subject chains forms-between root-count]
+  (accumulate [found false _ pattern (ipairs (or chains []))]
+              (or found (subject-chain-matches? subject pattern forms-between root-count))))
+
 (defn- forbidden-root-target?
   [chain target pattern root-count]
   (and (= root-count 1)
        (= (length chain) 1)
-       (= (. pattern 1) "<root>")
+       (root-marker? (. pattern 1))
        (= (. pattern 2) target)
-       (= (. pattern 3) "<form>")))
+       (form-marker? (. pattern 3))))
 
 (defn- forbidden-chain?
   [chain target pattern forms-between root-count]
@@ -166,11 +210,15 @@
 
 (defn- walk-first-body
   [node mode chain path forms policy rule result]
-  (let [head       (ast.list-head node)
-        next-chain (core.concat chain [head])
-        target?    (= head (or policy.options.target))
-        allowed?   (any-chain? chain policy.options.allowed-chains policy.options.forms-between policy.options.root-count)
-        forbidden? (any-forbidden-chain? chain head policy.options.forbidden-chains policy.options.forms-between policy.options.root-count)]
+  (let [head         (ast.list-head node)
+        next-chain   (core.concat chain [head])
+        target?      (= head (or policy.options.target))
+        nested-chain (let [child-head (first-executable-head node mode)]
+                       (and child-head (core.concat chain [head child-head])))
+        allowed?     (or (any-chain? chain policy.options.allowed-chains policy.options.forms-between policy.options.root-count)
+                         (and nested-chain
+                              (any-subject-chain? nested-chain policy.options.allowed-chains policy.options.forms-between policy.options.root-count)))
+        forbidden?   (any-forbidden-chain? chain head policy.options.forbidden-chains policy.options.forms-between policy.options.root-count)]
     (when (and target? (or (not allowed?) forbidden?))
           (append-finding result path forms node policy rule))
     (each [_ child (ipairs (executable-children node mode))]
@@ -178,7 +226,7 @@
                 first-child (first-body-child node mode)
                 child-chain (if (= child-node first-child)
                               next-chain
-                              [])]
+                              [:not-first])]
             (walk-first-body child-node (child-mode node child.index mode) child-chain path forms policy rule result)))
     result))
 

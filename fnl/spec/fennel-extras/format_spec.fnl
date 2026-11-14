@@ -17,8 +17,8 @@
 
 (local full-indents
        {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]] "def" [[:inner 0]] "defn" [[:inner 0]] "defn-" [[:inner 0]]})
-(local full-alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]})
-(local aligned-format-config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "match" "case-try" "match-try" "if"]}})
+(local full-alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "cond" "match" "case-try" "match-try" "if"]})
+(local aligned-format-config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "cond" "match" "case-try" "match-try" "if"]}})
 
 (defn- explicit-alignment
   [config]
@@ -429,7 +429,7 @@
                                            :split-bindings   true
                                            :collapse-padding true
                                            :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                                           :clause-forms     ["case" "match" "case-try" "match-try" "if"]}})
+                                           :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}})
               :value))))
 
   (testing "a long one-line form stays exactly one line"

@@ -54,7 +54,7 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
                      :split-bindings   true
                      :collapse-padding true
                      :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                     :clause-forms     ["case" "match" "case-try" "match-try" "if"]}
+                     :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}
   :newline          [{:applies-to {:files ["^fennel-extras/"]
                                     :forms ["fn" "defn" "defn-"]}
                       :options    {:after-header 1}}
@@ -152,7 +152,7 @@ Put each rule's direct, typed options inside its instance. Required values are e
 
 For direct-mode `child-count`, `:not-counted` is a non-empty list of exact literal symbol names. Matching literal symbol children are removed before applying `:min-count` and `:max-count`. Use either `:not-counted` or the legacy boolean `:nil-count`, not both. Structural checks for missing or multiple `if` branches still apply.
 
-`form-chain` selects target forms through `:applies-to {:forms [...]}`. Each configured chain uses the reserved string `"<form>"` for the selected target. The reserved string `"<root>"` anchors a chain to a source-root form. Each target must be the first executable body form along one configured outer-to-inner chain. `:forms-between` lists executable forms that may occur one or more times between the explicit chain steps. `:forbidden-chains` reports targets matching any forbidden chain even when an allowed chain also matches. Quoted data is ignored while quasiquote/unquote traversal keeps its existing executable semantics. For example, the canonical source rule uses `:allowed-chains [["def" "<form>"] ["defn" "<form>"] ["defn-" "<form>"] ["defn" "when" "<form>"] ["defn" "fn" "<form>"]]` for `let` forms. The canonical description is: `Keep bindings at the start of the body so functions gather required data before executing logic.` Each selected target form is evaluated independently.
+`form-chain` selects target forms through `:applies-to {:forms [...]}`. Each configured chain uses the keyword `:form` for the selected target, and the keyword `:root` anchors a chain to a source-root form. Old string placeholders `"<form>"` and `"<root>"` are rejected. Each target must be the first executable body form along one configured outer-to-inner chain. `:forms-between` lists executable forms that may occur one or more times between the explicit chain steps. `:forbidden-chains` reports targets matching any forbidden chain even when an allowed chain also matches. Quoted data is ignored while quasiquote/unquote traversal keeps its existing executable semantics. For example, the canonical source rule uses `:allowed-chains [["def" :form] ["defn" :form] ["defn-" :form] ["defn" "when" :form] ["defn" "fn" :form]]` for `let` forms. The canonical description is: `Keep bindings at the start of the body so functions gather required data before executing logic.` The canonical conditional rule selects `when`, `when-let`, `if`, `if-let`, `cond`, and `case` through `:applies-to`, and forbids `["or" :form]` and `["or" :forms-between :form]`; this catches both direct `or` operands and nested selected forms after `or`. Its description is: `Keep or operands simple; extract conditional logic into private functions.` Each selected target form is evaluated independently.
 
 #### Exclusions
 
@@ -186,7 +186,7 @@ Use `:applies-to :files` for path-specific rules. A file selector is a Vim regul
             :split-bindings false
             :collapse-padding false
             :binding-forms ["let" "when-let" "if-let" "with-open"]
-            :clause-forms ["case" "match" "case-try" "match-try" "if"]}
+            :clause-forms ["case" "cond" "match" "case-try" "match-try" "if"]}
 ```
 
 The boolean switches are `:bindings`, `:maps`, `:clauses`, `:split-bindings`, and `:collapse-padding`. `:binding-forms` and `:clause-forms` are required when their corresponding alignment modes are enabled. `:align-bindings` is not part of the configuration contract.

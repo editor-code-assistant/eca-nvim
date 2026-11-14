@@ -588,7 +588,7 @@
                                                                                          :applies-to {:files   ["^spec/"]
                                                                                                       :forms   ["require"]
                                                                                                       :modules "plenary.busted"}
-                                                                                         :options    {:allowed-chains [["<form>"]]}
+                                                                                         :options    {:allowed-chains [[:form]]}
                                                                                          :exclusions []}]}}}))))
 
   (testing "rejects a direct rule map"
@@ -610,7 +610,7 @@
 
   (testing "reports the lexicographically first invalid option"
     (let [message (validation-error-message "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:allowed-chains 1 :unknown true} :exclusions []}]}}}")]
-      (is (= "lint.rules.form-chain[1].options: allowed-chains must be a non-empty list of non-empty string lists"
+      (is (= "lint.rules.form-chain[1].options: allowed-chains must be a non-empty list of non-empty chain lists"
              message))))
 
   (testing "unknown options include the rule name"

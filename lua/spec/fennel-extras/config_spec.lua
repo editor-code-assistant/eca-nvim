@@ -798,7 +798,7 @@ local function _110_()
   local function _111_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["value?"] = true, ["has-message"] = false}
-    local actual_7_auto = validate_summary({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = "plenary.busted"}, options = {["allowed-chains"] = {{"<form>"}}}, exclusions = {}}}}}})
+    local actual_7_auto = validate_summary({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {files = {"^spec/"}, forms = {"require"}, modules = "plenary.busted"}, options = {["allowed-chains"] = {{"form"}}}, exclusions = {}}}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -826,7 +826,7 @@ local function _110_()
   local function _114_()
     local message = validation_error_message("{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:allowed-chains 1 :unknown true} :exclusions []}]}}}")
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "lint.rules.form-chain[1].options: allowed-chains must be a non-empty list of non-empty string lists"
+    local expected_6_auto = "lint.rules.form-chain[1].options: allowed-chains must be a non-empty list of non-empty chain lists"
     local actual_7_auto = message
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

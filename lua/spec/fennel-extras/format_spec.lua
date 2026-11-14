@@ -16,8 +16,8 @@ local function load_parser()
   end
 end
 local full_indents = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["case-try"] = {{"block", 1}}, ["match-try"] = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}, def = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}
-local full_alignment = {["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "match", "case-try", "match-try", "if"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}
-local aligned_format_config = {alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "match", "case-try", "match-try", "if"}}}
+local full_alignment = {["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}
+local aligned_format_config = {alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}}}
 local function explicit_alignment(config)
   return (((nil ~= config["align-bindings"]) and vim.tbl_extend("force", full_alignment, {bindings = config["align-bindings"], maps = config["align-bindings"], clauses = config["align-bindings"], ["split-bindings"] = config["align-bindings"], ["collapse-padding"] = config["align-bindings"]})) or full_alignment)
 end
@@ -490,7 +490,7 @@ local function _56_()
   local function _60_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn- git-root\n  [start]\n  (foo start))"
-    local actual_7_auto = format_summary("(defn- git-root\n[start]\n(foo start))", {indents = {["if"] = {{"block", 1}}, ["defn-"] = {{"inner", 0}}}, alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "match", "case-try", "match-try", "if"}}}).value
+    local actual_7_auto = format_summary("(defn- git-root\n[start]\n(foo start))", {indents = {["if"] = {{"block", 1}}, ["defn-"] = {{"inner", 0}}}, alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end

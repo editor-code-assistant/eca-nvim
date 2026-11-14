@@ -33,7 +33,7 @@
                                                            :applies-to {:files   ["^fnl/"]
                                                                         :forms   ["require"]
                                                                         :modules ["plenary.busted"]}
-                                                           :options    {:allowed-chains [["<form>"]]}
+                                                           :options    {:allowed-chains [[:form]]}
                                                            :exclusions []}]}}})]
       (is (and (. result :ok) (. result :value)))))
 
@@ -50,14 +50,14 @@
   (testing "path-only exclusions are accepted"
     (let [result (validation {:lint {:rules {:form-chain [{:severity   "warning"
                                                            :applies-to {:forms ["if"]}
-                                                           :options    {:allowed-chains [["<form>"]]}
+                                                           :options    {:allowed-chains [[:form]]}
                                                            :exclusions [{:path "^spec/"}]}]}}})]
       (is (and (. result :ok) (. result :value)))))
 
   (testing "old exclusion keys are rejected"
     (let [base     {:severity   "warning"
                     :applies-to {:forms ["if"]}
-                    :options    {:allowed-chains [["<form>"]]}}
+                    :options    {:allowed-chains [[:form]]}}
           keys     [:reason :code :form]
           rejected (icollect [_ key (ipairs keys)]
                              (let [exclusion {:path "^spec/"}]
@@ -74,7 +74,7 @@
   (testing "non-string path values are rejected"
     (let [result (validation {:lint {:rules {:form-chain [{:severity   "warning"
                                                            :applies-to {:forms ["if"]}
-                                                           :options    {:allowed-chains [["<form>"]]}
+                                                           :options    {:allowed-chains [[:form]]}
                                                            :exclusions [{:path ["^spec/"]}]}]}}})]
       (is (not (. result :ok)))))
 

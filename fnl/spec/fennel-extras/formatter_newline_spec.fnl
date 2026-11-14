@@ -25,7 +25,7 @@
                        :split-bindings   true
                        :collapse-padding false
                        :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                       :clause-forms     ["case" "match" "case-try" "match-try" "if"]}})
+                       :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}})
 
 (defn- formatted-body
   [format source]

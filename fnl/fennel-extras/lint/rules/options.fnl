@@ -93,12 +93,27 @@
   (and (strings? value)
        (> (length value) 0)))
 
+(defn- chain-item?
+  [value]
+  (or (= value :root)
+      (= value :form)
+      (and (= (type value) :string)
+           (not= value "<root>")
+           (not= value "<form>"))))
+
+(defn- chain?
+  [value]
+  (and (parse.sequence? value)
+       (> (length value) 0)
+       (accumulate [valid true _ item (ipairs value)]
+                   (and valid (chain-item? item)))))
+
 (defn- chains?
   [value]
   (and (parse.sequence? value)
        (> (length value) 0)
        (accumulate [valid true _ chain (ipairs value)]
-                   (and valid (non-empty-strings? chain)))))
+                   (and valid (chain? chain)))))
 
 (defn- exception?
   [value]
@@ -123,7 +138,7 @@
 (local type-messages
        {:strings              " must be a list of strings"
         :non-empty-strings    " must be a non-empty list of strings"
-        :chains               " must be a non-empty list of non-empty string lists"
+        :chains               " must be a non-empty list of non-empty chain lists"
         :positive-integer     " must be a positive integer"
         :non-negative-integer " must be a non-negative integer"
         :boolean              " must be a boolean"

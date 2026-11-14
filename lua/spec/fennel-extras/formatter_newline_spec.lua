@@ -3,7 +3,7 @@ local format = require("fennel-extras.format")
 local parser = require("eca.nfnl.fennel")
 local ast_equal_3f = format["ast-equal?"]
 local base_config = {["indent-width"] = 2, indents = {defn = {{"block", 1}}, testing = {{"block", 1}}}, newline = {{["applies-to"] = {forms = {"fn", "defn", "defn-"}}, options = {["after-header"] = 1}}, {["applies-to"] = {forms = {"testing"}}, options = {before = 1}}}, parser = false}
-local split_config = {["indent-width"] = 2, indents = {}, alignment = {bindings = true, ["split-bindings"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "match", "case-try", "match-try", "if"}, clauses = false, ["collapse-padding"] = false, maps = false}, parser = false}
+local split_config = {["indent-width"] = 2, indents = {}, alignment = {bindings = true, ["split-bindings"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}, clauses = false, ["collapse-padding"] = false, maps = false}, parser = false}
 local function formatted_body(format0, source)
   return format0["format-string"](source, {config = base_config})
 end

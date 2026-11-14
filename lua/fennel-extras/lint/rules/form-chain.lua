@@ -76,11 +76,22 @@ local function first_body_child(node, mode)
     return nil
   end
 end
+local function first_executable_head(node, mode)
+  local children = executable_children(node, mode)
+  local child = children[1]
+  return (child and ast["list-head"](child.node))
+end
 local function contains_3f(items, target, index)
   return ((index <= #(items or {})) and ((items[index] == target) or contains_3f(items, target, (index + 1))))
 end
+local function root_marker_3f(value)
+  return ((value == "root") or (value == "root"))
+end
+local function form_marker_3f(value)
+  return ((value == "form") or (value == "form"))
+end
 local function root_chain_3f(pattern)
-  return contains_3f(pattern, "<root>", 1)
+  return (contains_3f(pattern, "root", 1) or contains_3f(pattern, "root", 1))
 end
 local function match_step(subject, pattern, between, subject_index, pattern_index, matched_step_3f)
   if (pattern_index > #pattern) then
@@ -88,15 +99,42 @@ local function match_step(subject, pattern, between, subject_index, pattern_inde
   else
     local expected = pattern[pattern_index]
     local actual = subject[subject_index]
-    return (((expected == "<root>") and (subject_index == 1) and match_step(subject, pattern, between, (subject_index + 1), (pattern_index + 1), true)) or ((expected == "<form>") and (subject_index == #subject) and (actual == "<form>") and match_step(subject, pattern, between, (subject_index + 1), (pattern_index + 1), true)) or ((expected == actual) and match_step(subject, pattern, between, (subject_index + 1), (pattern_index + 1), true)) or (matched_step_3f and actual and contains_3f(between, actual, 1) and match_step(subject, pattern, between, (subject_index + 1), pattern_index, true)))
+    local and_9_ = root_marker_3f(expected) and (subject_index == 1)
+    if and_9_ then
+      local _10_
+      if (#pattern == 2) then
+        _10_ = (subject_index + 1)
+      else
+        _10_ = subject_index
+      end
+      and_9_ = match_step(subject, pattern, between, _10_, (pattern_index + 1), true)
+    end
+    return (and_9_ or (form_marker_3f(expected) and actual and match_step(subject, pattern, between, (subject_index + 1), (pattern_index + 1), true)) or ((expected == actual) and match_step(subject, pattern, between, (subject_index + 1), (pattern_index + 1), true)) or (matched_step_3f and actual and contains_3f(between, actual, 1) and match_step(subject, pattern, between, (subject_index + 1), pattern_index, true)))
   end
 end
-local function chain_matches_3f(chain, pattern, forms_between, root_count)
-  if root_chain_3f(pattern) then
-    return (((#pattern == 2) and (pattern[1] == "<root>") and (pattern[2] == "<form>") and ((#chain == 1) or ((#chain == 0) and ((root_count or 0) > 1)))) or match_step(core.concat(chain, {"<form>"}), pattern, (forms_between or {}), 1, 1, false))
-  else
-    return match_step(core.concat(chain, {"<form>"}), pattern, (forms_between or {}), 1, 1, false)
+local function root_chain_match_3f(chain, pattern, forms_between, root_count)
+  local or_13_ = ((#pattern == 2) and root_marker_3f(pattern[1]) and form_marker_3f(pattern[2]) and ((#chain == 1) or ((#chain == 0) and ((root_count or 0) > 1))))
+  if not or_13_ then
+    local _14_
+    if form_marker_3f(pattern[#pattern]) then
+      _14_ = core.concat(chain, {"form"})
+    else
+      _14_ = chain
+    end
+    or_13_ = match_step(_14_, pattern, (forms_between or {}), 1, 1, false)
   end
+  return or_13_
+end
+local function chain_matches_3f(chain, pattern, forms_between, root_count)
+  local and_16_ = not contains_3f(chain, "not-first", 1)
+  if and_16_ then
+    if root_chain_3f(pattern) then
+      and_16_ = root_chain_match_3f(chain, pattern, forms_between, root_count)
+    else
+      and_16_ = match_step(core.concat(chain, {"form"}), pattern, (forms_between or {}), 1, 1, false)
+    end
+  end
+  return and_16_
 end
 local function any_chain_3f(chain, chains, forms_between, root_count)
   local found = false
@@ -105,8 +143,26 @@ local function any_chain_3f(chain, chains, forms_between, root_count)
   end
   return found
 end
+local function subject_chain_matches_3f(subject, pattern, forms_between, root_count)
+  local and_18_ = not contains_3f(subject, "not-first", 1)
+  if and_18_ then
+    if root_chain_3f(pattern) then
+      and_18_ = root_chain_match_3f(subject, pattern, forms_between, root_count)
+    else
+      and_18_ = match_step(core.concat(subject, {"form"}), pattern, (forms_between or {}), 1, 1, false)
+    end
+  end
+  return and_18_
+end
+local function any_subject_chain_3f(subject, chains, forms_between, root_count)
+  local found = false
+  for _, pattern in ipairs((chains or {})) do
+    found = (found or subject_chain_matches_3f(subject, pattern, forms_between, root_count))
+  end
+  return found
+end
 local function forbidden_root_target_3f(chain, target, pattern, root_count)
-  return ((root_count == 1) and (#chain == 1) and (pattern[1] == "<root>") and (pattern[2] == target) and (pattern[3] == "<form>"))
+  return ((root_count == 1) and (#chain == 1) and root_marker_3f(pattern[1]) and (pattern[2] == target) and form_marker_3f(pattern[3]))
 end
 local function forbidden_chain_3f(chain, target, pattern, forms_between, root_count)
   return (chain_matches_3f(chain, pattern, forms_between, root_count) or forbidden_root_target_3f(chain, target, pattern, root_count))
@@ -136,7 +192,12 @@ local function walk_first_body(node, mode, chain, path, forms, policy, rule, res
   local head = ast["list-head"](node)
   local next_chain = core.concat(chain, {head})
   local target_3f = (head == policy.options.target)
-  local allowed_3f = any_chain_3f(chain, policy.options["allowed-chains"], policy.options["forms-between"], policy.options["root-count"])
+  local nested_chain
+  do
+    local child_head = first_executable_head(node, mode)
+    nested_chain = (child_head and core.concat(chain, {head, child_head}))
+  end
+  local allowed_3f = (any_chain_3f(chain, policy.options["allowed-chains"], policy.options["forms-between"], policy.options["root-count"]) or (nested_chain and any_subject_chain_3f(nested_chain, policy.options["allowed-chains"], policy.options["forms-between"], policy.options["root-count"])))
   local forbidden_3f = any_forbidden_chain_3f(chain, head, policy.options["forbidden-chains"], policy.options["forms-between"], policy.options["root-count"])
   if (target_3f and (not allowed_3f or forbidden_3f)) then
     append_finding(result, path, forms, node, policy, rule)
@@ -149,7 +210,7 @@ local function walk_first_body(node, mode, chain, path, forms, policy, rule, res
     if (child_node == first_child) then
       child_chain = next_chain
     else
-      child_chain = {}
+      child_chain = {"not-first"}
     end
     walk_first_body(child_node, child_mode(node, child.index, mode), child_chain, path, forms, policy, rule, result)
   end
