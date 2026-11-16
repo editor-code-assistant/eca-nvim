@@ -37,7 +37,7 @@
                                           :forms ["="]}
                              :options    {:break-after-args 1}}]}
  :lint
- {:rules {:file-size     [{:severity    :warning
+ {:rules {:file-size     [{:severity    :error
                            :description "keep source modules focused and reviewable by splitting oversized files"
                            :applies-to  {:files ["^fennel-extras/"]}
                            :options     {:max-code-lines 300}
@@ -73,13 +73,13 @@
                                                    "luassert"]}
                            :options     {:mode "forbid"}
                            :exclusions  []}]
-          :form-chain    [{:severity    :warning
+          :form-chain    [{:severity    :error
                            :description "keep source data flow explicit by avoiding mutable bindings and open-ended loops"
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["var" "set" "while"]}
                            :options     {:allowed-chains []}
                            :exclusions  []}
-                          {:severity    :warning
+                          {:severity    :error
                            :description "Keep bindings at the start of the body so functions gather required data before executing logic."
                            :applies-to  {:files ["^fennel-extras/"] :forms ["let"]}
                            :options     {:allowed-chains [["def" :form]
@@ -88,18 +88,19 @@
                                                           ["defn" "when" :form]
                                                           ["defn" "fn" :form]]}
                            :exclusions  []}
-                          {:severity    :warning
-                           :description "Keep or operands simple; extract conditional logic into private functions."
+                          {:severity    :error
+                           :description "Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible."
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["when" "when-let" "if" "if-let" "cond" "case"]}
                            :options     {:forbidden-chains [["or" :form]
                                                             ["or" :forms-between :form]]}
                            :exclusions  []}
-                          {:severity   :warning
-                           :applies-to {:files ["^fennel-extras/"] :forms ["local"]}
-                           :options    {:allowed-chains [[:root :form "require"]
-                                                         [:root :form "import"]]}
-                           :exclusions []}]
+                          {:severity    :error
+                           :description "keep top-level locals limited to explicit require/import dependencies"
+                           :applies-to  {:files ["^fennel-extras/"] :forms ["local"]}
+                           :options     {:allowed-chains [[:root :form "require"]
+                                                          [:root :form "import"]]}
+                           :exclusions  []}]
           :required-form [{:severity    :error
                            :description "give each source file a stable module identity for imports and diagnostics"
                            :applies-to  {:files ["^fennel-extras/"]
