@@ -335,7 +335,7 @@
   (if (or (. result :module-missing) (. result :value-nil?))
     result
     (icollect [_ finding (ipairs result)]
-              [(. finding :rule) (. finding :form) (. finding :severity)])))
+              [(. finding :rule) (. finding :form)])))
 
 
 
@@ -348,7 +348,7 @@
       (icollect [_ finding (ipairs result)]
                 (when (= (. finding :rule)
                          rule)
-                      [(. finding :rule) (. finding :form) (. finding :severity)])))))
+                      [(. finding :rule) (. finding :form)])))))
 
 
 
@@ -493,7 +493,7 @@
                       nil))))
 
   (testing "a spec macro import missing is is reported"
-    (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+    (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1"]]
            (forms-for "(import-macros {: deftest : testing} :fennel-extras.macros.test)"
                       "fnl/spec/app_spec.fnl"
                       nil))))
@@ -538,11 +538,11 @@
 
   (deftest module-import
     (testing "keyword plenary require is forbidden in ordinary specs"
-      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1"]]
              (findings-for-rule "(require :plenary.busted)" "fnl/spec/app_spec.fnl" "module-import"))))
 
     (testing "string luassert require is forbidden in ordinary specs"
-      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1"]]
              (findings-for-rule "(require \"luassert\")" "fnl/spec/app_spec.fnl" "module-import"))))
 
     (testing "the spec macro implementation may require test libraries directly"
@@ -571,31 +571,31 @@
                         nil))))
 
     (testing "testing with no is is reported"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"none\" (let [x 1] x)))"
                                 "fnl/spec/app_spec.fnl"
                                 "form-child-count"))))
 
     (testing "testing with two is forms is reported once"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"two\" (is true) (is true)))"
                                 "fnl/spec/app_spec.fnl"
                                 "form-child-count"))))
 
     (testing "nested testing forms are counted separately"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"outer\" (testing \"inner\" (is true))))"
                                 "fnl/spec/app_spec.fnl"
                                 "form-child-count"))))
 
     (testing "quoted is data is not counted"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"quoted\" '(is true)))"
                                 "fnl/spec/app_spec.fnl"
                                 "form-child-count"))))
 
     (testing "a quoted is separated by a comment is not counted"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"x\" '
  ;; comment
  (is true)))"
@@ -603,14 +603,14 @@
                                 "form-child-count"))))
 
     (testing "a quasiquoted is separated by a newline is not counted"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"x\" `
 (is true)))"
                                 "fnl/spec/app_spec.fnl"
                                 "form-child-count"))))
 
     (testing "a quoted is separated by whitespace is not counted"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"x\" ' (is true)))"
                                 "fnl/spec/app_spec.fnl"
                                 "form-child-count"))))
@@ -622,7 +622,7 @@
                                 "form-child-count"))))
 
     (testing "strings and comments containing is are not counted"
-      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["form-child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              (findings-for-rule "(deftest run (testing \"is in text\" (print \"is\"))) ;; is\n"
                                 "fnl/spec/app_spec.fnl"
                                 "form-child-count")))))

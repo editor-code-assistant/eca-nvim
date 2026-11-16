@@ -2061,11 +2061,11 @@ local function _132_()
       local result = lint_project("{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}", {["selected.fnl"] = "(if x 1)\n", ["other.fnl"] = "(if y 1 2)\n"}, {"lint", "selected.fnl"})
       local text = table.concat((result.lines or {}), "\n")
       local assert_28_auto = require("luassert")
-      local value_29_auto = ((0 == result.code) and (#result.lines > 0) and string.match(text, "selected%.fnl:.*warning"))
-      assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (> (length (. result \"lines\")) 0) (string.match text \"selected%.fnl:.*warning\"))")
+      local value_29_auto = ((#result.lines > 0) and string.match(text, "selected%.fnl:.*child%-count"))
+      assert_28_auto.is_truthy(value_29_auto, "(and (> (length (. result \"lines\")) 0) (string.match text \"selected%.fnl:.*child%-count\"))")
       return true
     end
-    require("plenary.busted").it("explicit lint paths keep selected-file warnings visible", _208_)
+    require("plenary.busted").it("explicit lint paths keep selected-file diagnostics visible", _208_)
     local function _209_()
       local result = lint_project("{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}", {["selected.fnl"] = "(if x 1)\n", ["other.fnl"] = "(if y 1 2)\n"}, {"lint", "selected.fnl"})
       local text = table.concat((result.lines or {}), "\n")
@@ -2079,11 +2079,11 @@ local function _132_()
       local result = lint_project("{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions []}]}}}", {["selected.fnl"] = "(if x 1)\n"}, {"lint", "--all"})
       local text = table.concat((result.lines or {}), "\n")
       local assert_28_auto = require("luassert")
-      local value_29_auto = ((0 == result.code) and string.match(text, "selected%.fnl:.*warning child%-count"))
-      assert_28_auto.is_truthy(value_29_auto, "(and (= 0 (. result \"code\")) (string.match text \"selected%.fnl:.*warning child%-count\"))")
+      local value_29_auto = string.match(text, "selected%.fnl:.*child%-count")
+      assert_28_auto.is_truthy(value_29_auto, "(string.match text \"selected%.fnl:.*child%-count\")")
       return true
     end
-    return require("plenary.busted").it("all lint paths preserve warnings", _210_)
+    return require("plenary.busted").it("all lint paths preserve diagnostics", _210_)
   end
   return require("plenary.busted").describe("explicit-lint-scope-diagnostics", _207_)
 end

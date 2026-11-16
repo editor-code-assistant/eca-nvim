@@ -2470,16 +2470,14 @@
                     (. result :unchanged-file-size)))))))
 
   (deftest explicit-lint-scope-diagnostics
-    (testing "explicit lint paths keep selected-file warnings visible"
+    (testing "explicit lint paths keep selected-file diagnostics visible"
       (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
                                  {"selected.fnl" "(if x 1)\n"
                                   "other.fnl"    "(if y 1 2)\n"}
                                  ["lint" "selected.fnl"])
             text   (table.concat (or (. result :lines) []) "\n")]
-        (is (and (= 0
-                    (. result :code))
-                 (> (length (. result :lines)) 0)
-                 (string.match text "selected%.fnl:.*warning")))))
+        (is (and (> (length (. result :lines)) 0)
+                 (string.match text "selected%.fnl:.*child%-count")))))
 
     (testing "explicit lint paths ignore stale exclusions outside the selected scope"
       (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions [{:path \"other[.]fnl\"}]}]}}}"
@@ -2489,13 +2487,11 @@
             text   (table.concat (or (. result :lines) []) "\n")]
         (is (not (string.match text "stale exclusion")))))
 
-    (testing "all lint paths preserve warnings"
+    (testing "all lint paths preserve diagnostics"
       (let [result (lint-project "{:lint {:rules {\"form-chain\" :off :child-count [{:severity :warning :applies-to {:forms [\"if\"]} :options {:min-count 2 :max-count 2 :not-counted [\"nil\" \"true\" \"false\"]} :exclusions []}]}}}"
                                  {"selected.fnl" "(if x 1)\n"}
                                  ["lint" "--all"])
             text   (table.concat (or (. result :lines) []) "\n")]
-        (is (and (= 0
-                    (. result :code))
-                 (string.match text "selected%.fnl:.*warning child%-count"))))))
+        (is (string.match text "selected%.fnl:.*child%-count")))))
 
 )

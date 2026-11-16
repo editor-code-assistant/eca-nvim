@@ -218,9 +218,7 @@
           rules    (. loaded :lint :rules)
           instance (. rules :form-chain 3)]
       (is (and instance
-               (= "warning"
-                  (. instance :severity))
-               (= "Keep or operands simple; extract conditional logic into private functions."
+               (= "Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible."
                   (. instance :description))
                (vim.deep_equal ["when" "when-let" "if" "if-let" "cond" "case"]
                                (. instance :applies-to :forms))

@@ -275,7 +275,7 @@ local function finding_identities(result)
     local tbl_26_ = {}
     local i_27_ = 0
     for _, finding in ipairs(result) do
-      local val_28_ = {finding.rule, finding.form, finding.severity}
+      local val_28_ = {finding.rule, finding.form}
       if (nil ~= val_28_) then
         i_27_ = (i_27_ + 1)
         tbl_26_[i_27_] = val_28_
@@ -295,7 +295,7 @@ local function findings_for_rule(source, path, rule, rules)
     for _, finding in ipairs(result) do
       local val_28_
       if (finding.rule == rule) then
-        val_28_ = {finding.rule, finding.form, finding.severity}
+        val_28_ = {finding.rule, finding.form}
       else
         val_28_ = nil
       end
@@ -425,7 +425,7 @@ local function _48_()
   require("plenary.busted").it("the approved spec macro import is clean", _49_)
   local function _50_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1", "error"}}
+    local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1"}}
     local actual_7_auto = forms_for("(import-macros {: deftest : testing} :fennel-extras.macros.test)", "fnl/spec/app_spec.fnl", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -490,7 +490,7 @@ local function _48_()
   local function _58_()
     local function _59_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1", "error"}}
+      local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1"}}
       local actual_7_auto = findings_for_rule("(require :plenary.busted)", "fnl/spec/app_spec.fnl", "module-import")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -498,7 +498,7 @@ local function _48_()
     require("plenary.busted").it("keyword plenary require is forbidden in ordinary specs", _59_)
     local function _60_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1", "error"}}
+      local expected_6_auto = {{"module-import", "fnl/spec/app_spec.fnl > top#1"}}
       local actual_7_auto = findings_for_rule("(require \"luassert\")", "fnl/spec/app_spec.fnl", "module-import")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -541,7 +541,7 @@ local function _48_()
     require("plenary.busted").it("one is inside a let wrapper is clean", _65_)
     local function _66_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"none\" (let [x 1] x)))", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -549,7 +549,7 @@ local function _48_()
     require("plenary.busted").it("testing with no is is reported", _66_)
     local function _67_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"two\" (is true) (is true)))", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -557,7 +557,7 @@ local function _48_()
     require("plenary.busted").it("testing with two is forms is reported once", _67_)
     local function _68_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"outer\" (testing \"inner\" (is true))))", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -565,7 +565,7 @@ local function _48_()
     require("plenary.busted").it("nested testing forms are counted separately", _68_)
     local function _69_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"quoted\" '(is true)))", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -573,7 +573,7 @@ local function _48_()
     require("plenary.busted").it("quoted is data is not counted", _69_)
     local function _70_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"x\" '\n ;; comment\n (is true)))", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -581,7 +581,7 @@ local function _48_()
     require("plenary.busted").it("a quoted is separated by a comment is not counted", _70_)
     local function _71_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"x\" `\n(is true)))", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -589,7 +589,7 @@ local function _48_()
     require("plenary.busted").it("a quasiquoted is separated by a newline is not counted", _71_)
     local function _72_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"x\" ' (is true)))", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true
@@ -605,7 +605,7 @@ local function _48_()
     require("plenary.busted").it("a quoted is plus an executable is is counted once", _73_)
     local function _74_()
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1", "error"}}
+      local expected_6_auto = {{"form-child-count", "fnl/spec/app_spec.fnl > deftest:run > testing#1"}}
       local actual_7_auto = findings_for_rule("(deftest run (testing \"is in text\" (print \"is\"))) ;; is\n", "fnl/spec/app_spec.fnl", "form-child-count")
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true

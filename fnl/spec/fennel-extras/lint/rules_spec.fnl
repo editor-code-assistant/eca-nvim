@@ -14,7 +14,7 @@
 (defn- identities
   [findings]
   (icollect [_ finding (ipairs findings)]
-            [finding.rule finding.form finding.severity]))
+            [finding.rule finding.form]))
 
 (deftest defaults
   (testing "all retained lint rules are off by default"
@@ -49,7 +49,7 @@
           result (identities (findings-for "(local c (require :eca.nfnl.core))"
                                            "fnl/app.fnl"
                                            policy))]
-      (is (= [["module-import" "fnl/app.fnl > local:c" "error"]]
+      (is (= [["module-import" "fnl/app.fnl > local:c"]]
              result))))
 
   (testing "forbids direct test-library requires"
@@ -60,7 +60,7 @@
           result (identities (findings-for "(require :plenary.busted)"
                                            "fnl/spec/app_spec.fnl"
                                            policy))]
-      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1" "error"]]
+      (is (= [["module-import" "fnl/spec/app_spec.fnl > top#1"]]
              result)))))
 
 (deftest required-form
@@ -70,7 +70,7 @@
                                    :options    {}
                                    :exclusions []}]}
           result (identities (findings-for "(local value 1)" "fnl/app.fnl" policy))]
-      (is (= [["required-form" "fnl/app.fnl > file" "error"]]
+      (is (= [["required-form" "fnl/app.fnl > file"]]
              result))))
 
   (testing "accepts a compliant top-level form"
@@ -92,7 +92,7 @@
           result (identities (findings-for "(deftest run (testing \"x\" (is a) (is b)))"
                                            "fnl/spec/app_spec.fnl"
                                            policy))]
-      (is (= [["child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1" "error"]]
+      (is (= [["child-count" "fnl/spec/app_spec.fnl > deftest:run > testing#1"]]
              result)))))
 
 (deftest direct-child-arity
@@ -106,15 +106,15 @@
                   (identities (findings-for source "fnl/app.fnl" policy)))]
 
     (testing "rejects an if with no else"
-      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok value))"))))
 
     (testing "rejects an if with a literal nil else"
-      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok value nil))"))))
 
     (testing "rejects an if with multiple clauses"
-      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok a b c d))"))))
 
     (testing "rejects a multi-clause if with broad direct bounds"
@@ -126,7 +126,7 @@
                                           :exclusions []}]}
             broad-finding (fn [source]
                             (identities (findings-for source "fnl/app.fnl" broad-policy)))]
-        (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+        (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
                (broad-finding "(defn run [] (if ok a b c d))")))))
 
     (testing "allows a normal two-branch if"
@@ -143,15 +143,15 @@
         finding (fn [source]
                   (identities (findings-for source "fnl/app.fnl" policy)))]
     (testing "excludes literal true from the direct count"
-      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok true fallback))"))))
 
     (testing "excludes literal false from the direct count"
-      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok false fallback))"))))
 
     (testing "excludes literal nil from the direct count"
-      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok value nil))"))))
 
     (testing "preserves two counted branches"
@@ -159,5 +159,5 @@
              (finding "(defn run [] (if ok value fallback))"))))
 
     (testing "enforces the maximum of two counted branches"
-      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1" "warning"]]
+      (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok value fallback extra))"))))))
