@@ -23,8 +23,10 @@
              :newline      [{:applies-to {:files ["^fennel-extras/"]
                                           :forms ["fn" "defn" "defn-"]}
                              :options    {:after-header       0
-                                          :between-same-level 1
-                                          :break-after-n-args [[1 1] [2 1]]}}
+                                          :between-same-level 1}}
+                            {:applies-to {:files ["^fennel-extras/"]
+                                          :forms ["defn" "defn-"]}
+                             :options    {:break-after-n-args [[1 1] [2 1]]}}
                             {:applies-to {:forms ["testing"]}
                              :options    {:before 0}}
                             {:applies-to {:files ["^spec/"]

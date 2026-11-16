@@ -1,6 +1,7 @@
 (import-macros {: deftest : testing : is} :fennel-extras.macros.test)
 (import-macros {: defn-} :eca.nfnl.macros.aniseed)
 
+(local config (require :fennel-extras.config))
 (local format (require :fennel-extras.format))
 (local parser (require :eca.nfnl.fennel))
 (local ast-equal? (. format :ast-equal?))
@@ -47,6 +48,10 @@
                                               (let [regex (vim.regex pattern)]
                                                 (not= nil (regex:match_str path))))
                                    :path    (. config :path)}))
+
+(defn- repository-format
+  []
+  (. (assert (config.load ".fnl-extras.fnl")) :format))
 
 (defn- formatted-split
   [source]
@@ -117,14 +122,21 @@
 (deftest break-after-n-args
   (let [config {:indent-width 2
                 :parser       false
-                :indents      {"defn" [[:block 1]]}
-                :newline      [{:applies-to {:forms ["defn"]}
+                :indents      {"defn"  [[:block 1]]
+                               "defn-" [[:block 1]]}
+                :newline      [{:applies-to {:forms ["defn" "defn-"]}
                                 :options    {:break-after-n-args [[1 1] [2 1]]}}]}]
 
     (testing "break-after-n-args canonicalizes direct defn argument boundaries"
       (is (= "(defn parse-string\n  [text]\n  (parse.parse-string text))"
              (formatted-with-config format
                                     "(defn parse-string [text] (parse.parse-string text))"
+                                    config))))
+
+    (testing "break-after-n-args canonicalizes direct defn- argument boundaries"
+      (is (= "(defn- parse-string\n  [text]\n  (parse.parse-string text))"
+             (formatted-with-config format
+                                    "(defn- parse-string [text] (parse.parse-string text))"
                                     config))))
 
     (testing "break-after-n-args canonicalizes already-varied input layouts"
@@ -155,6 +167,21 @@
                       (formatted-with-config format
                                              "(defn parse-string [text] (parse.parse-string text))"
                                              config))))))
+
+(deftest anonymous-fn-break-after-n-args
+  (let [config (doto (repository-format)
+                     (tset :path "fennel-extras/format.fnl"))]
+    (testing "keeps an anonymous fn value inline while aligning let bindings"
+      (is (= "(let [result (pcall (fn [] true))\n      other  2] result)"
+             (formatted-with-config format
+                                    "(let [result (pcall (fn [] true)) other 2] result)"
+                                    config))))
+
+    (testing "anonymous fn formatting is idempotent"
+      (let [source    "(let [result (pcall (fn [] true)) other 2] result)"
+            formatted (formatted-with-config format source config)]
+        (is (= formatted
+               (formatted-with-config format formatted config)))))))
 
 (deftest scalar-break-after-args
   (let [config      {:indent-width 2
