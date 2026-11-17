@@ -209,4 +209,56 @@ local function _23_()
   end
   return require("plenary.busted").it("enforces the maximum of two counted branches", _29_)
 end
-return require("plenary.busted").describe("direct-child-arity-not-counted", _23_)
+require("plenary.busted").describe("direct-child-arity-not-counted", _23_)
+local function _30_()
+  local policy = {binding = {{severity = "warning", ["applies-to"] = {forms = {"let"}}, options = {}, exclusions = {}}}}
+  local finding
+  local function _31_(source)
+    local result = findings_for(source, "fnl/app.fnl", policy)
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, item in ipairs(result) do
+      local val_28_ = {rule = item.rule, form = item.form, message = item.message}
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    return tbl_26_
+  end
+  finding = _31_
+  local function _33_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{rule = "binding", form = "fnl/app.fnl > let#1", message = "avoid introducing a local binding for a single body expression"}}
+    local actual_7_auto = finding("(let [value 1] value)")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("reports a let with one binding pair and one body expression", _33_)
+  local function _34_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = finding("(let [first 1 second 2] first)")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("allows a let with multiple bindings", _34_)
+  local function _35_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = finding("(let [value 1] value (+ value 1))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("allows a let with multiple body expressions", _35_)
+  local function _36_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = finding("(quote (let [value 1] value))")
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("ignores a let inside an explicit quote form", _36_)
+end
+return require("plenary.busted").describe("generic-binding", _30_)

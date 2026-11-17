@@ -161,3 +161,32 @@
     (testing "enforces the maximum of two counted branches"
       (is (= [["child-count" "fnl/app.fnl > defn:run > if#1"]]
              (finding "(defn run [] (if ok value fallback extra))"))))))
+
+(deftest generic-binding
+  (let [policy  {:binding [{:severity   "warning"
+                            :applies-to {:forms ["let"]}
+                            :options    {}
+                            :exclusions []}]}
+        finding (fn [source]
+                  (let [result (findings-for source "fnl/app.fnl" policy)]
+                    (icollect [_ item (ipairs result)]
+                              {:rule    item.rule
+                               :form    item.form
+                               :message item.message})))]
+    (testing "reports a let with one binding pair and one body expression"
+      (is (= [{:rule    "binding"
+               :form    "fnl/app.fnl > let#1"
+               :message "avoid introducing a local binding for a single body expression"}]
+             (finding "(let [value 1] value)"))))
+
+    (testing "allows a let with multiple bindings"
+      (is (= []
+             (finding "(let [first 1 second 2] first)"))))
+
+    (testing "allows a let with multiple body expressions"
+      (is (= []
+             (finding "(let [value 1] value (+ value 1))"))))
+
+    (testing "ignores a let inside an explicit quote form"
+      (is (= []
+             (finding "(quote (let [value 1] value))"))))))

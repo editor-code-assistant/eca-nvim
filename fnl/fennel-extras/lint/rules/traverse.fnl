@@ -21,7 +21,11 @@
         previous       (and previous-index (. node.children previous-index))]
     (if (and previous (= previous.kind :prefix))
       (mutation-mode-for-prefix previous.text (mutation-mode-for-child node previous-index mode))
-      mode)))
+      (case (ast.list-head node)
+        "quote" (case (= (. (ast.meaningful-children node) 2) (. node.children index))
+                  true :quoted
+                  _    mode)
+        _       mode))))
 
 (defn- append-executable-child
   [node result index child mode recurse predicate]

@@ -1091,4 +1091,37 @@
              (length (findings-for-rule "(defn value [] (when ready (when later (let [x 1] x))))"
                                         "fnl/app.fnl"
                                         "form-chain"
+                                        rules))))))
+
+  (testing "a forbidden-only policy does not reject a plain selected if"
+    (let [rules {:form-chain [{:severity   "error"
+                               :applies-to {:forms ["if"]}
+                               :options    {:forbidden-chains [["or" :form]]}
+                               :exclusions []}]}]
+      (is (= 0
+             (length (findings-for-rule "(if condition yes no)"
+                                        "fnl/app.fnl"
+                                        "form-chain"
+                                        rules))))))
+
+  (testing "a matching forbidden chain reports when allowed-chains is omitted"
+    (let [rules {:form-chain [{:severity   "error"
+                               :applies-to {:forms ["if"]}
+                               :options    {:forbidden-chains [["defn" :form]]}
+                               :exclusions []}]}]
+      (is (= 1
+             (length (findings-for-rule "(defn value [] (if condition yes no))"
+                                        "fnl/app.fnl"
+                                        "form-chain"
+                                        rules))))))
+
+  (testing "an explicit allow-list rejects an unmatched selected if"
+    (let [rules {:form-chain [{:severity   "error"
+                               :applies-to {:forms ["if"]}
+                               :options    {:allowed-chains [["defn" :form]]}
+                               :exclusions []}]}]
+      (is (= 1
+             (length (findings-for-rule "(if condition yes no)"
+                                        "fnl/app.fnl"
+                                        "form-chain"
                                         rules)))))))

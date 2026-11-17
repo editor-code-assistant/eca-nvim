@@ -18,7 +18,19 @@ local function mutation_mode_for_child(node, index, mode)
   if (previous and (previous.kind == "prefix")) then
     return mutation_mode_for_prefix(previous.text, mutation_mode_for_child(node, previous_index, mode))
   else
-    return mode
+    local case_1_ = ast["list-head"](node)
+    if (case_1_ == "quote") then
+      local case_2_ = (ast["meaningful-children"](node)[2] == node.children[index])
+      if (case_2_ == true) then
+        return "quoted"
+      else
+        local _ = case_2_
+        return mode
+      end
+    else
+      local _ = case_1_
+      return mode
+    end
   end
 end
 local function append_executable_child(node, result, index, child, mode, recurse, predicate)

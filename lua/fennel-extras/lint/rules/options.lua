@@ -6,8 +6,8 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local option_names = {["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count", "not-counted"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {"allowed-chains", "forms-between", "forbidden-chains"}}
-local required_option_names = {["required-form"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {"allowed-chains"}}
+local option_names = {["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count", "not-counted"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {"allowed-chains", "forms-between", "forbidden-chains"}, binding = {}}
+local required_option_names = {["required-form"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {}}
 local option_types = {module = "string", exception = "exception", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["not-counted"] = "non-empty-strings", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string", ["allowed-chains"] = "chains", ["forms-between"] = "strings", ["forbidden-chains"] = "chains"}
 local schema
 do
@@ -78,7 +78,7 @@ local function chain_3f(value)
   return and_1_
 end
 local function chains_3f(value)
-  local and_2_ = parse["sequence?"](value) and (#value > 0)
+  local and_2_ = parse["sequence?"](value)
   if and_2_ then
     local valid = true
     for _, chain in ipairs(value) do

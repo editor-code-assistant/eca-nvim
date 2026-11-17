@@ -215,7 +215,8 @@
         target?      (= head (or policy.options.target))
         nested-chain (let [child-head (first-executable-head node mode)]
                        (and child-head (core.concat chain [head child-head])))
-        allowed?     (or (any-chain? chain policy.options.allowed-chains policy.options.forms-between policy.options.root-count)
+        allowed?     (or (= policy.options.allowed-chains nil)
+                         (any-chain? chain policy.options.allowed-chains policy.options.forms-between policy.options.root-count)
                          (and nested-chain
                               (any-subject-chain? nested-chain policy.options.allowed-chains policy.options.forms-between policy.options.root-count)))
         forbidden?   (any-forbidden-chain? chain head policy.options.forbidden-chains policy.options.forms-between policy.options.root-count)]

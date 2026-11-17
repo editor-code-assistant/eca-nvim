@@ -197,7 +197,7 @@ local function walk_first_body(node, mode, chain, path, forms, policy, rule, res
     local child_head = first_executable_head(node, mode)
     nested_chain = (child_head and core.concat(chain, {head, child_head}))
   end
-  local allowed_3f = (any_chain_3f(chain, policy.options["allowed-chains"], policy.options["forms-between"], policy.options["root-count"]) or (nested_chain and any_subject_chain_3f(nested_chain, policy.options["allowed-chains"], policy.options["forms-between"], policy.options["root-count"])))
+  local allowed_3f = ((policy.options["allowed-chains"] == nil) or any_chain_3f(chain, policy.options["allowed-chains"], policy.options["forms-between"], policy.options["root-count"]) or (nested_chain and any_subject_chain_3f(nested_chain, policy.options["allowed-chains"], policy.options["forms-between"], policy.options["root-count"])))
   local forbidden_3f = any_forbidden_chain_3f(chain, head, policy.options["forbidden-chains"], policy.options["forms-between"], policy.options["root-count"])
   if (target_3f and (not allowed_3f or forbidden_3f)) then
     append_finding(result, path, forms, node, policy, rule)

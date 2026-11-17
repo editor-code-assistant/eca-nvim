@@ -9,6 +9,7 @@
 (local spec-rule (require :fennel-extras.lint.rules.spec))
 (local size-rule (require :fennel-extras.lint.rules.size))
 (local form-chain-rule (require :fennel-extras.lint.rules.form-chain))
+(local binding-rule (require :fennel-extras.lint.rules.binding))
 (local root-forms ast.root-forms)
 (local list-head ast.list-head)
 (local import-macros? ast.import-macros?)
@@ -75,7 +76,8 @@
   [path forms policy source state]
   (let [findings (append-file-size-findings [] path policy source)
         findings (append-all findings (module-rule.required-form-finding path source policy))
-        findings (append-form-findings findings path forms policy source)]
+        findings (append-form-findings findings path forms policy source)
+        findings (append-all findings (binding-rule.findings path forms policy source "binding"))]
     (if (enabled? policy "form-chain")
       (append-all findings (form-chain-rule.findings path forms policy source "form-chain"))
       findings)))

@@ -12,6 +12,7 @@ local module_rule = require("fennel-extras.lint.rules.module")
 local spec_rule = require("fennel-extras.lint.rules.spec")
 local size_rule = require("fennel-extras.lint.rules.size")
 local form_chain_rule = require("fennel-extras.lint.rules.form-chain")
+local binding_rule = require("fennel-extras.lint.rules.binding")
 local root_forms = ast["root-forms"]
 local list_head = ast["list-head"]
 local import_macros_3f = ast["import-macros?"]
@@ -83,10 +84,11 @@ local function check_result(path, forms, policy, source, state)
   local findings = append_file_size_findings({}, path, policy, source)
   local findings0 = append_all(findings, module_rule["required-form-finding"](path, source, policy))
   local findings1 = append_form_findings(findings0, path, forms, policy, source)
+  local findings2 = append_all(findings1, binding_rule.findings(path, forms, policy, source, "binding"))
   if enabled_3f(policy, "form-chain") then
-    return append_all(findings1, form_chain_rule.findings(path, forms, policy, source, "form-chain"))
+    return append_all(findings2, form_chain_rule.findings(path, forms, policy, source, "form-chain"))
   else
-    return findings1
+    return findings2
   end
 end
 local function check_instance(path, forms, policy, source, instance)

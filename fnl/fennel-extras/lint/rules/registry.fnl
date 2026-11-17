@@ -3,7 +3,7 @@
 (module fennel-extras.lint.rules.registry)
 
 (local core (require :eca.nfnl.core))
-(local lint-rule-name-list ["required-form" "module-import" "child-count" "file-size" "form-chain"])
+(local lint-rule-name-list ["required-form" "module-import" "child-count" "file-size" "form-chain" "binding"])
 (local design-rule-name-list [])
 (local rule-name-list lint-rule-name-list)
 (local default-rule-name-list ["required-form" "module-import" "form-child-count" "file-size" "form-chain"])
@@ -14,7 +14,8 @@
        {"required-form" ["forms"]
         "module-import" ["module" "modules" "forms"]
         "child-count"   ["forms"]
-        "form-chain"    ["forms"]})
+        "form-chain"    ["forms"]
+        "binding"       ["forms"]})
 (local required-semantic-applies-to
        {"required-form"    ["forms"]})
 

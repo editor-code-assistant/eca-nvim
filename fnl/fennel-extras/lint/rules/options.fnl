@@ -10,7 +10,8 @@
         "child-count"      ["children" "max-count" "min-count" "nil-count" "not-counted"]
         "form-child-count" ["children" "max-count"]
         "file-size"        ["max-code-lines"]
-        "form-chain"       ["allowed-chains" "forms-between" "forbidden-chains"]})
+        "form-chain"       ["allowed-chains" "forms-between" "forbidden-chains"]
+        "binding"          []})
 
 (local required-option-names
        {"required-form"    []
@@ -18,7 +19,7 @@
         "child-count"      []
         "form-child-count" ["children" "max-count"]
         "file-size"        ["max-code-lines"]
-        "form-chain"       ["allowed-chains"]})
+        "form-chain"       []})
 
 (local option-types
        {
@@ -111,7 +112,6 @@
 (defn- chains?
   [value]
   (and (parse.sequence? value)
-       (> (length value) 0)
        (accumulate [valid true _ chain (ipairs value)]
                    (and valid (chain? chain)))))
 

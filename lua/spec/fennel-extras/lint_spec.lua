@@ -1025,6 +1025,33 @@ local function _128_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it(":forms-between matches intermediate forms after an explicit step", _130_)
+  require("plenary.busted").it(":forms-between matches intermediate forms after an explicit step", _130_)
+  local function _131_()
+    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["forbidden-chains"] = {{"or", "form"}}}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_rule("(if condition yes no)", "fnl/app.fnl", "form-chain", rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a forbidden-only policy does not reject a plain selected if", _131_)
+  local function _132_()
+    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["forbidden-chains"] = {{"defn", "form"}}}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_rule("(defn value [] (if condition yes no))", "fnl/app.fnl", "form-chain", rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a matching forbidden chain reports when allowed-chains is omitted", _132_)
+  local function _133_()
+    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"defn", "form"}}}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_rule("(if condition yes no)", "fnl/app.fnl", "form-chain", rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("an explicit allow-list rejects an unmatched selected if", _133_)
 end
 return require("plenary.busted").describe("form-chain-regressions", _128_)
