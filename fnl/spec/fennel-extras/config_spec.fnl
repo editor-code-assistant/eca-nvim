@@ -662,3 +662,114 @@
              {:indents   (. format :indents)
               :format-as (. format :format-as)
               :newline   (. format :newline)})))))
+
+(defn- workspace-validation
+  [workspace require-paths?]
+  (let [config           (load-config)
+        (ok value error) (pcall (fn [] (config.validate-workspace workspace require-paths?)))]
+    {:ok ok :value value :error error}))
+
+(defn- canonical-validation
+  [value]
+  (let [config            (load-config)
+        (ok result error) (pcall (fn [] (config.validate value)))]
+    {:ok ok :value result :error error}))
+
+(defn- workspace-error-message
+  [result]
+  (let [error (or (. result :value)
+                  (. result :error))]
+    (and (= :table
+            (type error))
+         (. error :message))))
+
+(deftest validate-workspace-public-api
+  (testing "accepts a workspace table without paths when paths are optional"
+    (let [result (workspace-validation {} false)]
+      (is (and (. result :ok)
+               (= nil
+                  (. result :value))
+               (= nil
+                  (. result :error))))))
+
+  (testing "accepts a workspace table with paths when paths are required"
+    (let [result (workspace-validation {:paths ["fnl"]} true)]
+      (is (and (. result :ok)
+               (= nil
+                  (. result :value))
+               (= nil
+                  (. result :error))))))
+
+  (testing "requires paths when requested"
+    (let [result (workspace-validation {} true)]
+      (is (= "missing workspace.paths"
+             (workspace-error-message result)))))
+
+  (testing "rejects a non-table workspace"
+    (let [result (workspace-validation "fnl" false)]
+      (is (= "workspace must be a table"
+             (workspace-error-message result)))))
+
+  (testing "rejects an unknown workspace key"
+    (let [result (workspace-validation {:colour 1} false)]
+      (is (= "unknown workspace key: colour"
+             (workspace-error-message result)))))
+
+  (testing "rejects paths that are not an array of strings"
+    (let [result (workspace-validation {:paths ["fnl" 1]} false)]
+      (is (= "workspace.paths must be an array of strings"
+             (workspace-error-message result)))))
+
+  (testing "rejects exclude values that are not an array of strings"
+    (let [result (workspace-validation {:exclude "generated"} false)]
+      (is (= "workspace.exclude must be an array of strings"
+             (workspace-error-message result)))))
+
+  (testing "rejects an empty extensions list"
+    (let [result (workspace-validation {:extensions []} false)]
+      (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
+             (workspace-error-message result)))))
+
+  (testing "rejects extensions without a leading dot"
+    (let [result (workspace-validation {:extensions ["fnl"]} false)]
+      (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
+             (workspace-error-message result)))))
+
+  (testing "rejects a non-boolean dotfiles value"
+    (let [result (workspace-validation {:dotfiles 1} false)]
+      (is (= "workspace.dotfiles must be a boolean"
+             (workspace-error-message result)))))
+
+  (testing "rejects a non-boolean symlinks value"
+    (let [result (workspace-validation {:symlinks 1} false)]
+      (is (= "workspace.symlinks must be a boolean"
+             (workspace-error-message result)))))
+
+  (testing "rejects a non-boolean config value"
+    (let [result (workspace-validation {:config 1} false)]
+      (is (= "workspace.config must be a boolean"
+             (workspace-error-message result))))))
+
+(deftest workspace-error-through-config-validate
+  (testing "rejects a non-table workspace through canonical validation"
+    (let [result (canonical-validation {:workspace "fnl"})]
+      (is (= "workspace must be a table"
+             (workspace-error-message result)))))
+
+  (testing "rejects an unknown workspace key through canonical validation"
+    (let [result (canonical-validation {:workspace {:colour 1}})]
+      (is (= "unknown workspace key: colour"
+             (workspace-error-message result)))))
+
+  (testing "accepts a canonical workspace with boolean scan settings"
+    (let [result (canonical-validation {:workspace {:paths      ["fnl"]
+                                                    :exclude    []
+                                                    :extensions [".fnl"]
+                                                    :dotfiles   false
+                                                    :symlinks   false
+                                                    :config     true}
+                                        :format    {:indent-width 2
+                                                    :parser       false}
+                                        :lint      {:rules {}}})]
+      (is (and (. result :ok)
+               (. result :value))))))

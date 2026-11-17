@@ -117,30 +117,35 @@
   (and (= (type workspace) :table)
        (workspace-key-error-result workspace)))
 
+(defn- workspace-error-message
+  [message]
+  {:message message})
+
 (defn- workspace-error
   [tbl]
-  (let [workspace (. tbl :workspace)]
-    (or (when (and workspace (not= (type workspace) :table))
-              {:message "workspace must be a table"})
-        (workspace-key-error workspace)
-        (when (and workspace workspace.paths (not (array-of-strings? workspace.paths)))
-              {:message "workspace.paths must be an array of strings"})
-        (when (and workspace workspace.exclude (not (array-of-strings? workspace.exclude)))
-              {:message "workspace.exclude must be an array of strings"})
-        (when (and workspace workspace.extensions (not (extensions? workspace.extensions)))
-              {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
-        (when (and workspace
-                   (not= workspace.dotfiles nil)
-                   (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
-              {:message "workspace.dotfiles must be a boolean"})
-        (when (and workspace
-                   (not= workspace.symlinks nil)
-                   (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
-              {:message "workspace.symlinks must be a boolean"})
-        (when (and workspace
-                   (not= workspace.config nil)
-                   (not (or (= workspace.config true) (= workspace.config false))))
-              {:message "workspace.config must be a boolean"}))))
+  (let [workspace (. tbl :workspace)
+        key-error (workspace-key-error workspace)]
+    (if (and workspace (not= (type workspace) :table))
+      (workspace-error-message "workspace must be a table")
+      (if key-error
+        key-error
+        (if (and workspace workspace.paths (not (array-of-strings? workspace.paths)))
+          (workspace-error-message "workspace.paths must be an array of strings")
+          (if (and workspace workspace.exclude (not (array-of-strings? workspace.exclude)))
+            (workspace-error-message "workspace.exclude must be an array of strings")
+            (if (and workspace workspace.extensions (not (extensions? workspace.extensions)))
+              (workspace-error-message "workspace.extensions must be a non-empty list of strings starting with \".\"")
+              (if (and workspace (not= workspace.dotfiles nil) (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
+                (workspace-error-message "workspace.dotfiles must be a boolean")
+                (if (and workspace
+                         (not= workspace.symlinks nil)
+                         (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
+                  (workspace-error-message "workspace.symlinks must be a boolean")
+                  (if (and workspace
+                           (not= workspace.config nil)
+                           (not (or (= workspace.config true) (= workspace.config false))))
+                    (workspace-error-message "workspace.config must be a boolean")
+                    (and nil nil)))))))))))
 
 (defn- content-error
   [tbl]
@@ -148,26 +153,30 @@
 
 (defn validate-workspace
   [workspace require-paths?]
-  (or (when (not= (type workspace) :table)
-            {:message "workspace must be a table"})
-      (workspace-key-error workspace)
-      (when (and require-paths? (= workspace.paths nil))
-            {:message "missing workspace.paths"})
-      (when (and workspace.paths (not (array-of-strings? workspace.paths)))
-            {:message "workspace.paths must be an array of strings"})
-      (when (and workspace.exclude (not (array-of-strings? workspace.exclude)))
-            {:message "workspace.exclude must be an array of strings"})
-      (when (and workspace.extensions (not (extensions? workspace.extensions)))
-            {:message "workspace.extensions must be a non-empty list of strings starting with \".\""})
-      (when (and (not= workspace.dotfiles nil)
-                 (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
-            {:message "workspace.dotfiles must be a boolean"})
-      (when (and (not= workspace.symlinks nil)
-                 (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
-            {:message "workspace.symlinks must be a boolean"})
-      (when (and (not= workspace.config nil)
-                 (not (or (= workspace.config true) (= workspace.config false))))
-            {:message "workspace.config must be a boolean"})))
+  (let [key-error (and (= (type workspace) :table)
+                       (workspace-key-error workspace))]
+    (if (not= (type workspace) :table)
+      (workspace-error-message "workspace must be a table")
+      (if key-error
+        key-error
+        (if (and require-paths? (= workspace.paths nil))
+          (workspace-error-message "missing workspace.paths")
+          (if (and workspace.paths (not (array-of-strings? workspace.paths)))
+            (workspace-error-message "workspace.paths must be an array of strings")
+            (if (and workspace.exclude (not (array-of-strings? workspace.exclude)))
+              (workspace-error-message "workspace.exclude must be an array of strings")
+              (if (and workspace.extensions (not (extensions? workspace.extensions)))
+                (workspace-error-message "workspace.extensions must be a non-empty list of strings starting with \".\"")
+                (if (and (not= workspace.dotfiles nil)
+                         (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
+                  (workspace-error-message "workspace.dotfiles must be a boolean")
+                  (if (and (not= workspace.symlinks nil)
+                           (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
+                    (workspace-error-message "workspace.symlinks must be a boolean")
+                    (if (and (not= workspace.config nil)
+                             (not (or (= workspace.config true) (= workspace.config false))))
+                      (workspace-error-message "workspace.config must be a boolean")
+                      (and nil nil))))))))))))
 
 (defn- validation-result
   [tbl failure]

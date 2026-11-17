@@ -101,58 +101,45 @@ end
 local function workspace_key_error(workspace)
   return ((type(workspace) == "table") and workspace_key_error_result(workspace))
 end
+local function workspace_error_message(message)
+  return {message = message}
+end
 local function workspace_error(tbl)
   local workspace = tbl.workspace
-  local _7_
+  local key_error = workspace_key_error(workspace)
   if (workspace and (type(workspace) ~= "table")) then
-    _7_ = {message = "workspace must be a table"}
+    return workspace_error_message("workspace must be a table")
   else
-    _7_ = nil
-  end
-  local or_9_ = _7_ or workspace_key_error(workspace)
-  if not or_9_ then
-    if (workspace and workspace.paths and not array_of_strings_3f(workspace.paths)) then
-      or_9_ = {message = "workspace.paths must be an array of strings"}
+    if key_error then
+      return key_error
     else
-      or_9_ = nil
+      if (workspace and workspace.paths and not array_of_strings_3f(workspace.paths)) then
+        return workspace_error_message("workspace.paths must be an array of strings")
+      else
+        if (workspace and workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
+          return workspace_error_message("workspace.exclude must be an array of strings")
+        else
+          if (workspace and workspace.extensions and not extensions_3f(workspace.extensions)) then
+            return workspace_error_message("workspace.extensions must be a non-empty list of strings starting with \".\"")
+          else
+            if (workspace and (workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
+              return workspace_error_message("workspace.dotfiles must be a boolean")
+            else
+              if (workspace and (workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
+                return workspace_error_message("workspace.symlinks must be a boolean")
+              else
+                if (workspace and (workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
+                  return workspace_error_message("workspace.config must be a boolean")
+                else
+                  return (nil and nil)
+                end
+              end
+            end
+          end
+        end
+      end
     end
   end
-  if not or_9_ then
-    if (workspace and workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
-      or_9_ = {message = "workspace.exclude must be an array of strings"}
-    else
-      or_9_ = nil
-    end
-  end
-  if not or_9_ then
-    if (workspace and workspace.extensions and not extensions_3f(workspace.extensions)) then
-      or_9_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
-    else
-      or_9_ = nil
-    end
-  end
-  if not or_9_ then
-    if (workspace and (workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
-      or_9_ = {message = "workspace.dotfiles must be a boolean"}
-    else
-      or_9_ = nil
-    end
-  end
-  if not or_9_ then
-    if (workspace and (workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
-      or_9_ = {message = "workspace.symlinks must be a boolean"}
-    else
-      or_9_ = nil
-    end
-  end
-  if not or_9_ then
-    if (workspace and (workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
-      or_9_ = {message = "workspace.config must be a boolean"}
-    else
-      or_9_ = nil
-    end
-  end
-  return or_9_
 end
 local function content_error(tbl)
   return workspace_error(tbl)
@@ -160,63 +147,44 @@ end
 local validate_workspace
 do
   local function validate_workspace0(workspace, require_paths_3f)
-    local _16_
+    local key_error = ((type(workspace) == "table") and workspace_key_error(workspace))
     if (type(workspace) ~= "table") then
-      _16_ = {message = "workspace must be a table"}
+      return workspace_error_message("workspace must be a table")
     else
-      _16_ = nil
-    end
-    local or_18_ = _16_ or workspace_key_error(workspace)
-    if not or_18_ then
-      if (require_paths_3f and (workspace.paths == nil)) then
-        or_18_ = {message = "missing workspace.paths"}
+      if key_error then
+        return key_error
       else
-        or_18_ = nil
+        if (require_paths_3f and (workspace.paths == nil)) then
+          return workspace_error_message("missing workspace.paths")
+        else
+          if (workspace.paths and not array_of_strings_3f(workspace.paths)) then
+            return workspace_error_message("workspace.paths must be an array of strings")
+          else
+            if (workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
+              return workspace_error_message("workspace.exclude must be an array of strings")
+            else
+              if (workspace.extensions and not extensions_3f(workspace.extensions)) then
+                return workspace_error_message("workspace.extensions must be a non-empty list of strings starting with \".\"")
+              else
+                if ((workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
+                  return workspace_error_message("workspace.dotfiles must be a boolean")
+                else
+                  if ((workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
+                    return workspace_error_message("workspace.symlinks must be a boolean")
+                  else
+                    if ((workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
+                      return workspace_error_message("workspace.config must be a boolean")
+                    else
+                      return (nil and nil)
+                    end
+                  end
+                end
+              end
+            end
+          end
+        end
       end
     end
-    if not or_18_ then
-      if (workspace.paths and not array_of_strings_3f(workspace.paths)) then
-        or_18_ = {message = "workspace.paths must be an array of strings"}
-      else
-        or_18_ = nil
-      end
-    end
-    if not or_18_ then
-      if (workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
-        or_18_ = {message = "workspace.exclude must be an array of strings"}
-      else
-        or_18_ = nil
-      end
-    end
-    if not or_18_ then
-      if (workspace.extensions and not extensions_3f(workspace.extensions)) then
-        or_18_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
-      else
-        or_18_ = nil
-      end
-    end
-    if not or_18_ then
-      if ((workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
-        or_18_ = {message = "workspace.dotfiles must be a boolean"}
-      else
-        or_18_ = nil
-      end
-    end
-    if not or_18_ then
-      if ((workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
-        or_18_ = {message = "workspace.symlinks must be a boolean"}
-      else
-        or_18_ = nil
-      end
-    end
-    if not or_18_ then
-      if ((workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
-        or_18_ = {message = "workspace.config must be a boolean"}
-      else
-        or_18_ = nil
-      end
-    end
-    return or_18_
   end
   _2amodule_2a["validate-workspace"] = validate_workspace0
   validate_workspace = _2amodule_2a["validate-workspace"]
@@ -389,10 +357,10 @@ do
 end
 local function parse_loaded_text(text)
   local ok, parsed_or_error
-  local function _38_()
+  local function _36_()
     return parse_string(text)
   end
-  ok, parsed_or_error = pcall(_38_)
+  ok, parsed_or_error = pcall(_36_)
   if not ok then
     return nil, parsed_or_error
   else
