@@ -988,14 +988,6 @@
                                       "form-chain"
                                       local-placement-rules))))))
 
-(local unified-form-chain-rules
-       {:form-chain [{:severity   "error"
-                      :applies-to {:forms ["let" "local"]}
-                      :options    {:allowed-chains   [[:root :form]]
-                                   :forms-between    ["when" "fn"]
-                                   :forbidden-chains [[:root "local" :form]]}
-                      :exclusions []}]})
-
 (deftest form-chain-config-validation
   (testing "invalid chain shape is rejected as a structured error"
     (let [(ok result error) (pcall config.validate
@@ -1023,34 +1015,107 @@
                                                                  :exclusions []}]}}})]
       (is (and ok (not result) error)))))
 
-(deftest unified-form-chain-semantics
-  (testing ":root anchors matching at source-root forms"
-    (is (= []
-           (findings-for-rule "(def value (let [x 1] x))\n(def other (local y 2))"
-                              "fnl/app.fnl"
-                              "form-chain"
-                              unified-form-chain-rules))))
 
-  (testing ":form expands independently for each selected applies-to form"
-    (is (= 2
-           (length (findings-for-rule "(def value (print \"before\") (let [x 1] x) (local y 2))"
-                                      "fnl/app.fnl"
-                                      "form-chain"
-                                      unified-form-chain-rules)))))
+(local or-forbidden-rules
+       {:form-chain [{:severity   "error"
+                      :applies-to {:forms ["if"]}
+                      :options    {:forbidden-chains [["or" :form]]}
+                      :exclusions []}]})
 
-  (testing ":forms-between matches one or more executable intermediate forms"
-    (is (= []
-           (findings-for-rule "(defn value [] (when ready (when later (let [x 1] x))))"
-                              "fnl/app.fnl"
-                              "form-chain"
-                              unified-form-chain-rules))))
+(local rooted-or-forbidden-rules
+       {:form-chain [{:severity   "error"
+                      :applies-to {:forms ["if"]}
+                      :options    {:forbidden-chains [[:root "or" :form]]}
+                      :exclusions []}]})
 
-  (testing ":forbidden-chains reports matching paths"
+(local or-allowed-rules
+       {:form-chain [{:severity   "error"
+                      :applies-to {:forms ["if"]}
+                      :options    {:allowed-chains [["or" :form]]}
+                      :exclusions []}]})
+
+(local or-allowed-and-forbidden-rules
+       {:form-chain [{:severity   "error"
+                      :applies-to {:forms ["if"]}
+                      :options    {:allowed-chains   [["or" :form]]
+                                   :forbidden-chains [["or" :form]]}
+                      :exclusions []}]})
+
+(deftest form-chain-semantics
+  (testing "an unrooted forbidden chain matches a selected conditional under or"
     (is (= 1
-           (length (findings-for-rule "(def value (local y 2))"
+           (length (findings-for-rule "(or (if condition yes no) fallback)"
                                       "fnl/app.fnl"
                                       "form-chain"
-                                      unified-form-chain-rules)))))
+                                      or-forbidden-rules)))))
+
+  (testing ":root does not match the nested target under or"
+    (is (= 0
+           (length (findings-for-rule "(or (if condition yes no) fallback)"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      rooted-or-forbidden-rules)))))
+
+  (testing "an unrooted allowed chain matches a nested target"
+    (is (= 0
+           (length (findings-for-rule "(or (if condition yes no) fallback)"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      or-allowed-rules)))))
+
+  (testing "a target matching both allowed and forbidden chains still reports"
+    (is (= 1
+           (length (findings-for-rule "(or (if condition yes no) fallback)"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      or-allowed-and-forbidden-rules)))))
+
+  (testing "reader-quoted and explicit quote forms do not report"
+    (is (= 0
+           (length (findings-for-rule "(or '(if condition yes no) (quote (if condition yes no)))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      or-forbidden-rules)))))
+
+  (testing "an explicit quote payload does not report a selected target under a forbidden chain"
+    (is (= 0
+           (length (findings-for-rule "(quote (or (if condition yes no) fallback))"
+                                      "fnl/app.fnl"
+                                      "form-chain"
+                                      or-forbidden-rules)))))
+
+  (testing ":forms-between is an intrinsic one-or-more wildcard over executable heads"
+    (let [rules {:form-chain [{:severity   "error"
+                               :applies-to {:forms ["if"]}
+                               :options    {:allowed-chains [["defn" :forms-between :form]]}
+                               :exclusions []}]}]
+      (is (= 0
+             (length (findings-for-rule "(defn value [] (fn [] (when ready (if condition yes no))))"
+                                        "fnl/app.fnl"
+                                        "form-chain"
+                                        rules))))))
+
+  (testing "a later executable child in a sequence wrapper does not inherit enclosing ancestry"
+    (let [rules {:form-chain [{:severity   "error"
+                               :applies-to {:forms ["if"]}
+                               :options    {:allowed-chains [["defn" :form]]}
+                               :exclusions []}]}]
+      (is (= 1
+             (length (findings-for-rule "(defn vectorized [] [1 (if condition yes no)])"
+                                        "fnl/app.fnl"
+                                        "form-chain"
+                                        rules))))))
+
+  (testing "inline literal chains remain exact"
+    (let [rules {:form-chain [{:severity   "error"
+                               :applies-to {:forms ["if"]}
+                               :options    {:allowed-chains [["defn" "when" :form]]}
+                               :exclusions []}]}]
+      (is (= 1
+             (length (findings-for-rule "(defn value [] (fn [] (when ready (if condition yes no))))"
+                                        "fnl/app.fnl"
+                                        "form-chain"
+                                        rules))))))
 
   (testing "child-count and form-chain policies can coexist without changing counts"
     (let [result (check-source-exact "(testing \"one\" (is (= 1 1)) (is (= 2 2)))"
@@ -1062,66 +1127,7 @@
                                       :form-chain  [{:severity   "error"
                                                      :applies-to {:forms ["is"]}
                                                      :options    {:allowed-chains   [["testing" :form]]
-                                                                  :forms-between    []
                                                                   :forbidden-chains []}
                                                      :exclusions []}]})]
       (is (= 2
              (length result))))))
-
-(deftest form-chain-regressions
-  (testing ":forms-between only skips after a matched explicit step"
-    (let [rules {:form-chain [{:severity   "error"
-                               :applies-to {:forms ["let"]}
-                               :options    {:allowed-chains [["defn" "when" :form]]
-                                            :forms-between  ["fn"]}
-                               :exclusions []}]}]
-      (is (= 1
-             (length (findings-for-rule "(fn [] (defn value [] (when ready (let [x 1] x))))"
-                                        "fnl/app.fnl"
-                                        "form-chain"
-                                        rules))))))
-
-  (testing ":forms-between matches intermediate forms after an explicit step"
-    (let [rules {:form-chain [{:severity   "error"
-                               :applies-to {:forms ["let"]}
-                               :options    {:allowed-chains [["defn" "when" :form]]
-                                            :forms-between  ["when"]}
-                               :exclusions []}]}]
-      (is (= 0
-             (length (findings-for-rule "(defn value [] (when ready (when later (let [x 1] x))))"
-                                        "fnl/app.fnl"
-                                        "form-chain"
-                                        rules))))))
-
-  (testing "a forbidden-only policy does not reject a plain selected if"
-    (let [rules {:form-chain [{:severity   "error"
-                               :applies-to {:forms ["if"]}
-                               :options    {:forbidden-chains [["or" :form]]}
-                               :exclusions []}]}]
-      (is (= 0
-             (length (findings-for-rule "(if condition yes no)"
-                                        "fnl/app.fnl"
-                                        "form-chain"
-                                        rules))))))
-
-  (testing "a matching forbidden chain reports when allowed-chains is omitted"
-    (let [rules {:form-chain [{:severity   "error"
-                               :applies-to {:forms ["if"]}
-                               :options    {:forbidden-chains [["defn" :form]]}
-                               :exclusions []}]}]
-      (is (= 1
-             (length (findings-for-rule "(defn value [] (if condition yes no))"
-                                        "fnl/app.fnl"
-                                        "form-chain"
-                                        rules))))))
-
-  (testing "an explicit allow-list rejects an unmatched selected if"
-    (let [rules {:form-chain [{:severity   "error"
-                               :applies-to {:forms ["if"]}
-                               :options    {:allowed-chains [["defn" :form]]}
-                               :exclusions []}]}]
-      (is (= 1
-             (length (findings-for-rule "(if condition yes no)"
-                                        "fnl/app.fnl"
-                                        "form-chain"
-                                        rules)))))))

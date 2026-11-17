@@ -935,7 +935,6 @@ local function _113_()
   return require("plenary.busted").it("nested require local is rejected", _117_)
 end
 require("plenary.busted").describe("local-placement-policy", _113_)
-local unified_form_chain_rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"let", "local"}}, options = {["allowed-chains"] = {{"root", "form"}}, ["forms-between"] = {"when", "fn"}, ["forbidden-chains"] = {{"root", "local", "form"}}}, exclusions = {}}}}
 local function _118_()
   local function _119_()
     local ok, result, error = pcall(config.validate, {lint = {rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"let"}}, options = {["allowed-chains"] = {{"def", 42}}}, exclusions = {}}}}}})
@@ -963,95 +962,94 @@ local function _118_()
   return require("plenary.busted").it("legacy string placeholder chain markers are rejected", _121_)
 end
 require("plenary.busted").describe("form-chain-config-validation", _118_)
+local or_forbidden_rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["forbidden-chains"] = {{"or", "form"}}}, exclusions = {}}}}
+local rooted_or_forbidden_rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["forbidden-chains"] = {{"root", "or", "form"}}}, exclusions = {}}}}
+local or_allowed_rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"or", "form"}}}, exclusions = {}}}}
+local or_allowed_and_forbidden_rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"or", "form"}}, ["forbidden-chains"] = {{"or", "form"}}}, exclusions = {}}}}
 local function _122_()
   local function _123_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {}
-    local actual_7_auto = findings_for_rule("(def value (let [x 1] x))\n(def other (local y 2))", "fnl/app.fnl", "form-chain", unified_form_chain_rules)
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_rule("(or (if condition yes no) fallback)", "fnl/app.fnl", "form-chain", or_forbidden_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it(":root anchors matching at source-root forms", _123_)
+  require("plenary.busted").it("an unrooted forbidden chain matches a selected conditional under or", _123_)
   local function _124_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = 2
-    local actual_7_auto = #findings_for_rule("(def value (print \"before\") (let [x 1] x) (local y 2))", "fnl/app.fnl", "form-chain", unified_form_chain_rules)
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_rule("(or (if condition yes no) fallback)", "fnl/app.fnl", "form-chain", rooted_or_forbidden_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it(":form expands independently for each selected applies-to form", _124_)
+  require("plenary.busted").it(":root does not match the nested target under or", _124_)
   local function _125_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {}
-    local actual_7_auto = findings_for_rule("(defn value [] (when ready (when later (let [x 1] x))))", "fnl/app.fnl", "form-chain", unified_form_chain_rules)
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_rule("(or (if condition yes no) fallback)", "fnl/app.fnl", "form-chain", or_allowed_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it(":forms-between matches one or more executable intermediate forms", _125_)
+  require("plenary.busted").it("an unrooted allowed chain matches a nested target", _125_)
   local function _126_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = 1
-    local actual_7_auto = #findings_for_rule("(def value (local y 2))", "fnl/app.fnl", "form-chain", unified_form_chain_rules)
+    local actual_7_auto = #findings_for_rule("(or (if condition yes no) fallback)", "fnl/app.fnl", "form-chain", or_allowed_and_forbidden_rules)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it(":forbidden-chains reports matching paths", _126_)
+  require("plenary.busted").it("a target matching both allowed and forbidden chains still reports", _126_)
   local function _127_()
-    local result = check_source_exact("(testing \"one\" (is (= 1 1)) (is (= 2 2)))", "fnl/spec/app_spec.fnl", {["child-count"] = {{severity = "error", ["applies-to"] = {forms = {"testing"}}, options = {children = {"is"}, ["max-count"] = 1}, exclusions = {}}}, ["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"is"}}, options = {["allowed-chains"] = {{"testing", "form"}}, ["forms-between"] = {}, ["forbidden-chains"] = {}}, exclusions = {}}}})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_rule("(or '(if condition yes no) (quote (if condition yes no)))", "fnl/app.fnl", "form-chain", or_forbidden_rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("reader-quoted and explicit quote forms do not report", _127_)
+  local function _128_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_rule("(quote (or (if condition yes no) fallback))", "fnl/app.fnl", "form-chain", or_forbidden_rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("an explicit quote payload does not report a selected target under a forbidden chain", _128_)
+  local function _129_()
+    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"defn", "forms-between", "form"}}}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 0
+    local actual_7_auto = #findings_for_rule("(defn value [] (fn [] (when ready (if condition yes no))))", "fnl/app.fnl", "form-chain", rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it(":forms-between is an intrinsic one-or-more wildcard over executable heads", _129_)
+  local function _130_()
+    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"defn", "form"}}}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_rule("(defn vectorized [] [1 (if condition yes no)])", "fnl/app.fnl", "form-chain", rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("a later executable child in a sequence wrapper does not inherit enclosing ancestry", _130_)
+  local function _131_()
+    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"defn", "when", "form"}}}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = 1
+    local actual_7_auto = #findings_for_rule("(defn value [] (fn [] (when ready (if condition yes no))))", "fnl/app.fnl", "form-chain", rules)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("inline literal chains remain exact", _131_)
+  local function _132_()
+    local result = check_source_exact("(testing \"one\" (is (= 1 1)) (is (= 2 2)))", "fnl/spec/app_spec.fnl", {["child-count"] = {{severity = "error", ["applies-to"] = {forms = {"testing"}}, options = {children = {"is"}, ["max-count"] = 1}, exclusions = {}}}, ["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"is"}}, options = {["allowed-chains"] = {{"testing", "form"}}, ["forbidden-chains"] = {}}, exclusions = {}}}})
     local assert_5_auto = require("luassert")
     local expected_6_auto = 2
     local actual_7_auto = #result
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("child-count and form-chain policies can coexist without changing counts", _127_)
+  return require("plenary.busted").it("child-count and form-chain policies can coexist without changing counts", _132_)
 end
-require("plenary.busted").describe("unified-form-chain-semantics", _122_)
-local function _128_()
-  local function _129_()
-    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"let"}}, options = {["allowed-chains"] = {{"defn", "when", "form"}}, ["forms-between"] = {"fn"}}, exclusions = {}}}}
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 1
-    local actual_7_auto = #findings_for_rule("(fn [] (defn value [] (when ready (let [x 1] x))))", "fnl/app.fnl", "form-chain", rules)
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it(":forms-between only skips after a matched explicit step", _129_)
-  local function _130_()
-    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"let"}}, options = {["allowed-chains"] = {{"defn", "when", "form"}}, ["forms-between"] = {"when"}}, exclusions = {}}}}
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #findings_for_rule("(defn value [] (when ready (when later (let [x 1] x))))", "fnl/app.fnl", "form-chain", rules)
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it(":forms-between matches intermediate forms after an explicit step", _130_)
-  local function _131_()
-    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["forbidden-chains"] = {{"or", "form"}}}, exclusions = {}}}}
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 0
-    local actual_7_auto = #findings_for_rule("(if condition yes no)", "fnl/app.fnl", "form-chain", rules)
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("a forbidden-only policy does not reject a plain selected if", _131_)
-  local function _132_()
-    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["forbidden-chains"] = {{"defn", "form"}}}, exclusions = {}}}}
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 1
-    local actual_7_auto = #findings_for_rule("(defn value [] (if condition yes no))", "fnl/app.fnl", "form-chain", rules)
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  require("plenary.busted").it("a matching forbidden chain reports when allowed-chains is omitted", _132_)
-  local function _133_()
-    local rules = {["form-chain"] = {{severity = "error", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"defn", "form"}}}, exclusions = {}}}}
-    local assert_5_auto = require("luassert")
-    local expected_6_auto = 1
-    local actual_7_auto = #findings_for_rule("(if condition yes no)", "fnl/app.fnl", "form-chain", rules)
-    assert_5_auto.same(expected_6_auto, actual_7_auto)
-    return true
-  end
-  return require("plenary.busted").it("an explicit allow-list rejects an unmatched selected if", _133_)
-end
-return require("plenary.busted").describe("form-chain-regressions", _128_)
+return require("plenary.busted").describe("form-chain-semantics", _122_)

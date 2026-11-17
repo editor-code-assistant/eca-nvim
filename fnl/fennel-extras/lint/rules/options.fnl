@@ -10,7 +10,7 @@
         "child-count"      ["children" "max-count" "min-count" "nil-count" "not-counted"]
         "form-child-count" ["children" "max-count"]
         "file-size"        ["max-code-lines"]
-        "form-chain"       ["allowed-chains" "forms-between" "forbidden-chains"]
+        "form-chain"       ["allowed-chains" "forbidden-chains"]
         "binding"          []})
 
 (local required-option-names
@@ -40,7 +40,6 @@
         "max-code-lines"   :positive-integer
         "binding"          :string
         "allowed-chains"   :chains
-        "forms-between"    :strings
         "forbidden-chains" :chains})
 
 (defn schema
