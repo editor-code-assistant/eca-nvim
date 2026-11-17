@@ -212,21 +212,33 @@
                (vim.deep_equal ["nil" "true" "false"] (. instance :options :not-counted))))))
 )
 
-(deftest canonical-config-uses-or-form-chain
-  (testing "canonical config forbids direct and indirect or chains for conditional forms"
-    (let [loaded   (config.load ".fnl-extras.fnl")
-          rules    (. loaded :lint :rules)
-          instance (. rules :form-chain 3)]
-      (is (and instance
+(deftest canonical-config-uses-separate-same-form-chains
+  (testing "canonical config keeps the combined or rule and adds separate if and when rules"
+    (let [loaded        (config.load ".fnl-extras.fnl")
+          rules         (. loaded :lint :rules)
+          or-instance   (. rules :form-chain 3)
+          if-instance   (. rules :form-chain 4)
+          when-instance (. rules :form-chain 5)]
+      (is (and or-instance
                (= "Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible."
-                  (. instance :description))
+                  (. or-instance :description))
                (vim.deep_equal ["when" "when-let" "if" "if-let" "cond" "case"]
-                               (. instance :applies-to :forms))
+                               (. or-instance :applies-to :forms))
                (= nil
-                  (. instance :options :forms-between))
+                  (. or-instance :options :forms-between))
                (vim.deep_equal [["or" :form]
                                 ["or" :forms-between :form]]
-                               (. instance :options :forbidden-chains)))))))
+                               (. or-instance :options :forbidden-chains))))
+      (is (and if-instance
+               (vim.deep_equal {:files ["^fennel-extras/"] :forms ["if"]}
+                               (. if-instance :applies-to))
+               (vim.deep_equal [["if" :form]]
+                               (. if-instance :options :forbidden-chains))))
+      (is (and when-instance
+               (vim.deep_equal {:files ["^fennel-extras/"] :forms ["when"]}
+                               (. when-instance :applies-to))
+               (vim.deep_equal [["when" :form]]
+                               (. when-instance :options :forbidden-chains)))))))
 
 (deftest canonical-config-aligns-cond-clauses
   (testing "canonical formatter aligns cond clauses alongside case"

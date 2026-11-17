@@ -97,6 +97,14 @@
                            :options     {:forbidden-chains [["or" :form]
                                                             ["or" :forms-between :form]]}
                            :exclusions  []}
+                          {:severity   :error
+                           :applies-to {:files ["^fennel-extras/"] :forms ["if"]}
+                           :options    {:forbidden-chains [["if" :form]]}
+                           :exclusions []}
+                          {:severity   :error
+                           :applies-to {:files ["^fennel-extras/"] :forms ["when"]}
+                           :options    {:forbidden-chains [["when" :form]]}
+                           :exclusions []}
                           {:severity    :error
                            :description "keep top-level locals limited to explicit require/import dependencies"
                            :applies-to  {:files ["^fennel-extras/"]

@@ -203,15 +203,27 @@ local function _29_()
   local function _30_()
     local loaded = config.load(".fnl-extras.fnl")
     local rules = loaded.lint.rules
-    local instance = rules["form-chain"][3]
+    local or_instance = rules["form-chain"][3]
+    local if_instance = rules["form-chain"][4]
+    local when_instance = rules["form-chain"][5]
+    do
+      local assert_28_auto = require("luassert")
+      local value_29_auto = (or_instance and ("Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible." == or_instance.description) and vim.deep_equal({"when", "when-let", "if", "if-let", "cond", "case"}, or_instance["applies-to"].forms) and (nil == or_instance.options["forms-between"]) and vim.deep_equal({{"or", "form"}, {"or", "forms-between", "form"}}, or_instance.options["forbidden-chains"]))
+      assert_28_auto.is_truthy(value_29_auto, "(and or-instance (= \"Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible.\" (. or-instance \"description\")) (vim.deep_equal [\"when\" \"when-let\" \"if\" \"if-let\" \"cond\" \"case\"] (. or-instance \"applies-to\" \"forms\")) (= nil (. or-instance \"options\" \"forms-between\")) (vim.deep_equal [[\"or\" \"form\"] [\"or\" \"forms-between\" \"form\"]] (. or-instance \"options\" \"forbidden-chains\")))")
+    end
+    do
+      local assert_28_auto = require("luassert")
+      local value_29_auto = (if_instance and vim.deep_equal({files = {"^fennel-extras/"}, forms = {"if"}}, if_instance["applies-to"]) and vim.deep_equal({{"if", "form"}}, if_instance.options["forbidden-chains"]))
+      assert_28_auto.is_truthy(value_29_auto, "(and if-instance (vim.deep_equal {:files [\"^fennel-extras/\"] :forms [\"if\"]} (. if-instance \"applies-to\")) (vim.deep_equal [[\"if\" \"form\"]] (. if-instance \"options\" \"forbidden-chains\")))")
+    end
     local assert_28_auto = require("luassert")
-    local value_29_auto = (instance and ("Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible." == instance.description) and vim.deep_equal({"when", "when-let", "if", "if-let", "cond", "case"}, instance["applies-to"].forms) and (nil == instance.options["forms-between"]) and vim.deep_equal({{"or", "form"}, {"or", "forms-between", "form"}}, instance.options["forbidden-chains"]))
-    assert_28_auto.is_truthy(value_29_auto, "(and instance (= \"Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible.\" (. instance \"description\")) (vim.deep_equal [\"when\" \"when-let\" \"if\" \"if-let\" \"cond\" \"case\"] (. instance \"applies-to\" \"forms\")) (= nil (. instance \"options\" \"forms-between\")) (vim.deep_equal [[\"or\" \"form\"] [\"or\" \"forms-between\" \"form\"]] (. instance \"options\" \"forbidden-chains\")))")
+    local value_29_auto = (when_instance and vim.deep_equal({files = {"^fennel-extras/"}, forms = {"when"}}, when_instance["applies-to"]) and vim.deep_equal({{"when", "form"}}, when_instance.options["forbidden-chains"]))
+    assert_28_auto.is_truthy(value_29_auto, "(and when-instance (vim.deep_equal {:files [\"^fennel-extras/\"] :forms [\"when\"]} (. when-instance \"applies-to\")) (vim.deep_equal [[\"when\" \"form\"]] (. when-instance \"options\" \"forbidden-chains\")))")
     return true
   end
-  return require("plenary.busted").it("canonical config forbids direct and indirect or chains for conditional forms", _30_)
+  return require("plenary.busted").it("canonical config keeps the combined or rule and adds separate if and when rules", _30_)
 end
-require("plenary.busted").describe("canonical-config-uses-or-form-chain", _29_)
+require("plenary.busted").describe("canonical-config-uses-separate-same-form-chains", _29_)
 local function _31_()
   local function _32_()
     local loaded = config.load(".fnl-extras.fnl").format.alignment["clause-forms"]
