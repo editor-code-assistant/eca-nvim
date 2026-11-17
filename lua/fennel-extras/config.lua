@@ -11,12 +11,6 @@ local parse = require("fennel-extras.config.parse")
 local lint_config = require("fennel-extras.config.lint")
 local format_config = require("fennel-extras.config.format")
 local find_config = require("fennel-extras.config.find")
-local function branch(condition, _then, _else)
-  return ((condition and _then) or _else)()
-end
-local function noop()
-  return nil
-end
 local parse_string
 do
   local function parse_string0(text)
@@ -38,13 +32,11 @@ local function valid_rule_values_3f(rule)
   local kind = rule[1]
   local value = rule[2]
   local index = rule[3]
-  local function _1_()
+  if (kind == "block") then
     return (integer_3f(value) and (value >= 0) and (index == nil))
-  end
-  local function _2_()
+  else
     return ((kind == "inner") and ((value == 0) and ((index == nil) or (integer_3f(index) and (index >= 0)))))
   end
-  return branch((kind == "block"), _1_, _2_)
 end
 local function valid_rule_3f(rule)
   return ((type(rule) == "table") and (type(rule[1]) == "string") and valid_rule_values_3f(rule))
@@ -57,25 +49,22 @@ local function valid_rule_list_3f(value)
 end
 local function rule_map_error_step(value, prefix, name)
   local next_name, rule = next(value, name)
-  local function _3_()
-    local function _4_()
+  if next_name then
+    if valid_rule_list_3f(rule) then
       return rule_map_error_step(value, prefix, next_name)
-    end
-    local function _5_()
+    else
       return {message = (prefix .. next_name .. ": invalid indentation rule")}
     end
-    return branch(valid_rule_list_3f(rule), _4_, _5_)
+  else
+    return nil
   end
-  return branch(next_name, _3_, noop)
 end
 local function rule_map_error(value, prefix)
-  local function _6_()
+  if (type(value) == "table") then
     return rule_map_error_step(value, prefix, nil)
-  end
-  local function _7_()
+  else
     return {message = (prefix .. ": invalid indentation rule")}
   end
-  return branch((type(value) == "table"), _6_, _7_)
 end
 local function extensions_step(value, index)
   return ((index > #value) or ((type(value[index]) == "string") and (string.sub(value[index], 1, 1) == ".") and extensions_step(value, (index + 1))))
@@ -93,69 +82,77 @@ local function workspace_key(workspace)
   local allowed = {paths = true, exclude = true, extensions = true, dotfiles = true, symlinks = true, config = true}
   local candidate = nil
   for name, _ in pairs(workspace) do
-    local function _8_()
-      return name
+    if (not allowed[name] and ((candidate == nil) or (tostring(name) < tostring(candidate)))) then
+      candidate = name
+    else
+      candidate = candidate
     end
-    local function _9_()
-      return candidate
-    end
-    candidate = branch((not allowed[name] and ((candidate == nil) or (tostring(name) < tostring(candidate)))), _8_, _9_)
   end
   return candidate
 end
 local function workspace_key_error_result(workspace)
   local key = workspace_key(workspace)
-  local function _10_()
+  if key then
     return {message = ("unknown workspace key: " .. key)}
+  else
+    return nil
   end
-  return branch(key, _10_, noop)
 end
 local function workspace_key_error(workspace)
   return ((type(workspace) == "table") and workspace_key_error_result(workspace))
 end
 local function workspace_error(tbl)
   local workspace = tbl.workspace
-  local function _11_()
-    return {message = "workspace must be a table"}
+  local _7_
+  if (workspace and (type(workspace) ~= "table")) then
+    _7_ = {message = "workspace must be a table"}
+  else
+    _7_ = nil
   end
-  local or_12_ = branch((workspace and (type(workspace) ~= "table")), _11_, noop) or workspace_key_error(workspace)
-  if not or_12_ then
-    local function _13_()
-      return {message = "workspace.paths must be an array of strings"}
+  local or_9_ = _7_ or workspace_key_error(workspace)
+  if not or_9_ then
+    if (workspace and workspace.paths and not array_of_strings_3f(workspace.paths)) then
+      or_9_ = {message = "workspace.paths must be an array of strings"}
+    else
+      or_9_ = nil
     end
-    or_12_ = branch((workspace and workspace.paths and not array_of_strings_3f(workspace.paths)), _13_, noop)
   end
-  if not or_12_ then
-    local function _14_()
-      return {message = "workspace.exclude must be an array of strings"}
+  if not or_9_ then
+    if (workspace and workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
+      or_9_ = {message = "workspace.exclude must be an array of strings"}
+    else
+      or_9_ = nil
     end
-    or_12_ = branch((workspace and workspace.exclude and not array_of_strings_3f(workspace.exclude)), _14_, noop)
   end
-  if not or_12_ then
-    local function _15_()
-      return {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
+  if not or_9_ then
+    if (workspace and workspace.extensions and not extensions_3f(workspace.extensions)) then
+      or_9_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
+    else
+      or_9_ = nil
     end
-    or_12_ = branch((workspace and workspace.extensions and not extensions_3f(workspace.extensions)), _15_, noop)
   end
-  if not or_12_ then
-    local function _16_()
-      return {message = "workspace.dotfiles must be a boolean"}
+  if not or_9_ then
+    if (workspace and (workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
+      or_9_ = {message = "workspace.dotfiles must be a boolean"}
+    else
+      or_9_ = nil
     end
-    or_12_ = branch((workspace and (workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))), _16_, noop)
   end
-  if not or_12_ then
-    local function _17_()
-      return {message = "workspace.symlinks must be a boolean"}
+  if not or_9_ then
+    if (workspace and (workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
+      or_9_ = {message = "workspace.symlinks must be a boolean"}
+    else
+      or_9_ = nil
     end
-    or_12_ = branch((workspace and (workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))), _17_, noop)
   end
-  if not or_12_ then
-    local function _18_()
-      return {message = "workspace.config must be a boolean"}
+  if not or_9_ then
+    if (workspace and (workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
+      or_9_ = {message = "workspace.config must be a boolean"}
+    else
+      or_9_ = nil
     end
-    or_12_ = branch((workspace and (workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))), _18_, noop)
   end
-  return or_12_
+  return or_9_
 end
 local function content_error(tbl)
   return workspace_error(tbl)
@@ -163,65 +160,73 @@ end
 local validate_workspace
 do
   local function validate_workspace0(workspace, require_paths_3f)
-    local function _19_()
-      return {message = "workspace must be a table"}
+    local _16_
+    if (type(workspace) ~= "table") then
+      _16_ = {message = "workspace must be a table"}
+    else
+      _16_ = nil
     end
-    local or_20_ = branch((type(workspace) ~= "table"), _19_, noop) or workspace_key_error(workspace)
-    if not or_20_ then
-      local function _21_()
-        return {message = "missing workspace.paths"}
+    local or_18_ = _16_ or workspace_key_error(workspace)
+    if not or_18_ then
+      if (require_paths_3f and (workspace.paths == nil)) then
+        or_18_ = {message = "missing workspace.paths"}
+      else
+        or_18_ = nil
       end
-      or_20_ = branch((require_paths_3f and (workspace.paths == nil)), _21_, noop)
     end
-    if not or_20_ then
-      local function _22_()
-        return {message = "workspace.paths must be an array of strings"}
+    if not or_18_ then
+      if (workspace.paths and not array_of_strings_3f(workspace.paths)) then
+        or_18_ = {message = "workspace.paths must be an array of strings"}
+      else
+        or_18_ = nil
       end
-      or_20_ = branch((workspace.paths and not array_of_strings_3f(workspace.paths)), _22_, noop)
     end
-    if not or_20_ then
-      local function _23_()
-        return {message = "workspace.exclude must be an array of strings"}
+    if not or_18_ then
+      if (workspace.exclude and not array_of_strings_3f(workspace.exclude)) then
+        or_18_ = {message = "workspace.exclude must be an array of strings"}
+      else
+        or_18_ = nil
       end
-      or_20_ = branch((workspace.exclude and not array_of_strings_3f(workspace.exclude)), _23_, noop)
     end
-    if not or_20_ then
-      local function _24_()
-        return {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
+    if not or_18_ then
+      if (workspace.extensions and not extensions_3f(workspace.extensions)) then
+        or_18_ = {message = "workspace.extensions must be a non-empty list of strings starting with \".\""}
+      else
+        or_18_ = nil
       end
-      or_20_ = branch((workspace.extensions and not extensions_3f(workspace.extensions)), _24_, noop)
     end
-    if not or_20_ then
-      local function _25_()
-        return {message = "workspace.dotfiles must be a boolean"}
+    if not or_18_ then
+      if ((workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))) then
+        or_18_ = {message = "workspace.dotfiles must be a boolean"}
+      else
+        or_18_ = nil
       end
-      or_20_ = branch(((workspace.dotfiles ~= nil) and not ((workspace.dotfiles == true) or (workspace.dotfiles == false))), _25_, noop)
     end
-    if not or_20_ then
-      local function _26_()
-        return {message = "workspace.symlinks must be a boolean"}
+    if not or_18_ then
+      if ((workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))) then
+        or_18_ = {message = "workspace.symlinks must be a boolean"}
+      else
+        or_18_ = nil
       end
-      or_20_ = branch(((workspace.symlinks ~= nil) and not ((workspace.symlinks == true) or (workspace.symlinks == false))), _26_, noop)
     end
-    if not or_20_ then
-      local function _27_()
-        return {message = "workspace.config must be a boolean"}
+    if not or_18_ then
+      if ((workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
+        or_18_ = {message = "workspace.config must be a boolean"}
+      else
+        or_18_ = nil
       end
-      or_20_ = branch(((workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))), _27_, noop)
     end
-    return or_20_
+    return or_18_
   end
   _2amodule_2a["validate-workspace"] = validate_workspace0
   validate_workspace = _2amodule_2a["validate-workspace"]
 end
 local function validation_result(tbl, failure)
-  local function _28_()
+  if failure then
     return nil, failure
-  end
-  local function _29_()
+  else
     return tbl
   end
-  return branch(failure, _28_, _29_)
 end
 local function validation_failure(tbl)
   return (configuration_error(tbl) or content_error(tbl))
@@ -233,22 +238,21 @@ local function unknown_config_key(tbl)
   local allowed = {workspace = true, format = true, lint = true, design = true}
   local candidate = nil
   for key, _ in pairs(tbl) do
-    local function _30_()
-      return key
+    if (not allowed[key] and ((candidate == nil) or (tostring(key) < tostring(candidate)))) then
+      candidate = key
+    else
+      candidate = candidate
     end
-    local function _31_()
-      return candidate
-    end
-    candidate = branch((not allowed[key] and ((candidate == nil) or (tostring(key) < tostring(candidate)))), _30_, _31_)
   end
   return candidate
 end
 local function unknown_config_error(tbl)
   local key = unknown_config_key(tbl)
-  local function _32_()
+  if key then
     return {message = ("unknown configuration key: " .. key)}
+  else
+    return nil
   end
-  return branch(key, _32_, noop)
 end
 local function format_fragment_key_3f(key)
   return ((key == "indent-width") or (key == "parser") or (key == "indents") or (key == "format-as") or (key == "alignment") or (key == "newline") or (key == "extensions"))
@@ -256,34 +260,28 @@ end
 local function unknown_format_fragment_key(tbl)
   local candidate = nil
   for key, _ in pairs(tbl) do
-    local function _33_()
-      return key
+    if (not format_fragment_key_3f(key) and ((candidate == nil) or (tostring(key) < tostring(candidate)))) then
+      candidate = key
+    else
+      candidate = candidate
     end
-    local function _34_()
-      return candidate
-    end
-    candidate = branch((not format_fragment_key_3f(key) and ((candidate == nil) or (tostring(key) < tostring(candidate)))), _33_, _34_)
   end
   return candidate
 end
 local function format_fragment_error(tbl)
   local key = unknown_format_fragment_key(tbl)
-  local function _35_()
+  if key then
     return {message = ("unknown configuration key: " .. key)}
-  end
-  local function _36_()
+  else
     return format_config.validate(tbl, false, false, false)
   end
-  return branch(key, _35_, _36_)
 end
 local function validate_table_result(tbl, failure)
-  local function _37_()
+  if failure then
     return nil, failure
-  end
-  local function _38_()
+  else
     return valid_table(tbl)
   end
-  return branch(failure, _37_, _38_)
 end
 local function validate_canonical_table(tbl)
   return validate_table_result(tbl, unknown_config_error(tbl))
@@ -295,19 +293,15 @@ end
 local validate
 do
   local function validate0(tbl)
-    local function _39_()
+    if (type(tbl) ~= "table") then
       return nil, {message = "configuration must be a table"}
-    end
-    local function _40_()
-      local function _41_()
+    else
+      if (tbl.workspace or tbl.format or tbl.lint or tbl.design) then
         return validate_canonical_table(tbl)
-      end
-      local function _42_()
+      else
         return validate_format_fragment(tbl)
       end
-      return branch((tbl.workspace or tbl.format or tbl.lint or tbl.design), _41_, _42_)
     end
-    return branch((type(tbl) ~= "table"), _39_, _40_)
   end
   _2amodule_2a["validate"] = validate0
   validate = _2amodule_2a.validate
@@ -343,13 +337,11 @@ local function canonical_exclusions(rules)
 end
 local function normalize_lint_rules(rules)
   local normalized
-  local function _43_()
-    return core.assoc(rules, "form-child-count", nil)
+  if (rules["form-child-count"] and rules["child-count"]) then
+    normalized = core.assoc(rules, "form-child-count", nil)
+  else
+    normalized = rules
   end
-  local function _44_()
-    return rules
-  end
-  normalized = branch((rules["form-child-count"] and rules["child-count"]), _43_, _44_)
   return normalized
 end
 local function valid_lint_policy_result(cfg, rules, design)
@@ -360,34 +352,29 @@ local function valid_lint_policy(cfg)
   local rules = core.merge(((cfg.lint and cfg.lint.rules) or {}))
   local design = (cfg.design and cfg.design.rules)
   for rule, instances in pairs((design or {})) do
-    local function _45_()
+    if (rules[rule] == nil) then
       rules[rule] = instances
-      return nil
+    else
     end
-    branch((rules[rule] == nil), _45_, noop)
   end
   return valid_lint_policy_result(cfg, rules, design)
 end
 local function lint_policy_valid(valid)
-  local function _46_()
+  if ((valid.lint == nil) and (valid.design == nil)) then
     return nil, {message = "missing lint or design"}
-  end
-  local function _47_()
+  else
     return valid_lint_policy(valid)
   end
-  return branch(((valid.lint == nil) and (valid.design == nil)), _46_, _47_)
 end
 local lint_policy
 do
   local function lint_policy0(cfg)
     local valid, error = validate(cfg)
-    local function _48_()
+    if error then
       return nil, error
-    end
-    local function _49_()
+    else
       return lint_policy_valid(valid)
     end
-    return branch(error, _48_, _49_)
   end
   _2amodule_2a["lint-policy"] = lint_policy0
   lint_policy = _2amodule_2a["lint-policy"]
@@ -402,17 +389,15 @@ do
 end
 local function parse_loaded_text(text)
   local ok, parsed_or_error
-  local function _50_()
+  local function _38_()
     return parse_string(text)
   end
-  ok, parsed_or_error = pcall(_50_)
-  local function _51_()
+  ok, parsed_or_error = pcall(_38_)
+  if not ok then
     return nil, parsed_or_error
-  end
-  local function _52_()
+  else
     return validate(parsed_or_error)
   end
-  return branch(not ok, _51_, _52_)
 end
 local function read_file_text(file)
   local text = file:read("*a")
@@ -423,13 +408,11 @@ local load
 do
   local function load0(path)
     local file = io.open(path, "r")
-    local function _53_()
+    if not file then
       return nil, {message = ("could not read config file: " .. path)}
-    end
-    local function _54_()
+    else
       return parse_loaded_text(read_file_text(file))
     end
-    return branch(not file, _53_, _54_)
   end
   _2amodule_2a["load"] = load0
   load = _2amodule_2a.load
