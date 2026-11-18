@@ -131,7 +131,7 @@ local function workspace_error(tbl)
                 if (workspace and (workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
                   return workspace_error_message("workspace.config must be a boolean")
                 else
-                  return (nil and nil)
+                  return nil
                 end
               end
             end
@@ -175,7 +175,7 @@ do
                     if ((workspace.config ~= nil) and not ((workspace.config == true) or (workspace.config == false))) then
                       return workspace_error_message("workspace.config must be a boolean")
                     else
-                      return (nil and nil)
+                      return nil
                     end
                   end
                 end
