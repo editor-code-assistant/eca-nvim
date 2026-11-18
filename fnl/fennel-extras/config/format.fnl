@@ -162,6 +162,12 @@
        (integer? value)
        (>= value 1)))
 
+(defn- non-negative-integer?
+  [value]
+  (and (= (type value) :number)
+       (integer? value)
+       (>= value 0)))
+
 (defn- newline-instance?
   [value]
   (and (= (type value) :table)
@@ -183,7 +189,11 @@
            (and (= (type (. value :options :break-after-n-args)) :table)
                 (every-ipairs? break-after-n-args-entry? (. value :options :break-after-n-args) 1)))
        (or (= (. value :options :break-after-args) nil)
-           (positive-integer? (. value :options :break-after-args)))))
+           (positive-integer? (. value :options :break-after-args)))
+       (or (= (. value :options :group-size) nil)
+           (positive-integer? (. value :options :group-size)))
+       (or (= (. value :options :group-gap) nil)
+           (non-negative-integer? (. value :options :group-gap)))))
 
 (defn- validate-newline
   [config]

@@ -253,7 +253,95 @@ local function _27_()
 end
 require("plenary.busted").describe("scalar-break-after-args", _27_)
 local function _32_()
+  local config0 = {["indent-width"] = 2, indents = {cond = {{"inner", 0}}}, newline = {{["applies-to"] = {forms = {"cond"}}, options = {["group-size"] = 2, ["group-gap"] = 1}}}, parser = false}
   local function _33_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(cond\n  a\n  b\n\n  c\n  d\n\n  e)"
+    local actual_7_auto = formatted_with_config(format, "(cond a b c d e)", config0)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("puts the head and every direct argument on separate lines", _33_)
+  local function _34_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(cond\n  a\n  (foo b)\n\n  c\n  (bar d)\n\n  e)"
+    local actual_7_auto = formatted_with_config(format, "(cond a (foo b) c (bar d) e)", config0)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("treats nested forms as one direct argument and preserves indentation", _34_)
+  local function _35_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(cond ;; first\n  a\n  b ;; interior\n  c\n  d\n\n  e)"
+    local actual_7_auto = formatted_with_config(format, "(cond ;; first\n a b ;; interior\n c d e)", config0)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("comments are barriers at first and interior boundaries", _35_)
+  local function _36_()
+    local composed
+    do
+      config0["newline"] = {{["applies-to"] = {forms = {"cond"}}, options = {["group-size"] = 2, ["group-gap"] = 1}}, {["applies-to"] = {forms = {"cond"}}, options = {["break-after-args"] = 1}}}
+      composed = config0
+    end
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(cond\n  a\n  b\n\n  c\n  d\n\n  e)"
+    local actual_7_auto = formatted_with_config(format, "(cond a b c d e)", composed)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("composes with scalar and indexed argument breaks", _36_)
+  local function _37_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(cond\n  'a\n  ~b\n\n  c\n  d)"
+    local actual_7_auto = formatted_with_config(format, "(cond 'a ~b c d)", config0)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("keeps quote and unquote prefixes with their argument", _37_)
+  local function _38_()
+    local source = "(cond a (foo b) c (bar d) e)"
+    local formatted0 = formatted_with_config(format, source, config0)
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = formatted0
+    local actual_7_auto = formatted_with_config(format, formatted0, config0)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("is idempotent", _38_)
+  local function _39_()
+    local source = "(cond a (foo b) c (bar d) e)"
+    local formatted0 = formatted_with_config(format, source, config0)
+    local assert_28_auto = require("luassert")
+    local value_29_auto = ast_equal_3f(parser, source, formatted0)
+    assert_28_auto.is_truthy(value_29_auto, "(ast-equal? parser source formatted)")
+    return true
+  end
+  return require("plenary.busted").it("preserves AST", _39_)
+end
+require("plenary.busted").describe("grouped-argument-newline", _32_)
+local function _40_()
+  local config0 = {["indent-width"] = 2, newline = {{["applies-to"] = {forms = {"cond"}}, options = {["group-size"] = 2, ["group-gap"] = 1}}}, parser = false}
+  local function _41_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(cond\n  a\n  b\n\n  c\n  d)\n"
+    local actual_7_auto = formatted_with_config(format, "(cond a b c d)\n", config0)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("preserves a terminal newline", _41_)
+  local function _42_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(cond\n  a\n  b\n\n  c\n  d)"
+    local actual_7_auto = formatted_with_config(format, "(cond a b c d)", config0)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("preserves the absence of a terminal newline", _42_)
+end
+require("plenary.busted").describe("grouped-argument-terminal-newline", _40_)
+local function _43_()
+  local function _44_()
     local config0 = {["indent-width"] = 2, indents = {fn = {{"inner", 0}}}, ["format-as"] = {["my-fn"] = "fn"}, newline = {{["applies-to"] = {forms = {"fn"}}, options = {after = 1}}}, parser = false}
     local source = "(my-fn []\ntrue)\n(foo)"
     local result = formatted_with_config(format, source, config0)
@@ -263,115 +351,115 @@ local function _32_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exact alias formats through its target without inheriting newline membership", _33_)
+  return require("plenary.busted").it("an exact alias formats through its target without inheriting newline membership", _44_)
 end
-require("plenary.busted").describe("exact-alias-newline-membership", _32_)
-local function _34_()
+require("plenary.busted").describe("exact-alias-newline-membership", _43_)
+local function _45_()
   local config0 = {["indent-width"] = 2, indents = {defn = {{"block", 1}}, testing = {{"block", 1}}}, newline = {{["applies-to"] = {files = {"^fennel-extras/"}, forms = {"fn", "defn", "defn-"}}, options = {["after-header"] = 1}}}, parser = false}
-  local function _35_()
+  local function _46_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn run\n\n  []\n  true)"
     local actual_7_auto
-    local function _36_()
+    local function _47_()
       config0["path"] = "fennel-extras/format.fnl"
       return config0
     end
-    actual_7_auto = formatted_with_config(format, "(defn run\n  []\n  true)", _36_())
+    actual_7_auto = formatted_with_config(format, "(defn run\n  []\n  true)", _47_())
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("file selector uses workspace-relative paths and ANDs files with forms", _35_)
-  local function _37_()
+  require("plenary.busted").it("file selector uses workspace-relative paths and ANDs files with forms", _46_)
+  local function _48_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(testing \"works\"\n  (is true))"
     local actual_7_auto
-    local function _38_()
+    local function _49_()
       config0["path"] = "fennel-extras/format.fnl"
       return config0
     end
-    actual_7_auto = formatted_with_config(format, "(testing \"works\"\n  (is true))", _38_())
+    actual_7_auto = formatted_with_config(format, "(testing \"works\"\n  (is true))", _49_())
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("form selector does not apply outside its forms", _37_)
-  local function _39_()
+  require("plenary.busted").it("form selector does not apply outside its forms", _48_)
+  local function _50_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn run\n  []\n  true)"
     local actual_7_auto
-    local function _40_()
+    local function _51_()
       config0["path"] = "eca/format.fnl"
       return config0
     end
-    actual_7_auto = formatted_with_config(format, "(defn run\n  []\n  true)", _40_())
+    actual_7_auto = formatted_with_config(format, "(defn run\n  []\n  true)", _51_())
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("file selector does not apply outside its path", _39_)
+  return require("plenary.busted").it("file selector does not apply outside its path", _50_)
 end
-require("plenary.busted").describe("file-scoped-newline-membership", _34_)
-local function _41_()
+require("plenary.busted").describe("file-scoped-newline-membership", _45_)
+local function _52_()
   local config0 = {["indent-width"] = 2, indents = {defn = {{"block", 1}}, ["defn-"] = {{"block", 1}}}, newline = {{["applies-to"] = {forms = {"defn", "defn-"}}, options = {["between-same-level"] = 1}}}, parser = false}
-  local function _42_()
+  local function _53_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn one [] true)\n\n(defn- two [] true)"
     local actual_7_auto = formatted_with_config(format, "(defn one [] true)\n\n\n\n(defn- two [] true)", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("normalizes excessive blank lines between selected top-level siblings", _42_)
-  local function _43_()
+  require("plenary.busted").it("normalizes excessive blank lines between selected top-level siblings", _53_)
+  local function _54_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn one [] true)\n\n(defn- two [] true)"
     local actual_7_auto = formatted_with_config(format, "(defn one [] true)\n(defn- two [] true)", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("adds the requested blank line between adjacent selected top-level siblings", _43_)
-  local function _44_()
+  require("plenary.busted").it("adds the requested blank line between adjacent selected top-level siblings", _54_)
+  local function _55_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn one [] true)\n\n(defn two [] true)"
     local actual_7_auto = formatted_with_config(format, "(defn one [] true) (defn two [] true)", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("places one blank line between selected siblings that share a physical line", _44_)
-  local function _45_()
+  require("plenary.busted").it("places one blank line between selected siblings that share a physical line", _55_)
+  local function _56_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo (defn one [] true)\n\n     (defn- two [] true))"
     local actual_7_auto = formatted_with_config(format, "(foo (defn one [] true)\n\n\n(defn- two [] true))", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("normalizes selected siblings under an unselected nested parent", _45_)
-  local function _46_()
+  require("plenary.busted").it("normalizes selected siblings under an unselected nested parent", _56_)
+  local function _57_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "; keep this comment\n(foo)\n\n\n(defn one [] true)\n\n(defn- two [] true)"
     local actual_7_auto = formatted_with_config(format, "; keep this comment\n(foo)\n\n\n(defn one [] true)\n(defn- two [] true)", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("does not change unselected top-level forms or comments", _46_)
+  return require("plenary.busted").it("does not change unselected top-level forms or comments", _57_)
 end
-require("plenary.busted").describe("between-same-level-newline", _41_)
-local function _47_()
+require("plenary.busted").describe("between-same-level-newline", _52_)
+local function _58_()
   local config0 = {["indent-width"] = 2, indents = {deftest = {{"block", 1}}, testing = {{"block", 1}}}, newline = {{["applies-to"] = {forms = {"deftest", "testing"}}, options = {["between-same-level"] = 1}}}, parser = false}
-  local function _48_()
+  local function _59_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(deftest sample\n  (testing \"one\"\n    (is true))\n\n  (testing \"two\"\n    (is true)))"
     local actual_7_auto = formatted_with_config(format, "(deftest sample\n  (testing \"one\"\n    (is true))\n  (testing \"two\"\n    (is true)))", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("separates sibling testing forms by exactly one blank line", _48_)
-  local function _49_()
+  require("plenary.busted").it("separates sibling testing forms by exactly one blank line", _59_)
+  local function _60_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(deftest sample\n\n\n  (testing \"one\"\n    (is true)))"
     local actual_7_auto = formatted_with_config(format, "(deftest sample\n\n\n  (testing \"one\"\n    (is true)))", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not normalize the gap between a parent deftest and child testing", _49_)
-  local function _50_()
+  require("plenary.busted").it("does not normalize the gap between a parent deftest and child testing", _60_)
+  local function _61_()
     local testing_config = {["indent-width"] = 2, indents = {testing = {{"block", 1}}}, newline = {{["applies-to"] = {forms = {"testing"}}, options = {["between-same-level"] = 1}}}, parser = false}
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo (testing one)\n\n     (testing two))"
@@ -379,11 +467,11 @@ local function _47_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("normalizes selected testing siblings under an unselected parent", _50_)
+  return require("plenary.busted").it("normalizes selected testing siblings under an unselected parent", _61_)
 end
-require("plenary.busted").describe("between-same-level-nested-newline", _47_)
-local function _51_()
-  local function _52_()
+require("plenary.busted").describe("between-same-level-nested-newline", _58_)
+local function _62_()
+  local function _63_()
     local config0 = {["indent-width"] = 2, indents = {defn = {{"block", 1}}, ["defn-"] = {{"block", 1}}}, parser = false}
     local source = "(defn one [] true)\n\n\n(defn- two [] true)"
     local assert_5_auto = require("luassert")
@@ -392,27 +480,36 @@ local function _51_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("omitting between-same-level preserves the existing top-level gap", _52_)
+  return require("plenary.busted").it("omitting between-same-level preserves the existing top-level gap", _63_)
 end
-require("plenary.busted").describe("omitted-between-same-level-newline", _51_)
-local function _53_()
+require("plenary.busted").describe("omitted-between-same-level-newline", _62_)
+local function _64_()
   local config0 = {["indent-width"] = 2, indents = {deftest = {{"block", 1}}, testing = {{"block", 1}}}, newline = {{["applies-to"] = {forms = {"deftest"}}, options = {["after-header"] = 0}}, {["applies-to"] = {forms = {"testing"}}, options = {["between-same-level"] = 1}}}, parser = false}
   local source = "(deftest render\n\n  (testing one)\n\n  (testing two))"
-  local function _54_()
+  local function _65_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(deftest render\n  (testing one)\n\n  (testing two))"
     local actual_7_auto = formatted_with_config(format, source, config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("after-header zero removes the blank line after the deftest header", _54_)
-  local function _55_()
+  require("plenary.busted").it("after-header zero removes the blank line after the deftest header", _65_)
+  local function _66_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(deftest render\n  (testing one)\n\n  (testing two))"
     local actual_7_auto = formatted_with_config(format, source, config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("between-same-level leaves no parent-child blank line and one sibling blank line", _55_)
+  return require("plenary.busted").it("between-same-level leaves no parent-child blank line and one sibling blank line", _66_)
 end
-return require("plenary.busted").describe("configured-deftest-and-testing-spacing", _53_)
+require("plenary.busted").describe("configured-deftest-and-testing-spacing", _64_)
+local function _67_()
+  local config0 = {["indent-width"] = 2, indents = {cond = {{"inner", 0}}}, newline = {{["applies-to"] = {forms = {"cond"}}, options = {["group-size"] = 2, ["group-gap"] = 1}}}, parser = false}
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = "(cond\n  #\"a\"\n  #_(skip)\n\n  b\n  c\n\n  d)"
+  local actual_7_auto = formatted_with_config(format, "(cond #\"a\" #_(skip) b c d)", config0)
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+return require("plenary.busted").describe("grouped-reader-prefix-regression", _67_)

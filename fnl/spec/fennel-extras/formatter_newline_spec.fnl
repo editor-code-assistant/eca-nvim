@@ -215,6 +215,64 @@
         (is (= source
                (formatted-with-config format source without-option)))))))
 
+(deftest grouped-argument-newline
+  (let [config {:indent-width 2
+                :parser       false
+                :indents      {"cond" [[:inner 0]]}
+                :newline      [{:applies-to {:forms ["cond"]}
+                                :options    {:group-size 2
+                                             :group-gap  1}}]}]
+    (testing "puts the head and every direct argument on separate lines"
+      (is (= "(cond\n  a\n  b\n\n  c\n  d\n\n  e)"
+             (formatted-with-config format "(cond a b c d e)" config))))
+
+    (testing "treats nested forms as one direct argument and preserves indentation"
+      (is (= "(cond\n  a\n  (foo b)\n\n  c\n  (bar d)\n\n  e)"
+             (formatted-with-config format "(cond a (foo b) c (bar d) e)" config))))
+
+    (testing "comments are barriers at first and interior boundaries"
+      (is (= "(cond ;; first\n  a\n  b ;; interior\n  c\n  d\n\n  e)"
+             (formatted-with-config format "(cond ;; first\n a b ;; interior\n c d e)" config))))
+
+    (testing "composes with scalar and indexed argument breaks"
+      (let [composed (doto config
+                           (tset :newline [{:applies-to {:forms ["cond"]}
+                                            :options    {:group-size 2
+                                                         :group-gap  1}}
+                                           {:applies-to {:forms ["cond"]}
+                                            :options    {:break-after-args 1}}]))]
+        (is (= "(cond\n  a\n  b\n\n  c\n  d\n\n  e)"
+               (formatted-with-config format "(cond a b c d e)" composed)))))
+
+    (testing "keeps quote and unquote prefixes with their argument"
+      (is (= "(cond\n  'a\n  ~b\n\n  c\n  d)"
+             (formatted-with-config format "(cond 'a ~b c d)" config))))
+
+    (testing "is idempotent"
+      (let [source    "(cond a (foo b) c (bar d) e)"
+            formatted (formatted-with-config format source config)]
+        (is (= formatted
+               (formatted-with-config format formatted config)))))
+
+    (testing "preserves AST"
+      (let [source    "(cond a (foo b) c (bar d) e)"
+            formatted (formatted-with-config format source config)]
+        (is (ast-equal? parser source formatted))))))
+
+(deftest grouped-argument-terminal-newline
+  (let [config {:indent-width 2
+                :parser       false
+                :newline      [{:applies-to {:forms ["cond"]}
+                                :options    {:group-size 2
+                                             :group-gap  1}}]}]
+    (testing "preserves a terminal newline"
+      (is (= "(cond\n  a\n  b\n\n  c\n  d)\n"
+             (formatted-with-config format "(cond a b c d)\n" config))))
+
+    (testing "preserves the absence of a terminal newline"
+      (is (= "(cond\n  a\n  b\n\n  c\n  d)"
+             (formatted-with-config format "(cond a b c d)" config))))))
+
 (deftest exact-alias-newline-membership
   (testing "an exact alias formats through its target without inheriting newline membership"
     (let [config {:indent-width 2
@@ -348,3 +406,15 @@
     (testing "between-same-level leaves no parent-child blank line and one sibling blank line"
       (is (= "(deftest render\n  (testing one)\n\n  (testing two))"
              (formatted-with-config format source config))))))
+
+(deftest grouped-reader-prefix-regression
+  (let [config {:indent-width 2
+                :parser       false
+                :indents      {"cond" [[:inner 0]]}
+                :newline      [{:applies-to {:forms ["cond"]}
+                                :options    {:group-size 2
+                                             :group-gap  1}}]}]
+    (is (= "(cond\n  #\"a\"\n  #_(skip)\n\n  b\n  c\n\n  d)"
+           (formatted-with-config format
+                                  "(cond #\"a\" #_(skip) b c d)"
+                                  config)))))

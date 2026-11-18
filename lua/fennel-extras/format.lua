@@ -279,6 +279,330 @@ local function insert_breaks(source, positions)
   end
   return table.concat(lines, "\n")
 end
+local function append_value(items, value)
+  local result = {}
+  for _, item in ipairs(items) do
+    table.insert(result, item)
+  end
+  table.insert(result, value)
+  return result
+end
+local function replace_last(items, value)
+  local result = {}
+  local last_index = #items
+  for index, item in ipairs(items) do
+    local function _39_()
+      if (index == last_index) then
+        return value
+      else
+        return item
+      end
+    end
+    table.insert(result, _39_())
+  end
+  return result
+end
+local function remove_last(items)
+  local result = {}
+  local last_index = #items
+  for index, item in ipairs(items) do
+    if (index < last_index) then
+      table.insert(result, item)
+    else
+    end
+  end
+  return result
+end
+local function frame_with(frame, key, value)
+  local result = {}
+  for name, item in pairs(frame) do
+    result[name] = item
+  end
+  result[key] = value
+  return result
+end
+local function grouped_child_state(state, child, open_col, group_size, group_gap, indent_width)
+  local since
+  if child.barrier then
+    since = 0
+  else
+    since = state.since
+  end
+  local count
+  local _42_
+  if ((since > 0) and (math.fmod(since, group_size) == 0)) then
+    _42_ = group_gap
+  else
+    _42_ = 0
+  end
+  count = (1 + _42_)
+  local position = {line = child.line, col = child.col, indent = ((open_col + indent_width) - 1), count = count}
+  return {since = (since + 1), positions = append_value(state.positions, position)}
+end
+local function grouped_children(children, open_col, group_size, group_gap, indent_width, since_barrier, positions)
+  local _44_
+  do
+    local state = {since = since_barrier, positions = positions}
+    for _, child in ipairs(children) do
+      state = grouped_child_state(state, child, open_col, group_size, group_gap, indent_width)
+    end
+    _44_ = state
+  end
+  return _44_.positions
+end
+local function grouped_open_state(state, token)
+  local stack = state.stack
+  local top = ((#stack > 0) and stack[#stack])
+  local child = (top and top.head and (top.prefix or {line = token.line, col = token.col, barrier = top.barrier}))
+  local next_top
+  if child then
+    next_top = frame_with(frame_with(frame_with(top, "children", append_value(top.children, child)), "prefix", nil), "barrier", false)
+  else
+    next_top = top
+  end
+  local next_stack
+  if top then
+    next_stack = replace_last(stack, next_top)
+  else
+    next_stack = stack
+  end
+  return {stack = append_value(next_stack, {start = token.line, ["open-col"] = token.col, head = nil, children = {}, prefix = nil, barrier = false}), positions = state.positions}
+end
+local function grouped_close_state(state, token, span, group_size, group_gap, indent_width)
+  local stack = state.stack
+  local top = ((#stack > 0) and stack[#stack])
+  local positions
+  if (top and (top.start == span.start) and (top.head == span.head)) then
+    positions = grouped_children(top.children, top["open-col"], group_size, group_gap, indent_width, 0, state.positions)
+  else
+    positions = state.positions
+  end
+  return {stack = remove_last(stack), positions = positions}
+end
+local function grouped_value_state(state, token)
+  local stack = state.stack
+  local top = ((#stack > 0) and stack[#stack])
+  local child = (top.prefix or {line = token.line, col = token.col, barrier = top.barrier})
+  local next_top
+  if (top.head == nil) then
+    next_top = frame_with(frame_with(top, "head", token.text), "prefix", nil)
+  else
+    next_top = frame_with(frame_with(frame_with(top, "children", append_value(top.children, child)), "prefix", nil), "barrier", false)
+  end
+  return {stack = replace_last(stack, next_top), positions = state.positions}
+end
+local function grouped_prefix_state(state, stack, top, token)
+  local prefix = (top.prefix or {line = token.line, col = token.col, text = ""})
+  local next_prefix = frame_with(prefix, "text", (prefix.text .. token.text))
+  return {stack = replace_last(stack, frame_with(top, "prefix", next_prefix)), positions = state.positions}
+end
+local function grouped_token_state(state, token, span, group_size, group_gap, indent_width)
+  local stack = state.stack
+  local top = ((#stack > 0) and stack[#stack])
+  local case_49_ = token.kind
+  if (case_49_ == "open") then
+    return grouped_open_state(state, token)
+  elseif (case_49_ == "close") then
+    return grouped_close_state(state, token, span, group_size, group_gap, indent_width)
+  elseif (case_49_ == "comment") then
+    if top then
+      return {stack = replace_last(stack, frame_with(top, "barrier", true)), positions = state.positions}
+    else
+      return state
+    end
+  elseif (case_49_ == "whitespace") then
+    return state
+  elseif (case_49_ == "newline") then
+    return state
+  elseif (case_49_ == "prefix") then
+    if top then
+      return grouped_prefix_state(state, stack, top, token)
+    else
+      return state
+    end
+  else
+    local _ = case_49_
+    if (not top or (top.prefix and (top.prefix.text == "#") and (token.text == "_"))) then
+      return state
+    else
+      return grouped_value_state(state, token)
+    end
+  end
+end
+local function grouped_argument_positions(source, span, group_size, group_gap, indent_width)
+  local tokens, error = reader.tokenize(source)
+  if error then
+    return {}
+  else
+    local _54_
+    do
+      local state = {stack = {}, positions = {}}
+      for _, token in ipairs(tokens) do
+        state = grouped_token_state(state, token, span, group_size, group_gap, indent_width)
+      end
+      _54_ = state
+    end
+    return _54_.positions
+  end
+end
+local function replace_line(lines, index, value)
+  local result = {}
+  for line_number, line in ipairs(lines) do
+    local function _56_()
+      if (line_number == index) then
+        return value
+      else
+        return line
+      end
+    end
+    table.insert(result, _56_())
+  end
+  return result
+end
+local function insert_after(lines, index, items)
+  local result = {}
+  for line_number, line in ipairs(lines) do
+    table.insert(result, line)
+    if (line_number == index) then
+      for _, item in ipairs(items) do
+        table.insert(result, item)
+      end
+    else
+    end
+  end
+  return result
+end
+local function insert_before(lines, index, count)
+  local result = {}
+  for line_number, line in ipairs(lines) do
+    if (line_number == index) then
+      for _ = 1, count do
+        table.insert(result, "")
+      end
+    else
+    end
+    table.insert(result, line)
+  end
+  if (index == (#lines + 1)) then
+    for _ = 1, count do
+      table.insert(result, "")
+    end
+    return nil
+  else
+    return result
+  end
+end
+local function preceding_blank_count(lines, index)
+  if ((index > 0) and (lines[index] == "")) then
+    return (1 + preceding_blank_count(lines, (index - 1)))
+  else
+    return 0
+  end
+end
+local function group_break_lines(count, continuation)
+  local result = {}
+  for _ = 1, (count - 1) do
+    table.insert(result, "")
+  end
+  return append_value(result, continuation)
+end
+local function apply_group_position_with_prefix(lines, position, trimmed_prefix, continuation)
+  return insert_after(replace_line(lines, position.line, trimmed_prefix), position.line, group_break_lines(position.count, continuation))
+end
+local function apply_group_position_without_prefix(lines, position, continuation)
+  local wanted = (position.count - 1)
+  local blanks = preceding_blank_count(lines, (position.line - 1))
+  local function _61_()
+    if (wanted > blanks) then
+      return (wanted - blanks)
+    else
+      return 0
+    end
+  end
+  return insert_before(replace_line(lines, position.line, continuation), position.line, _61_())
+end
+local function apply_group_position(lines, position, indent_width)
+  local line = lines[position.line]
+  local prefix = (line and string.sub(line, 1, (position.col - 1)))
+  local suffix = (line and string.sub(line, position.col))
+  local trimmed_prefix = (prefix and string.gsub(prefix, "%s+$", ""))
+  local trimmed_suffix = (suffix and string.gsub(suffix, "^%s+", ""))
+  local continuation = (trimmed_suffix and (string.rep(" ", (position.indent or indent_width)) .. trimmed_suffix))
+  local case_62_ = not (line and suffix and (string.len(suffix) > 0))
+  if (case_62_ == true) then
+    return lines
+  elseif (case_62_ == false) then
+    if (string.len(trimmed_prefix) > 0) then
+      return apply_group_position_with_prefix(lines, position, trimmed_prefix, continuation)
+    else
+      return apply_group_position_without_prefix(lines, position, continuation)
+    end
+  else
+    return nil
+  end
+end
+local function trim_trailing_empty_lines(lines)
+  if ((#lines > 1) and (lines[#lines] == "")) then
+    return trim_trailing_empty_lines(remove_last(lines))
+  else
+    return lines
+  end
+end
+local function sorted_group_positions(positions)
+  local result = {}
+  for _, position in ipairs(positions) do
+    table.insert(result, position)
+  end
+  local function _66_(left, right)
+    if (left.line == right.line) then
+      return (left.col > right.col)
+    else
+      return (left.line > right.line)
+    end
+  end
+  table.sort(result, _66_)
+  return result
+end
+local function grouped_lines(source, positions, indent_width)
+  local result = split_lines(source)
+  for _, position in ipairs(sorted_group_positions(positions)) do
+    result = apply_group_position(result, position, indent_width)
+  end
+  return result
+end
+local function insert_group_breaks(source, positions, indent_width)
+  local lines = grouped_lines(source, positions, indent_width)
+  local output = table.concat(trim_trailing_empty_lines(lines), "\n")
+  if (string.sub(source, -1) == "\n") then
+    return (output .. "\n")
+  else
+    return output
+  end
+end
+local function apply_grouped_spans(source, config, path, matcher, rule)
+  local group_size = rule.options["group-size"]
+  local indent_width = (config["indent-width"] or 2)
+  if group_size then
+    local result = source
+    for _, span in ipairs(form_spans(source)) do
+      if rule_selected_3f(rule, path, matcher, span.head) then
+        result = insert_group_breaks(result, grouped_argument_positions(result, span, group_size, (rule.options["group-gap"] or 0), indent_width), indent_width)
+      else
+        result = result
+      end
+    end
+    return result
+  else
+    return source
+  end
+end
+local function apply_grouped_argument_break_rules(source, config, path, matcher)
+  local result = source
+  for _, rule in ipairs(newline_rules(config)) do
+    result = apply_grouped_spans(result, config, path, matcher, rule)
+  end
+  return result
+end
 local function apply_argument_break_rules(source, config, path, matcher)
   local result = source
   for _, rule in ipairs(newline_rules(config)) do
@@ -376,10 +700,10 @@ local function normalize_same_level_gaps(source, config, path, matcher)
           end
         end
       end
-      local function _47_(left, right)
+      local function _79_(left, right)
         return (left.left["end"] > right.left["end"])
       end
-      table.sort(pairs, _47_)
+      table.sort(pairs, _79_)
       for _0, pair in ipairs(pairs) do
         if (pair.left["end"] == pair.right.start) then
           normalize_same_line_gap(lines, pair.left, pair.right, count)
@@ -487,17 +811,17 @@ local function token_text_equal_3f(left, right)
   end
 end
 local function token_sequences_equal_3f(left, right, index)
-  local and_59_ = (#left == #right)
-  if and_59_ then
+  local and_91_ = (#left == #right)
+  if and_91_ then
     local result = true
     for offset in ipairs(left) do
       local token = left[offset]
       local other = right[offset]
       result = (result and token_kind_equal_3f(token, other) and token_text_equal_3f(token, other))
     end
-    and_59_ = result
+    and_91_ = result
   end
-  return and_59_
+  return and_91_
 end
 local function binding_whitespace_equal_3f(left, right)
   local left_body = string.gsub(left, "^ *", "")
@@ -593,13 +917,13 @@ local function continue_equal_entries(continue, equal, parser, left, right, foun
   return (found_index and remove_and_continue(continue, equal, parser, left, right, found_index))
 end
 local function equal_entries_3f(equal, parser, left, right)
-  local or_64_ = (#left == 0)
-  if not or_64_ then
+  local or_96_ = (#left == 0)
+  if not or_96_ then
     local entry = table.remove(left, 1)
     local found_index = matching_entry(equal, parser, entry, right)
-    or_64_ = continue_equal_entries(equal_entries_3f, equal, parser, left, right, found_index)
+    or_96_ = continue_equal_entries(equal_entries_3f, equal, parser, left, right, found_index)
   end
-  return or_64_
+  return or_96_
 end
 local function equal_table_3f(equal, parser, a, b)
   local left = entries(a)
@@ -607,19 +931,19 @@ local function equal_table_3f(equal, parser, a, b)
   return ((#left == #right) and equal_entries_3f(equal, parser, left, right))
 end
 local function equal_value(parser, a, b)
-  local and_65_ = (type(a) == type(b))
-  if and_65_ then
+  local and_97_ = (type(a) == type(b))
+  if and_97_ then
     if (type(a) == "table") then
       if (symbol_3f(a) or parser["comment?"](a)) then
-        and_65_ = (tostring(a) == tostring(b))
+        and_97_ = (tostring(a) == tostring(b))
       else
-        and_65_ = equal_table_3f(equal_value, parser, a, b)
+        and_97_ = equal_table_3f(equal_value, parser, a, b)
       end
     else
-      and_65_ = (a == b)
+      and_97_ = (a == b)
     end
   end
-  return and_65_
+  return and_97_
 end
 local function parse_all(parser, source)
   local iterator = parser.parser(source, "fennel-extras", {comments = true})
@@ -627,10 +951,10 @@ local function parse_all(parser, source)
   local done = false
   while not done do
     local captured_values
-    local function _68_()
+    local function _100_()
       return iterator()
     end
-    captured_values = capture_values(_68_)
+    captured_values = capture_values(_100_)
     local ok = captured_values[1]
     local form = captured_values[2]
     if ok then
@@ -655,12 +979,12 @@ local ast_equal_3f
 do
   local function ast_equal_3f0(parser, a, b)
     local ok, result
-    local function _71_()
+    local function _103_()
       local left = parse_all(parser, a)
       local right = parse_all(parser, b)
       return ((#left == #right) and forms_equal_3f(parser, left, right))
     end
-    ok, result = pcall(_71_)
+    ok, result = pcall(_103_)
     return (ok and result)
   end
   _2amodule_2a["ast-equal?"] = ast_equal_3f0
@@ -700,6 +1024,14 @@ end
 local function format_string_error(alignment_error, rules_error)
   return (alignment_error or rules_error)
 end
+local function format_string_output(source, parser, alignment, out, config, path, matcher)
+  local scalar_broken = apply_scalar_argument_break_rules(out, config, path, matcher)
+  local normalized = normalize_same_level_gaps(scalar_broken, config, path, matcher)
+  local newlines = apply_newline_rules(normalized, config, path, matcher)
+  local grouped = apply_grouped_argument_break_rules(newlines, config, path, matcher)
+  local output = normalize_same_level_gaps(grouped, config, path, matcher)
+  return validated_output(source, parser, alignment, output, config)
+end
 local function format_string_valid(source, parser, config, path, matcher)
   local alignment = settings.resolve(config)
   local broken_source = apply_argument_break_rules(source, config, path, matcher)
@@ -707,11 +1039,7 @@ local function format_string_valid(source, parser, config, path, matcher)
   if error then
     return nil, error
   else
-    local scalar_broken = apply_scalar_argument_break_rules(out, config, path, matcher)
-    local normalized = normalize_same_level_gaps(scalar_broken, config, path, matcher)
-    local newlines = apply_newline_rules(normalized, config, path, matcher)
-    local output = normalize_same_level_gaps(newlines, config, path, matcher)
-    return validated_output(source, parser, alignment, output, config)
+    return format_string_output(source, parser, alignment, out, config, path, matcher)
   end
 end
 local format_string

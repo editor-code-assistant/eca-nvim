@@ -229,6 +229,295 @@
                 (table.insert lines (+ position.line position.count) suffix)))
     (table.concat lines "\n")))
 
+(defn- append-value
+  [items value]
+  (let [result []]
+    (each [_ item (ipairs items)]
+          (table.insert result item))
+    (table.insert result value)
+    result))
+
+(defn- replace-last
+  [items value]
+  (let [result     []
+        last-index (length items)]
+    (each [index item (ipairs items)]
+          (table.insert result (if (= index last-index) value item)))
+    result))
+
+(defn- remove-last
+  [items]
+  (let [result     []
+        last-index (length items)]
+    (each [index item (ipairs items)]
+          (when (< index last-index)
+                (table.insert result item)))
+    result))
+
+(defn- frame-with
+  [frame key value]
+  (let [result {}]
+    (each [name item (pairs frame)]
+          (tset result name item))
+    (tset result key value)
+    result))
+
+(defn- grouped-child-state
+  [state child open-col group-size group-gap indent-width]
+  (let [since    (if child.barrier 0 (. state :since))
+        count    (+ 1 (if (and (> since 0)
+                               (= (math.fmod since group-size) 0))
+                        group-gap
+                     0))
+        position {:line   child.line
+                  :col    child.col
+                  :indent (- (+ open-col indent-width) 1)
+                  :count  count}]
+    {:since     (+ since 1)
+     :positions (append-value (. state :positions) position)}))
+
+(defn- grouped-children
+  [children open-col group-size group-gap indent-width since-barrier positions]
+  (. (accumulate [state {:since since-barrier :positions positions}
+                  _ child (ipairs children)]
+                 (grouped-child-state state child open-col group-size group-gap indent-width))
+     :positions))
+
+(defn- grouped-open-state
+  [state token]
+  (let [stack      (. state :stack)
+        top        (and (> (length stack) 0) (. stack (length stack)))
+        child      (and top
+                        top.head
+                        (or top.prefix
+                            {:line    token.line
+                             :col     token.col
+                             :barrier top.barrier}))
+        next-top   (if child
+                     (frame-with (frame-with (frame-with top
+                                                         :children
+                                                         (append-value top.children child))
+                                             :prefix nil)
+                                 :barrier false)
+                     top)
+        next-stack (if top (replace-last stack next-top) stack)]
+    {:stack     (append-value next-stack {:start    token.line
+                                          :open-col token.col
+                                          :head     nil
+                                          :children []
+                                          :barrier  false
+                                          :prefix   nil})
+     :positions (. state :positions)}))
+
+(defn- grouped-close-state
+  [state token span group-size group-gap indent-width]
+  (let [stack     (. state :stack)
+        top       (and (> (length stack) 0) (. stack (length stack)))
+        positions (if (and top
+                           (= top.start span.start)
+                           (= top.head span.head))
+                    (grouped-children top.children
+                                      top.open-col
+                                      group-size
+                                      group-gap
+                                      indent-width
+                                       0
+                                      (. state :positions))
+                    (. state :positions))]
+    {:stack (remove-last stack) :positions positions}))
+
+(defn- grouped-value-state
+  [state token]
+  (let [stack    (. state :stack)
+        top      (and (> (length stack) 0) (. stack (length stack)))
+        child    (or top.prefix
+                     {:line    token.line
+                      :col     token.col
+                      :barrier top.barrier})
+        next-top (if (= top.head nil)
+                   (frame-with (frame-with top :head token.text) :prefix nil)
+                   (frame-with (frame-with (frame-with top
+                                                       :children
+                                                       (append-value top.children child))
+                                           :prefix nil)
+                               :barrier false))]
+    {:stack     (replace-last stack next-top)
+     :positions (. state :positions)}))
+
+(defn- grouped-prefix-state
+  [state stack top token]
+  (let [prefix      (or top.prefix
+                        {:line token.line
+                         :col  token.col
+                         :text ""})
+        next-prefix (frame-with prefix
+                                :text
+                                (.. prefix.text token.text))]
+    {:stack     (replace-last stack (frame-with top :prefix next-prefix))
+     :positions (. state :positions)}))
+
+(defn- grouped-token-state
+  [state token span group-size group-gap indent-width]
+  (let [stack (. state :stack)
+        top   (and (> (length stack) 0) (. stack (length stack)))]
+    (case token.kind
+      :open       (grouped-open-state state token)
+      :close      (grouped-close-state state token span group-size group-gap indent-width)
+      :comment    (if top
+                    {:stack     (replace-last stack (frame-with top :barrier true))
+                     :positions (. state :positions)}
+                    state)
+      :whitespace state
+      :newline    state
+      :prefix     (if top
+                    (grouped-prefix-state state stack top token)
+                    state)
+      _           (if (or (not top)
+                          (and top.prefix
+                               (= top.prefix.text "#")
+                               (= token.text "_")))
+                    state
+                    (grouped-value-state state token)))))
+
+(defn- grouped-argument-positions
+  [source span group-size group-gap indent-width]
+  (let [(tokens error) (reader.tokenize source)]
+    (if error
+      []
+      (. (accumulate [state {:stack [] :positions []}
+                      _ token (ipairs tokens)]
+                     (grouped-token-state state token span group-size group-gap indent-width))
+         :positions))))
+
+(defn- replace-line
+  [lines index value]
+  (let [result []]
+    (each [line-number line (ipairs lines)]
+          (table.insert result (if (= line-number index) value line)))
+    result))
+
+(defn- insert-after
+  [lines index items]
+  (let [result []]
+    (each [line-number line (ipairs lines)]
+          (table.insert result line)
+          (when (= line-number index)
+                (each [_ item (ipairs items)]
+                      (table.insert result item))))
+    result))
+
+(defn- insert-before
+  [lines index count]
+  (let [result []]
+    (each [line-number line (ipairs lines)]
+          (when (= line-number index)
+                (for [_ 1 count]
+                     (table.insert result "")))
+          (table.insert result line))
+    (if (= index (+ (length lines) 1))
+      (for [_ 1 count]
+           (table.insert result ""))
+      result)))
+
+(defn- preceding-blank-count
+  [lines index]
+  (if (and (> index 0) (= (. lines index) ""))
+    (+ 1 (preceding-blank-count lines (- index 1)))
+    0))
+
+(defn- group-break-lines
+  [count continuation]
+  (let [result []]
+    (for [_ 1 (- count 1)]
+         (table.insert result ""))
+    (append-value result continuation)))
+
+(defn- apply-group-position-with-prefix
+  [lines position trimmed-prefix continuation]
+  (insert-after (replace-line lines position.line trimmed-prefix)
+                position.line
+                (group-break-lines position.count continuation)))
+
+(defn- apply-group-position-without-prefix
+  [lines position continuation]
+  (let [wanted (- position.count 1)
+        blanks (preceding-blank-count lines (- position.line 1))]
+    (insert-before (replace-line lines position.line continuation)
+                   position.line
+                   (if (> wanted blanks) (- wanted blanks) 0))))
+
+(defn- apply-group-position
+  [lines position indent-width]
+  (let [line           (. lines position.line)
+        prefix         (and line (string.sub line 1 (- position.col 1)))
+        suffix         (and line (string.sub line position.col))
+        trimmed-prefix (and prefix (string.gsub prefix "%s+$" ""))
+        trimmed-suffix (and suffix (string.gsub suffix "^%s+" ""))
+        continuation   (and trimmed-suffix
+                            (.. (string.rep " " (or position.indent indent-width))
+                                trimmed-suffix))]
+    (case (not (and line suffix (> (string.len suffix) 0)))
+      true  lines
+      false (if (> (string.len trimmed-prefix) 0)
+              (apply-group-position-with-prefix lines position trimmed-prefix continuation)
+              (apply-group-position-without-prefix lines position continuation)))))
+
+(defn- trim-trailing-empty-lines
+  [lines]
+  (if (and (> (length lines) 1)
+           (= (. lines (length lines)) ""))
+    (trim-trailing-empty-lines (remove-last lines))
+    lines))
+
+(defn- sorted-group-positions
+  [positions]
+  (let [result []]
+    (each [_ position (ipairs positions)]
+          (table.insert result position))
+    (table.sort result
+                (fn
+                  [left right]
+                  (if (= left.line right.line)
+                    (> left.col right.col)
+                    (> left.line right.line))))
+    result))
+
+(defn- grouped-lines
+  [source positions indent-width]
+  (accumulate [result (split-lines source)
+               _ position (ipairs (sorted-group-positions positions))]
+              (apply-group-position result position indent-width)))
+
+(defn- insert-group-breaks
+  [source positions indent-width]
+  (let [lines  (grouped-lines source positions indent-width)
+        output (table.concat (trim-trailing-empty-lines lines) "\n")]
+    (if (= (string.sub source -1) "\n")
+      (.. output "\n")
+      output)))
+
+(defn- apply-grouped-spans
+  [source config path matcher rule]
+  (let [group-size   (. rule :options :group-size)
+        indent-width (or (. config :indent-width) 2)]
+    (if group-size
+      (accumulate [result source _ span (ipairs (form-spans source))]
+                  (if (rule-selected? rule path matcher span.head)
+                    (insert-group-breaks result
+                                         (grouped-argument-positions result
+                                                                     span
+                                                                     group-size
+                                                                     (or (. rule :options :group-gap) 0)
+                                                                     indent-width)
+                                         indent-width)
+                    result))
+      source)))
+
+(defn- apply-grouped-argument-break-rules
+  [source config path matcher]
+  (accumulate [result source _ rule (ipairs (newline-rules config))]
+              (apply-grouped-spans result config path matcher rule)))
+
 (defn- apply-argument-break-rules
   [source config path matcher]
   (accumulate [result source _ rule (ipairs (newline-rules config))]
@@ -637,6 +926,15 @@
   [alignment-error rules-error]
   (or alignment-error rules-error))
 
+(defn- format-string-output
+  [source parser alignment out config path matcher]
+  (let [scalar-broken (apply-scalar-argument-break-rules out config path matcher)
+        normalized    (normalize-same-level-gaps scalar-broken config path matcher)
+        newlines      (apply-newline-rules normalized config path matcher)
+        grouped       (apply-grouped-argument-break-rules newlines config path matcher)
+        output        (normalize-same-level-gaps grouped config path matcher)]
+    (validated-output source parser alignment output config)))
+
 (defn- format-string-valid
   [source parser config path matcher]
   (let [alignment     (settings.resolve config)
@@ -644,11 +942,7 @@
         (out error)   (indent.reindent broken-source config)]
     (if error
       (values nil error)
-      (do (local scalar-broken (apply-scalar-argument-break-rules out config path matcher))
-          (local normalized (normalize-same-level-gaps scalar-broken config path matcher))
-          (local newlines (apply-newline-rules normalized config path matcher))
-          (local output (normalize-same-level-gaps newlines config path matcher))
-          (validated-output source parser alignment output config)))))
+      (format-string-output source parser alignment out config path matcher))))
 
 (defn format-string
   [source opts]

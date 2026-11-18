@@ -46,6 +46,10 @@
                           {:applies-to {:files ["^fennel-extras/"]
                                         :forms ["defn" "defn-"]}
                            :options    {:break-after-n-args [[1 1] [2 1]]}}
+                          {:applies-to {:files ["^fennel-extras/"]
+                                        :forms ["cond"]}
+                           :options    {:group-size 2
+                                        :group-gap  1}}
                           {:applies-to {:forms ["testing"]}
                            :options    {:before 0}}
                           {:applies-to {:files ["^spec/"]

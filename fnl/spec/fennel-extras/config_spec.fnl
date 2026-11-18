@@ -445,6 +445,21 @@
               (validation-error-message-raw
                "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-n-args [[1 \"1\"]]}}]}"))))
 
+  (testing "accepts grouped argument options"
+    (is (= nil
+           (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-size 2 :group-gap 1}}]}"))))
+
+  (testing "rejects non-positive group-size"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-size 0}}]}"))))
+
+  (testing "rejects negative group-gap"
+    (is (not= nil
+              (validation-error-message-raw
+               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-gap -1}}]}"))))
+
   (testing "accepts a positive scalar break-after-args value"
     (is (= nil
            (validation-error-message-raw
@@ -648,6 +663,10 @@
                           {:applies-to {:files ["^fennel-extras/"]
                                         :forms ["defn" "defn-"]}
                            :options    {:break-after-n-args [[1 1] [2 1]]}}
+                          {:applies-to {:files ["^fennel-extras/"]
+                                        :forms ["cond"]}
+                           :options    {:group-size 2
+                                        :group-gap  1}}
                           {:applies-to {:forms ["testing"]}
                            :options    {:before 0}}
                           {:applies-to {:files ["^spec/"]
