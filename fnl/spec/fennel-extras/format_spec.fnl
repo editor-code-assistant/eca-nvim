@@ -90,7 +90,7 @@
                                                   true))
      :newline-added      (and (not (. format :error))
                               (format.indent-only? "(let [a 1 b 2])"
-                                                   "(let [a 1\n      b 2])"
+                                                   "(let [a 1\n       b 2])"
                                                    true))
      :blank-line-removed (or (. format :error)
                              (format.indent-only? "(f a\n\n  b)"
@@ -553,9 +553,11 @@
      :value-idempotent (. (format-summary value-on {:align-bindings true}) :value)}))
 
 (deftest alignment-regressions
-  (testing "alignment preserves normal reindentation without binding vectors"
+  (testing "alignment preserves the generic fallback for unrelated lists"
     (let [result (alignment-regression-scenario)]
-      (is (= (. result :simple-off)
+      (is (= "(defn f []\n  (foo\n    bar))"
+             (. result :simple-off)))
+      (is (= "(defn f []\n  (foo\n   bar))"
              (. result :simple-on)))))
 
   (testing "alignment preserves custom if indentation"
@@ -899,7 +901,7 @@
       (is (= "(let [{: x\n       : y} (f)\n      a  1\n      bb 2] x)"
              (. result :value)))))
 
-  (testing "all alignment switches off preserve the existing output byte-for-byte"
+  (testing "all alignment switches off use generic fallback indentation"
     (let [source
           "(let [a 1\n      long-name 2]\n  a)"
           config {:alignment {:bindings         false
@@ -910,7 +912,7 @@
                               :binding-forms    ["let"]
                               :clause-forms     ["case"]}}
           result (format-summary source config)]
-      (is (= source
+      (is (= "(let [a 1\n       long-name 2]\n  a)"
              (. result :value))))))
 
 (deftest align-binding-clauses
@@ -1051,7 +1053,7 @@
               :value))))
 
   (testing "align-bindings false indents a map comment like the following key"
-    (is (= "(let [m {:a 1\n         ;; in map\n         :b 2}]\n  m)"
+    (is (= "(let [m {:a 1\n          ;; in map\n          :b 2}]\n  m)"
            (. (comment-format-scenario "(let [m {:a 1\n;; in map\n:b 2}]\nm)"
                                        false)
               :value))))
@@ -1213,7 +1215,7 @@
            (. (format-summary "(let [a 1 b 2]\n  a)" {:alignment {:maps true}}) :value))))
 
   (testing "split-bindings splits a let without aligning its names"
-    (is (= "(let [a 1\n      b 2]\n  a)"
+    (is (= "(let [a 1\n       b 2]\n  a)"
            (. (format-summary "(let [a 1 b 2]\n  a)" {:alignment {:split-bindings true}}) :value))))
 
   (testing "bindings alignment aligns lets"
@@ -1239,7 +1241,7 @@
               :value))))
 
   (testing "custom binding forms can add a form for splitting"
-    (is (= "(my-let [a 1\n         b 2] a)"
+    (is (= "(my-let [a 1\n          b 2] a)"
            (. (format-summary "(my-let [a 1 b 2] a)"
                               {:alignment {:split-bindings true :binding-forms ["my-let"]}})
               :value))))

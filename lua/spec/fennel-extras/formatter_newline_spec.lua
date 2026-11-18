@@ -425,7 +425,7 @@ local function _52_()
   require("plenary.busted").it("places one blank line between selected siblings that share a physical line", _55_)
   local function _56_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(foo (defn one [] true)\n\n     (defn- two [] true))"
+    local expected_6_auto = "(foo (defn one [] true)\n\n  (defn- two [] true))"
     local actual_7_auto = formatted_with_config(format, "(foo (defn one [] true)\n\n\n(defn- two [] true))", config0)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

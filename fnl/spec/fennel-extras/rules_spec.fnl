@@ -97,8 +97,8 @@
     (is (= "(testing \"d\"\n  body)"
            (output-for "(testing \"d\"\nbody)" {:indents {"testing" [[:block 1]]}}))))
 
-  (testing "applies block rules through nested forms and keeps default inner alignment"
-    (is (= "(deftest t\n  (testing \"d\"\n    (is (= 1\n           1))))"
+  (testing "applies block rules through nested forms and uses generic fallback offsets"
+    (is (= "(deftest t\n  (testing \"d\"\n    (is (= 1\n          1))))"
            (output-for "(deftest t\n(testing \"d\"\n(is (= 1\n1))))"
                        {:indents {"deftest" [[:block 1]]
                                   "testing" [[:block 1]]}}))))
@@ -108,7 +108,7 @@
            (output-for "(testing\n\"d\"\nbody)" {:indents {"testing" [[:block 1]]}}))))
 
   (testing "applies inner rules to only the selected argument"
-    (is (= "(foo a\n  b\n     c)"
+    (is (= "(foo a\n  b\n  c)"
            (output-for "(foo a\nb\nc)" {:indents {"foo" [[:inner 0 1]]}})))))
 
 (deftest exact-only-rules
@@ -116,9 +116,9 @@
     (let [outputs [(exact-output-for "(when x\ny)" {})
                    (exact-output-for "(defn f\n[x]\nx)" {})
                    (exact-output-for "(with-foo x\ny)" {})]]
-      (is (= ["(when x\n      y)"
-              "(defn f\n      [x]\n      x)"
-              "(with-foo x\n          y)"]
+      (is (= ["(when x\n  y)"
+              "(defn f\n  [x]\n  x)"
+              "(with-foo x\n  y)"]
              outputs))))
 
   (testing "uses only an exact indent or format-as alias when declared"

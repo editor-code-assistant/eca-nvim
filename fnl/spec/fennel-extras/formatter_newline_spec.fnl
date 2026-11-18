@@ -337,7 +337,7 @@
                                     config))))
 
     (testing "normalizes selected siblings under an unselected nested parent"
-      (is (= "(foo (defn one [] true)\n\n     (defn- two [] true))"
+      (is (= "(foo (defn one [] true)\n\n  (defn- two [] true))"
              (formatted-with-config format
                                     "(foo (defn one [] true)\n\n\n(defn- two [] true))"
                                     config))))

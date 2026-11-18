@@ -92,12 +92,12 @@ local function _9_()
   require("plenary.busted").it("applies block one to arguments after the first", _11_)
   local function _12_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(deftest t\n  (testing \"d\"\n    (is (= 1\n           1))))"
+    local expected_6_auto = "(deftest t\n  (testing \"d\"\n    (is (= 1\n          1))))"
     local actual_7_auto = output_for("(deftest t\n(testing \"d\"\n(is (= 1\n1))))", {indents = {deftest = {{"block", 1}}, testing = {{"block", 1}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("applies block rules through nested forms and keeps default inner alignment", _12_)
+  require("plenary.busted").it("applies block rules through nested forms and uses generic fallback offsets", _12_)
   local function _13_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(testing\n  \"d\"\n  body)"
@@ -108,7 +108,7 @@ local function _9_()
   require("plenary.busted").it("uses body indentation when the first block argument starts on a new line", _13_)
   local function _14_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(foo a\n  b\n     c)"
+    local expected_6_auto = "(foo a\n  b\n  c)"
     local actual_7_auto = output_for("(foo a\nb\nc)", {indents = {foo = {{"inner", 0, 1}}}})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -120,7 +120,7 @@ local function _15_()
   local function _16_()
     local outputs = {exact_output_for("(when x\ny)", {}), exact_output_for("(defn f\n[x]\nx)", {}), exact_output_for("(with-foo x\ny)", {})}
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"(when x\n      y)", "(defn f\n      [x]\n      x)", "(with-foo x\n          y)"}
+    local expected_6_auto = {"(when x\n  y)", "(defn f\n  [x]\n  x)", "(with-foo x\n  y)"}
     local actual_7_auto = outputs
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

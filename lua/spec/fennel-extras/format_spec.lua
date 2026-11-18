@@ -35,7 +35,7 @@ local function verifier_scenario()
   local comment_b = ";; two\n(foo)"
   local second_a = "(a)\n(b)"
   local second_b = "(a)\n(c)"
-  return {["indent-same"] = (not format.error and format["indent-only?"](same_a, same_b)), ["indent-string"] = (format.error or format["indent-only?"]("(foo \"a\")", "(foo \"b\")")), ["indent-trailing"] = (format.error or format["indent-only?"]("(foo)", "(foo) ")), ["indent-lines"] = (format.error or format["indent-only?"]("(foo)\n(bar)", "(foo)")), ["indent-char"] = (format.error or format["indent-only?"]("(foo)", "(bar)")), ["binding-aligned"] = (not format.error and format["indent-only?"]("(let [a 1\n      long-name 2])", "(let [a         1\n      long-name 2])", true)), ["binding-joined"] = (format.error or format["indent-only?"]("(let [a 1\n      long-name 2])", "(let [a1\n      long-name 2])", true)), ["binding-string"] = (format.error or format["indent-only?"]("(let [x \"a b\"])", "(let [x \"a  b\"])", true)), ["newline-removed"] = (format.error or format["indent-only?"]("(let [a 1\n b 2])", "(let [a 1 b 2])", true)), ["newline-added"] = (not format.error and format["indent-only?"]("(let [a 1 b 2])", "(let [a 1\n      b 2])", true)), ["blank-line-removed"] = (format.error or format["indent-only?"]("(f a\n\n  b)", "(f a\n  b)", true)), ["spaces-collapsed"] = (not format.error and format["indent-only?"]("(f a    b)", "(f a b)", true)), ["separation-removed"] = (format.error or format["indent-only?"]("(f a b)", "(f ab)", true)), ["ast-same"] = (not (format.error or parser.error) and format["ast-equal?"](parser, same_a, same_b)), ["ast-symbol"] = (format.error or parser.error or format["ast-equal?"](parser, symbol_a, symbol_b)), ["ast-comment"] = (format.error or parser.error or format["ast-equal?"](parser, comment_a, comment_b)), ["ast-second"] = (format.error or parser.error or format["ast-equal?"](parser, second_a, second_b))}
+  return {["indent-same"] = (not format.error and format["indent-only?"](same_a, same_b)), ["indent-string"] = (format.error or format["indent-only?"]("(foo \"a\")", "(foo \"b\")")), ["indent-trailing"] = (format.error or format["indent-only?"]("(foo)", "(foo) ")), ["indent-lines"] = (format.error or format["indent-only?"]("(foo)\n(bar)", "(foo)")), ["indent-char"] = (format.error or format["indent-only?"]("(foo)", "(bar)")), ["binding-aligned"] = (not format.error and format["indent-only?"]("(let [a 1\n      long-name 2])", "(let [a         1\n      long-name 2])", true)), ["binding-joined"] = (format.error or format["indent-only?"]("(let [a 1\n      long-name 2])", "(let [a1\n      long-name 2])", true)), ["binding-string"] = (format.error or format["indent-only?"]("(let [x \"a b\"])", "(let [x \"a  b\"])", true)), ["newline-removed"] = (format.error or format["indent-only?"]("(let [a 1\n b 2])", "(let [a 1 b 2])", true)), ["newline-added"] = (not format.error and format["indent-only?"]("(let [a 1 b 2])", "(let [a 1\n       b 2])", true)), ["blank-line-removed"] = (format.error or format["indent-only?"]("(f a\n\n  b)", "(f a\n  b)", true)), ["spaces-collapsed"] = (not format.error and format["indent-only?"]("(f a    b)", "(f a b)", true)), ["separation-removed"] = (format.error or format["indent-only?"]("(f a b)", "(f ab)", true)), ["ast-same"] = (not (format.error or parser.error) and format["ast-equal?"](parser, same_a, same_b)), ["ast-symbol"] = (format.error or parser.error or format["ast-equal?"](parser, symbol_a, symbol_b)), ["ast-comment"] = (format.error or parser.error or format["ast-equal?"](parser, comment_a, comment_b)), ["ast-second"] = (format.error or parser.error or format["ast-equal?"](parser, second_a, second_b))}
 end
 local function format_call_body(format, source, config)
   return format["format-string"](source, {config = explicit_format_config(config)})
@@ -622,13 +622,19 @@ end
 local function _72_()
   local function _73_()
     local result = alignment_regression_scenario()
+    do
+      local assert_5_auto = require("luassert")
+      local expected_6_auto = "(defn f []\n  (foo\n    bar))"
+      local actual_7_auto = result["simple-off"]
+      assert_5_auto.same(expected_6_auto, actual_7_auto)
+    end
     local assert_5_auto = require("luassert")
-    local expected_6_auto = result["simple-off"]
+    local expected_6_auto = "(defn f []\n  (foo\n   bar))"
     local actual_7_auto = result["simple-on"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment preserves normal reindentation without binding vectors", _73_)
+  require("plenary.busted").it("alignment preserves the generic fallback for unrelated lists", _73_)
   local function _74_()
     local result = alignment_regression_scenario()
     local assert_5_auto = require("luassert")
@@ -1062,12 +1068,12 @@ local function _104_()
     local config = {alignment = {["binding-forms"] = {"let"}, ["clause-forms"] = {"case"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}}
     local result = format_summary(source, config)
     local assert_5_auto = require("luassert")
-    local expected_6_auto = source
+    local expected_6_auto = "(let [a 1\n       long-name 2]\n  a)"
     local actual_7_auto = result.value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("all alignment switches off preserve the existing output byte-for-byte", _123_)
+  return require("plenary.busted").it("all alignment switches off use generic fallback indentation", _123_)
 end
 require("plenary.busted").describe("align-bindings", _104_)
 local function _124_()
@@ -1247,7 +1253,7 @@ local function _140_()
   require("plenary.busted").it("align-bindings true indents a let comment like the following body", _146_)
   local function _147_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [m {:a 1\n         ;; in map\n         :b 2}]\n  m)"
+    local expected_6_auto = "(let [m {:a 1\n          ;; in map\n          :b 2}]\n  m)"
     local actual_7_auto = comment_format_scenario("(let [m {:a 1\n;; in map\n:b 2}]\nm)", false).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -1529,7 +1535,7 @@ local function _181_()
   require("plenary.busted").it("maps alignment does not align let bindings or split one-line lets", _183_)
   local function _184_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a 1\n      b 2]\n  a)"
+    local expected_6_auto = "(let [a 1\n       b 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2]\n  a)", {alignment = {["split-bindings"] = true}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -1577,7 +1583,7 @@ local function _181_()
   require("plenary.busted").it("custom binding forms restrict splitting to the configured names", _189_)
   local function _190_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(my-let [a 1\n         b 2] a)"
+    local expected_6_auto = "(my-let [a 1\n          b 2] a)"
     local actual_7_auto = format_summary("(my-let [a 1 b 2] a)", {alignment = {["split-bindings"] = true, ["binding-forms"] = {"my-let"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

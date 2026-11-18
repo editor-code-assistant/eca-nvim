@@ -158,35 +158,40 @@
   (< (. (helpers.child-start child) :line) line-number))
 
 (defn- default-indent-for
-  [node first-token line-number]
+  [node first-token line-number config]
   (if (= node nil)
     0
     (if (= first-token.kind :close)
       (or (. node.open :line-indent) (. node.open :out-col))
-      (do (local children (helpers.nontrivia-children node))
-          (local first-child (. children 1))
-          (local second-child (. children 2))
-          (if (= first-child nil)
-            (+ (. node.open :out-col) 1)
-            (if (and (= node.kind :list) (= first-child.kind :symbol))
-              (if (and second-child (started-before? second-child line-number))
-                (+ (. (helpers.child-start second-child) :out-col)
-                   (if (and (= (. node.open :line) 2)
-                            (= (. node.open :col) 2)
-                            (= line-number 3))
-                               1
-                               0))
-                (if (started-before? first-child line-number)
-                  (. (helpers.child-start first-child) :out-col)
-                  (+ (. node.open :out-col) 1)))
-              (if (started-before? first-child line-number)
-                (. (helpers.child-start first-child) :out-col)
-                (+ (. node.open :out-col) 1))))))))
+      (let [alignment (settings.resolve config)]
+        (if (or alignment.maps
+                alignment.clauses
+                (and alignment.bindings (not= node.kind :list)))
+          (do (local children (helpers.nontrivia-children node))
+              (local first-child (. children 1))
+              (local second-child (. children 2))
+              (if (= first-child nil)
+                (+ (. node.open :out-col) 1)
+                (if (and (= node.kind :list) (= first-child.kind :symbol))
+                  (if (and second-child (started-before? second-child line-number))
+                    (+ (. (helpers.child-start second-child) :out-col)
+                       (if (and (= (. node.open :line) 2)
+                                (= (. node.open :col) 2)
+                                (= line-number 3))
+                           1
+                           0))
+                    (if (started-before? first-child line-number)
+                      (. (helpers.child-start first-child) :out-col)
+                      (+ (. node.open :out-col) 1)))
+                  (if (started-before? first-child line-number)
+                    (. (helpers.child-start first-child) :out-col)
+                    (+ (. node.open :out-col) 1)))))
+          (+ (. node.open :out-col) (or (and config (. config :indent-width)) 2)))))))
 
 (defn- indent-for
   [node first-token line-number config]
   (or (rule-indent node first-token line-number config)
-      (default-indent-for node first-token line-number)))
+      (default-indent-for node first-token line-number config)))
 
 (defn- next-token-indent
   [token node config]

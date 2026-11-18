@@ -192,28 +192,37 @@ end
 local function started_before_3f(child, line_number)
   return (helpers["child-start"](child).line < line_number)
 end
-local function default_indent_for(node, first_token, line_number)
+local function default_indent_for(node, first_token, line_number, config)
   if (node == nil) then
     return 0
   else
     if (first_token.kind == "close") then
       return (node.open["line-indent"] or node.open["out-col"])
     else
-      local children = helpers["nontrivia-children"](node)
-      local first_child = children[1]
-      local second_child = children[2]
-      if (first_child == nil) then
-        return (node.open["out-col"] + 1)
-      else
-        if ((node.kind == "list") and (first_child.kind == "symbol")) then
-          if (second_child and started_before_3f(second_child, line_number)) then
-            local _21_
-            if ((node.open.line == 2) and (node.open.col == 2) and (line_number == 3)) then
-              _21_ = 1
+      local alignment = settings.resolve(config)
+      if (alignment.maps or alignment.clauses or (alignment.bindings and (node.kind ~= "list"))) then
+        local children = helpers["nontrivia-children"](node)
+        local first_child = children[1]
+        local second_child = children[2]
+        if (first_child == nil) then
+          return (node.open["out-col"] + 1)
+        else
+          if ((node.kind == "list") and (first_child.kind == "symbol")) then
+            if (second_child and started_before_3f(second_child, line_number)) then
+              local _21_
+              if ((node.open.line == 2) and (node.open.col == 2) and (line_number == 3)) then
+                _21_ = 1
+              else
+                _21_ = 0
+              end
+              return (helpers["child-start"](second_child)["out-col"] + _21_)
             else
-              _21_ = 0
+              if started_before_3f(first_child, line_number) then
+                return helpers["child-start"](first_child)["out-col"]
+              else
+                return (node.open["out-col"] + 1)
+              end
             end
-            return (helpers["child-start"](second_child)["out-col"] + _21_)
           else
             if started_before_3f(first_child, line_number) then
               return helpers["child-start"](first_child)["out-col"]
@@ -221,19 +230,15 @@ local function default_indent_for(node, first_token, line_number)
               return (node.open["out-col"] + 1)
             end
           end
-        else
-          if started_before_3f(first_child, line_number) then
-            return helpers["child-start"](first_child)["out-col"]
-          else
-            return (node.open["out-col"] + 1)
-          end
         end
+      else
+        return (node.open["out-col"] + ((config and config["indent-width"]) or 2))
       end
     end
   end
 end
 local function indent_for(node, first_token, line_number, config)
-  return (rule_indent(node, first_token, line_number, config) or default_indent_for(node, first_token, line_number))
+  return (rule_indent(node, first_token, line_number, config) or default_indent_for(node, first_token, line_number, config))
 end
 local function next_token_indent(token, node, config)
   if (token.kind == "close") then
@@ -321,10 +326,10 @@ local function reindent_once(source, config)
     return nil, nil, error
   else
     local captured_values
-    local function _38_()
+    local function _39_()
       return split_lines(source)
     end
-    captured_values = capture_values(_38_)
+    captured_values = capture_values(_39_)
     local lines = captured_values[1]
     local final_newline = captured_values[2]
     local nodes = {}
@@ -336,25 +341,25 @@ local function reindent_once(source, config)
       table.insert(output, process_line(line_number, line, nodes, tokens, config))
       line_number = (line_number + 1)
     end
-    local _39_
+    local _40_
     if final_newline then
-      _39_ = "\n"
+      _40_ = "\n"
     else
-      _39_ = ""
+      _40_ = ""
     end
-    return (table.concat(output, "\n") .. _39_), tree, nil
+    return (table.concat(output, "\n") .. _40_), tree, nil
   end
 end
 local function alignment_source(source, tree, alignment)
   local lines, final_newline = split_lines(source)
   local aligned = align.apply(lines, tree, alignment)
-  local _42_
+  local _43_
   if final_newline then
-    _42_ = "\n"
+    _43_ = "\n"
   else
-    _42_ = ""
+    _43_ = ""
   end
-  return (table.concat(aligned, "\n") .. _42_)
+  return (table.concat(aligned, "\n") .. _43_)
 end
 local function alignment_pass(source, config, alignment)
   local plain, tree, error = reindent_once(source, config)
@@ -363,10 +368,10 @@ local function alignment_pass(source, config, alignment)
   else
     local aligned = alignment_source(plain, tree, alignment)
     local captured_values
-    local function _44_()
+    local function _45_()
       return reindent_once(aligned, config)
     end
-    captured_values = capture_values(_44_)
+    captured_values = capture_values(_45_)
     local result = captured_values[1]
     local _ = captured_values[2]
     local result_error = captured_values[3]
@@ -395,10 +400,10 @@ local function split_and_align(source, config, alignment)
     return nil, error
   else
     local captured_values
-    local function _48_()
+    local function _49_()
       return alignment_fixed_point(prepared, config, alignment, 3)
     end
-    captured_values = capture_values(_48_)
+    captured_values = capture_values(_49_)
     local result = captured_values[1]
     local result_error = captured_values[2]
     if result_error then
@@ -424,10 +429,10 @@ do
           return split_and_align(source, config, alignment)
         else
           local captured_values
-          local function _51_()
+          local function _52_()
             return reindent_once(source, config)
           end
-          captured_values = capture_values(_51_)
+          captured_values = capture_values(_52_)
           local result = captured_values[1]
           local _ = captured_values[2]
           local error = captured_values[3]
