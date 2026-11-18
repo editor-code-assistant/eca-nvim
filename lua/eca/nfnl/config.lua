@@ -11,64 +11,93 @@ local vim = _G.vim
 local M = define("eca.nfnl.config")
 local config_file_name = ".nfnl.fnl"
 M.find = function(dir)
-  return fs.findfile(config_file_name, (dir .. ";"))
+  return fs["full-path"](core.first(vim.fs.find(config_file_name, {path = dir, upward = true, type = "file"})))
 end
-M["path-dirs"] = function(_2_)
-  local rtp_patterns = _2_["rtp-patterns"]
-  local runtimepath = _2_.runtimepath
-  local base_dirs = _2_["base-dirs"]
-  local function _3_(path)
-    local function _4_(_241)
+local function under_3f(parent, dir)
+  local prefix = (parent .. fs["path-sep"]())
+  return ((parent == dir) or (prefix == string.sub(dir, 1, string.len(prefix))))
+end
+M["owner-filter"] = function(root_dir)
+  local cache = {}
+  local function _2_(path)
+    local dir = fs.basename(path)
+    if core["nil?"](cache[dir]) then
+      local _3_
+      do
+        local config_dir = fs.basename(M.find(dir))
+        if core["nil?"](config_dir) then
+          _3_ = true
+        elseif (root_dir == config_dir) then
+          _3_ = true
+        elseif (under_3f(root_dir, config_dir) and under_3f(config_dir, dir)) then
+          _3_ = false
+        else
+          _3_ = true
+        end
+      end
+      cache[dir] = _3_
+    else
+    end
+    return cache[dir]
+  end
+  return _2_
+end
+M["path-dirs"] = function(_6_)
+  local rtp_patterns = _6_["rtp-patterns"]
+  local runtimepath = _6_.runtimepath
+  local base_dirs = _6_["base-dirs"]
+  local function _7_(path)
+    local function _8_(_241)
       return string.find(path, _241)
     end
-    return core.some(_4_, rtp_patterns)
+    return core.some(_8_, rtp_patterns)
   end
-  return core.distinct(core.concat(base_dirs, core.filter(_3_, str.split(runtimepath, ","))))
+  return core.distinct(core.concat(base_dirs, core.filter(_7_, str.split(runtimepath, ","))))
 end
 M.default = function(opts)
   local root_dir
-  local or_5_ = core.get(opts, "root-dir")
-  if not or_5_ then
+  local or_9_ = core.get(opts, "root-dir")
+  if not or_9_ then
     local tmp_3_ = vim.fn.getcwd()
     if (nil ~= tmp_3_) then
       local tmp_3_0 = M.find(tmp_3_)
       if (nil ~= tmp_3_0) then
         local tmp_3_1 = fs["full-path"](tmp_3_0)
         if (nil ~= tmp_3_1) then
-          or_5_ = fs.basename(tmp_3_1)
+          or_9_ = fs.basename(tmp_3_1)
         else
-          or_5_ = nil
+          or_9_ = nil
         end
       else
-        or_5_ = nil
+        or_9_ = nil
       end
     else
-      or_5_ = nil
+      or_9_ = nil
     end
   end
-  root_dir = (or_5_ or vim.fn.getcwd())
+  root_dir = (or_9_ or vim.fn.getcwd())
   local dirs = M["path-dirs"]({runtimepath = vim.o.runtimepath, ["rtp-patterns"] = core.get(opts, "rtp-patterns", {(fs["path-sep"]() .. "nfnl$")}), ["base-dirs"] = {root_dir}})
-  local function _12_(root_dir0)
+  local function _16_(root_dir0)
     return core.map(fs["join-path"], {{root_dir0, "?.fnl"}, {root_dir0, "?", "init.fnl"}, {root_dir0, "fnl", "?.fnl"}, {root_dir0, "fnl", "?", "init.fnl"}})
   end
-  local function _13_(root_dir0)
+  local function _17_(root_dir0)
     return core.map(fs["join-path"], {{root_dir0, "?.fnlm"}, {root_dir0, "?", "init.fnlm"}, {root_dir0, "?", "init-macros.fnlm"}, {root_dir0, "fnl", "?.fnlm"}, {root_dir0, "fnl", "?", "init.fnlm"}, {root_dir0, "fnl", "?", "init-macros.fnlm"}, {root_dir0, "?.fnl"}, {root_dir0, "?", "init.fnl"}, {root_dir0, "?", "init-macros.fnl"}, {root_dir0, "fnl", "?.fnl"}, {root_dir0, "fnl", "?", "init.fnl"}, {root_dir0, "fnl", "?", "init-macros.fnl"}})
   end
-  return {["header-comment"] = true, ["compiler-options"] = {["error-pinpoint"] = false}, ["orphan-detection"] = {["auto?"] = true, ["ignore-patterns"] = {}}, ["root-dir"] = root_dir, ["fennel-path"] = str.join(";", core.mapcat(_12_, dirs)), ["fennel-macro-path"] = str.join(";", core.mapcat(_13_, dirs)), ["source-file-patterns"] = {".*.fnl", "*.fnl", fs["join-path"]({"**", "*.fnl"})}, ["fnl-path->lua-path"] = fs["fnl-path->lua-path"], verbose = false}
+  return {["header-comment"] = true, ["header-search-lines"] = 5, ["compiler-options"] = {["error-pinpoint"] = false}, ["orphan-detection"] = {["auto?"] = true, ["ignore-patterns"] = {}}, ["root-dir"] = root_dir, ["fennel-path"] = str.join(";", core.mapcat(_16_, dirs)), ["fennel-macro-path"] = str.join(";", core.mapcat(_17_, dirs)), ["source-file-patterns"] = {".*.fnl", "*.fnl", fs["join-path"]({"**", "*.fnl"})}, ["fnl-path->lua-path"] = fs["fnl-path->lua-path"], verbose = false}
 end
 M["cfg-fn"] = function(t, opts)
   local default_cfg = M.default(opts)
-  local function _14_(path)
+  local function _18_(path)
     return core["get-in"](t, path, core["get-in"](default_cfg, path))
   end
-  return _14_
+  return _18_
 end
 local notified = {}
 M["config-file-path?"] = function(path)
   return (config_file_name == fs.filename(path))
 end
 M["find-and-load"] = function(dir)
-  local _15_
+  local _19_
   do
     local config_file_path = M.find(dir)
     if config_file_path then
@@ -88,18 +117,18 @@ M["find-and-load"] = function(dir)
         ok, config = pcall(fennel.eval, config_source, {filename = config_file_path})
       end
       if ok then
-        _15_ = {config = config, ["root-dir"] = root_dir, cfg = M["cfg-fn"](config, {["root-dir"] = root_dir})}
+        _19_ = {config = config, ["root-dir"] = root_dir, cfg = M["cfg-fn"](config, {["root-dir"] = root_dir})}
       else
         if config then
-          _15_ = notify.error(config)
+          _19_ = notify.error(config)
         else
-          _15_ = nil
+          _19_ = nil
         end
       end
     else
-      _15_ = nil
+      _19_ = nil
     end
   end
-  return (_15_ or {})
+  return (_19_ or {})
 end
 return M

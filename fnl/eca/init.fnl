@@ -1,7 +1,12 @@
-(local {: autoload} (require :eca.nfnl.module))
-(local notify (autoload :eca.nfnl.notify))
+;; ECA Neovim Plugin — entry point.
+;; Minimal: just setup, delegates everything to api.fnl.
 
-(fn setup []
-  (notify.info "Hello, World!"))
+(local api (require :eca.api))
+(local commands (require :eca.commands))
+
+(fn setup [opts]
+  "Initialize ECA plugin."
+  (api.set-plugin-opts (or opts {}))
+  (commands.setup api))
 
 {: setup}
