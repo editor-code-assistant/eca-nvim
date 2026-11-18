@@ -228,13 +228,17 @@
                   (. or-instance :options :forms-between))
                (vim.deep_equal [["or" :form]
                                 ["or" :forms-between :form]]
-                               (. or-instance :options :forbidden-chains))))
-      (is (and if-instance
+                               (. or-instance :options :forbidden-chains))
+               if-instance
+               (= "Avoid nested `if` forms; they make control flow harder to read."
+                  (. if-instance :description))
                (vim.deep_equal {:files ["^fennel-extras/"] :forms ["if"]}
                                (. if-instance :applies-to))
                (vim.deep_equal [["if" :form]]
-                               (. if-instance :options :forbidden-chains))))
-      (is (and when-instance
+                               (. if-instance :options :forbidden-chains))
+               when-instance
+               (= "Avoid nested `when` forms; they make control flow harder to read."
+                  (. when-instance :description))
                (vim.deep_equal {:files ["^fennel-extras/"] :forms ["when"]}
                                (. when-instance :applies-to))
                (vim.deep_equal [["when" :form]]
