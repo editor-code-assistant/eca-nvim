@@ -27,21 +27,21 @@
     (var i 1)
     (local n (string.len source))
     (while (<= i n)
-           (when (= (string.sub source i i) "\n")
-                 (set start (append-line lines source start i)))
-           (set i (+ i 1)))
+      (when (= (string.sub source i i) "\n")
+        (set start (append-line lines source start i)))
+      (set i (+ i 1)))
     (when (or (<= start n) (= n 0))
-          (table.insert lines (string.sub source start n)))
+      (table.insert lines (string.sub source start n)))
     (values lines (= (and (> n 0) (= (string.sub source n n) "\n")) true))))
 
 (defn- first-token-on-line
   [tokens line]
   (var result nil)
   (each [_ token (ipairs tokens)]
-        (when (and (= result nil)
-                   (= token.line line)
-                   (not (or (= token.kind :whitespace) (= token.kind :newline))))
-              (set result token)))
+    (when (and (= result nil)
+            (= token.line line)
+            (not (or (= token.kind :whitespace) (= token.kind :newline))))
+      (set result token)))
   result)
 
 (defn- newline-count
@@ -49,20 +49,20 @@
   (var count 0)
   (var i 1)
   (do (local n (string.len text))
-      (while (<= i n)
-             (when (= (string.sub text i i) "\n")
-                   (set count (+ count 1)))
-             (set i (+ i 1))))
+    (while (<= i n)
+      (when (= (string.sub text i i) "\n")
+        (set count (+ count 1)))
+      (set i (+ i 1))))
   count)
 
 (defn- string-on-line?
   [tokens line]
   (var result false)
   (each [_ token (ipairs tokens)]
-        (when (and (= token.kind :string)
-                   (< token.line line)
-                   (<= line (+ token.line (newline-count token.text))))
-              (set result true)))
+    (when (and (= token.kind :string)
+            (< token.line line)
+            (<= line (+ token.line (newline-count token.text))))
+      (set result true)))
   result)
 
 (defn- collect-node-entry
@@ -74,22 +74,22 @@
 (defn- collect-node
   [node nodes tokens depth]
   (when (not= node.kind :root)
-        (collect-node-entry node nodes tokens depth))
+    (collect-node-entry node nodes tokens depth))
   (each [_ child (ipairs node.children)]
-        (if child.text
-          (table.insert tokens child)
-          (collect-node child nodes tokens (+ depth 1))))
+    (if child.text
+      (table.insert tokens child)
+      (collect-node child nodes tokens (+ depth 1))))
   (when (and (not= node.kind :root) node.close)
-        (table.insert tokens node.close)))
+    (table.insert tokens node.close)))
 
 (defn- active-node
   [nodes line]
   (var result nil)
   (each [_ node (ipairs nodes)]
-        (when (and (< node.open.line line)
-                   (or (= node.close nil) (>= node.close.line line))
-                   (or (= result nil) (> node.depth result.depth)))
-              (set result node)))
+    (when (and (< node.open.line line)
+            (or (= node.close nil) (>= node.close.line line))
+            (or (= result nil) (> node.depth result.depth)))
+      (set result node)))
   result)
 
 (defn- output-column
@@ -106,27 +106,27 @@
   (let [children (helpers.nontrivia-children node)]
     (var result nil)
     (each [index child (ipairs children)]
-          (local start (helpers.child-start child))
-          (when (and (= result nil)
-                     (= start.line first-token.line)
-                     (= start.col first-token.col))
-                (set result (- index 2))))
+      (local start (helpers.child-start child))
+      (when (and (= result nil)
+              (= start.line first-token.line)
+              (= start.col first-token.col))
+        (set result (- index 2))))
     result))
 
 (defn- matching-rule-indent
   [rule node arg-index config]
   (var result nil)
   (each [_ entry (ipairs rule)]
-        (when (= result nil)
-              (do (local kind (. entry 1))
-                  (local value (. entry 2))
-                  (local selected (. entry 3))
-                  (if (and (= kind :inner)
-                           (= value 0)
-                           (or (= selected nil) (= selected arg-index)))
-                    (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
-                    (when (and (= kind :block) (>= arg-index value))
-                          (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
+    (when (= result nil)
+      (do (local kind (. entry 1))
+        (local value (. entry 2))
+        (local selected (. entry 3))
+        (if (and (= kind :inner)
+              (= value 0)
+              (or (= selected nil) (= selected arg-index)))
+          (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
+          (when (and (= kind :block) (>= arg-index value))
+            (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
   result)
 
 (defn- block-argument-index
@@ -139,19 +139,19 @@
   [config name]
   (let [alignment (settings.resolve config)]
     (when (or (and alignment.bindings ((. settings "binding-form?") alignment name))
-              (and alignment.clauses ((. settings "clause-form?") alignment name)))
-          [[:block 1]])))
+            (and alignment.clauses ((. settings "clause-form?") alignment name)))
+      [[:block 1]])))
 
 (defn- rule-indent
   [node first-token line-number config]
   (when (and node (= node.kind :list) (> line-number node.open.line))
-        (do (local children (helpers.nontrivia-children node))
-            (local head (. children 1))
-            (when (and head (= head.kind :symbol))
-                  (do (local rule (or (rules.resolve config head.text) (custom-rule config head.text)))
-                      (local arg-index (argument-index node first-token))
-                      (when (and rule arg-index)
-                            (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
+    (do (local children (helpers.nontrivia-children node))
+      (local head (. children 1))
+      (when (and head (= head.kind :symbol))
+        (do (local rule (or (rules.resolve config head.text) (custom-rule config head.text)))
+          (local arg-index (argument-index node first-token))
+          (when (and rule arg-index)
+            (matching-rule-indent rule node (block-argument-index arg-index first-token node) config)))))))
 
 (defn- started-before?
   [child line-number]
@@ -163,35 +163,45 @@
     0
     (if (= first-token.kind :close)
       (or (. node.open :line-indent) (. node.open :out-col))
-      (let [alignment (settings.resolve config)]
-        (if (or alignment.maps
-                alignment.clauses
-                (and alignment.bindings (not= node.kind :list)))
-          (do (local children (helpers.nontrivia-children node))
-              (local first-child (. children 1))
-              (local second-child (. children 2))
-              (if (= first-child nil)
-                (+ (. node.open :out-col) 1)
-                (if (and (= node.kind :list) (= first-child.kind :symbol))
-                  (if (and second-child (started-before? second-child line-number))
-                    (+ (. (helpers.child-start second-child) :out-col)
-                       (if (and (= (. node.open :line) 2)
-                                (= (. node.open :col) 2)
-                                (= line-number 3))
-                           1
-                           0))
-                    (if (started-before? first-child line-number)
-                      (. (helpers.child-start first-child) :out-col)
-                      (+ (. node.open :out-col) 1)))
-                  (if (started-before? first-child line-number)
-                    (. (helpers.child-start first-child) :out-col)
-                    (+ (. node.open :out-col) 1)))))
+      (let [alignment       (settings.resolve config)
+            children        (helpers.nontrivia-children node)
+            first-child     (. children 1)
+            second-child    (. children 2)
+            form-sensitive? (and config (. config :format-as))
+            aligned?        (if form-sensitive?
+                              (or (and alignment.maps (= node.kind :table))
+                                (and alignment.clauses
+                                  (= node.kind :list)
+                                  first-child
+                                  (= first-child.kind :symbol)
+                                  ((. settings "clause-form?") alignment first-child.text))
+                                (and alignment.bindings (not= node.kind :list)))
+                              (or alignment.maps
+                                alignment.clauses
+                                (and alignment.bindings (not= node.kind :list))))]
+        (if aligned?
+          (if (= first-child nil)
+            (+ (. node.open :out-col) 1)
+            (if (and (= node.kind :list) (= first-child.kind :symbol))
+              (if (and second-child (started-before? second-child line-number))
+                (+ (. (helpers.child-start second-child) :out-col)
+                  (if (and (= (. node.open :line) 2)
+                        (= (. node.open :col) 2)
+                        (= line-number 3))
+                       1
+                       0))
+                (if (started-before? first-child line-number)
+                  (. (helpers.child-start first-child) :out-col)
+                  (+ (. node.open :out-col) 1)))
+              (if (started-before? first-child line-number)
+                (. (helpers.child-start first-child) :out-col)
+                (+ (. node.open :out-col) 1))))
           (+ (. node.open :out-col) (or (and config (. config :indent-width)) 2)))))))
 
 (defn- indent-for
   [node first-token line-number config]
   (or (rule-indent node first-token line-number config)
-      (default-indent-for node first-token line-number config)))
+    (default-indent-for node first-token line-number config)))
 
 (defn- next-token-indent
   [token node config]
@@ -204,7 +214,7 @@
   (let [token (comments.first-code-token-after tokens line-number)
         node  (and token (active-node nodes token.line))]
     (or (and token node (next-token-indent token node config))
-        0)))
+      0)))
 
 (defn- default-line-indent
   [node first-token line-number tokens config]
@@ -224,13 +234,13 @@
   [token line indent strip-leading?]
   (set (. token :out-col) (output-column token line indent strip-leading?))
   (when (= token.kind :open)
-        (set (. token :line-indent) indent)))
+    (set (. token :line-indent) indent)))
 
 (defn- assign-output-columns
   [tokens line-number line indent strip-leading?]
   (each [_ token (ipairs tokens)]
-        (when (= token.line line-number)
-              (assign-token-output token line indent strip-leading?))))
+    (when (= token.line line-number)
+      (assign-token-output token line indent strip-leading?))))
 
 (defn- process-string-line
   [line-number line tokens]
@@ -257,16 +267,16 @@
       (if (= first-token nil)
         (process-empty-line line-number line tokens)
         (if (and node
-                 (> (. node.open :col) 1)
-                 (or (= first-token.kind :close)
-                     (and (= first-token.kind :number)
-                          (> (helpers.leading-spaces line) 20))))
+              (> (. node.open :col) 1)
+              (or (= first-token.kind :close)
+                (and (= first-token.kind :number)
+                  (> (helpers.leading-spaces line) 20))))
           (process-unchanged-line line-number line tokens)
           (do (local indent (line-indent node first-token line-number tokens nodes config))
-              (local spaces (helpers.leading-spaces line))
-              (local body (string.sub line (+ spaces 1)))
-              (assign-output-columns tokens line-number line indent true)
-              (.. (string.rep " " indent) body)))))))
+            (local spaces (helpers.leading-spaces line))
+            (local body (string.sub line (+ spaces 1)))
+            (assign-output-columns tokens line-number line indent true)
+            (.. (string.rep " " indent) body)))))))
 
 (defn- reindent-once
   [source config]
@@ -276,15 +286,15 @@
       (do (local captured-values (capture-values (fn
                                                    []
                                                    (split-lines source)))) (local lines (. captured-values 1)) (local final-newline (. captured-values 2))
-          (local nodes [])
-          (local tokens [])
-          (collect-node tree nodes tokens 0)
-          (local output [])
-          (var line-number 1)
-          (each [_ line (ipairs lines)]
-                (table.insert output (process-line line-number line nodes tokens config))
-                (set line-number (+ line-number 1)))
-          (values (.. (table.concat output "\n") (if final-newline "\n" "")) tree nil)))))
+        (local nodes [])
+        (local tokens [])
+        (collect-node tree nodes tokens 0)
+        (local output [])
+        (var line-number 1)
+        (each [_ line (ipairs lines)]
+          (table.insert output (process-line line-number line nodes tokens config))
+          (set line-number (+ line-number 1)))
+        (values (.. (table.concat output "\n") (if final-newline "\n" "")) tree nil)))))
 
 (defn- alignment-source
   [source tree alignment]
@@ -298,10 +308,10 @@
     (if error
       (values nil error)
       (do (local aligned (alignment-source plain tree alignment))
-          (local captured-values (capture-values (fn
-                                                   []
-                                                   (reindent-once aligned config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local result-error (. captured-values 3))
-          (values result result-error)))))
+        (local captured-values (capture-values (fn
+                                                 []
+                                                 (reindent-once aligned config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local result-error (. captured-values 3))
+        (values result result-error)))))
 
 (defn- fixed-point-result
   [source config alignment rounds result recurse]
@@ -325,9 +335,9 @@
       (do (local captured-values (capture-values (fn
                                                    []
                                                    (alignment-fixed-point prepared config alignment 3)))) (local result (. captured-values 1)) (local result-error (. captured-values 2))
-          (if result-error
-            (values nil result-error)
-            (values result nil))))))
+        (if result-error
+          (values nil result-error)
+          (values result nil))))))
 
 (defn reindent
   [source config]
@@ -338,13 +348,13 @@
       (if config-error
         (values nil config-error)
         (do (local alignment (settings.resolve config))
-            (if (or alignment.bindings
-                    alignment.maps
-                    alignment.clauses
-                    alignment.split-bindings
-                    alignment.collapse-padding)
-              (split-and-align source config alignment)
-              (do (local captured-values (capture-values (fn
-                                                           []
-                                                           (reindent-once source config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local error (. captured-values 3))
-                  (values result error))))))))
+          (if (or alignment.bindings
+                alignment.maps
+                alignment.clauses
+                alignment.split-bindings
+                alignment.collapse-padding)
+            (split-and-align source config alignment)
+            (do (local captured-values (capture-values (fn
+                                                         []
+                                                         (reindent-once source config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local error (. captured-values 3))
+              (values result error))))))))

@@ -181,67 +181,112 @@ local function _7_()
   return require("plenary.busted").it("starts each top-level form at column zero", _19_)
 end
 require("plenary.busted").describe("alignment-goldens", _7_)
+local canonical_indent_config = {["indent-width"] = 2, parser = "eca.nfnl.fennel", indents = {fn = {{"inner", 0}}, def = {{"inner", 0}}, ["def-"] = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}, ["format-as"] = {def = "fn", ["def-"] = "fn", defn = "fn", ["defn-"] = "fn"}, alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}}}
+local function output_for_canonical(source, config)
+  local indent = load_indent()
+  local config0 = vim.tbl_deep_extend("force", canonical_indent_config, (config or {}))
+  return indent.reindent(source, config0)
+end
 local function _20_()
   local function _21_()
+    local output = output_for_canonical("(when (and very-long-condition\n another-condition)\n (if ready\n value\n fallback))", {})
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "string"
+    local actual_7_auto = type(output)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("keeps unconfigured when and nested long-condition if form-sensitive", _21_)
+  local function _22_()
+    for _, width in ipairs({2, 4}) do
+      local source = "(cond\n (ready\n (case value\n (:a (handle-a))\n (:b (handle-b))))\n (otherwise\n (fallback)))"
+      local expected
+      if (width == 2) then
+        expected = "(cond\n  (ready\n    (case value\n      (:a (handle-a))\n      (:b (handle-b))))\n  (otherwise\n    (fallback)))"
+      else
+        expected = "(cond\n    (ready\n        (case value\n            (:a (handle-a))\n            (:b (handle-b))))\n    (otherwise\n        (fallback)))"
+      end
+      local assert_5_auto = require("luassert")
+      local expected_6_auto = expected
+      local actual_7_auto = output_for_canonical(source, {["indent-width"] = width})
+      assert_5_auto.same(expected_6_auto, actual_7_auto)
+    end
+    return nil
+  end
+  return require("plenary.busted").it("keeps cond and case clause arms aligned at widths 2 and 4", _22_)
+end
+require("plenary.busted").describe("canonical-alignment-fallbacks", _20_)
+local function _24_()
+  local source = "(cond\n (ready\n (case value\n (:a (handle-a))\n (:b (handle-b))))\n (otherwise\n (fallback)))"
+  local once = output_for_canonical(source, {})
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = once
+  local actual_7_auto = output_for_canonical(once, {})
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+require("plenary.busted").it("is idempotent", _24_)
+local function _25_()
+  local function _26_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo a\n    b)"
     local actual_7_auto = output_for_config("(foo a\n b)", {["indent-width"] = 4})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("uses indent-width for an unconfigured continuation", _21_)
-  local function _22_()
+  require("plenary.busted").it("uses indent-width for an unconfigured continuation", _26_)
+  local function _27_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(when condition\n  (if ready\n    value\n    fallback))"
     local actual_7_auto = output_for("(when condition\n (if ready\n value\n fallback))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("uses the active opener column for nested when and if continuations", _22_)
+  return require("plenary.busted").it("uses the active opener column for nested when and if continuations", _27_)
 end
-require("plenary.busted").describe("universal-fallback-indent", _20_)
-local function _23_()
-  local function _24_()
+require("plenary.busted").describe("universal-fallback-indent", _25_)
+local function _28_()
+  local function _29_()
     local assert_28_auto = require("luassert")
     local value_29_auto = ((newline_count("(x\n  ;; c\n)") == newline_count(output_for("(x\n  ;; c\n)"))) and (newline_count("(a\nb)") == newline_count(output_for("(a\nb)"))) and (newline_count("a\nb") == newline_count(output_for("a\nb"))))
     assert_28_auto.is_truthy(value_29_auto, "(and (= (newline-count \"(x\n  ;; c\n)\") (newline-count (output-for \"(x\n  ;; c\n)\"))) (= (newline-count \"(a\nb)\") (newline-count (output-for \"(a\nb)\"))) (= (newline-count \"a\nb\") (newline-count (output-for \"a\nb\"))))")
     return true
   end
-  require("plenary.busted").it("preserves newline counts for final-line regression inputs", _24_)
-  local function _25_()
+  require("plenary.busted").it("preserves newline counts for final-line regression inputs", _29_)
+  local function _30_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo \"one\n  two\"\n  bar)"
     local actual_7_auto = output_for("(foo \"one\n  two\"\nbar)")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("keeps leading spaces inside multi-line strings unchanged", _25_)
-  local function _26_()
+  require("plenary.busted").it("keeps leading spaces inside multi-line strings unchanged", _30_)
+  local function _31_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo\n\n  bar)"
     local actual_7_auto = output_for("(foo\n   \nbar)")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("turns whitespace-only lines into empty lines", _26_)
-  local function _27_()
+  require("plenary.busted").it("turns whitespace-only lines into empty lines", _31_)
+  local function _32_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo a\n  b   )"
     local actual_7_auto = output_for("(foo a\n b   )")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("keeps trailing spaces after code", _27_)
-  local function _28_()
+  require("plenary.busted").it("keeps trailing spaces after code", _32_)
+  local function _33_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(\206\187 a\n  b)"
     local actual_7_auto = output_for("(\206\187 a\nb)")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("counts Unicode codepoints for continuation columns", _28_)
+  return require("plenary.busted").it("counts Unicode codepoints for continuation columns", _33_)
 end
-require("plenary.busted").describe("preservation", _23_)
+require("plenary.busted").describe("preservation", _28_)
 local function file_paths()
   local paths = {}
   local fnl_files = vim.fn.globpath("fnl", "**/*.fnl", false, true)
@@ -296,37 +341,37 @@ local function repo_idempotence_failures()
   end
   return failures
 end
-local function _34_()
-  local function _35_()
+local function _39_()
+  local function _40_()
     local assert_28_auto = require("luassert")
     local value_29_auto = idempotent_3f("(foo a\n b)")
     assert_28_auto.is_truthy(value_29_auto, "(idempotent? \"(foo a\n b)\")")
     return true
   end
-  require("plenary.busted").it("alignment golden is idempotent", _35_)
-  local function _36_()
+  require("plenary.busted").it("alignment golden is idempotent", _40_)
+  local function _41_()
     local assert_28_auto = require("luassert")
     local value_29_auto = idempotent_3f("(foo \"one\n  two\"\nbar)")
     assert_28_auto.is_truthy(value_29_auto, "(idempotent? \"(foo \\\"one\n  two\\\"\nbar)\")")
     return true
   end
-  require("plenary.busted").it("preservation golden is idempotent", _36_)
-  local function _37_()
+  require("plenary.busted").it("preservation golden is idempotent", _41_)
+  local function _42_()
     local assert_28_auto = require("luassert")
     local value_29_auto = idempotent_3f("(foo\n (bar x\n y))")
     assert_28_auto.is_truthy(value_29_auto, "(idempotent? \"(foo\n (bar x\n y))\")")
     return true
   end
-  require("plenary.busted").it("nested golden is idempotent", _37_)
-  local function _38_()
+  require("plenary.busted").it("nested golden is idempotent", _42_)
+  local function _43_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = repo_idempotence_failures()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("one direct reindent pass is idempotent for every project source", _38_)
-  local function _39_()
+  require("plenary.busted").it("one direct reindent pass is idempotent for every project source", _43_)
+  local function _44_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["has-message"] = true, ["value?"] = false}
     local actual_7_auto
@@ -337,41 +382,41 @@ local function _34_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("unbalanced input returns a structured reader error", _39_)
-  local function _40_()
+  require("plenary.busted").it("unbalanced input returns a structured reader error", _44_)
+  local function _45_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["ok?"] = true, ["result-nil?"] = true, ["has-message"] = true, message = "alignment must be a table"}
     local actual_7_auto = alignment_error_summary(true)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("a boolean alignment value returns the documented validation error", _40_)
-  local function _41_()
+  require("plenary.busted").it("a boolean alignment value returns the documented validation error", _45_)
+  local function _46_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {["ok?"] = true, ["result-nil?"] = true, ["has-message"] = true, message = "alignment must be a table"}
     local actual_7_auto = alignment_error_summary("yes")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("a string alignment value returns the documented validation error", _41_)
+  return require("plenary.busted").it("a string alignment value returns the documented validation error", _46_)
 end
-require("plenary.busted").describe("idempotence-and-errors", _34_)
-local function _42_()
-  local function _43_()
+require("plenary.busted").describe("idempotence-and-errors", _39_)
+local function _47_()
+  local function _48_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn- apply\n  [items]\n  (if (lualine.plugin)\n    (lualine.setup items)\n    (set-native-statusline items)))"
     local actual_7_auto = reindent_direct("(defn- apply\n  [items]\n  (if (lualine.plugin)\n      (lualine.setup items)\n      (set-native-statusline items)))", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("footer-bar apply uses generic fallback offsets for an unconfigured if", _43_)
-  local function _44_()
+  require("plenary.busted").it("footer-bar apply uses generic fallback offsets for an unconfigured if", _48_)
+  local function _49_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn- text\n  [item]\n  (let [title (core.get item :title nil)\n         value (core.get item :value nil)\n         title-str (if title (core.str \"%#EcaHeaderKey#\" title \":\") \"\")\n         value-str (if value (core.str \"%#EcaHeaderValue#\" value) \"\")]\n    (core.str title-str value-str)))"
     local actual_7_auto = reindent_direct("(defn- text\n  [item]\n  (let [title (core.get item :title nil)\n        value (core.get item :value nil)\n        title-str (if title (core.str \"%#EcaHeaderKey#\" title \":\") \"\")\n        value-str (if value (core.str \"%#EcaHeaderValue#\" value) \"\")]\n    (core.str title-str value-str)))", nil)
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("lualine text keeps explicit let alignment and uses generic if offsets", _44_)
+  return require("plenary.busted").it("lualine text keeps explicit let alignment and uses generic if offsets", _49_)
 end
-return require("plenary.busted").describe("hand-style-fixed-points", _42_)
+return require("plenary.busted").describe("hand-style-fixed-points", _47_)

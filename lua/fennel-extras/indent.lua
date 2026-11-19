@@ -200,22 +200,29 @@ local function default_indent_for(node, first_token, line_number, config)
       return (node.open["line-indent"] or node.open["out-col"])
     else
       local alignment = settings.resolve(config)
-      if (alignment.maps or alignment.clauses or (alignment.bindings and (node.kind ~= "list"))) then
-        local children = helpers["nontrivia-children"](node)
-        local first_child = children[1]
-        local second_child = children[2]
+      local children = helpers["nontrivia-children"](node)
+      local first_child = children[1]
+      local second_child = children[2]
+      local form_sensitive_3f = (config and config["format-as"])
+      local aligned_3f
+      if form_sensitive_3f then
+        aligned_3f = ((alignment.maps and (node.kind == "table")) or (alignment.clauses and (node.kind == "list") and first_child and (first_child.kind == "symbol") and settings["clause-form?"](alignment, first_child.text)) or (alignment.bindings and (node.kind ~= "list")))
+      else
+        aligned_3f = (alignment.maps or alignment.clauses or (alignment.bindings and (node.kind ~= "list")))
+      end
+      if aligned_3f then
         if (first_child == nil) then
           return (node.open["out-col"] + 1)
         else
           if ((node.kind == "list") and (first_child.kind == "symbol")) then
             if (second_child and started_before_3f(second_child, line_number)) then
-              local _21_
+              local _22_
               if ((node.open.line == 2) and (node.open.col == 2) and (line_number == 3)) then
-                _21_ = 1
+                _22_ = 1
               else
-                _21_ = 0
+                _22_ = 0
               end
-              return (helpers["child-start"](second_child)["out-col"] + _21_)
+              return (helpers["child-start"](second_child)["out-col"] + _22_)
             else
               if started_before_3f(first_child, line_number) then
                 return helpers["child-start"](first_child)["out-col"]
@@ -326,10 +333,10 @@ local function reindent_once(source, config)
     return nil, nil, error
   else
     local captured_values
-    local function _39_()
+    local function _40_()
       return split_lines(source)
     end
-    captured_values = capture_values(_39_)
+    captured_values = capture_values(_40_)
     local lines = captured_values[1]
     local final_newline = captured_values[2]
     local nodes = {}
@@ -341,25 +348,25 @@ local function reindent_once(source, config)
       table.insert(output, process_line(line_number, line, nodes, tokens, config))
       line_number = (line_number + 1)
     end
-    local _40_
+    local _41_
     if final_newline then
-      _40_ = "\n"
+      _41_ = "\n"
     else
-      _40_ = ""
+      _41_ = ""
     end
-    return (table.concat(output, "\n") .. _40_), tree, nil
+    return (table.concat(output, "\n") .. _41_), tree, nil
   end
 end
 local function alignment_source(source, tree, alignment)
   local lines, final_newline = split_lines(source)
   local aligned = align.apply(lines, tree, alignment)
-  local _43_
+  local _44_
   if final_newline then
-    _43_ = "\n"
+    _44_ = "\n"
   else
-    _43_ = ""
+    _44_ = ""
   end
-  return (table.concat(aligned, "\n") .. _43_)
+  return (table.concat(aligned, "\n") .. _44_)
 end
 local function alignment_pass(source, config, alignment)
   local plain, tree, error = reindent_once(source, config)
@@ -368,10 +375,10 @@ local function alignment_pass(source, config, alignment)
   else
     local aligned = alignment_source(plain, tree, alignment)
     local captured_values
-    local function _45_()
+    local function _46_()
       return reindent_once(aligned, config)
     end
-    captured_values = capture_values(_45_)
+    captured_values = capture_values(_46_)
     local result = captured_values[1]
     local _ = captured_values[2]
     local result_error = captured_values[3]
@@ -400,10 +407,10 @@ local function split_and_align(source, config, alignment)
     return nil, error
   else
     local captured_values
-    local function _49_()
+    local function _50_()
       return alignment_fixed_point(prepared, config, alignment, 3)
     end
-    captured_values = capture_values(_49_)
+    captured_values = capture_values(_50_)
     local result = captured_values[1]
     local result_error = captured_values[2]
     if result_error then
@@ -429,10 +436,10 @@ do
           return split_and_align(source, config, alignment)
         else
           local captured_values
-          local function _52_()
+          local function _53_()
             return reindent_once(source, config)
           end
-          captured_values = capture_values(_52_)
+          captured_values = capture_values(_53_)
           local result = captured_values[1]
           local _ = captured_values[2]
           local error = captured_values[3]
