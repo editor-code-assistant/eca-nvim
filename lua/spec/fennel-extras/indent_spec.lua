@@ -191,8 +191,8 @@ local function _20_()
   local function _21_()
     local output = output_for_canonical("(when (and very-long-condition\n another-condition)\n (if ready\n value\n fallback))", {})
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "string"
-    local actual_7_auto = type(output)
+    local expected_6_auto = "(when (and very-long-condition\n        another-condition)\n  (if ready\n    value\n    fallback))"
+    local actual_7_auto = output
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end

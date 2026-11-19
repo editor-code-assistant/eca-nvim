@@ -199,8 +199,8 @@
 (deftest canonical-alignment-fallbacks
   (testing "keeps unconfigured when and nested long-condition if form-sensitive"
     (let [output (output-for-canonical "(when (and very-long-condition\n another-condition)\n (if ready\n value\n fallback))" {})]
-      (is (= :string
-            (type output)))))
+      (is (= "(when (and very-long-condition\n        another-condition)\n  (if ready\n    value\n    fallback))"
+            output))))
 
   (testing "keeps cond and case clause arms aligned at widths 2 and 4"
     (each [_ width (ipairs [2 4])]
