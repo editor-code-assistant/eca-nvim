@@ -163,13 +163,13 @@
     (is (= "missing alignment.binding-forms"
            (. (config-error {:alignment {:bindings true}}) :message))))
 
-  (testing "clause forms are required when clause alignment is enabled"
-    (is (= "missing alignment.clause-forms"
+  (testing "removed clause alignment keys are rejected"
+    (is (= "unknown alignment key: clauses"
            (. (config-error {:alignment {:clauses true}}) :message))))
 
   (testing "missing alignment switches are off"
     (let [result (config-error {:alignment {:binding-forms ["let"]
-                                            :clause-forms  ["case"]}})]
+                                            :align-pairs    ["case"]}})]
       (is (. result :ok)))))
 
 (deftest strict-lint-options

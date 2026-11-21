@@ -991,7 +991,7 @@ do
   ast_equal_3f = _2amodule_2a["ast-equal?"]
 end
 local function alignment_enabled_3f(alignment)
-  return (alignment.bindings or alignment.maps or alignment.clauses or alignment["split-bindings"] or alignment["collapse-padding"])
+  return (alignment.bindings or alignment.maps or (#(alignment["align-args"] or {}) > 0) or (#(alignment["align-pairs"] or {}) > 0) or alignment["split-bindings"] or alignment["collapse-padding"])
 end
 local function rules_config(config)
   return {indents = config.indents, ["format-as"] = config["format-as"], ["indent-width"] = config["indent-width"], alignment = config.alignment}

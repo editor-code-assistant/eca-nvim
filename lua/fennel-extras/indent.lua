@@ -164,7 +164,7 @@ local function block_argument_index(arg_index, first_token, node)
 end
 local function custom_rule(config, name)
   local alignment = settings.resolve(config)
-  if ((alignment.bindings and settings["binding-form?"](alignment, name)) or (alignment.clauses and settings["clause-form?"](alignment, name))) then
+  if ((alignment.bindings and settings["binding-form?"](alignment, name)) or ((#(alignment["align-pairs"] or {}) > 0) and settings["clause-form?"](alignment, name))) then
     return {{"block", 1}}
   else
     return nil
@@ -206,9 +206,9 @@ local function default_indent_for(node, first_token, line_number, config)
       local form_sensitive_3f = (config and config["format-as"])
       local aligned_3f
       if form_sensitive_3f then
-        aligned_3f = ((alignment.maps and (node.kind == "table")) or (alignment.clauses and (node.kind == "list") and first_child and (first_child.kind == "symbol") and settings["clause-form?"](alignment, first_child.text)) or (alignment.bindings and (node.kind ~= "list")))
+        aligned_3f = ((alignment.maps and (node.kind == "table")) or ((#(alignment["align-pairs"] or {}) > 0) and (node.kind == "list") and first_child and (first_child.kind == "symbol") and settings["clause-form?"](alignment, first_child.text)) or ((#(alignment["align-args"] or {}) > 0) and (node.kind == "list") and first_child and (first_child.kind == "symbol") and settings["arg-form?"](alignment, first_child.text)) or (alignment.bindings and (node.kind ~= "list")))
       else
-        aligned_3f = (alignment.maps or alignment.clauses or (alignment.bindings and (node.kind ~= "list")))
+        aligned_3f = ((alignment.maps and (node.kind == "table")) or ((node.kind == "list") and first_child and (first_child.kind == "symbol") and settings["clause-form?"](alignment, first_child.text)) or ((node.kind == "list") and first_child and (first_child.kind == "symbol") and settings["arg-form?"](alignment, first_child.text)) or (alignment.bindings and (node.kind ~= "list")))
       end
       if aligned_3f then
         if (first_child == nil) then
@@ -380,9 +380,13 @@ local function alignment_pass(source, config, alignment)
     end
     captured_values = capture_values(_46_)
     local result = captured_values[1]
-    local _ = captured_values[2]
+    local result_tree = captured_values[2]
     local result_error = captured_values[3]
-    return result, result_error
+    if result_error then
+      return nil, result_error
+    else
+      return alignment_source(result, result_tree, alignment), nil
+    end
   end
 end
 local function fixed_point_result(source, config, alignment, rounds, result, recurse)
@@ -394,7 +398,7 @@ local function fixed_point_result(source, config, alignment, rounds, result, rec
   end
 end
 local function alignment_fixed_point(source, config, alignment, rounds)
-  local result, _, error = alignment_pass(source, config, alignment)
+  local result, error = alignment_pass(source, config, alignment)
   if error then
     return nil, error
   else
@@ -407,10 +411,10 @@ local function split_and_align(source, config, alignment)
     return nil, error
   else
     local captured_values
-    local function _50_()
+    local function _51_()
       return alignment_fixed_point(prepared, config, alignment, 3)
     end
-    captured_values = capture_values(_50_)
+    captured_values = capture_values(_51_)
     local result = captured_values[1]
     local result_error = captured_values[2]
     if result_error then
@@ -432,14 +436,14 @@ do
         return nil, config_error
       else
         local alignment = settings.resolve(config)
-        if (alignment.bindings or alignment.maps or alignment.clauses or alignment["split-bindings"] or alignment["collapse-padding"]) then
+        if (alignment.bindings or alignment.maps or (#(alignment["align-args"] or {}) > 0) or (#(alignment["align-pairs"] or {}) > 0) or alignment["split-bindings"] or alignment["collapse-padding"]) then
           return split_and_align(source, config, alignment)
         else
           local captured_values
-          local function _53_()
+          local function _54_()
             return reindent_once(source, config)
           end
-          captured_values = capture_values(_53_)
+          captured_values = capture_values(_54_)
           local result = captured_values[1]
           local _ = captured_values[2]
           local error = captured_values[3]

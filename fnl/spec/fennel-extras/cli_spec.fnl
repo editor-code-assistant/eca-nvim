@@ -55,8 +55,8 @@
                          "}")
                      "{:extensions [\".fnl\" \".fnlm\"] :dotfiles false :symlinks false :paths [\".\"]}")
         format     (if workspace?
-                     "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]}}"
-                     (.. "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]} " body "}"))]
+                     "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :align-pairs [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\"]}}"
+                     (.. "{:indent-width 2 :indents {\"fn\" [[:inner 0]] \"let\" [[:block 1]] \"when\" [[:block 1]] \"do\" [[:block 0]] \"def\" [[:inner 0]] \"defn\" [[:inner 0]] \"defn-\" [[:inner 0]]} :parser false :alignment {:bindings false :maps false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :align-pairs [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\"]} " body "}"))]
     (.. "{:workspace " workspace " :format " format " :lint {:rules {}}}")))
 
 
@@ -285,7 +285,7 @@
 
 (defn- align-bindings-cli-scenario-body
   [root path config-path source expected]
-  (write-file config-path "{:indent-width 2 :indents {} :parser false :alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
+  (write-file config-path "{:indent-width 2 :indents {} :parser false :alignment {:bindings true :maps true :align-pairs [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\"] :split-bindings true :collapse-padding true :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :align-pairs [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\"]}}")
   (write-file path source)
   (align-bindings-cli-scenario-result root path expected))
 
@@ -1269,7 +1269,7 @@
                              :exclude       true
                              :extensions    true
                              :binding-forms true
-                             :clause-forms  true})
+                             :align-pairs ["case" "cond" "match" "case-try" "match-try"]})
 
 (defn- fennel-value
   [value as-list?]
@@ -2364,7 +2364,7 @@
 
   (defn- alignment-maps-cli-setup
     [config-path path source]
-    (write-file config-path "{:indent-width 2 :indents {} :parser false :alignment {:bindings false :maps true :clauses false :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :clause-forms [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"]}}")
+    (write-file config-path "{:indent-width 2 :indents {} :parser false :alignment {:bindings false :maps true :split-bindings false :collapse-padding false :binding-forms [\"let\" \"when-let\" \"if-let\" \"with-open\"] :align-pairs [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\"]}}")
     (write-file path source))
 
 

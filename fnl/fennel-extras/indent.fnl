@@ -139,7 +139,7 @@
   [config name]
   (let [alignment (settings.resolve config)]
     (when (or (and alignment.bindings ((. settings "binding-form?") alignment name))
-            (and alignment.clauses ((. settings "clause-form?") alignment name)))
+            (and (> (length (or alignment.align-pairs [])) 0) ((. settings "clause-form?") alignment name)))
       [[:block 1]])))
 
 (defn- rule-indent
@@ -170,14 +170,26 @@
             form-sensitive? (and config (. config :format-as))
             aligned?        (if form-sensitive?
                               (or (and alignment.maps (= node.kind :table))
-                                (and alignment.clauses
+                                (and (> (length (or alignment.align-pairs [])) 0)
                                   (= node.kind :list)
                                   first-child
                                   (= first-child.kind :symbol)
                                   ((. settings "clause-form?") alignment first-child.text))
+                                (and (> (length (or alignment.align-args [])) 0)
+                                  (= node.kind :list)
+                                  first-child
+                                  (= first-child.kind :symbol)
+                                  ((. settings "arg-form?") alignment first-child.text))
                                 (and alignment.bindings (not= node.kind :list)))
-                              (or alignment.maps
-                                alignment.clauses
+                              (or (and alignment.maps (= node.kind :table))
+                                (and (= node.kind :list)
+                                  first-child
+                                  (= first-child.kind :symbol)
+                                  ((. settings "clause-form?") alignment first-child.text))
+                                (and (= node.kind :list)
+                                  first-child
+                                  (= first-child.kind :symbol)
+                                  ((. settings "arg-form?") alignment first-child.text))
                                 (and alignment.bindings (not= node.kind :list))))]
         (if aligned?
           (if (= first-child nil)
@@ -307,11 +319,14 @@
   (let [(plain tree error) (reindent-once source config)]
     (if error
       (values nil error)
-      (do (local aligned (alignment-source plain tree alignment))
-        (local captured-values (capture-values (fn
-                                                 []
-                                                 (reindent-once aligned config)))) (local result (. captured-values 1)) (local _ (. captured-values 2)) (local result-error (. captured-values 3))
-        (values result result-error)))))
+      (let [aligned (alignment-source plain tree alignment)
+            captured-values (capture-values (fn [] (reindent-once aligned config)))
+            result (. captured-values 1)
+            result-tree (. captured-values 2)
+            result-error (. captured-values 3)]
+        (if result-error
+          (values nil result-error)
+          (values (alignment-source result result-tree alignment) nil))))))
 
 (defn- fixed-point-result
   [source config alignment rounds result recurse]
@@ -322,7 +337,7 @@
 
 (defn- alignment-fixed-point
   [source config alignment rounds]
-  (let [(result _ error) (alignment-pass source config alignment)]
+  (let [(result error) (alignment-pass source config alignment)]
     (if error
       (values nil error)
       (fixed-point-result source config alignment rounds result alignment-fixed-point))))
@@ -350,7 +365,8 @@
         (do (local alignment (settings.resolve config))
           (if (or alignment.bindings
                 alignment.maps
-                alignment.clauses
+                (> (length (or alignment.align-args [])) 0)
+                (> (length (or alignment.align-pairs [])) 0)
                 alignment.split-bindings
                 alignment.collapse-padding)
             (split-and-align source config alignment)

@@ -7,8 +7,8 @@ do
 end
 local core = require("eca.nfnl.core")
 local parse = require("fennel-extras.config.parse")
-local toggle_keys = {"bindings", "maps", "clauses", "split-bindings", "collapse-padding"}
-local list_keys = {"binding-forms", "clause-forms"}
+local toggle_keys = {"bindings", "maps", "split-bindings", "collapse-padding"}
+local list_keys = {"binding-forms", "align-args", "align-pairs"}
 local function boolean_3f(value)
   return ((value == true) or (value == false))
 end
@@ -24,7 +24,7 @@ local function list_contains_entry_3f(items, name, index)
   return ((item ~= nil) and ((item == name) or list_contains_entry_3f(items, name, (index + 1))))
 end
 local function list_contains_3f(items, name)
-  return list_contains_entry_3f(items, name, 1)
+  return (items and list_contains_entry_3f(items, name, 1))
 end
 local function toggle_key_3f(key)
   return list_contains_3f(toggle_keys, key)
@@ -94,7 +94,7 @@ local resolve
 do
   local function resolve0(config)
     local alignment = ((config and config.alignment) or {})
-    return {bindings = toggle_value(alignment, "bindings"), maps = toggle_value(alignment, "maps"), clauses = toggle_value(alignment, "clauses"), ["split-bindings"] = toggle_value(alignment, "split-bindings"), ["collapse-padding"] = toggle_value(alignment, "collapse-padding"), ["binding-forms"] = alignment["binding-forms"], ["clause-forms"] = alignment["clause-forms"]}
+    return {bindings = toggle_value(alignment, "bindings"), maps = toggle_value(alignment, "maps"), ["split-bindings"] = toggle_value(alignment, "split-bindings"), ["align-args"] = alignment["align-args"], ["align-pairs"] = alignment["align-pairs"], ["collapse-padding"] = toggle_value(alignment, "collapse-padding"), ["binding-forms"] = alignment["binding-forms"]}
   end
   _2amodule_2a["resolve"] = resolve0
   resolve = _2amodule_2a.resolve
@@ -106,9 +106,9 @@ local function add_binding_forms(alignment, explicit)
     return alignment
   end
 end
-local function add_clause_forms(alignment, explicit)
-  if (explicit and explicit["clause-forms"]) then
-    return core.assoc(alignment, "clause-forms", explicit["clause-forms"])
+local function add_list(alignment, explicit, key)
+  if (explicit and explicit[key]) then
+    return core.assoc(alignment, key, explicit[key])
   else
     return alignment
   end
@@ -117,10 +117,11 @@ local normalize
 do
   local function normalize0(config)
     local resolved = resolve(config)
-    local alignment = {bindings = resolved.bindings, maps = resolved.maps, clauses = resolved.clauses, ["split-bindings"] = resolved["split-bindings"], ["collapse-padding"] = resolved["collapse-padding"]}
+    local alignment = {bindings = resolved.bindings, maps = resolved.maps, ["split-bindings"] = resolved["split-bindings"], ["collapse-padding"] = resolved["collapse-padding"]}
     local explicit = config.alignment
     local with_binding_forms = add_binding_forms(alignment, explicit)
-    local normalized = add_clause_forms(with_binding_forms, explicit)
+    local with_args = add_list(with_binding_forms, explicit, "align-args")
+    local normalized = add_list(with_args, explicit, "align-pairs")
     return core.assoc(config, "alignment", normalized)
   end
   _2amodule_2a["normalize"] = normalize0
@@ -134,10 +135,18 @@ do
   _2amodule_2a["binding-form?"] = binding_form_3f0
   binding_form_3f = _2amodule_2a["binding-form?"]
 end
+local arg_form_3f
+do
+  local function arg_form_3f0(alignment, name)
+    return list_contains_3f(alignment["align-args"], name)
+  end
+  _2amodule_2a["arg-form?"] = arg_form_3f0
+  arg_form_3f = _2amodule_2a["arg-form?"]
+end
 local clause_form_3f
 do
   local function clause_form_3f0(alignment, name)
-    return list_contains_3f(alignment["clause-forms"], name)
+    return list_contains_3f(alignment["align-pairs"], name)
   end
   _2amodule_2a["clause-form?"] = clause_form_3f0
   clause_form_3f = _2amodule_2a["clause-form?"]

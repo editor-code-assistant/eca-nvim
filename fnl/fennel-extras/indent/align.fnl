@@ -33,7 +33,7 @@
   [node parent alignment]
   (or (and alignment.maps (= node.kind :table))
       (and alignment.bindings (alignment-form? node parent alignment))
-      (and alignment.clauses (clause-form? node alignment))))
+      (and (> (length (or alignment.align-pairs [])) 0) (clause-form? node alignment))))
 
 (defn- append-alignment-node
   [result node]
@@ -328,13 +328,68 @@
   (accumulate [result line _ edit (ipairs edits)]
               (apply-edit result edit)))
 
+(defn- collect-argument-nodes
+  [node result alignment]
+  (let [children (helpers.nontrivia-children node)
+        head     (. children 1)
+        result   (if (and (= node.kind :list)
+                          head
+                          (= head.kind :symbol)
+                          ((. settings "arg-form?") alignment head.text))
+                   (do (table.insert result node) result)
+                   result)]
+    (accumulate [state result _ child (ipairs (or node.children []))]
+                (if child.children
+                  (collect-argument-nodes child state alignment)
+                  state))))
+
+(defn- argument-edits-for-node
+  [node alignment]
+  (let [children (helpers.nontrivia-children node)
+        head     (. children 1)
+        first    (. children 2)
+        target   (and head first (= head.line first.line) (helpers.child-start first))
+        composite? (accumulate [found false index child (ipairs children)]
+                      (or found (and (> index 1) child.children)))]
+    (if (and target (not composite?))
+      (accumulate [edits [] index child (ipairs children)]
+                  (if (and (> index 2)
+                           child.line
+                           head.line
+                           (not child.children)
+                           (or (= child.kind :symbol)
+                               (= child.kind :string)
+                               (= child.kind :keyword)
+                               (= child.kind :number))
+                           (> child.line head.line))
+                    (let [start (helpers.child-start child)]
+                      (if (and start start.out-col target.out-col)
+                        (do (table.insert edits {:line child.line
+                                                 :start 1
+                                                 :finish (+ start.out-col 1)
+                                                 :spaces target.out-col})
+                            edits)
+                        edits))
+                    edits))
+      [])))
+
+(defn- argument-edits
+  [nodes alignment]
+  (accumulate [edits [] _ node (ipairs nodes)]
+              (let [next (argument-edits-for-node node alignment)]
+                (each [_ edit (ipairs next)] (table.insert edits edit))
+                edits)))
+
 (defn- apply-alignment
-  [lines plans]
-  (let [edits (alignment-edits plans)]
+  [lines plans argument-nodes alignment]
+  (let [edits (alignment-edits plans)
+        args  (argument-edits argument-nodes alignment)]
+    (each [_ edit (ipairs args)] (table.insert edits edit))
     (icollect [line-number line (ipairs lines)]
               (apply-edits line (line-edits edits line-number)))))
 
 (defn apply
   [output tree alignment]
-  (let [nodes (collect-alignment-nodes tree nil [] alignment)]
-    (apply-alignment output (alignment-plans nodes alignment))))
+  (let [nodes (collect-alignment-nodes tree nil [] alignment)
+        args  (collect-argument-nodes tree [] alignment)]
+    (apply-alignment output (alignment-plans nodes alignment) args alignment)))

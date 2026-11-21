@@ -216,13 +216,13 @@ end
 require("plenary.busted").describe("canonical-config-uses-separate-same-form-chains", _29_)
 local function _31_()
   local function _32_()
-    local loaded = config.load(".fnl-extras.fnl").format.alignment["clause-forms"]
+    local loaded = config.load(".fnl-extras.fnl").format.alignment["align-pairs"]
     local assert_28_auto = require("luassert")
-    local value_29_auto = vim.deep_equal({"case", "cond", "match", "case-try", "match-try", "if"}, loaded)
-    assert_28_auto.is_truthy(value_29_auto, "(vim.deep_equal [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\" \"if\"] loaded)")
+    local value_29_auto = vim.deep_equal({"case", "cond", "match", "case-try", "match-try"}, loaded)
+    assert_28_auto.is_truthy(value_29_auto, "(vim.deep_equal [\"case\" \"cond\" \"match\" \"case-try\" \"match-try\"] loaded)")
     return true
   end
-  return require("plenary.busted").it("canonical formatter aligns cond clauses alongside case", _32_)
+  return require("plenary.busted").it("canonical formatter aligns cond pairs alongside case", _32_)
 end
 require("plenary.busted").describe("canonical-config-aligns-cond-clauses", _31_)
 local removed_rules = {"call-data-arg", "module-style", "unused-and-or", "function-shape", "if-branch-call", "nested-forms", "leading-bindings", "no-mutation", "forbidden-form"}

@@ -5,8 +5,8 @@
 (local core (require :eca.nfnl.core))
 (local parse (require :fennel-extras.config.parse))
 
-(local toggle-keys ["bindings" "maps" "clauses" "split-bindings" "collapse-padding"])
-(local list-keys ["binding-forms" "clause-forms"])
+(local toggle-keys ["bindings" "maps" "split-bindings" "collapse-padding"])
+(local list-keys ["binding-forms" "align-args" "align-pairs"])
 
 (defn- boolean?
   [value]
@@ -33,7 +33,7 @@
 
 (defn- list-contains?
   [items name]
-  (list-contains-entry? items name 1))
+  (and items (list-contains-entry? items name 1)))
 
 (defn- toggle-key?
   [key]
@@ -96,11 +96,11 @@
   (let [alignment (or (and config (. config :alignment)) {})]
     {:bindings         (toggle-value alignment "bindings")
      :maps             (toggle-value alignment "maps")
-     :clauses          (toggle-value alignment "clauses")
      :split-bindings   (toggle-value alignment "split-bindings")
+     :align-args       (. alignment "align-args")
+     :align-pairs      (. alignment "align-pairs")
      :collapse-padding (toggle-value alignment "collapse-padding")
-     :binding-forms    (. alignment "binding-forms")
-     :clause-forms     (. alignment "clause-forms")}))
+     :binding-forms    (. alignment "binding-forms")}))
 
 (defn- add-binding-forms
   [alignment explicit]
@@ -108,10 +108,10 @@
     (core.assoc alignment "binding-forms" (. explicit "binding-forms"))
     alignment))
 
-(defn- add-clause-forms
-  [alignment explicit]
-  (if (and explicit (. explicit "clause-forms"))
-    (core.assoc alignment "clause-forms" (. explicit "clause-forms"))
+(defn- add-list
+  [alignment explicit key]
+  (if (and explicit (. explicit key))
+    (core.assoc alignment key (. explicit key))
     alignment))
 
 (defn normalize
@@ -119,18 +119,22 @@
   (let [resolved           (resolve config)
         alignment          {:bindings         resolved.bindings
                             :maps             resolved.maps
-                            :clauses          resolved.clauses
                             :split-bindings   resolved.split-bindings
                             :collapse-padding resolved.collapse-padding}
         explicit           (. config :alignment)
         with-binding-forms (add-binding-forms alignment explicit)
-        normalized         (add-clause-forms with-binding-forms explicit)]
+        with-args          (add-list with-binding-forms explicit "align-args")
+        normalized         (add-list with-args explicit "align-pairs")]
     (core.assoc config :alignment normalized)))
 
 (defn binding-form?
   [alignment name]
   (list-contains? alignment.binding-forms name))
 
+(defn arg-form?
+  [alignment name]
+  (list-contains? alignment.align-args name))
+
 (defn clause-form?
   [alignment name]
-  (list-contains? alignment.clause-forms name))
+  (list-contains? alignment.align-pairs name))

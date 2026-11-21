@@ -20,7 +20,7 @@ local function clause_form_3f(node, alignment)
   return ((node.kind == "list") and clause_form_name_3f(helpers["nontrivia-children"](node)[1], alignment))
 end
 local function alignment_node_3f(node, parent, alignment)
-  return ((alignment.maps and (node.kind == "table")) or (alignment.bindings and alignment_form_3f(node, parent, alignment)) or (alignment.clauses and clause_form_3f(node, alignment)))
+  return ((alignment.maps and (node.kind == "table")) or (alignment.bindings and alignment_form_3f(node, parent, alignment)) or ((#(alignment["align-pairs"] or {}) > 0) and clause_form_3f(node, alignment)))
 end
 local function append_alignment_node(result, node)
   table.insert(result, node)
@@ -352,8 +352,76 @@ local function apply_edits(line, edits)
   end
   return result
 end
-local function apply_alignment(lines, plans)
+local function collect_argument_nodes(node, result, alignment)
+  local children = helpers["nontrivia-children"](node)
+  local head = children[1]
+  local result0
+  if ((node.kind == "list") and head and (head.kind == "symbol") and settings["arg-form?"](alignment, head.text)) then
+    table.insert(result, node)
+    result0 = result
+  else
+    result0 = result
+  end
+  local state = result0
+  for _, child in ipairs((node.children or {})) do
+    if child.children then
+      state = collect_argument_nodes(child, state, alignment)
+    else
+      state = state
+    end
+  end
+  return state
+end
+local function argument_edits_for_node(node, alignment)
+  local children = helpers["nontrivia-children"](node)
+  local head = children[1]
+  local first = children[2]
+  local target = (head and first and (head.line == first.line) and helpers["child-start"](first))
+  local composite_3f
+  do
+    local found = false
+    for index, child in ipairs(children) do
+      found = (found or ((index > 1) and child.children))
+    end
+    composite_3f = found
+  end
+  if (target and not composite_3f) then
+    local edits = {}
+    for index, child in ipairs(children) do
+      if ((index > 2) and child.line and head.line and not child.children and ((child.kind == "symbol") or (child.kind == "string") or (child.kind == "keyword") or (child.kind == "number")) and (child.line > head.line)) then
+        local start = helpers["child-start"](child)
+        if (start and start["out-col"] and target["out-col"]) then
+          table.insert(edits, {line = child.line, start = 1, finish = (start["out-col"] + 1), spaces = target["out-col"]})
+          edits = edits
+        else
+          edits = edits
+        end
+      else
+        edits = edits
+      end
+    end
+    return edits
+  else
+    return {}
+  end
+end
+local function argument_edits(nodes, alignment)
+  local edits = {}
+  for _, node in ipairs(nodes) do
+    local next = argument_edits_for_node(node, alignment)
+    for _0, edit in ipairs(next) do
+      table.insert(edits, edit)
+    end
+    edits = edits
+  end
+  return edits
+end
+local function apply_alignment(lines, plans, argument_nodes, alignment)
   local edits = alignment_edits(plans)
+  local args = argument_edits(argument_nodes, alignment)
+  for _, edit in ipairs(args) do
+    table.insert(edits, edit)
+  end
   local tbl_26_ = {}
   local i_27_ = 0
   for line_number, line in ipairs(lines) do
@@ -370,7 +438,8 @@ local apply
 do
   local function apply0(output, tree, alignment)
     local nodes = collect_alignment_nodes(tree, nil, {}, alignment)
-    return apply_alignment(output, alignment_plans(nodes, alignment))
+    local args = collect_argument_nodes(tree, {}, alignment)
+    return apply_alignment(output, alignment_plans(nodes, alignment), args, alignment)
   end
   _2amodule_2a["apply"] = apply0
   apply = _2amodule_2a.apply

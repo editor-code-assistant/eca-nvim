@@ -15,11 +15,11 @@
                             "testing" "deftest"}
              :alignment    {:bindings         true
                             :maps             true
-                            :clauses          true
                             :split-bindings   true
                             :collapse-padding true
                             :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                            :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}
+                            :align-args       ["and" "or"]
+                            :align-pairs      ["case" "cond" "match" "case-try" "match-try"]}
              :newline      [{:applies-to {:files ["^fennel-extras/"]
                                           :forms ["fn" "defn" "defn-"]}
                              :options    {:after-header       0

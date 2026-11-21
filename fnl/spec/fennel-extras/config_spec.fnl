@@ -552,26 +552,25 @@
     (is (= "alignment key binding-forms must be a list of strings"
            (validation-error-message "{:alignment {:binding-forms {:foo \"bar\"}}}"))))
 
-  (testing "rejects a non-string clause form with the exact validation message"
-    (is (= "alignment key clause-forms must be a list of strings"
-           (validation-error-message "{:alignment {:clause-forms [1]}}"))))
+  (testing "rejects the removed clause-forms key"
+    (is (= "unknown alignment key: clause-forms"
+           (validation-error-message "{:alignment {:clause-forms [\"case\"]}}"))))
 
-  (testing "rejects a map clause-forms value with the exact validation message"
-    (is (= "alignment key clause-forms must be a list of strings"
-           (validation-error-message "{:alignment {:clause-forms {:foo \"bar\"}}}"))))
+  (testing "rejects the removed clauses key"
+    (is (= "unknown alignment key: clauses"
+           (validation-error-message "{:alignment {:clauses true}}"))))
 
   (testing "missing alignment switches remain off"
     (let [config   (load-config)
           settings (require :fennel-extras.indent.settings)
           value    {:alignment {:binding-forms ["let"]
-                                :clause-forms  ["case"]}}]
+                                :align-pairs    ["case"]}}]
       (is (= {:bindings         false
               :maps             false
-              :clauses          false
               :split-bindings   false
               :collapse-padding false
               :binding-forms    ["let"]
-              :clause-forms     ["case"]}
+              :align-pairs      ["case"]}
              (settings.resolve (config.validate value))))))
 
   (testing "alignment tables require binding forms when binding alignment is enabled"

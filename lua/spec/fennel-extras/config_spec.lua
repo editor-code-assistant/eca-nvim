@@ -767,26 +767,26 @@ local function _99_()
   require("plenary.busted").it("rejects a map binding-forms value with the exact validation message", _106_)
   local function _107_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "alignment key clause-forms must be a list of strings"
-    local actual_7_auto = validation_error_message("{:alignment {:clause-forms [1]}}")
+    local expected_6_auto = "unknown alignment key: clause-forms"
+    local actual_7_auto = validation_error_message("{:alignment {:clause-forms [\"case\"]}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a non-string clause form with the exact validation message", _107_)
+  require("plenary.busted").it("rejects the removed clause-forms key", _107_)
   local function _108_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "alignment key clause-forms must be a list of strings"
-    local actual_7_auto = validation_error_message("{:alignment {:clause-forms {:foo \"bar\"}}}")
+    local expected_6_auto = "unknown alignment key: clauses"
+    local actual_7_auto = validation_error_message("{:alignment {:clauses true}}")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a map clause-forms value with the exact validation message", _108_)
+  require("plenary.busted").it("rejects the removed clauses key", _108_)
   local function _109_()
     local config = load_config()
     local settings = require("fennel-extras.indent.settings")
-    local value = {alignment = {["binding-forms"] = {"let"}, ["clause-forms"] = {"case"}}}
+    local value = {alignment = {["binding-forms"] = {"let"}, ["align-pairs"] = {"case"}}}
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {["binding-forms"] = {"let"}, ["clause-forms"] = {"case"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}
+    local expected_6_auto = {["binding-forms"] = {"let"}, ["align-pairs"] = {"case"}, bindings = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}
     local actual_7_auto = settings.resolve(config.validate(value))
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true

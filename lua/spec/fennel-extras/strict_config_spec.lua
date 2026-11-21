@@ -138,14 +138,14 @@ local function _12_()
   require("plenary.busted").it("binding forms are required when binding alignment is enabled", _15_)
   local function _16_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "missing alignment.clause-forms"
+    local expected_6_auto = "unknown alignment key: clauses"
     local actual_7_auto = config_error({alignment = {clauses = true}}).message
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("clause forms are required when clause alignment is enabled", _16_)
+  require("plenary.busted").it("removed clause alignment keys are rejected", _16_)
   local function _17_()
-    local result = config_error({alignment = {["binding-forms"] = {"let"}, ["clause-forms"] = {"case"}}})
+    local result = config_error({alignment = {["binding-forms"] = {"let"}, ["align-pairs"] = {"case"}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = result.ok
     assert_28_auto.is_truthy(value_29_auto, "(. result \"ok\")")

@@ -7,7 +7,7 @@ local function load_indent()
     return {error = "module missing"}
   end
 end
-local explicit_indent_config = {["indent-width"] = 2, parser = "eca.nfnl.fennel", indents = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["case-try"] = {{"block", 1}}, ["match-try"] = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}, def = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}, alignment = {["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}}
+local explicit_indent_config = {["indent-width"] = 2, parser = "eca.nfnl.fennel", indents = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["case-try"] = {{"block", 1}}, ["match-try"] = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}, def = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}, alignment = {["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["align-args"] = {"and", "or"}, ["align-pairs"] = {"case", "cond", "match", "case-try", "match-try"}, bindings = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}}
 local function reindent_call_body(indent, source)
   return indent.reindent(source, explicit_indent_config)
 end
@@ -181,7 +181,7 @@ local function _7_()
   return require("plenary.busted").it("starts each top-level form at column zero", _19_)
 end
 require("plenary.busted").describe("alignment-goldens", _7_)
-local canonical_indent_config = {["indent-width"] = 2, parser = "eca.nfnl.fennel", indents = {fn = {{"inner", 0}}, def = {{"inner", 0}}, ["def-"] = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}, ["format-as"] = {def = "fn", ["def-"] = "fn", defn = "fn", ["defn-"] = "fn"}, alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}}}
+local canonical_indent_config = {["indent-width"] = 2, parser = "eca.nfnl.fennel", indents = {fn = {{"inner", 0}}, def = {{"inner", 0}}, ["def-"] = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}, ["format-as"] = {def = "fn", ["def-"] = "fn", defn = "fn", ["defn-"] = "fn"}, alignment = {bindings = true, maps = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["align-args"] = {"and", "or"}, ["align-pairs"] = {"case", "cond", "match", "case-try", "match-try"}}}
 local function output_for_canonical(source, config)
   local indent = load_indent()
   local config0 = vim.tbl_deep_extend("force", canonical_indent_config, (config or {}))
@@ -191,7 +191,7 @@ local function _20_()
   local function _21_()
     local output = output_for_canonical("(when (and very-long-condition\n another-condition)\n (if ready\n value\n fallback))", {})
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(when (and very-long-condition\n        another-condition)\n  (if ready\n    value\n    fallback))"
+    local expected_6_auto = "(when (and very-long-condition\n           another-condition)\n  (if ready\n    value\n    fallback))"
     local actual_7_auto = output
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -417,6 +417,41 @@ local function _47_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("lualine text keeps explicit let alignment and uses generic if offsets", _49_)
+  require("plenary.busted").it("lualine text keeps explicit let alignment and uses generic if offsets", _49_)
+  local function _50_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(and first\n     second\n     third)"
+    local actual_7_auto = reindent_direct("(and first\n second\n third)", nil)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-args aligns later direct arguments under the first argument", _50_)
+  local function _51_()
+    local source = "(or first\n    second\n    third)"
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = source
+    local actual_7_auto = reindent_direct(source, nil)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-args preserves already-aligned input", _51_)
+  local function _52_()
+    local once = reindent_direct("(and first\n second\n third)", nil)
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = once
+    local actual_7_auto = reindent_direct(once, nil)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-args is idempotent", _52_)
+  local function _53_()
+    local result = reindent_direct("(and (foo\n bar)\n baz)", nil)
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "string"
+    local actual_7_auto = type(result)
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("align-args leaves nested composite arguments structurally valid", _53_)
 end
 return require("plenary.busted").describe("hand-style-fixed-points", _47_)

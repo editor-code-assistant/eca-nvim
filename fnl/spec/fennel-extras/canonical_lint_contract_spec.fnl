@@ -245,9 +245,9 @@
                                (. when-instance :options :forbidden-chains)))))))
 
 (deftest canonical-config-aligns-cond-clauses
-  (testing "canonical formatter aligns cond clauses alongside case"
-    (let [loaded (. (config.load ".fnl-extras.fnl") :format :alignment :clause-forms)]
-      (is (vim.deep_equal ["case" "cond" "match" "case-try" "match-try" "if"] loaded)))))
+  (testing "canonical formatter aligns cond pairs alongside case"
+    (let [loaded (. (config.load ".fnl-extras.fnl") :format :alignment :align-pairs)]
+      (is (vim.deep_equal ["case" "cond" "match" "case-try" "match-try"] loaded)))))
 
 (local removed-rules ["call-data-arg"
                       "module-style"

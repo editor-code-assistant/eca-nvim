@@ -22,11 +22,10 @@
         :indents      {}
         :alignment    {:bindings         true
                        :maps             false
-                       :clauses          false
-                       :split-bindings   true
+                                              :split-bindings   true
                        :collapse-padding false
                        :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                       :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}})
+                       :align-pairs      ["case" "cond" "match" "case-try" "match-try"]}})
 
 (defn- formatted-body
   [format source]

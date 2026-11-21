@@ -888,7 +888,8 @@
   [alignment]
   (or alignment.bindings
       alignment.maps
-      alignment.clauses
+      (> (length (or alignment.align-args [])) 0)
+      (> (length (or alignment.align-pairs [])) 0)
       alignment.split-bindings
       alignment.collapse-padding))
 

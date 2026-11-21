@@ -14,11 +14,11 @@
    :indents      {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]] "def" [[:inner 0]] "defn" [[:inner 0]] "defn-" [[:inner 0]]}
    :alignment    {:bindings         false
                   :maps             false
-                  :clauses          false
                   :split-bindings   false
                   :collapse-padding false
                   :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                  :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}})
+                  :align-args       ["and" "or"]
+                  :align-pairs      ["case" "cond" "match" "case-try" "match-try"]}})
 
 (defn- reindent-call-body
   [indent source]
@@ -184,11 +184,11 @@
                   "defn-" "fn"}
    :alignment    {:bindings         true
                   :maps             true
-                  :clauses          true
                   :split-bindings   true
                   :collapse-padding true
                   :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                  :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}})
+                  :align-args       ["and" "or"]
+                  :align-pairs      ["case" "cond" "match" "case-try" "match-try"]}})
 
 (defn- output-for-canonical
   [source config]
@@ -199,7 +199,7 @@
 (deftest canonical-alignment-fallbacks
   (testing "keeps unconfigured when and nested long-condition if form-sensitive"
     (let [output (output-for-canonical "(when (and very-long-condition\n another-condition)\n (if ready\n value\n fallback))" {})]
-      (is (= "(when (and very-long-condition\n        another-condition)\n  (if ready\n    value\n    fallback))"
+      (is (= "(when (and very-long-condition\n           another-condition)\n  (if ready\n    value\n    fallback))"
             output))))
 
   (testing "keeps cond and case clause arms aligned at widths 2 and 4"
@@ -340,4 +340,20 @@
 
   (testing "lualine text keeps explicit let alignment and uses generic if offsets"
     (is (= "(defn- text\n  [item]\n  (let [title (core.get item :title nil)\n         value (core.get item :value nil)\n         title-str (if title (core.str \"%#EcaHeaderKey#\" title \":\") \"\")\n         value-str (if value (core.str \"%#EcaHeaderValue#\" value) \"\")]\n    (core.str title-str value-str)))"
-          (reindent-direct "(defn- text\n  [item]\n  (let [title (core.get item :title nil)\n        value (core.get item :value nil)\n        title-str (if title (core.str \"%#EcaHeaderKey#\" title \":\") \"\")\n        value-str (if value (core.str \"%#EcaHeaderValue#\" value) \"\")]\n    (core.str title-str value-str)))" nil)))))
+          (reindent-direct "(defn- text\n  [item]\n  (let [title (core.get item :title nil)\n        value (core.get item :value nil)\n        title-str (if title (core.str \"%#EcaHeaderKey#\" title \":\") \"\")\n        value-str (if value (core.str \"%#EcaHeaderValue#\" value) \"\")]\n    (core.str title-str value-str)))" nil))))
+
+  (testing "align-args aligns later direct arguments under the first argument"
+    (is (= "(and first\n     second\n     third)"
+          (reindent-direct "(and first\n second\n third)" nil))))
+
+  (testing "align-args preserves already-aligned input"
+    (let [source "(or first\n    second\n    third)"]
+      (is (= source (reindent-direct source nil)))))
+
+  (testing "align-args is idempotent"
+    (let [once (reindent-direct "(and first\n second\n third)" nil)]
+      (is (= once (reindent-direct once nil)))))
+
+  (testing "align-args leaves nested composite arguments structurally valid"
+    (let [result (reindent-direct "(and (foo\n bar)\n baz)" nil)]
+      (is (= :string (type result))))))

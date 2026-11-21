@@ -50,11 +50,11 @@ The formatter uses an **explicit configuration contract**. There are no hidden d
               "defn-" "fn"}
   :alignment        {:bindings         true
                      :maps             true
-                     :clauses          true
                      :split-bindings   true
                      :collapse-padding true
                      :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                     :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}
+                     :align-args       ["and" "or"]
+                     :align-pairs      ["case" "cond" "match" "case-try" "match-try"]}
   :newline          [{:applies-to {:files ["^fennel-extras/"]
                                     :forms ["fn" "defn" "defn-"]}
                       :options    {:after-header 1}}
@@ -182,14 +182,14 @@ Use `:applies-to :files` for path-specific rules. A file selector is a Vim regul
 ```fennel
 :alignment {:bindings true
             :maps false
-            :clauses true
             :split-bindings false
             :collapse-padding false
             :binding-forms ["let" "when-let" "if-let" "with-open"]
-            :clause-forms ["case" "cond" "match" "case-try" "match-try" "if"]}
+            :align-args ["and" "or"]
+            :align-pairs ["case" "cond" "match" "case-try" "match-try"]}
 ```
 
-The boolean switches are `:bindings`, `:maps`, `:clauses`, `:split-bindings`, and `:collapse-padding`. `:binding-forms` and `:clause-forms` are required when their corresponding alignment modes are enabled. `:align-bindings` is not part of the configuration contract.
+The boolean switches are `:bindings`, `:maps`, `:split-bindings`, and `:collapse-padding`. Direct argument and pair forms are configured with `:align-args` and `:align-pairs`. `:align-bindings` is not part of the configuration contract.
 
 #### `:newline`
 

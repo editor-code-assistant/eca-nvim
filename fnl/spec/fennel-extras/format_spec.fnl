@@ -17,8 +17,8 @@
 
 (local full-indents
        {"fn" [[:inner 0]] "lambda" [[:inner 0]] "macro" [[:inner 0]] "let" [[:block 1]] "when" [[:block 1]] "when-let" [[:block 1]] "if-let" [[:block 1]] "each" [[:block 1]] "for" [[:block 1]] "icollect" [[:block 1]] "collect" [[:block 1]] "accumulate" [[:block 1]] "case" [[:block 1]] "match" [[:block 1]] "case-try" [[:block 1]] "match-try" [[:block 1]] "while" [[:block 1]] "with-open" [[:block 1]] "do" [[:block 0]] "def" [[:inner 0]] "defn" [[:inner 0]] "defn-" [[:inner 0]]})
-(local full-alignment {:bindings false :maps false :clauses false :split-bindings false :collapse-padding false :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "cond" "match" "case-try" "match-try" "if"]})
-(local aligned-format-config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true :binding-forms ["let" "when-let" "if-let" "with-open"] :clause-forms ["case" "cond" "match" "case-try" "match-try" "if"]}})
+(local full-alignment {:bindings false :maps false :split-bindings false :collapse-padding false :binding-forms ["let" "when-let" "if-let" "with-open"] :align-args [] :align-pairs []})
+(local aligned-format-config {:alignment {:bindings true :maps true :split-bindings true :collapse-padding true :binding-forms ["let" "when-let" "if-let" "with-open"] :align-args [] :align-pairs ["case" "cond" "match" "case-try" "match-try"]}})
 
 (defn- explicit-alignment
   [config]
@@ -27,7 +27,7 @@
                            full-alignment
                            {:bindings         (. config :align-bindings)
                             :maps             (. config :align-bindings)
-                            :clauses          (. config :align-bindings)
+                            :align-pairs       ["case" "cond" "match" "case-try" "match-try"]
                             :split-bindings   (. config :align-bindings)
                             :collapse-padding (. config :align-bindings)}))
       full-alignment))
@@ -425,11 +425,11 @@
                                            "defn-" [[:inner 0]]}
                                :alignment {:bindings         true
                                            :maps             true
-                                           :clauses          true
+                                           :align-pairs      ["case" "cond" "match" "case-try" "match-try"]
                                            :split-bindings   true
                                            :collapse-padding true
                                            :binding-forms    ["let" "when-let" "if-let" "with-open"]
-                                           :clause-forms     ["case" "cond" "match" "case-try" "match-try" "if"]}})
+                                           :align-pairs      ["case" "cond" "match" "case-try" "match-try"]}})
               :value))))
 
   (testing "a long one-line form stays exactly one line"
@@ -553,11 +553,14 @@
      :value-idempotent (. (format-summary value-on {:align-bindings true}) :value)}))
 
 (deftest alignment-regressions
-  (testing "alignment preserves the generic fallback for unrelated lists"
+  (testing "alignment preserves the generic fallback for unrelated lists when off"
     (let [result (alignment-regression-scenario)]
       (is (= "(defn f []\n  (foo\n    bar))"
-             (. result :simple-off)))
-      (is (= "(defn f []\n  (foo\n   bar))"
+             (. result :simple-off)))))
+
+  (testing "alignment preserves the generic fallback for unrelated lists when on"
+    (let [result (alignment-regression-scenario)]
+      (is (= "(defn f []\n  (foo\n    bar))"
              (. result :simple-on)))))
 
   (testing "alignment preserves custom if indentation"
@@ -567,12 +570,12 @@
 
   (testing "alignment applies binding alignment and unrelated reindentation"
     (let [result (alignment-regression-scenario)]
-      (is (= "(let [long-name 1\n      x         2]\n  (foo\n   bar))"
+      (is (= "(let [long-name 1\n      x         2]\n  (foo\n    bar))"
              (. result :mixed-on)))))
 
   (testing "alignment shifts multiline value continuations with the moved value"
     (let [result (alignment-regression-scenario)]
-      (is (= "(let [a         (foo\n                 bar)\n      long-name 2]\n  baz)"
+      (is (= "(let [a         (foo\n                  bar)\n      long-name 2]\n  baz)"
              (. result :value-on)))))
 
   (testing "alignment output is idempotent for mixed reindentation"
@@ -776,25 +779,25 @@
               :value))))
 
   (testing "alignment does not move an unmoved multiline value continuation"
-    (is (= "(let [a (foo\n         bar)]\n  a)"
+    (is (= "(let [a (foo\n          bar)]\n  a)"
            (. (format-summary "(let [a (foo\n         bar)]\n  a)"
                               {:align-bindings true})
               :value))))
 
   (testing "alignment shifts a multiline continuation by one column"
-    (is (= "(let [a  (foo\n          bar)\n      bb 2]\n  a)"
+    (is (= "(let [a  (foo\n           bar)\n      bb 2]\n  a)"
            (. (format-summary (multiline-binding-source "bb")
                               {:align-bindings true})
               :value))))
 
   (testing "alignment shifts a multiline continuation by two columns"
-    (is (= "(let [a   (foo\n           bar)\n      bbb 2]\n  a)"
+    (is (= "(let [a   (foo\n            bar)\n      bbb 2]\n  a)"
            (. (format-summary (multiline-binding-source "bbb")
                               {:align-bindings true})
               :value))))
 
   (testing "alignment shifts a multiline continuation by three columns"
-    (is (= "(let [a    (foo\n            bar)\n      bbbb 2]\n  a)"
+    (is (= "(let [a    (foo\n             bar)\n      bbbb 2]\n  a)"
            (. (format-summary (multiline-binding-source "bbbb")
                               {:align-bindings true})
               :value))))
@@ -868,7 +871,7 @@
            (. (format-summary "(let [a     1\n      bb 1]\n  a)" {:align-bindings true}) :value))))
 
   (testing "aligns a multiline value and reindents its continuation"
-    (is (= "(let [a         (foo\n                 bar)\n      long-name 2] a)"
+    (is (= "(let [a         (foo\n                  bar)\n      long-name 2] a)"
            (. (format-summary "(let [a (foo\n         bar)\n      long-name 2] a)" {:align-bindings true}) :value))))
 
   (testing "formatting aligned mixed bindings is idempotent"
@@ -906,11 +909,10 @@
           "(let [a 1\n      long-name 2]\n  a)"
           config {:alignment {:bindings         false
                               :maps             false
-                              :clauses          false
-                              :split-bindings   false
+                                                            :split-bindings   false
                               :collapse-padding false
                               :binding-forms    ["let"]
-                              :clause-forms     ["case"]}}
+                              :align-pairs      ["case"]}}
           result (format-summary source config)]
       (is (= "(let [a 1\n       long-name 2]\n  a)"
              (. result :value))))))
@@ -941,7 +943,7 @@
               :value))))
 
   (testing "aligns multi-clause if test and result children"
-    (is (= "(if\n  (> i n)    false\n  (= path x) true\n  (rec))"
+    (is (= "(if\n  (> i n) false\n  (= path x) true\n  (rec))"
            (. (format-summary "(if\n  (> i n) false\n  (= path x) true\n  (rec))"
                               {:indents        {"if" [[:block 1]]}
                                :align-bindings
@@ -963,13 +965,13 @@
               :value))))
 
   (testing "does not align and clauses"
-    (is (= "(and\n a true\n long-name false)"
+    (is (= "(and\n  a true\n  long-name false)"
            (. (format-summary "(and\n  a true\n  long-name false)"
                               {:align-bindings true})
               :value))))
 
   (testing "does not align clause lines with comments or multiline patterns"
-    (is (= "(case x\n  (foo\n   a) :one\n  long-pattern :two ;; keep\n  short :three)"
+    (is (= "(case x\n  (foo\n    a) :one\n  long-pattern :two ;; keep\n  short :three)"
            (. (format-summary "(case x\n  (foo\n   a) :one\n  long-pattern :two ;; keep\n  short :three)"
                               {:align-bindings true})
               :value))))
@@ -1071,7 +1073,7 @@
               :value))))
 
   (testing "an end-of-line comment stays attached while following code is indented"
-    (is (= "(foo ;; eol\n  bar)"
+    (is (= "(foo ;; eol\n   bar)"
            (. (comment-format-scenario "(foo ;; eol\nbar)"
                                        true)
               :value)))))
@@ -1157,7 +1159,7 @@
            (. (format-summary "(if-let [a 1 b 2] a b)" {:align-bindings true}) :value))))
 
   (testing "splits after a value spanning lines"
-    (is (= "(let [a (foo\n         1)\n      b 2]\n  a)"
+    (is (= "(let [a (foo\n          1)\n      b 2]\n  a)"
            (. (format-summary "(let [a (foo\n         1) b 2]\n  a)" {:align-bindings true}) :value))))
 
   (testing "splits a destructuring binding name"
@@ -1228,7 +1230,13 @@
 
   (testing "clauses alignment aligns clause pairs"
     (is (= "(case x\n  \"--all\"     (a)\n  \"--changed\" (b)\n  _           (c))"
-           (. (format-summary "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))" {:alignment {:clauses true}}) :value))))
+           (. (format-summary "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))" {:alignment {:align-pairs ["case" "cond" "match" "case-try" "match-try"]}}) :value))))
+
+  (testing "align-args-only activates alignment without other modes"
+    (is (= "(and first\n     second\n     third)"
+           (. (format-summary "(and first\n second\n third)"
+                              {:alignment {:align-args ["and"]}})
+              :value))))
 
   (testing "collapse-padding collapses one-line map padding"
     (is (= "{:a 1 :bb 2}"
@@ -1249,7 +1257,7 @@
   (testing "custom clause forms enable alignment for the configured form"
     (is (= "(my-case x\n  short  (a)\n  longer (b))"
            (. (format-summary "(my-case x\n  short (a)\n  longer (b))"
-                              {:alignment {:clauses true :clause-forms ["my-case"]}})
+                              {:alignment {:align-pairs ["my-case"]}})
               :value))))
 
   (testing "explicit split-bindings false overrides align-bindings shorthand"
@@ -1260,7 +1268,7 @@
               :value))))
 
   (testing "a configurable alignment combination is idempotent"
-    (let [config {:alignment {:bindings true :maps true :clauses true :split-bindings true :collapse-padding true}}
+    (let [config {:alignment {:bindings true :maps true :align-pairs ["case" "cond" "match" "case-try" "match-try"] :split-bindings true :collapse-padding true}}
           source "(let [a 1 b 2]\n  a)\n{:a 1\n :long 2}"
           once   (. (format-summary source config) :value)
           twice  (. (format-summary once config) :value)]
@@ -1273,6 +1281,5 @@
            (. (format-summary "(my-if\nshort (a)\nlonger (b))"
                               {:indents   {"when" [[:block 1]]}
                                :format-as {"my-if" "when"}
-                               :alignment {:clauses      true
-                                           :clause-forms ["when"]}})
+                               :alignment {:align-pairs ["when"]}})
               :value)))))

@@ -83,16 +83,9 @@ local function missing_binding_forms(value)
     return nil
   end
 end
-local function missing_clause_forms(value)
-  if (value.clauses and (value["clause-forms"] == nil)) then
-    return missing("alignment.clause-forms")
-  else
-    return nil
-  end
-end
 local function validate_alignment(config)
   local value = config.alignment
-  return (alignment.validate(value) or (value and (missing_binding_forms(value) or missing_clause_forms(value))))
+  return (alignment.validate(value) or (value and missing_binding_forms(value)))
 end
 local function break_after_n_args_entry_3f(value)
   return ((type(value) == "table") and (type(value[1]) == "number") and (type(value[2]) == "number") and integer_3f(value[1]) and integer_3f(value[2]) and (value[1] >= 1) and (value[2] >= 1))

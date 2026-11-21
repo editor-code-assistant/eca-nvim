@@ -132,19 +132,12 @@
              (= (. value :binding-forms) nil))
         (missing "alignment.binding-forms")))
 
-(defn- missing-clause-forms
-  [value]
-  (when (and (. value :clauses)
-             (= (. value :clause-forms) nil))
-        (missing "alignment.clause-forms")))
-
 (defn- validate-alignment
   [config]
   (let [value (. config :alignment)]
     (or (alignment.validate value)
         (and value
-             (or (missing-binding-forms value)
-                 (missing-clause-forms value))))))
+             (missing-binding-forms value)))))
 
 (defn- break-after-n-args-entry?
   [value]

@@ -16,10 +16,10 @@ local function load_parser()
   end
 end
 local full_indents = {fn = {{"inner", 0}}, lambda = {{"inner", 0}}, macro = {{"inner", 0}}, let = {{"block", 1}}, when = {{"block", 1}}, ["when-let"] = {{"block", 1}}, ["if-let"] = {{"block", 1}}, each = {{"block", 1}}, ["for"] = {{"block", 1}}, icollect = {{"block", 1}}, collect = {{"block", 1}}, accumulate = {{"block", 1}}, case = {{"block", 1}}, match = {{"block", 1}}, ["case-try"] = {{"block", 1}}, ["match-try"] = {{"block", 1}}, ["while"] = {{"block", 1}}, ["with-open"] = {{"block", 1}}, ["do"] = {{"block", 0}}, def = {{"inner", 0}}, defn = {{"inner", 0}}, ["defn-"] = {{"inner", 0}}}
-local full_alignment = {["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}
-local aligned_format_config = {alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}}}
+local full_alignment = {["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["align-args"] = {}, ["align-pairs"] = {}, bindings = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}
+local aligned_format_config = {alignment = {bindings = true, maps = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["align-args"] = {}, ["align-pairs"] = {"case", "cond", "match", "case-try", "match-try"}}}
 local function explicit_alignment(config)
-  return (((nil ~= config["align-bindings"]) and vim.tbl_extend("force", full_alignment, {bindings = config["align-bindings"], maps = config["align-bindings"], clauses = config["align-bindings"], ["split-bindings"] = config["align-bindings"], ["collapse-padding"] = config["align-bindings"]})) or full_alignment)
+  return (((nil ~= config["align-bindings"]) and vim.tbl_extend("force", full_alignment, {bindings = config["align-bindings"], maps = config["align-bindings"], ["align-pairs"] = {"case", "cond", "match", "case-try", "match-try"}, ["split-bindings"] = config["align-bindings"], ["collapse-padding"] = config["align-bindings"]})) or full_alignment)
 end
 local function explicit_format_config(config)
   return (config and vim.tbl_deep_extend("force", {["indent-width"] = 2, indents = full_indents, alignment = explicit_alignment(config), parser = false}, config))
@@ -490,7 +490,7 @@ local function _56_()
   local function _60_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn- git-root\n  [start]\n  (foo start))"
-    local actual_7_auto = format_summary("(defn- git-root\n[start]\n(foo start))", {indents = {["if"] = {{"block", 1}}, ["defn-"] = {{"inner", 0}}}, alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}, ["clause-forms"] = {"case", "cond", "match", "case-try", "match-try", "if"}}}).value
+    local actual_7_auto = format_summary("(defn- git-root\n[start]\n(foo start))", {indents = {["if"] = {{"block", 1}}, ["defn-"] = {{"inner", 0}}}, alignment = {bindings = true, maps = true, ["align-pairs"] = {"case", "cond", "match", "case-try", "match-try"}, ["split-bindings"] = true, ["collapse-padding"] = true, ["binding-forms"] = {"let", "when-let", "if-let", "with-open"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
@@ -622,20 +622,23 @@ end
 local function _72_()
   local function _73_()
     local result = alignment_regression_scenario()
-    do
-      local assert_5_auto = require("luassert")
-      local expected_6_auto = "(defn f []\n  (foo\n    bar))"
-      local actual_7_auto = result["simple-off"]
-      assert_5_auto.same(expected_6_auto, actual_7_auto)
-    end
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(defn f []\n  (foo\n   bar))"
+    local expected_6_auto = "(defn f []\n  (foo\n    bar))"
+    local actual_7_auto = result["simple-off"]
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("alignment preserves the generic fallback for unrelated lists when off", _73_)
+  local function _74_()
+    local result = alignment_regression_scenario()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(defn f []\n  (foo\n    bar))"
     local actual_7_auto = result["simple-on"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment preserves the generic fallback for unrelated lists", _73_)
-  local function _74_()
+  require("plenary.busted").it("alignment preserves the generic fallback for unrelated lists when on", _74_)
+  local function _75_()
     local result = alignment_regression_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if a\n  b\n  c)"
@@ -643,26 +646,26 @@ local function _72_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment preserves custom if indentation", _74_)
-  local function _75_()
+  require("plenary.busted").it("alignment preserves custom if indentation", _75_)
+  local function _76_()
     local result = alignment_regression_scenario()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [long-name 1\n      x         2]\n  (foo\n   bar))"
+    local expected_6_auto = "(let [long-name 1\n      x         2]\n  (foo\n    bar))"
     local actual_7_auto = result["mixed-on"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment applies binding alignment and unrelated reindentation", _75_)
-  local function _76_()
+  require("plenary.busted").it("alignment applies binding alignment and unrelated reindentation", _76_)
+  local function _77_()
     local result = alignment_regression_scenario()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a         (foo\n                 bar)\n      long-name 2]\n  baz)"
+    local expected_6_auto = "(let [a         (foo\n                  bar)\n      long-name 2]\n  baz)"
     local actual_7_auto = result["value-on"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment shifts multiline value continuations with the moved value", _76_)
-  local function _77_()
+  require("plenary.busted").it("alignment shifts multiline value continuations with the moved value", _77_)
+  local function _78_()
     local result = alignment_regression_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = result["mixed-on"]
@@ -670,8 +673,8 @@ local function _72_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment output is idempotent for mixed reindentation", _77_)
-  local function _78_()
+  require("plenary.busted").it("alignment output is idempotent for mixed reindentation", _78_)
+  local function _79_()
     local result = alignment_regression_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = result["value-on"]
@@ -679,7 +682,7 @@ local function _72_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("alignment output is idempotent for multiline moved values", _78_)
+  return require("plenary.busted").it("alignment output is idempotent for multiline moved values", _79_)
 end
 require("plenary.busted").describe("alignment-regressions", _72_)
 local function stale_leading_whitespace_scenario()
@@ -707,32 +710,32 @@ end
 local function multiline_binding_source(name)
   return ("(let [a (foo\n         bar)\n      " .. name .. " 2]\n  a)")
 end
-local function _79_()
-  local function _80_()
+local function _80_()
+  local function _81_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn f []\n  (if condition\n    (foo)\n    (bar)))"
     local actual_7_auto = stale_leading_whitespace_scenario()["if-on"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment does not restore stale if branch indentation", _80_)
-  local function _81_()
+  require("plenary.busted").it("alignment does not restore stale if branch indentation", _81_)
+  local function _82_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if condition\n  (foo)\n  (bar))"
     local actual_7_auto = stale_leading_whitespace_scenario()["top-if-on"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment reindents top-level if branches", _81_)
-  local function _82_()
+  require("plenary.busted").it("alignment reindents top-level if branches", _82_)
+  local function _83_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(when condition\n  (foo))"
     local actual_7_auto = stale_leading_whitespace_scenario()["when-on"]
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment reindents over-indented when bodies", _82_)
-  local function _83_()
+  require("plenary.busted").it("alignment reindents over-indented when bodies", _83_)
+  local function _84_()
     local result = stale_leading_whitespace_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a         1\n      long-name 2]\n  (if condition\n    (foo)\n    (bar)))"
@@ -740,8 +743,8 @@ local function _79_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment preserves binding alignment while reindenting if branches", _83_)
-  local function _84_()
+  require("plenary.busted").it("alignment preserves binding alignment while reindenting if branches", _84_)
+  local function _85_()
     local result = stale_leading_whitespace_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = result["mixed-on"]
@@ -749,8 +752,8 @@ local function _79_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment remains idempotent after correcting stale indentation", _84_)
-  local function _85_()
+  require("plenary.busted").it("alignment remains idempotent after correcting stale indentation", _85_)
+  local function _86_()
     local result = stale_leading_whitespace_scenario()
     local assert_5_auto = require("luassert")
     local expected_6_auto = result["no-pairs-off"]
@@ -758,9 +761,9 @@ local function _79_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("alignment matches normal formatting when no pairs are alignable", _85_)
+  return require("plenary.busted").it("alignment matches normal formatting when no pairs are alignable", _86_)
 end
-require("plenary.busted").describe("stale-leading-whitespace", _79_)
+require("plenary.busted").describe("stale-leading-whitespace", _80_)
 local function leading_space_count(line)
   return #(string.match(line, "^( *)") or "")
 end
@@ -787,104 +790,104 @@ local function multiline_if_branch_violations(source)
   end
   return violations
 end
-local function _88_()
-  local function _89_()
+local function _89_()
+  local function _90_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(7), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for one extra branch space", _89_)
-  local function _90_()
+  require("plenary.busted").it("alignment uses normal indentation for one extra branch space", _90_)
+  local function _91_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(8), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for two extra branch spaces", _90_)
-  local function _91_()
+  require("plenary.busted").it("alignment uses normal indentation for two extra branch spaces", _91_)
+  local function _92_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(9), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for three extra branch spaces", _91_)
-  local function _92_()
+  require("plenary.busted").it("alignment uses normal indentation for three extra branch spaces", _92_)
+  local function _93_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(10), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for four extra branch spaces", _92_)
-  local function _93_()
+  require("plenary.busted").it("alignment uses normal indentation for four extra branch spaces", _93_)
+  local function _94_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(11), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for five extra branch spaces", _93_)
-  local function _94_()
+  require("plenary.busted").it("alignment uses normal indentation for five extra branch spaces", _94_)
+  local function _95_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(5), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for one under-indented branch space", _94_)
-  local function _95_()
+  require("plenary.busted").it("alignment uses normal indentation for one under-indented branch space", _95_)
+  local function _96_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(4), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for two under-indented branch spaces", _95_)
-  local function _96_()
+  require("plenary.busted").it("alignment uses normal indentation for two under-indented branch spaces", _96_)
+  local function _97_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = nested_if_expected()
     local actual_7_auto = format_summary(nested_if_source(3), {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment uses normal indentation for three under-indented branch spaces", _96_)
-  local function _97_()
+  require("plenary.busted").it("alignment uses normal indentation for three under-indented branch spaces", _97_)
+  local function _98_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a (foo\n         bar)]\n  a)"
+    local expected_6_auto = "(let [a (foo\n          bar)]\n  a)"
     local actual_7_auto = format_summary("(let [a (foo\n         bar)]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment does not move an unmoved multiline value continuation", _97_)
-  local function _98_()
+  require("plenary.busted").it("alignment does not move an unmoved multiline value continuation", _98_)
+  local function _99_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a  (foo\n          bar)\n      bb 2]\n  a)"
+    local expected_6_auto = "(let [a  (foo\n           bar)\n      bb 2]\n  a)"
     local actual_7_auto = format_summary(multiline_binding_source("bb"), {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment shifts a multiline continuation by one column", _98_)
-  local function _99_()
+  require("plenary.busted").it("alignment shifts a multiline continuation by one column", _99_)
+  local function _100_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a   (foo\n           bar)\n      bbb 2]\n  a)"
+    local expected_6_auto = "(let [a   (foo\n            bar)\n      bbb 2]\n  a)"
     local actual_7_auto = format_summary(multiline_binding_source("bbb"), {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment shifts a multiline continuation by two columns", _99_)
-  local function _100_()
+  require("plenary.busted").it("alignment shifts a multiline continuation by two columns", _100_)
+  local function _101_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a    (foo\n            bar)\n      bbbb 2]\n  a)"
+    local expected_6_auto = "(let [a    (foo\n             bar)\n      bbbb 2]\n  a)"
     local actual_7_auto = format_summary(multiline_binding_source("bbbb"), {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment shifts a multiline continuation by three columns", _100_)
-  local function _101_()
+  require("plenary.busted").it("alignment shifts a multiline continuation by three columns", _101_)
+  local function _102_()
     local config = {indents = {deftest = {{"block", 1}}, testing = {{"block", 1}}, ["if"] = {{"block", 1}}}, ["align-bindings"] = true}
     local violations = {}
     for _, path in ipairs({"fnl/eca/api.fnl", "fnl/fennel-extras/lint.fnl"}) do
@@ -909,115 +912,115 @@ local function _88_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("repo if branches use the configured two-column indentation", _101_)
+  return require("plenary.busted").it("repo if branches use the configured two-column indentation", _102_)
 end
-require("plenary.busted").describe("stale-leading-whitespace-remaining", _88_)
-local function _104_()
-  local function _105_()
+require("plenary.busted").describe("stale-leading-whitespace-remaining", _89_)
+local function _105_()
+  local function _106_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a         1\n      long-name 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1\n      long-name 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns let bindings to the longest single-line name", _105_)
-  local function _106_()
+  require("plenary.busted").it("aligns let bindings to the longest single-line name", _106_)
+  local function _107_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a         #(+ $1 1)\n      long-name 2]\n  a)"
     local actual_7_auto = format_summary("(let [a #(+ $1 1)\n      long-name 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns a reader-prefix value", _106_)
-  local function _107_()
+  require("plenary.busted").it("aligns a reader-prefix value", _107_)
+  local function _108_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a         '(foo bar)\n      long-name 2]\n  a)"
     local actual_7_auto = format_summary("(let [a '(foo bar)\n      long-name 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns a quoted value", _107_)
-  local function _108_()
+  require("plenary.busted").it("aligns a quoted value", _108_)
+  local function _109_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [start#     1\n      long-name# 2]\n  start#)"
     local actual_7_auto = format_summary("(let [start# 1\n      long-name# 2]\n  start#)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns gensym names by their full text", _108_)
-  local function _109_()
+  require("plenary.busted").it("aligns gensym names by their full text", _109_)
+  local function _110_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "{:a    1\n :long 2}"
     local actual_7_auto = format_summary("{:a 1\n :long 2}", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns map entries to the longest key", _109_)
-  local function _110_()
+  require("plenary.busted").it("aligns map entries to the longest key", _110_)
+  local function _111_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a         1\n      b         2\n      long-name 3\n      c         4]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2\n      long-name 3\n      c 4]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits and aligns mixed binding lines", _110_)
-  local function _111_()
+  require("plenary.busted").it("splits and aligns mixed binding lines", _111_)
+  local function _112_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(when-let [a         1\n           long-name 2]\n  a)"
     local actual_7_auto = format_summary("(when-let [a 1\n          long-name 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns when-let bindings", _111_)
-  local function _112_()
+  require("plenary.busted").it("aligns when-let bindings", _112_)
+  local function _113_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if-let [a         1\n         long-name 2]\n  a\n  b)"
     local actual_7_auto = format_summary("(if-let [a 1\n        long-name 2]\n  a\n  b)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns if-let bindings", _112_)
-  local function _113_()
+  require("plenary.busted").it("aligns if-let bindings", _113_)
+  local function _114_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(with-open [a         1\n            long-name 2]\n  a)"
     local actual_7_auto = format_summary("(with-open [a 1\n          long-name 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns with-open bindings", _113_)
-  local function _114_()
+  require("plenary.busted").it("aligns with-open bindings", _114_)
+  local function _115_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(each [k v\n       long-name 3]\n  k)"
     local actual_7_auto = format_summary("(each [k v\n      long-name 3]\n  k)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not align loop bindings", _114_)
-  local function _115_()
+  require("plenary.busted").it("does not align loop bindings", _115_)
+  local function _116_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "[1\n 2]"
     local actual_7_auto = format_summary("[1\n 2]", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not align sequential tables", _115_)
-  local function _116_()
+  require("plenary.busted").it("does not align sequential tables", _116_)
+  local function _117_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a  1\n      bb 1]\n  a)"
     local actual_7_auto = format_summary("(let [a     1\n      bb 1]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("normalizes extra spaces to the aligned column", _116_)
-  local function _117_()
+  require("plenary.busted").it("normalizes extra spaces to the aligned column", _117_)
+  local function _118_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a         (foo\n                 bar)\n      long-name 2] a)"
+    local expected_6_auto = "(let [a         (foo\n                  bar)\n      long-name 2] a)"
     local actual_7_auto = format_summary("(let [a (foo\n         bar)\n      long-name 2] a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns a multiline value and reindents its continuation", _117_)
-  local function _118_()
+  require("plenary.busted").it("aligns a multiline value and reindents its continuation", _118_)
+  local function _119_()
     local source = "(let [a 1 b 2\n      long-name 3\n      c 4]\n  a)"
     local once = format_summary(source, {["align-bindings"] = true}).value
     local twice = format_summary(once, {["align-bindings"] = true}).value
@@ -1026,16 +1029,16 @@ local function _104_()
     assert_28_auto.is_truthy(value_29_auto, "(and once twice (= once twice))")
     return true
   end
-  require("plenary.busted").it("formatting aligned mixed bindings is idempotent", _118_)
-  local function _119_()
+  require("plenary.busted").it("formatting aligned mixed bindings is idempotent", _119_)
+  local function _120_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [{: x}     (f)\n      long-name 2]\n  x)"
     local actual_7_auto = format_summary("(let [{: x} (f)\n      long-name 2]\n  x)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns a destructuring map name by its full source width", _119_)
-  local function _120_()
+  require("plenary.busted").it("aligns a destructuring map name by its full source width", _120_)
+  local function _121_()
     local source = "(let [[a b] (g)\n      long-name 2]\n  a)"
     local result = format_summary(source, {["align-bindings"] = true})
     local assert_5_auto = require("luassert")
@@ -1044,16 +1047,16 @@ local function _104_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns a destructuring vector name by its full source width", _120_)
-  local function _121_()
+  require("plenary.busted").it("aligns a destructuring vector name by its full source width", _121_)
+  local function _122_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "{(foo a)  1\n :long-key 2}"
     local actual_7_auto = format_summary("{(foo a) 1\n :long-key 2}", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns an expression map key by its full source width", _121_)
-  local function _122_()
+  require("plenary.busted").it("aligns an expression map key by its full source width", _122_)
+  local function _123_()
     local source = "(let [{: x\n       : y} (f)\n      a 1\n      bb 2] x)"
     local result = format_summary(source, {["align-bindings"] = true})
     local assert_5_auto = require("luassert")
@@ -1062,10 +1065,10 @@ local function _104_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("ignores a multiline composite binding name while aligning single-line bindings", _122_)
-  local function _123_()
+  require("plenary.busted").it("ignores a multiline composite binding name while aligning single-line bindings", _123_)
+  local function _124_()
     local source = "(let [a 1\n      long-name 2]\n  a)"
-    local config = {alignment = {["binding-forms"] = {"let"}, ["clause-forms"] = {"case"}, bindings = false, clauses = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}}
+    local config = {alignment = {["binding-forms"] = {"let"}, ["align-pairs"] = {"case"}, bindings = false, ["collapse-padding"] = false, maps = false, ["split-bindings"] = false}}
     local result = format_summary(source, config)
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1\n       long-name 2]\n  a)"
@@ -1073,83 +1076,83 @@ local function _104_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("all alignment switches off use generic fallback indentation", _123_)
+  return require("plenary.busted").it("all alignment switches off use generic fallback indentation", _124_)
 end
-require("plenary.busted").describe("align-bindings", _104_)
-local function _124_()
-  local function _125_()
+require("plenary.busted").describe("align-bindings", _105_)
+local function _125_()
+  local function _126_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(case x\n  \"--all\"     (a)\n  \"--changed\" (b)\n  _           (c))"
     local actual_7_auto = format_summary("(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns case clauses to the longest single-line pattern", _125_)
-  local function _126_()
+  require("plenary.busted").it("aligns case clauses to the longest single-line pattern", _126_)
+  local function _127_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(match value\n  :short (a)\n  :long  (b))"
     local actual_7_auto = format_summary("(match value\n  :short (a)\n  :long (b))", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns match clauses to the longest single-line pattern", _126_)
-  local function _127_()
+  require("plenary.busted").it("aligns match clauses to the longest single-line pattern", _127_)
+  local function _128_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(case-try (f)\n  x      (g x)\n  long-y (h y)\n  (catch _ nil))"
     local actual_7_auto = format_summary("(case-try (f)\n  x (g x)\n  long-y (h y)\n  (catch _ nil))", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns case-try clauses but leaves catch unchanged", _127_)
-  local function _128_()
+  require("plenary.busted").it("aligns case-try clauses but leaves catch unchanged", _128_)
+  local function _129_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(match-try (f)\n  x      (g x)\n  long-y (h y)\n  (catch _ nil))"
     local actual_7_auto = format_summary("(match-try (f)\n  x (g x)\n  long-y (h y)\n  (catch _ nil))", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns match-try clauses but leaves catch unchanged", _128_)
-  local function _129_()
+  require("plenary.busted").it("aligns match-try clauses but leaves catch unchanged", _129_)
+  local function _130_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(if\n  (> i n)    false\n  (= path x) true\n  (rec))"
+    local expected_6_auto = "(if\n  (> i n) false\n  (= path x) true\n  (rec))"
     local actual_7_auto = format_summary("(if\n  (> i n) false\n  (= path x) true\n  (rec))", {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns multi-clause if test and result children", _129_)
-  local function _130_()
+  require("plenary.busted").it("aligns multi-clause if test and result children", _130_)
+  local function _131_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if a\n  b\n  c)"
     local actual_7_auto = format_summary("(if a\n  b\n  c)", {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not align a one-pair if with an else branch", _130_)
-  local function _131_()
+  require("plenary.busted").it("does not align a one-pair if with an else branch", _131_)
+  local function _132_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(case x 1 :a\n  22 :b)"
     local actual_7_auto = format_summary("(case x 1 :a\n  22 :b)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not align a clause pair sharing the case head line", _131_)
-  local function _132_()
+  require("plenary.busted").it("does not align a clause pair sharing the case head line", _132_)
+  local function _133_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(and\n a true\n long-name false)"
+    local expected_6_auto = "(and\n  a true\n  long-name false)"
     local actual_7_auto = format_summary("(and\n  a true\n  long-name false)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not align and clauses", _132_)
-  local function _133_()
+  require("plenary.busted").it("does not align and clauses", _133_)
+  local function _134_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(case x\n  (foo\n   a) :one\n  long-pattern :two ;; keep\n  short :three)"
+    local expected_6_auto = "(case x\n  (foo\n    a) :one\n  long-pattern :two ;; keep\n  short :three)"
     local actual_7_auto = format_summary("(case x\n  (foo\n   a) :one\n  long-pattern :two ;; keep\n  short :three)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not align clause lines with comments or multiline patterns", _133_)
-  local function _134_()
+  require("plenary.busted").it("does not align clause lines with comments or multiline patterns", _134_)
+  local function _135_()
     local source = "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))"
     local assert_5_auto = require("luassert")
     local expected_6_auto = source
@@ -1157,8 +1160,8 @@ local function _124_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings false preserves the case sample byte-for-byte", _134_)
-  local function _135_()
+  require("plenary.busted").it("align-bindings false preserves the case sample byte-for-byte", _135_)
+  local function _136_()
     local source = "(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))\n(if\n  (> i n) false\n  (= path x) true\n  (rec))"
     local config = {indents = {["if"] = {{"block", 1}}}, ["align-bindings"] = true}
     local once = format_summary(source, config).value
@@ -1169,188 +1172,188 @@ local function _124_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("clause alignment is idempotent on a mixed sample", _135_)
+  return require("plenary.busted").it("clause alignment is idempotent on a mixed sample", _136_)
 end
-require("plenary.busted").describe("align-binding-clauses", _124_)
-local function _136_()
-  local function _137_()
+require("plenary.busted").describe("align-binding-clauses", _125_)
+local function _137_()
+  local function _138_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if\n  a b\n  c d\n  e)"
     local actual_7_auto = format_summary("(if\n a b\n  c d\n  e)", {indents = {["if"] = {{"block", 1}}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("configured block-one if indents every own-line argument by two spaces", _137_)
-  local function _138_()
+  require("plenary.busted").it("configured block-one if indents every own-line argument by two spaces", _138_)
+  local function _139_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if\n  a\n  b)"
     local actual_7_auto = format_summary("(if\n   a\n   b)", {indents = {["if"] = {{"block", 1}}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("configured block-one if indents a simple form by two spaces", _138_)
-  local function _139_()
+  require("plenary.busted").it("configured block-one if indents a simple form by two spaces", _139_)
+  local function _140_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(when\n  a\n  b)"
     local actual_7_auto = format_summary("(when\n   a\n   b)", {}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("built-in when block indentation uses two spaces for every argument", _139_)
+  return require("plenary.busted").it("built-in when block indentation uses two spaces for every argument", _140_)
 end
-require("plenary.busted").describe("block-one-indentation", _136_)
+require("plenary.busted").describe("block-one-indentation", _137_)
 local function comment_format_scenario(source, align_bindings)
   return format_summary(source, {indents = {deftest = {{"block", 1}}, testing = {{"block", 1}}, ["if"] = {{"block", 1}}}, ["align-bindings"] = align_bindings})
 end
-local function _140_()
-  local function _141_()
+local function _141_()
+  local function _142_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn- rename-files\n  ;; comment\n  [temps]\n  (rename-loop temps 1 nil))"
     local actual_7_auto = comment_format_scenario("(defn- rename-files\n       ;; comment\n[temps]\n(rename-loop temps 1 nil))", false).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings false indents a defn header comment like the following code", _141_)
-  local function _142_()
+  require("plenary.busted").it("align-bindings false indents a defn header comment like the following code", _142_)
+  local function _143_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn- rename-files\n  ;; comment\n  [temps]\n  (rename-loop temps 1 nil))"
     local actual_7_auto = comment_format_scenario("(defn- rename-files\n       ;; comment\n[temps]\n(rename-loop temps 1 nil))", true).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings true indents a defn header comment like the following code", _142_)
-  local function _143_()
+  require("plenary.busted").it("align-bindings true indents a defn header comment like the following code", _143_)
+  local function _144_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn foo\n  [x]\n  ;; between\n  (bar)\n  (baz))"
     local actual_7_auto = comment_format_scenario("(defn foo\n[x]\n      ;; between\n(bar)\n(baz))", false).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings false indents a comment between defn body expressions", _143_)
-  local function _144_()
+  require("plenary.busted").it("align-bindings false indents a comment between defn body expressions", _144_)
+  local function _145_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(defn foo\n  [x]\n  ;; between\n  (bar)\n  (baz))"
     local actual_7_auto = comment_format_scenario("(defn foo\n[x]\n      ;; between\n(bar)\n(baz))", true).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings true indents a comment between defn body expressions", _144_)
-  local function _145_()
+  require("plenary.busted").it("align-bindings true indents a comment between defn body expressions", _145_)
+  local function _146_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [x 1]\n  ;; in let\n  x)"
     local actual_7_auto = comment_format_scenario("(let [x 1]\n     ;; in let\nx)", false).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings false indents a let comment like the following body", _145_)
-  local function _146_()
+  require("plenary.busted").it("align-bindings false indents a let comment like the following body", _146_)
+  local function _147_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [x 1]\n  ;; in let\n  x)"
     local actual_7_auto = comment_format_scenario("(let [x 1]\n     ;; in let\nx)", true).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings true indents a let comment like the following body", _146_)
-  local function _147_()
+  require("plenary.busted").it("align-bindings true indents a let comment like the following body", _147_)
+  local function _148_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [m {:a 1\n          ;; in map\n          :b 2}]\n  m)"
     local actual_7_auto = comment_format_scenario("(let [m {:a 1\n;; in map\n:b 2}]\nm)", false).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings false indents a map comment like the following key", _147_)
-  local function _148_()
+  require("plenary.busted").it("align-bindings false indents a map comment like the following key", _148_)
+  local function _149_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [m {:a 1\n         ;; in map\n         :b 2}]\n  m)"
     local actual_7_auto = comment_format_scenario("(let [m {:a 1\n;; in map\n:b 2}]\nm)", true).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("align-bindings true indents a map comment like the following key", _148_)
-  local function _149_()
+  require("plenary.busted").it("align-bindings true indents a map comment like the following key", _149_)
+  local function _150_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = ";; first\n;; second\n(let [x 1]\n  x)"
     local actual_7_auto = comment_format_scenario(";; first\n;; second\n(let [x 1]\nx)", true).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("a full-line comment block remains unchanged at top level", _149_)
-  local function _150_()
+  require("plenary.busted").it("a full-line comment block remains unchanged at top level", _150_)
+  local function _151_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(foo ;; eol\n  bar)"
+    local expected_6_auto = "(foo ;; eol\n   bar)"
     local actual_7_auto = comment_format_scenario("(foo ;; eol\nbar)", true).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an end-of-line comment stays attached while following code is indented", _150_)
+  return require("plenary.busted").it("an end-of-line comment stays attached while following code is indented", _151_)
 end
-require("plenary.busted").describe("comment-indentation", _140_)
-local function _151_()
-  local function _152_()
+require("plenary.busted").describe("comment-indentation", _141_)
+local function _152_()
+  local function _153_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a  1\n      bb 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 bb 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits a one-line let binding vector", _152_)
-  local function _153_()
+  require("plenary.busted").it("splits a one-line let binding vector", _153_)
+  local function _154_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a  1\n      bb 2]\n  a)"
     local actual_7_auto = format_summary("(let [a     1 bb    2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits and collapses padding in a one-line let binding vector", _153_)
-  local function _154_()
+  require("plenary.busted").it("splits and collapses padding in a one-line let binding vector", _154_)
+  local function _155_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "{:a 1 :bb 2}"
     local actual_7_auto = format_summary("{:a     1 :bb    2}", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("collapses padding in a one-line map", _154_)
-  local function _155_()
+  require("plenary.busted").it("collapses padding in a one-line map", _155_)
+  local function _156_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(case x 1 :a 2 :b)"
     local actual_7_auto = format_summary("(case x 1     :a 2     :b)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("collapses padding in one-line case clauses", _155_)
-  local function _156_()
+  require("plenary.busted").it("collapses padding in one-line case clauses", _156_)
+  local function _157_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "{:a \"x  y\"}"
     local actual_7_auto = format_summary("{:a \"x  y\"}", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("leaves string contents unchanged", _156_)
-  local function _157_()
+  require("plenary.busted").it("leaves string contents unchanged", _157_)
+  local function _158_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo a)   ;; c"
     local actual_7_auto = format_summary("(foo a)   ;; c", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("leaves end-of-line comments unchanged", _157_)
-  local function _158_()
+  require("plenary.busted").it("leaves end-of-line comments unchanged", _158_)
+  local function _159_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a  1\n      bb 2]\n  a)"
     local actual_7_auto = format_summary("(let [a  1\n      bb 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("keeps multiline aligned forms aligned", _158_)
-  local function _159_()
+  require("plenary.busted").it("keeps multiline aligned forms aligned", _159_)
+  local function _160_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a     1 bb    2]\n  a)"
     local actual_7_auto = format_summary("(let [a     1 bb    2]\n  a)", {["align-bindings"] = false}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("leaves padding unchanged when alignment is off", _159_)
-  local function _160_()
+  require("plenary.busted").it("leaves padding unchanged when alignment is off", _160_)
+  local function _161_()
     local first = format_summary("(let [a 1 bb 2]\n  a)", {["align-bindings"] = true}).value
     local second = format_summary(first, {["align-bindings"] = true}).value
     local assert_5_auto = require("luassert")
@@ -1359,150 +1362,150 @@ local function _151_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("alignment is idempotent", _160_)
-  local function _161_()
+  require("plenary.busted").it("alignment is idempotent", _161_)
+  local function _162_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(local function-heads {:defn true :defn- true :fn true :lambda true :\206\187 true})"
     local actual_7_auto = format_summary("(local function-heads {:defn true :defn- true :fn true :lambda true :\206\187 true})", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("preserves a one-line map with a multi-byte key already single-spaced", _161_)
-  local function _162_()
+  require("plenary.busted").it("preserves a one-line map with a multi-byte key already single-spaced", _162_)
+  local function _163_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(local m {:a true :\206\187 true})"
     local actual_7_auto = format_summary("(local m {:a     true :\206\187  true})", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("collapses one-line map padding with a multi-byte key", _162_)
-  local function _163_()
+  require("plenary.busted").it("collapses one-line map padding with a multi-byte key", _163_)
+  local function _164_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [\206\187  1\n      bb 2]\n  \206\187)"
     local actual_7_auto = format_summary("(let [\206\187 1\n      bb 2]\n  \206\187)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("aligns a multi-byte let name by display width", _163_)
-  local function _164_()
+  require("plenary.busted").it("aligns a multi-byte let name by display width", _164_)
+  local function _165_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a \"\206\187\206\187\"\n      b 2]\n  a)"
     local actual_7_auto = format_summary("(let [a     \"\206\187\206\187\" b 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("splits a one-line let with a multi-byte string value", _164_)
+  return require("plenary.busted").it("splits a one-line let with a multi-byte string value", _165_)
 end
-require("plenary.busted").describe("align-bindings-one-line-padding", _151_)
-local function _165_()
-  local function _166_()
+require("plenary.busted").describe("align-bindings-one-line-padding", _152_)
+local function _166_()
+  local function _167_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1\n      b 2\n      c 3]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2\n      c 3]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits a partially split let binding vector", _166_)
-  local function _167_()
+  require("plenary.busted").it("splits a partially split let binding vector", _167_)
+  local function _168_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(foo (let [a 1\n           b 2] a))"
     local actual_7_auto = format_summary("(foo (let [a 1 b 2] a))", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits let bindings nested inside a call", _167_)
-  local function _168_()
+  require("plenary.busted").it("splits let bindings nested inside a call", _168_)
+  local function _169_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(when-let [a 1\n           b 2] a)"
     local actual_7_auto = format_summary("(when-let [a 1 b 2] a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits when-let bindings", _168_)
-  local function _169_()
+  require("plenary.busted").it("splits when-let bindings", _169_)
+  local function _170_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(if-let [a 1\n         b 2] a b)"
     local actual_7_auto = format_summary("(if-let [a 1 b 2] a b)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits if-let bindings", _169_)
-  local function _170_()
+  require("plenary.busted").it("splits if-let bindings", _170_)
+  local function _171_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = "(let [a (foo\n         1)\n      b 2]\n  a)"
+    local expected_6_auto = "(let [a (foo\n          1)\n      b 2]\n  a)"
     local actual_7_auto = format_summary("(let [a (foo\n         1) b 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits after a value spanning lines", _170_)
-  local function _171_()
+  require("plenary.busted").it("splits after a value spanning lines", _171_)
+  local function _172_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [[x y] pt\n      z     3]\n  x)"
     local actual_7_auto = format_summary("(let [[x y] pt z 3]\n  x)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits a destructuring binding name", _171_)
-  local function _172_()
+  require("plenary.busted").it("splits a destructuring binding name", _172_)
+  local function _173_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(each [k v (pairs t)]\n  (print k v))"
     local actual_7_auto = format_summary("(each [k v (pairs t)]\n  (print k v))", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not split each binding vectors", _172_)
-  local function _173_()
+  require("plenary.busted").it("does not split each binding vectors", _173_)
+  local function _174_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1]\n  a)"
     local actual_7_auto = format_summary("(let [a 1]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not split single-pair let vectors", _173_)
-  local function _174_()
+  require("plenary.busted").it("does not split single-pair let vectors", _174_)
+  local function _175_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "'(let [a 1 b 2] a)"
     local actual_7_auto = format_summary("'(let [a 1 b 2] a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not split quoted let data", _174_)
-  local function _175_()
+  require("plenary.busted").it("does not split quoted let data", _175_)
+  local function _176_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1 b 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2]\n  a)", {["align-bindings"] = false}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("does not split let vectors when alignment is off", _175_)
-  local function _176_()
+  require("plenary.busted").it("does not split let vectors when alignment is off", _176_)
+  local function _177_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1\n      b 2\n      c 3\n      d 4]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2 c 3 d 4]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits a four-pair let binding vector", _176_)
-  local function _177_()
+  require("plenary.busted").it("splits a four-pair let binding vector", _177_)
+  local function _178_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1\n      b 2\n      c 3\n      d 4\n      e 5]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2\n      c 3 d 4\n      e 5]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("splits a partially split five-pair let binding vector", _177_)
-  local function _178_()
+  require("plenary.busted").it("splits a partially split five-pair let binding vector", _178_)
+  local function _179_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [;; note\n      a 1\n      b 2]\n  a)"
     local actual_7_auto = format_summary("(let [;; note\n      a 1 b 2]\n  a)", {["align-bindings"] = true}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("keeps a comment before split let bindings", _178_)
+  return require("plenary.busted").it("keeps a comment before split let bindings", _179_)
 end
-require("plenary.busted").describe("align-bindings-split", _165_)
-local function _179_()
-  local function _180_()
+require("plenary.busted").describe("align-bindings-split", _166_)
+local function _180_()
+  local function _181_()
     local source = "(defn- parse-lint-args\n  [args]\n  (let [result {:a 1} state (lint-state args 2 result) (final-state error) (parse-lint-loop state)]\n    (parse-lint-result final-state error)))"
     local once = format_summary(source, {["align-bindings"] = true}).value
     local twice = format_summary(once, {["align-bindings"] = true}).value
@@ -1513,100 +1516,108 @@ local function _179_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("formats a nested multi-pair let idempotently", _180_)
+  return require("plenary.busted").it("formats a nested multi-pair let idempotently", _181_)
 end
-require("plenary.busted").describe("align-bindings-idempotence", _179_)
-local function _181_()
-  local function _182_()
+require("plenary.busted").describe("align-bindings-idempotence", _180_)
+local function _182_()
+  local function _183_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "{:a    1\n :long 2}"
     local actual_7_auto = format_summary("{:a 1\n :long 2}", {alignment = {maps = true}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("maps alignment aligns maps", _182_)
-  local function _183_()
+  require("plenary.busted").it("maps alignment aligns maps", _183_)
+  local function _184_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1 b 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2]\n  a)", {alignment = {maps = true}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("maps alignment does not align let bindings or split one-line lets", _183_)
-  local function _184_()
+  require("plenary.busted").it("maps alignment does not align let bindings or split one-line lets", _184_)
+  local function _185_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1\n       b 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2]\n  a)", {alignment = {["split-bindings"] = true}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("split-bindings splits a let without aligning its names", _184_)
-  local function _185_()
+  require("plenary.busted").it("split-bindings splits a let without aligning its names", _185_)
+  local function _186_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a         1\n      long-name 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1\n      long-name 2]\n  a)", {alignment = {bindings = true}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("bindings alignment aligns lets", _185_)
-  local function _186_()
+  require("plenary.busted").it("bindings alignment aligns lets", _186_)
+  local function _187_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "{:a 1\n :long 2}"
     local actual_7_auto = format_summary("{:a 1\n :long 2}", {alignment = {bindings = true}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("bindings alignment does not align maps", _186_)
-  local function _187_()
+  require("plenary.busted").it("bindings alignment does not align maps", _187_)
+  local function _188_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(case x\n  \"--all\"     (a)\n  \"--changed\" (b)\n  _           (c))"
-    local actual_7_auto = format_summary("(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))", {alignment = {clauses = true}}).value
+    local actual_7_auto = format_summary("(case x\n  \"--all\" (a)\n  \"--changed\" (b)\n  _ (c))", {alignment = {["align-pairs"] = {"case", "cond", "match", "case-try", "match-try"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("clauses alignment aligns clause pairs", _187_)
-  local function _188_()
+  require("plenary.busted").it("clauses alignment aligns clause pairs", _188_)
+  local function _189_()
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = "(and first\n     second\n     third)"
+    local actual_7_auto = format_summary("(and first\n second\n third)", {alignment = {["align-args"] = {"and"}}}).value
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("align-args-only activates alignment without other modes", _189_)
+  local function _190_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "{:a 1 :bb 2}"
     local actual_7_auto = format_summary("{:a     1 :bb    2}", {alignment = {["collapse-padding"] = true, maps = true}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("collapse-padding collapses one-line map padding", _188_)
-  local function _189_()
+  require("plenary.busted").it("collapse-padding collapses one-line map padding", _190_)
+  local function _191_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(when-let [a 1 b 2] a)"
     local actual_7_auto = format_summary("(when-let [a 1 b 2] a)", {alignment = {["split-bindings"] = true, ["binding-forms"] = {"let"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("custom binding forms restrict splitting to the configured names", _189_)
-  local function _190_()
+  require("plenary.busted").it("custom binding forms restrict splitting to the configured names", _191_)
+  local function _192_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(my-let [a 1\n          b 2] a)"
     local actual_7_auto = format_summary("(my-let [a 1 b 2] a)", {alignment = {["split-bindings"] = true, ["binding-forms"] = {"my-let"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("custom binding forms can add a form for splitting", _190_)
-  local function _191_()
+  require("plenary.busted").it("custom binding forms can add a form for splitting", _192_)
+  local function _193_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(my-case x\n  short  (a)\n  longer (b))"
-    local actual_7_auto = format_summary("(my-case x\n  short (a)\n  longer (b))", {alignment = {clauses = true, ["clause-forms"] = {"my-case"}}}).value
+    local actual_7_auto = format_summary("(my-case x\n  short (a)\n  longer (b))", {alignment = {["align-pairs"] = {"my-case"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("custom clause forms enable alignment for the configured form", _191_)
-  local function _192_()
+  require("plenary.busted").it("custom clause forms enable alignment for the configured form", _193_)
+  local function _194_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(let [a 1 b 2]\n  a)"
     local actual_7_auto = format_summary("(let [a 1 b 2]\n  a)", {["align-bindings"] = true, alignment = {["split-bindings"] = false}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("explicit split-bindings false overrides align-bindings shorthand", _192_)
-  local function _193_()
-    local config = {alignment = {bindings = true, maps = true, clauses = true, ["split-bindings"] = true, ["collapse-padding"] = true}}
+  require("plenary.busted").it("explicit split-bindings false overrides align-bindings shorthand", _194_)
+  local function _195_()
+    local config = {alignment = {bindings = true, maps = true, ["align-pairs"] = {"case", "cond", "match", "case-try", "match-try"}, ["split-bindings"] = true, ["collapse-padding"] = true}}
     local source = "(let [a 1 b 2]\n  a)\n{:a 1\n :long 2}"
     local once = format_summary(source, config).value
     local twice = format_summary(once, config).value
@@ -1616,17 +1627,17 @@ local function _181_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("a configurable alignment combination is idempotent", _193_)
+  return require("plenary.busted").it("a configurable alignment combination is idempotent", _195_)
 end
-require("plenary.busted").describe("configurable-alignment", _181_)
-local function _194_()
-  local function _195_()
+require("plenary.busted").describe("configurable-alignment", _182_)
+local function _196_()
+  local function _197_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = "(my-if\n  short (a)\n  longer (b))"
-    local actual_7_auto = format_summary("(my-if\nshort (a)\nlonger (b))", {indents = {when = {{"block", 1}}}, ["format-as"] = {["my-if"] = "when"}, alignment = {clauses = true, ["clause-forms"] = {"when"}}}).value
+    local actual_7_auto = format_summary("(my-if\nshort (a)\nlonger (b))", {indents = {when = {{"block", 1}}}, ["format-as"] = {["my-if"] = "when"}, alignment = {["align-pairs"] = {"when"}}}).value
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("an exact alias uses target indentation without inheriting clause alignment membership", _195_)
+  return require("plenary.busted").it("an exact alias uses target indentation without inheriting clause alignment membership", _197_)
 end
-return require("plenary.busted").describe("exact-alias-alignment-membership", _194_)
+return require("plenary.busted").describe("exact-alias-alignment-membership", _196_)
