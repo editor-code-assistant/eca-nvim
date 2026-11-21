@@ -39,8 +39,8 @@
   (var result nil)
   (each [_ token (ipairs tokens)]
     (when (and (= result nil)
-            (= token.line line)
-            (not (or (= token.kind :whitespace) (= token.kind :newline))))
+               (= token.line line)
+               (not (or (= token.kind :whitespace) (= token.kind :newline))))
       (set result token)))
   result)
 
@@ -60,8 +60,8 @@
   (var result false)
   (each [_ token (ipairs tokens)]
     (when (and (= token.kind :string)
-            (< token.line line)
-            (<= line (+ token.line (newline-count token.text))))
+               (< token.line line)
+               (<= line (+ token.line (newline-count token.text))))
       (set result true)))
   result)
 
@@ -87,8 +87,8 @@
   (var result nil)
   (each [_ node (ipairs nodes)]
     (when (and (< node.open.line line)
-            (or (= node.close nil) (>= node.close.line line))
-            (or (= result nil) (> node.depth result.depth)))
+               (or (= node.close nil) (>= node.close.line line))
+               (or (= result nil) (> node.depth result.depth)))
       (set result node)))
   result)
 
@@ -108,8 +108,8 @@
     (each [index child (ipairs children)]
       (local start (helpers.child-start child))
       (when (and (= result nil)
-              (= start.line first-token.line)
-              (= start.col first-token.col))
+                 (= start.line first-token.line)
+                 (= start.col first-token.col))
         (set result (- index 2))))
     result))
 
@@ -122,8 +122,8 @@
         (local value (. entry 2))
         (local selected (. entry 3))
         (if (and (= kind :inner)
-              (= value 0)
-              (or (= selected nil) (= selected arg-index)))
+                 (= value 0)
+                 (or (= selected nil) (= selected arg-index)))
           (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2)))
           (when (and (= kind :block) (>= arg-index value))
             (set result (+ node.open.out-col (or (and config (. config :indent-width)) 2))))))))
@@ -139,7 +139,7 @@
   [config name]
   (let [alignment (settings.resolve config)]
     (when (or (and alignment.bindings ((. settings "binding-form?") alignment name))
-            (and (> (length (or alignment.align-pairs [])) 0) ((. settings "clause-form?") alignment name)))
+              (and (> (length (or alignment.align-pairs [])) 0) ((. settings "clause-form?") alignment name)))
       [[:block 1]])))
 
 (defn- rule-indent
@@ -170,27 +170,27 @@
             form-sensitive? (and config (. config :format-as))
             aligned?        (if form-sensitive?
                               (or (and alignment.maps (= node.kind :table))
-                                (and (> (length (or alignment.align-pairs [])) 0)
-                                  (= node.kind :list)
-                                  first-child
-                                  (= first-child.kind :symbol)
-                                  ((. settings "clause-form?") alignment first-child.text))
-                                (and (> (length (or alignment.align-args [])) 0)
-                                  (= node.kind :list)
-                                  first-child
-                                  (= first-child.kind :symbol)
-                                  ((. settings "arg-form?") alignment first-child.text))
-                                (and alignment.bindings (not= node.kind :list)))
+                                  (and (> (length (or alignment.align-pairs [])) 0)
+                                       (= node.kind :list)
+                                       first-child
+                                       (= first-child.kind :symbol)
+                                       ((. settings "clause-form?") alignment first-child.text))
+                                  (and (> (length (or alignment.align-args [])) 0)
+                                       (= node.kind :list)
+                                       first-child
+                                       (= first-child.kind :symbol)
+                                       ((. settings "arg-form?") alignment first-child.text))
+                                  (and alignment.bindings (not= node.kind :list)))
                               (or (and alignment.maps (= node.kind :table))
-                                (and (= node.kind :list)
-                                  first-child
-                                  (= first-child.kind :symbol)
-                                  ((. settings "clause-form?") alignment first-child.text))
-                                (and (= node.kind :list)
-                                  first-child
-                                  (= first-child.kind :symbol)
-                                  ((. settings "arg-form?") alignment first-child.text))
-                                (and alignment.bindings (not= node.kind :list))))]
+                                  (and (= node.kind :list)
+                                       first-child
+                                       (= first-child.kind :symbol)
+                                       ((. settings "clause-form?") alignment first-child.text))
+                                  (and (= node.kind :list)
+                                       first-child
+                                       (= first-child.kind :symbol)
+                                       ((. settings "arg-form?") alignment first-child.text))
+                                  (and alignment.bindings (not= node.kind :list))))]
         (if aligned?
           (if (= first-child nil)
             (+ (. node.open :out-col) 1)
@@ -198,8 +198,8 @@
               (if (and second-child (started-before? second-child line-number))
                 (+ (. (helpers.child-start second-child) :out-col)
                   (if (and (= (. node.open :line) 2)
-                        (= (. node.open :col) 2)
-                        (= line-number 3))
+                           (= (. node.open :col) 2)
+                           (= line-number 3))
                        1
                        0))
                 (if (started-before? first-child line-number)
@@ -213,7 +213,7 @@
 (defn- indent-for
   [node first-token line-number config]
   (or (rule-indent node first-token line-number config)
-    (default-indent-for node first-token line-number config)))
+      (default-indent-for node first-token line-number config)))
 
 (defn- next-token-indent
   [token node config]
@@ -226,7 +226,7 @@
   (let [token (comments.first-code-token-after tokens line-number)
         node  (and token (active-node nodes token.line))]
     (or (and token node (next-token-indent token node config))
-      0)))
+        0)))
 
 (defn- default-line-indent
   [node first-token line-number tokens config]
@@ -279,10 +279,10 @@
       (if (= first-token nil)
         (process-empty-line line-number line tokens)
         (if (and node
-              (> (. node.open :col) 1)
-              (or (= first-token.kind :close)
-                (and (= first-token.kind :number)
-                  (> (helpers.leading-spaces line) 20))))
+                 (> (. node.open :col) 1)
+                 (or (= first-token.kind :close)
+                     (and (= first-token.kind :number)
+                          (> (helpers.leading-spaces line) 20))))
           (process-unchanged-line line-number line tokens)
           (do (local indent (line-indent node first-token line-number tokens nodes config))
             (local spaces (helpers.leading-spaces line))
@@ -319,11 +319,11 @@
   (let [(plain tree error) (reindent-once source config)]
     (if error
       (values nil error)
-      (let [aligned (alignment-source plain tree alignment)
+      (let [aligned         (alignment-source plain tree alignment)
             captured-values (capture-values (fn [] (reindent-once aligned config)))
-            result (. captured-values 1)
-            result-tree (. captured-values 2)
-            result-error (. captured-values 3)]
+            result          (. captured-values 1)
+            result-tree     (. captured-values 2)
+            result-error    (. captured-values 3)]
         (if result-error
           (values nil result-error)
           (values (alignment-source result result-tree alignment) nil))))))
@@ -364,11 +364,11 @@
         (values nil config-error)
         (do (local alignment (settings.resolve config))
           (if (or alignment.bindings
-                alignment.maps
-                (> (length (or alignment.align-args [])) 0)
-                (> (length (or alignment.align-pairs [])) 0)
-                alignment.split-bindings
-                alignment.collapse-padding)
+                  alignment.maps
+                  (> (length (or alignment.align-args [])) 0)
+                  (> (length (or alignment.align-pairs [])) 0)
+                  alignment.split-bindings
+                  alignment.collapse-padding)
             (split-and-align source config alignment)
             (do (local captured-values (capture-values (fn
                                                          []

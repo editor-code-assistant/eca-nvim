@@ -69,7 +69,7 @@
 (defn- error-value
   [value]
   (if (= :table
-         (type value))
+        (type value))
     (. value :message)
     value))
 
@@ -106,12 +106,12 @@
   [result path]
   (or (and (. result :ok)
            (= nil
-              (. result :findings))
+             (. result :findings))
            (= (.. "missing " path)
-              (. result :message)))
+             (. result :message)))
       (and (not (. result :ok))
            (= (.. "missing " path)
-              (. result :message)))))
+             (. result :message)))))
 
 
 
@@ -119,10 +119,10 @@
   [entry rules names index recurse]
   (let [instance (. entry 1)]
     (and (= (type entry)
-            :table)
+           :table)
          (> (length entry) 0)
          (= (type instance)
-            :table)
+           :table)
          (not= (. instance :severity) nil)
          (not= (. instance :options) nil)
          (not= (. instance :applies-to) nil)
@@ -153,86 +153,86 @@
 (deftest strict-config-shape
   (testing "align-bindings is rejected as an unknown key"
     (is (= "unknown configuration key: align-bindings"
-           (. (config-error {:align-bindings true}) :message))))
+          (. (config-error {:align-bindings true}) :message))))
 
   (testing "top-level lint max-code-lines is rejected"
     (is (= "unknown lint key: max-code-lines"
-           (. (config-error {:lint {:max-code-lines 300}}) :message))))
+          (. (config-error {:lint {:max-code-lines 300}}) :message))))
 
   (testing "binding forms are required when binding alignment is enabled"
     (is (= "missing alignment.binding-forms"
-           (. (config-error {:alignment {:bindings true}}) :message))))
+          (. (config-error {:alignment {:bindings true}}) :message))))
 
   (testing "removed clause alignment keys are rejected"
     (is (= "unknown alignment key: clauses"
-           (. (config-error {:alignment {:clauses true}}) :message))))
+          (. (config-error {:alignment {:clauses true}}) :message))))
 
   (testing "missing alignment switches are off"
     (let [result (config-error {:alignment {:binding-forms ["let"]
-                                            :align-pairs    ["case"]}})]
+                                            :align-pairs   ["case"]}})]
       (is (. result :ok)))))
 
 (deftest strict-lint-options
   (testing "an enabled rule reports the canonical applies-to path"
     (let [result (lint-error "(module a)"
-                             {:path  "fnl/a.fnl"
-                              :rules {:form-chain [{:severity   "warning"
-                                                    :options    {:allowed-chains []}
-                                                    :exclusions []}]}})]
+                   {:path  "fnl/a.fnl"
+                    :rules {:form-chain [{:severity   "warning"
+                                          :options    {:allowed-chains []}
+                                          :exclusions []}]}})]
       (is (= "lint.rules.form-chain[1].applies-to must be a table"
-             (. result :message)))))
+            (. result :message)))))
 
   (testing "an enabled rule reports missing option values"
     (is (missing-message? (lint-error "(module a)"
-                                      {:path  "fnl/a.fnl"
-                                       :rules {:file-size [{:severity   "warning"
-                                                            :applies-to {}
-                                                            :options    {}}]}})
-                          "lint.rules.file-size[1].options.max-code-lines")))
+                            {:path  "fnl/a.fnl"
+                             :rules {:file-size [{:severity   "warning"
+                                                  :applies-to {}
+                                                  :options    {}}]}})
+          "lint.rules.file-size[1].options.max-code-lines")))
 
   (testing "an off rule still uses the canonical instance shape"
     (let [result (lint-error "(module a)"
-                             {:path  "fnl/a.fnl"
-                              :rules {:file-size [{:severity   "off"
-                                                   :applies-to {}
-                                                   :options    {}
-                                                   :exclusions []}]}})]
+                   {:path  "fnl/a.fnl"
+                    :rules {:file-size [{:severity   "off"
+                                         :applies-to {}
+                                         :options    {}
+                                         :exclusions []}]}})]
       (is (and (. result :ok) (= 0
-                                 (length (. result :findings))))))))
+                                (length (. result :findings))))))))
 
 (deftest child-count-not-counted-validation
   (testing "accepts a non-empty not-counted string list"
     (let [result (lint-error "(if ok value fallback)"
-                             {:path  "fnl/app.fnl"
-                              :rules {:child-count [{:severity   "warning"
-                                                     :applies-to {:forms ["if"]}
-                                                     :options    {:min-count   2
-                                                                  :max-count   2
-                                                                  :not-counted ["nil" "true" "false"]}
-                                                     :exclusions []}]}})]
+                   {:path  "fnl/app.fnl"
+                    :rules {:child-count [{:severity   "warning"
+                                           :applies-to {:forms ["if"]}
+                                           :options    {:min-count   2
+                                                        :max-count   2
+                                                        :not-counted ["nil" "true" "false"]}
+                                           :exclusions []}]}})]
       (is (. result :ok))))
 
   (testing "rejects an empty not-counted list"
     (let [result (lint-error "(if ok value fallback)"
-                             {:path  "fnl/app.fnl"
-                              :rules {:child-count [{:severity   "warning"
-                                                     :applies-to {:forms ["if"]}
-                                                     :options    {:min-count   2
-                                                                  :max-count   2
-                                                                  :not-counted []}
-                                                     :exclusions []}]}})]
+                   {:path  "fnl/app.fnl"
+                    :rules {:child-count [{:severity   "warning"
+                                           :applies-to {:forms ["if"]}
+                                           :options    {:min-count   2
+                                                        :max-count   2
+                                                        :not-counted []}
+                                           :exclusions []}]}})]
       (is (not (. result :ok)))))
 
   (testing "rejects nil-count together with not-counted"
     (let [result (lint-error "(if ok value fallback)"
-                             {:path  "fnl/app.fnl"
-                              :rules {:child-count [{:severity   "warning"
-                                                     :applies-to {:forms ["if"]}
-                                                     :options    {:min-count   2
-                                                                  :max-count   2
-                                                                  :nil-count   false
-                                                                  :not-counted ["nil"]}
-                                                     :exclusions []}]}})]
+                   {:path  "fnl/app.fnl"
+                    :rules {:child-count [{:severity   "warning"
+                                           :applies-to {:forms ["if"]}
+                                           :options    {:min-count   2
+                                                        :max-count   2
+                                                        :nil-count   false
+                                                        :not-counted ["nil"]}
+                                           :exclusions []}]}})]
       (is (not (. result :ok))))))
 
 (deftest rule-instance-description-validation
@@ -251,7 +251,7 @@
                                                              :options     {:allowed-chains []}
                                                              :exclusions  []}]}}})]
       (is (= "lint.rules.form-chain[1].description must be a non-empty string"
-             (. result :message)))))
+            (. result :message)))))
 
   (testing "rejects an empty description"
     (let [result (config-error {:lint {:rules {:form-chain [{:severity    "warning"
@@ -260,7 +260,7 @@
                                                              :options     {:allowed-chains []}
                                                              :exclusions  []}]}}})]
       (is (= "lint.rules.form-chain[1].description must be a non-empty string"
-             (. result :message))))))
+            (. result :message))))))
 
 (deftest strict-config-property
   (testing "the repository config loads with complete format and lint settings"
@@ -285,7 +285,7 @@
                (. (. loaded :format) :alignment)
                (. loaded :lint)
                (= nil
-                  (. loaded :design))
+                 (. loaded :design))
                (complete-rules? lint-rules lint-names 1))))))
 
 (deftest removed-layout-rule-config-errors
@@ -295,7 +295,7 @@
                                                                   :options    {:allowed-chains []}
                                                                   :exclusions []}]}}})]
       (is (= "unknown lint rule: control-layout"
-             (. result :message)))))
+            (. result :message)))))
 
   (testing "strict config rejects removed multiline-layout"
     (let [result (config-error {:lint {:rules {"multiline-layout" [{:severity   "warning"
@@ -304,7 +304,7 @@
                                                                                  :bindings ["let" "when-let" "if-let" "with-open"]}
                                                                     :exclusions []}]}}})]
       (is (= "unknown lint rule: multiline-layout"
-             (. result :message))))))
+            (. result :message))))))
 
 (deftest repository-exclusion-contract
   (testing "child-count macro exclusions consolidate to one path-only entry"
@@ -314,9 +314,9 @@
           instances  (and loaded (. (. (. loaded :lint) :rules) :child-count))
           exclusions (and instances (. (. instances 2) :exclusions))]
       (is (and (= 1
-                  (length exclusions))
+                 (length exclusions))
                (= "^fennel-extras/macros"
-                  (. (. exclusions 1) :path))))))
+                 (. (. exclusions 1) :path))))))
 
   (testing "module-import has empty exclusions after removing stale macro entries"
     (let [config    (load-module :fennel-extras.config)
@@ -325,10 +325,10 @@
           instances (and loaded (. (. (. loaded :lint) :rules) :module-import))]
       (is (and instances
                (= nil
-                  (. (. instances 2) :options :exempt-files))
+                 (. (. instances 2) :options :exempt-files))
                (= 0
-                  (length (. (. instances 2) :exclusions)))
+                 (length (. (. instances 2) :exclusions)))
                (= nil
-                  (. (. instances 3) :options :exempt-files))
+                 (. (. instances 3) :options :exempt-files))
                (= 0
-                  (length (. (. instances 3) :exclusions))))))))
+                 (length (. (. instances 3) :exclusions))))))))

@@ -61,32 +61,32 @@
                           {:applies-to {:files ["^spec/"]
                                         :forms ["="]}
                            :options    {:break-after-args 1}}]}
-             {:indents   (. format-config :indents)
-              :format-as (. format-config :format-as)
-              :alignment (. format-config :alignment)
-              :newline   (. format-config :newline)})))))
+            {:indents   (. format-config :indents)
+             :format-as (. format-config :format-as)
+             :alignment (. format-config :alignment)
+             :newline   (. format-config :newline)})))))
 
 (deftest root-declarations
   (testing "def indents its value"
     (is (= "(def value\n  1)"
-           (format-with "(def value\n1)" fn-config))))
+          (format-with "(def value\n1)" fn-config))))
 
   (testing "def- indents its value"
     (is (= "(def- value\n  1)"
-           (format-with "(def- value\n1)" fn-config))))
+          (format-with "(def- value\n1)" fn-config))))
 
   (testing "defn indents arguments and body"
     (is (= "(defn value\n  [x]\n  body)"
-           (format-with "(defn value\n[x]\nbody)" fn-config))))
+          (format-with "(defn value\n[x]\nbody)" fn-config))))
 
   (testing "defn- indents arguments and body"
     (is (= "(defn- value\n  [x]\n  body)"
-           (format-with "(defn- value\n[x]\nbody)" fn-config)))))
+          (format-with "(defn- value\n[x]\nbody)" fn-config)))))
 
 (deftest nested-declarations
   (testing "nested declarations use parent indentation while preserving declaration shape"
     (is (= "(def outer\n  (defn inner\n    [x]\n    body)\n  (def value\n    1))"
-           (format-with "(def outer\n(defn inner\n[x]\nbody)\n(def value\n1))" fn-config)))))
+          (format-with "(def outer\n(defn inner\n[x]\nbody)\n(def value\n1))" fn-config)))))
 
 (deftest target-propagation
   (testing "changing the fn target changes every aliased definition"
@@ -101,7 +101,7 @@
               "def-"  [[:block 1]]
               "defn"  [[:block 1]]
               "defn-" [[:block 1]]}
-             {"def"   (rules.resolve second "def")
-              "def-"  (rules.resolve second "def-")
-              "defn"  (rules.resolve second "defn")
-              "defn-" (rules.resolve second "defn-")})))))
+            {"def"   (rules.resolve second "def")
+             "def-"  (rules.resolve second "def-")
+             "defn"  (rules.resolve second "defn")
+             "defn-" (rules.resolve second "defn-")})))))

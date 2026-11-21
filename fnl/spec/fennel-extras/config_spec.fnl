@@ -43,62 +43,62 @@
         (if include-location?
           {:value?      (not= nil value)
            :has-message (and (= nil
-                                value)
+                               value)
                              err
                              (= :table
-                                (type err))
+                               (type err))
                              (= :string
-                                (type (. err :message))))
+                               (type (. err :message))))
            :line        (and err (. err :line))
            :col         (and err (. err :col))}
           {:value?      (not= nil value)
            :has-message (and (= nil
-                                value)
+                               value)
                              err
                              (= :table
-                                (type err))
+                               (type err))
                              (= :string
-                                (type (. err :message))))})))))
+                               (type (. err :message))))})))))
 
 (defn- canonical-fragment
   [value]
   (if (and (= :table
-              (type value))
+             (type value))
            (= nil
-              (. value :workspace))
+             (. value :workspace))
            (= nil
-              (. value :format))
+             (. value :format))
            (= nil
-              (. value :lint)))
+             (. value :lint)))
     (let [workspace {}
           format    {}]
       (each [key item (pairs value)]
-            (if (or (= key
-                       :paths)
-                    (= key
-                       :exclude)
-                    (= key
-                       :extensions)
-                    (= key
-                       :dotfiles)
-                    (= key
-                       :symlinks))
-              (tset workspace key item)
-              (tset format key item)))
+        (if (or (= key
+                  :paths)
+                (= key
+                  :exclude)
+                (= key
+                  :extensions)
+                (= key
+                  :dotfiles)
+                (= key
+                  :symlinks))
+          (tset workspace key item)
+          (tset format key item)))
       {:workspace workspace :format format :lint {:rules {}}})
     value))
 
 (defn- complete-config
   [value]
   (if (= :table
-         (type value))
+        (type value))
     (vim.tbl_deep_extend "force"
-                         {:workspace {:paths      ["fnl"]
-                                      :extensions [".fnl" ".fnlm"]}
-                          :format    {:indent-width 2
-                                      :parser       false}
-                          :lint      {:rules {}}}
-                         (canonical-fragment value))
+      {:workspace {:paths      ["fnl"]
+                   :extensions [".fnl" ".fnlm"]}
+       :format    {:indent-width 2
+                   :parser       false}
+       :lint      {:rules {}}}
+      (canonical-fragment value))
     value))
 
 (defn- validate-summary
@@ -112,12 +112,12 @@
         {:value?      (and ok (not= nil result))
          :has-message (and ok
                            (= nil
-                              result)
+                             result)
                            err
                            (= :table
-                              (type err))
+                             (type err))
                            (= :string
-                              (type (. err :message))))}))))
+                             (type (. err :message))))}))))
 
 (defn- validation-call
   [config value]
@@ -131,41 +131,41 @@
   [config value]
   (let [(ok result err) (validation-call config value)]
     (when (and ok (= result
-                     nil) err)
-          (. err :message))))
+                    nil) err)
+      (. err :message))))
 
 (defn- validation-error-message-raw
   [text]
   (let [config (load-config)
         value  (parse-value text)]
     (when (and (not (. config :module-missing)) (not= value nil))
-          (validation-message config value))))
+      (validation-message config value))))
 
 (defn- validation-error-message
   [text]
   (let [config (load-config)
         value  (complete-lint-config (parse-value text))]
     (when (and (not (. config :module-missing)) (not= value nil))
-          (validation-message config value))))
+      (validation-message config value))))
 
 (defn- validation-summary
   [config value]
   (let [(ok result err) (validation-call config value)]
     {:crashed? (not ok)
      :message  (and ok (= nil
-                          result) err (. err :message))}))
+                         result) err (. err :message))}))
 
 (defn- validation-result
   [config value]
   (if (or (. config :module-missing) (= value
-                                        nil))
+                                       nil))
     {:crashed? false :message nil}
     (validation-summary config value)))
 
 (defn- parsed-value
   [text-or-value]
   (if (= :string
-         (type text-or-value))
+        (type text-or-value))
     (parse-value text-or-value)
     text-or-value))
 
@@ -185,9 +185,9 @@
       (let [(ok policy err) (pcall (fn [] (config.lint-policy value)))]
 
         {:value-nil? (and ok (= nil
-                                policy))
+                               policy))
          :message    (and ok (= nil
-                                policy) err (. err :message))}))))
+                               policy) err (. err :message))}))))
 
 (defn- lint-policy-value
   [value]
@@ -209,10 +209,10 @@
       (let [(ok result err) (pcall (fn [] (config.validate value)))
 
             message         (and ok (= nil
-                                       result) err (. err :message))]
+                                      result) err (. err :message))]
         {:unknown-key? (and message
                             (= "unknown lint key: "
-                               (string.sub message 1 18)))}))))
+                              (string.sub message 1 18)))}))))
 
 (defn- write-file
   [path text]
@@ -235,43 +235,43 @@
     (vim.fn.mkdir stop-git "p")
     (with-cleanup (fn [] (vim.fn.delete root "rf"))
 
-                  (fn []
-                    (write-file root-config "{:workspace {:exclude [\"root\"]} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {}}}")
-                    (write-file config-path "{:workspace {:paths [\"fnl\"]} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {}}}")
-                    (write-file (.. root "/valid.fnl-extras.fnl") "{:exclude [\"generated\"]}")
-                    {:start       (let [config (load-config)]
-                                    (if (. config :module-missing)
-                                      config
-                                      (config.find root)))
-                     :parent      (let [config (load-config)]
-                                    (if (. config :module-missing)
-                                      config
-                                      (config.find nested)))
-                     :stopped     (let [config (load-config)]
-                                    (if (. config :module-missing)
-                                      config
-                                      (config.find stop-nested)))
-                     :root-config root-config
-                     :config-path config-path
-                     :loaded      (let [config (load-config)]
-                                    (if (. config :module-missing)
-                                      config
-                                      (config.load config-path)))
-                     :missing     (let [config (load-config)]
-                                    (if (. config :module-missing)
-                                      config
-                                      (let [(ok value err)
-                                            (pcall (fn [] (config.load (.. root "/missing.fnl-extras.fnl"))))]
+      (fn []
+        (write-file root-config "{:workspace {:exclude [\"root\"]} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {}}}")
+        (write-file config-path "{:workspace {:paths [\"fnl\"]} :format {:indent-width 2 :indents {} :parser false} :lint {:rules {}}}")
+        (write-file (.. root "/valid.fnl-extras.fnl") "{:exclude [\"generated\"]}")
+        {:start       (let [config (load-config)]
+                        (if (. config :module-missing)
+                          config
+                          (config.find root)))
+         :parent      (let [config (load-config)]
+                        (if (. config :module-missing)
+                          config
+                          (config.find nested)))
+         :stopped     (let [config (load-config)]
+                        (if (. config :module-missing)
+                          config
+                          (config.find stop-nested)))
+         :root-config root-config
+         :config-path config-path
+         :loaded      (let [config (load-config)]
+                        (if (. config :module-missing)
+                          config
+                          (config.load config-path)))
+         :missing     (let [config (load-config)]
+                        (if (. config :module-missing)
+                          config
+                          (let [(ok value err)
+                                (pcall (fn [] (config.load (.. root "/missing.fnl-extras.fnl"))))]
 
-                                        {:value?      (and ok (not= nil value))
-                                         :has-message (and ok
-                                                           (= nil
-                                                              value)
-                                                           err
-                                                           (= :table
-                                                              (type err))
-                                                           (= :string
-                                                              (type (. err :message))))})))}))))
+                            {:value?      (and ok (not= nil value))
+                             :has-message (and ok
+                                               (= nil
+                                                 value)
+                                               err
+                                               (= :table
+                                                 (type err))
+                                               (= :string
+                                                 (type (. err :message))))})))}))))
 
 (deftest parse-string
   (testing "parses a realistic data-only configuration and converts keywords to strings"
@@ -280,7 +280,7 @@
             :format-as {:my-let "let"}
             :paths     ["fnl"]
             :exclude   ["fnl/eca/nfnl"]}
-           (parse-value "{:indents {\"deftest\" [[:block 1]] \"testing\" [[:block 1]]} :format-as {\"my-let\" \"let\"} :paths [\"fnl\"] :exclude [\"fnl/eca/nfnl\"]}"))))
+          (parse-value "{:indents {\"deftest\" [[:block 1]] \"testing\" [[:block 1]]} :format-as {\"my-let\" \"let\"} :paths [\"fnl\"] :exclude [\"fnl/eca/nfnl\"]}"))))
 
   (testing "parses escapes, numbers, booleans, nil, and ignores comments"
     (is (= {:text     "quote \" slash \\ line\n tab\t"
@@ -290,57 +290,57 @@
             :yes      true
             :no       false
             :nothing  nil}
-           (parse-value "{:text \"quote \\\" slash \\\\ line\\n tab\\t\" ; comment\n :one 1 :decimal 2.5 :negative -3 :yes true :no false :nothing nil}")))))
+          (parse-value "{:text \"quote \\\" slash \\\\ line\\n tab\\t\" ; comment\n :one 1 :decimal 2.5 :negative -3 :yes true :no false :nothing nil}")))))
 
 (deftest rejection
   (testing "rejects a list and reports line 1 column 5"
     (is (= {:value? false :has-message true :line 1 :col 5}
-           (parse-error-summary "{:a (require :x)}" true))))
+          (parse-error-summary "{:a (require :x)}" true))))
 
   (testing "rejects a bare symbol"
     (is (= {:value? false :has-message true}
-           (parse-error-summary "{:a foo}" false))))
+          (parse-error-summary "{:a foo}" false))))
 
   (testing "rejects hash reader prefixes"
     (is (= {:value? false :has-message true}
-           (parse-error-summary "{:a #(x)}" false))))
+          (parse-error-summary "{:a #(x)}" false))))
 
   (testing "rejects more than one top-level form"
     (is (= {:value? false :has-message true}
-           (parse-error-summary "{} {}" false))))
+          (parse-error-summary "{} {}" false))))
 
   (testing "rejects an empty file"
     (is (= {:value? false :has-message true}
-           (parse-error-summary "" false))))
+          (parse-error-summary "" false))))
 
   (testing "rejects a non-table top-level form"
     (is (= {:value? false :has-message true}
-           (parse-error-summary "[1]" false))))
+          (parse-error-summary "[1]" false))))
 
   (testing "rejects unbalanced input"
     (is (= {:value? false :has-message true}
-           (parse-error-summary "{:a 1" false))))
+          (parse-error-summary "{:a 1" false))))
 
   (testing "validate rejects an unknown top-level key"
     (is (= {:value? false :has-message true}
-           (validate-summary {:workspace {:colour 1}
-                              :format    {}
-                              :lint      {:rules {}}}))))
+          (validate-summary {:workspace {:colour 1}
+                             :format    {}
+                             :lint      {:rules {}}}))))
 
   (testing "validate rejects paths that are not a sequence"
     (is (= {:value? false :has-message true}
-           (validate-summary {:paths "fnl"})))))
+          (validate-summary {:paths "fnl"})))))
 
 (deftest find-load
   (testing "find returns a config in the start directory"
     (let [result (find-load-scenario)]
       (is (= (. result :root-config)
-             (. result :start)))))
+            (. result :start)))))
 
   (testing "find returns the nearest config in a parent directory"
     (let [result (find-load-scenario)]
       (is (= (. result :config-path)
-             (. result :parent)))))
+            (. result :parent)))))
 
   (testing "find stops at a .git directory"
     (is (nil? (. (find-load-scenario) :stopped))))
@@ -349,233 +349,233 @@
     (is (= {:workspace {:paths ["fnl"]}
             :format    {:indent-width 2 :indents {} :parser false}
             :lint      {:rules {}}}
-           (. (find-load-scenario) :loaded))))
+          (. (find-load-scenario) :loaded))))
 
   (testing "load returns a structured error for a missing path"
     (is (= {:value? false :has-message true}
-           (. (find-load-scenario) :missing)))))
+          (. (find-load-scenario) :missing)))))
 
 (deftest config-new-configuration
   (testing "accepts an indent width of four"
     (is (= {:value? true :has-message false}
-           (validate-summary {:indent-width 4}))))
+          (validate-summary {:indent-width 4}))))
 
   (testing "rejects zero indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width 0}")]
       (is (= "indent-width must be a positive integer"
-             message))))
+            message))))
 
   (testing "rejects negative indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width -1}")]
       (is (= "indent-width must be a positive integer"
-             message))))
+            message))))
 
   (testing "rejects non-integer indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width 2.5}")]
       (is (= "indent-width must be a positive integer"
-             message))))
+            message))))
 
   (testing "rejects string indent width with a specific validation message"
     (let [message (validation-error-message "{:indent-width \"4\"}")]
       (is (= "indent-width must be a positive integer"
-             message))))
+            message))))
 )
 
 (deftest exact-formatter-configuration
   (testing "rejects the removed builtins key"
     (is (= "unknown configuration key: builtins"
-           (validation-error-message-raw "{:builtins false}"))))
+          (validation-error-message-raw "{:builtins false}"))))
 
   (testing "rejects the removed prefix-fallbacks key"
     (is (= "unknown configuration key: prefix-fallbacks"
-           (validation-error-message-raw "{:prefix-fallbacks false}"))))
+          (validation-error-message-raw "{:prefix-fallbacks false}"))))
 
   (testing "rejects the removed indent-patterns key"
     (is (= "unknown configuration key: indent-patterns"
-           (validation-error-message-raw "{:indent-patterns []}"))))
+          (validation-error-message-raw "{:indent-patterns []}"))))
 
   (testing "accepts exact indents and preserves format-as aliases"
     (is (= nil
-           (validation-error-message-raw
+          (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {\"if\" [[:block 1]]} :format-as {\"my-if\" \"if\"}}")))))
 
 (deftest file-scoped-newline-configuration
   (testing "accepts file and form selectors on newline rules"
     (is (= nil
-           (validation-error-message-raw
+          (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^fennel-extras/\"] :forms [\"fn\" \"defn\" \"defn-\"]} :options {:after-header 1}}]}"))))
 
   (testing "accepts zero after-header and break-after-n-args pairs"
     (is (= nil
-           (validation-error-message-raw
+          (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:after-header 0 :break-after-n-args [[1 1] [2 1]]}}]}"))))
 
   (testing "accepts non-negative between-same-level counts"
     (is (= nil
-           (validation-error-message-raw
+          (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level 0}}]}"))))
 
   (testing "accepts positive between-same-level counts"
     (is (= nil
-           (validation-error-message-raw
+          (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level 2}}]}"))))
 
   (testing "rejects a negative between-same-level count"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level -1}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level -1}}]}"))))
 
   (testing "rejects a non-integer between-same-level count"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level 1.5}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level 1.5}}]}"))))
 
   (testing "rejects a string between-same-level count"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level \"1\"}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:between-same-level \"1\"}}]}"))))
 
   (testing "rejects a non-list break-after-n-args value"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-n-args true}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-n-args true}}]}"))))
 
   (testing "rejects a break-after-n-args entry that is not a pair of integers"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-n-args [[1 \"1\"]]}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"defn\"]} :options {:break-after-n-args [[1 \"1\"]]}}]}"))))
 
   (testing "accepts grouped argument options"
     (is (= nil
-           (validation-error-message-raw
+          (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-size 2 :group-gap 1}}]}"))))
 
   (testing "rejects non-positive group-size"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-size 0}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-size 0}}]}"))))
 
   (testing "rejects negative group-gap"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-gap -1}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"cond\"]} :options {:group-gap -1}}]}"))))
 
   (testing "accepts a positive scalar break-after-args value"
     (is (= nil
-           (validation-error-message-raw
+          (validation-error-message-raw
             "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:files [\"^spec/\"] :forms [\"=\"]} :options {:break-after-args 1}}]}"))))
 
   (testing "rejects zero break-after-args"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args 0}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args 0}}]}"))))
 
   (testing "rejects a non-integer break-after-args value"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args 1.5}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args 1.5}}]}"))))
 
   (testing "rejects a list under scalar break-after-args"
     (is (not= nil
-              (validation-error-message-raw
-               "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args [[1 1]]}}]}"))))
+          (validation-error-message-raw
+            "{:indent-width 2 :parser false :indents {} :newline [{:applies-to {:forms [\"=\"]} :options {:break-after-args [[1 1]]}}]}"))))
 )
 
 (deftest extensions
   (testing "accepts a non-empty list of dotted extension strings"
     (is (= {:value? true :has-message false}
-           (validate-summary {:extensions [".fnl" ".fnlm"]}))))
+          (validate-summary {:extensions [".fnl" ".fnlm"]}))))
 
   (testing "rejects an empty extensions list with the exact validation message"
     (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-           (validation-error-message "{:extensions []}"))))
+          (validation-error-message "{:extensions []}"))))
 
   (testing "rejects non-string extensions with the exact validation message"
     (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-           (validation-error-message "{:extensions [1]}"))))
+          (validation-error-message "{:extensions [1]}"))))
 
   (testing "rejects extensions without a leading dot with the exact validation message"
     (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-           (validation-error-message "{:extensions [\"fnl\"]}"))))
+          (validation-error-message "{:extensions [\"fnl\"]}"))))
 
   (testing "rejects a non-list extensions value with the exact validation message"
     (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-           (validation-error-message "{:extensions \".fnl\"}")))))
+          (validation-error-message "{:extensions \".fnl\"}")))))
 
 (deftest new-keys
   (testing "does not require paths during general configuration validation"
     (is (= nil
-           (validation-error-message-raw "{:indent-width 2 :indents {} :parser false :extensions [\".fnl\"]}"))))
+          (validation-error-message-raw "{:indent-width 2 :indents {} :parser false :extensions [\".fnl\"]}"))))
 
   (testing "rejects a non-boolean dotfiles value with the exact validation message"
     (is (= "workspace.dotfiles must be a boolean"
-           (validation-error-message "{:dotfiles 1}"))))
+          (validation-error-message "{:dotfiles 1}"))))
 
   (testing "rejects a non-boolean symlinks value with the exact validation message"
     (is (= "workspace.symlinks must be a boolean"
-           (validation-error-message "{:symlinks 1}"))))
+          (validation-error-message "{:symlinks 1}"))))
 
   (testing "rejects a non-string parser value with the exact validation message"
     (is (= "parser must be a string or false"
-           (validation-error-message "{:parser 1}"))))
+          (validation-error-message "{:parser 1}"))))
 
   (testing "rejects the removed align-bindings key"
     (is (= "unknown configuration key: align-bindings"
-           (validation-error-message-raw "{:align-bindings true}")))))
+          (validation-error-message-raw "{:align-bindings true}")))))
 
 (deftest alignment-configuration
   (testing "accepts an alignment table"
     (is (= {:value? true :has-message false}
-           (validate-summary {:alignment {:maps true}}))))
+          (validate-summary {:alignment {:maps true}}))))
 
   (testing "rejects a boolean alignment value with the exact validation message"
     (is (= "alignment must be a table"
-           (validation-error-message "{:alignment true}"))))
+          (validation-error-message "{:alignment true}"))))
 
   (testing "rejects a string alignment value with the exact validation message"
     (is (= "alignment must be a table"
-           (validation-error-message "{:alignment \"yes\"}"))))
+          (validation-error-message "{:alignment \"yes\"}"))))
 
   (testing "rejects an unknown alignment key with the key in the error"
     (is (= "unknown alignment key: nope"
-           (validation-error-message "{:alignment {:nope true}}"))))
+          (validation-error-message "{:alignment {:nope true}}"))))
 
   (testing "rejects a non-boolean alignment toggle with the exact validation message"
     (is (= "alignment key maps must be a boolean"
-           (validation-error-message "{:alignment {:maps 1}}"))))
+          (validation-error-message "{:alignment {:maps 1}}"))))
 
   (testing "rejects a non-list binding-forms value with the exact validation message"
     (is (= "alignment key binding-forms must be a list of strings"
-           (validation-error-message "{:alignment {:binding-forms \"let\"}}"))))
+          (validation-error-message "{:alignment {:binding-forms \"let\"}}"))))
 
   (testing "rejects a map binding-forms value with the exact validation message"
     (is (= "alignment key binding-forms must be a list of strings"
-           (validation-error-message "{:alignment {:binding-forms {:foo \"bar\"}}}"))))
+          (validation-error-message "{:alignment {:binding-forms {:foo \"bar\"}}}"))))
 
   (testing "rejects the removed clause-forms key"
     (is (= "unknown alignment key: clause-forms"
-           (validation-error-message "{:alignment {:clause-forms [\"case\"]}}"))))
+          (validation-error-message "{:alignment {:clause-forms [\"case\"]}}"))))
 
   (testing "rejects the removed clauses key"
     (is (= "unknown alignment key: clauses"
-           (validation-error-message "{:alignment {:clauses true}}"))))
+          (validation-error-message "{:alignment {:clauses true}}"))))
 
   (testing "missing alignment switches remain off"
     (let [config   (load-config)
           settings (require :fennel-extras.indent.settings)
           value    {:alignment {:binding-forms ["let"]
-                                :align-pairs    ["case"]}}]
+                                :align-pairs   ["case"]}}]
       (is (= {:bindings         false
               :maps             false
               :split-bindings   false
               :collapse-padding false
               :binding-forms    ["let"]
               :align-pairs      ["case"]}
-             (settings.resolve (config.validate value))))))
+            (settings.resolve (config.validate value))))))
 
   (testing "alignment tables require binding forms when binding alignment is enabled"
     (is (= "missing alignment.binding-forms"
-           (validation-error-message "{:alignment {:bindings true}}")))))
+          (validation-error-message "{:alignment {:bindings true}}")))))
 
 (defn- formatter-projection
   [config]
@@ -597,22 +597,22 @@
 (deftest lint-configuration
   (testing "accepts a canonical lint rule instance"
     (is (= {:value? true :has-message false}
-           (validate-summary {:lint {                                     :rules      {:form-chain
-                                                                                       [{:severity   :warning
-                                                                                         :applies-to {:files   ["^spec/"]
-                                                                                                      :forms   ["require"]
-                                                                                                      :modules "plenary.busted"}
-                                                                                         :options    {:allowed-chains [[:form]]}
-                                                                                         :exclusions []}]}}}))))
+          (validate-summary {:lint {                                     :rules      {:form-chain
+                                                                                      [{:severity   :warning
+                                                                                        :applies-to {:files   ["^spec/"]
+                                                                                                     :forms   ["require"]
+                                                                                                     :modules "plenary.busted"}
+                                                                                        :options    {:allowed-chains [[:form]]}
+                                                                                        :exclusions []}]}}}))))
 
   (testing "rejects a direct rule map"
     (is (= {:value? false :has-message true}
-           (validate-summary {:lint {                                     :rules      {:form-chain
-                                                                                       {:severity   :warning
-                                                                                        :applies-to {:files ["^spec/"]
-                                                                                                     :forms ["require"]}
-                                                                                        :options    {:module "plenary.busted"}
-                                                                                        :exclusions []}}}}))))
+          (validate-summary {:lint {                                     :rules      {:form-chain
+                                                                                      {:severity   :warning
+                                                                                       :applies-to {:files ["^spec/"]
+                                                                                                    :forms ["require"]}
+                                                                                       :options    {:module "plenary.busted"}
+                                                                                       :exclusions []}}}}))))
 
   (testing "reports option errors deterministically"
     (let [first          "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:unknown true :allowed-chains 1} :exclusions []}]}}}"
@@ -620,12 +620,12 @@
           first-message  (validation-error-message first)
           second-message (validation-error-message second)]
       (is (= first-message
-             second-message))))
+            second-message))))
 
   (testing "reports the lexicographically first invalid option"
     (let [message (validation-error-message "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:allowed-chains 1 :unknown true} :exclusions []}]}}}")]
       (is (= "lint.rules.form-chain[1].options: allowed-chains must be a non-empty list of non-empty chain lists"
-             message))))
+            message))))
 
   (testing "unknown options include the rule name"
     (let [message (validation-error-message "{:lint {:rules {:form-chain [{:severity :warning :applies-to {} :options {:unknown true} :exclusions []}]}}}")]
@@ -677,9 +677,9 @@
                           {:applies-to {:files ["^spec/"]
                                         :forms ["="]}
                            :options    {:break-after-args 1}}]}
-             {:indents   (. format :indents)
-              :format-as (. format :format-as)
-              :newline   (. format :newline)})))))
+            {:indents   (. format :indents)
+             :format-as (. format :format-as)
+             :newline   (. format :newline)})))))
 
 (defn- workspace-validation
   [workspace require-paths?]
@@ -698,7 +698,7 @@
   (let [error (or (. result :value)
                   (. result :error))]
     (and (= :table
-            (type error))
+           (type error))
          (. error :message))))
 
 (deftest validate-workspace-public-api
@@ -706,78 +706,78 @@
     (let [result (workspace-validation {} false)]
       (is (and (. result :ok)
                (= nil
-                  (. result :value))
+                 (. result :value))
                (= nil
-                  (. result :error))))))
+                 (. result :error))))))
 
   (testing "accepts a workspace table with paths when paths are required"
     (let [result (workspace-validation {:paths ["fnl"]} true)]
       (is (and (. result :ok)
                (= nil
-                  (. result :value))
+                 (. result :value))
                (= nil
-                  (. result :error))))))
+                 (. result :error))))))
 
   (testing "requires paths when requested"
     (let [result (workspace-validation {} true)]
       (is (= "missing workspace.paths"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects a non-table workspace"
     (let [result (workspace-validation "fnl" false)]
       (is (= "workspace must be a table"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects an unknown workspace key"
     (let [result (workspace-validation {:colour 1} false)]
       (is (= "unknown workspace key: colour"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects paths that are not an array of strings"
     (let [result (workspace-validation {:paths ["fnl" 1]} false)]
       (is (= "workspace.paths must be an array of strings"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects exclude values that are not an array of strings"
     (let [result (workspace-validation {:exclude "generated"} false)]
       (is (= "workspace.exclude must be an array of strings"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects an empty extensions list"
     (let [result (workspace-validation {:extensions []} false)]
       (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects extensions without a leading dot"
     (let [result (workspace-validation {:extensions ["fnl"]} false)]
       (is (= "workspace.extensions must be a non-empty list of strings starting with \".\""
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects a non-boolean dotfiles value"
     (let [result (workspace-validation {:dotfiles 1} false)]
       (is (= "workspace.dotfiles must be a boolean"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects a non-boolean symlinks value"
     (let [result (workspace-validation {:symlinks 1} false)]
       (is (= "workspace.symlinks must be a boolean"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects a non-boolean config value"
     (let [result (workspace-validation {:config 1} false)]
       (is (= "workspace.config must be a boolean"
-             (workspace-error-message result))))))
+            (workspace-error-message result))))))
 
 (deftest workspace-error-through-config-validate
   (testing "rejects a non-table workspace through canonical validation"
     (let [result (canonical-validation {:workspace "fnl"})]
       (is (= "workspace must be a table"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "rejects an unknown workspace key through canonical validation"
     (let [result (canonical-validation {:workspace {:colour 1}})]
       (is (= "unknown workspace key: colour"
-             (workspace-error-message result)))))
+            (workspace-error-message result)))))
 
   (testing "accepts a canonical workspace with boolean scan settings"
     (let [result (canonical-validation {:workspace {:paths      ["fnl"]

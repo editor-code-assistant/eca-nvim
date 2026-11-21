@@ -64,23 +64,23 @@
   (let [once (output-for source)]
     (and (= :string
            (type once))
-      (= once
-        (output-for once)))))
+         (= once
+           (output-for once)))))
 
 (defn- error-summary-result
   [result]
   {:value?         (and (. result :ok) (not= nil (. result :value)))
    :has-message    (and (. result :ok)
-                     (= nil
-                       (. result :value))
-                     (not= nil (. result :error))
-                     (= :string
-                       (type (. (. result :error) :message))))
+                        (= nil
+                          (. result :value))
+                        (not= nil (. result :error))
+                        (= :string
+                          (type (. (. result :error) :message))))
    :returned-error (and (. result :ok)
-                     (. result :value)
-                     (= nil
-                       (. result :value))
-                     (. result :error))})
+                        (. result :value)
+                        (= nil
+                          (. result :value))
+                        (. result :error))})
 
 (defn- error-summary
   [source]
@@ -231,10 +231,10 @@
   (testing "preserves newline counts for final-line regression inputs"
     (is (and (= (newline-count "(x\n  ;; c\n)")
                (newline-count (output-for "(x\n  ;; c\n)")))
-          (= (newline-count "(a\nb)")
-            (newline-count (output-for "(a\nb)")))
-          (= (newline-count "a\nb")
-            (newline-count (output-for "a\nb"))))))
+             (= (newline-count "(a\nb)")
+               (newline-count (output-for "(a\nb)")))
+             (= (newline-count "a\nb")
+               (newline-count (output-for "a\nb"))))))
 
   (testing "keeps leading spaces inside multi-line strings unchanged"
     (is (= "(foo \"one\n  two\"\n  bar)"
@@ -348,12 +348,15 @@
 
   (testing "align-args preserves already-aligned input"
     (let [source "(or first\n    second\n    third)"]
-      (is (= source (reindent-direct source nil)))))
+      (is (= source
+            (reindent-direct source nil)))))
 
   (testing "align-args is idempotent"
     (let [once (reindent-direct "(and first\n second\n third)" nil)]
-      (is (= once (reindent-direct once nil)))))
+      (is (= once
+            (reindent-direct once nil)))))
 
   (testing "align-args leaves nested composite arguments structurally valid"
     (let [result (reindent-direct "(and (foo\n bar)\n baz)" nil)]
-      (is (= :string (type result))))))
+      (is (= :string
+            (type result))))))

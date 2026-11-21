@@ -13,17 +13,17 @@
   [result]
   (let [error (. result :error)]
     (if (= :table
-           (type error))
+          (type error))
       (. error :message)
       error)))
 
 (local canonical-rule
-       {:lint {:rules {:module-import [{:severity   "error"
-                                        :applies-to {:files   ["^spec/"]
-                                                     :forms   ["require"]
-                                                     :modules ["plenary.busted"]}
-                                        :options    {:mode "forbid"}
-                                        :exclusions [{:path "^fennel-extras/macros/test[.]fnlm$"}]}]}}})
+  {:lint {:rules {:module-import [{:severity   "error"
+                                   :applies-to {:files   ["^spec/"]
+                                                :forms   ["require"]
+                                                :modules ["plenary.busted"]}
+                                   :options    {:mode "forbid"}
+                                   :exclusions [{:path "^fennel-extras/macros/test[.]fnlm$"}]}]}}})
 
 (deftest canonical-applies-to-contract
   (testing "rule instances with files, forms, and modules validate"
@@ -39,18 +39,18 @@
                                                               :exclusions [{:path "^fennel-extras/macros/test[.]fnlm$"}]}]}}})]
       (is (and (not (. result :ok))
                (= nil
-                  (. result :value))
+                 (. result :value))
                (= "unknown applies-to key: contexts"
-                  (error-message result)))))))
+                 (error-message result)))))))
 
 (deftest canonical-spec-file-contract
   (testing "top-level lint spec-files is absent from the canonical contract"
     (let [result (validation {:lint {:spec-files ["^spec/"] :rules {}}})]
       (is (and (not (. result :ok))
                (= nil
-                  (. result :value))
+                 (. result :value))
                (= "unknown lint key: spec-files"
-                  (error-message result))))))
+                 (error-message result))))))
 
   (testing "spec-only behavior uses explicit file regexes"
     (let [result (validation canonical-rule)
@@ -58,9 +58,9 @@
       (is (and (. result :ok)
                value
                (= nil
-                  (. value :lint :spec-files))
+                 (. value :lint :spec-files))
                (vim.deep_equal ["^spec/"]
-                               (. value :lint :rules :module-import 1 :applies-to :files)))))))
+                 (. value :lint :rules :module-import 1 :applies-to :files)))))))
 
 (deftest generic-rule-contract
   (testing "generic rules and form-child-count validate"
@@ -95,9 +95,9 @@
                                                               :exclusions []}]}}})]
       (is (and (. result :ok)
                (= "require"
-                  (. result :value :lint :rules :module-import 1 :options :mode))
+                 (. result :value :lint :rules :module-import 1 :options :mode))
                (= "core"
-                  (. result :value :lint :rules :module-import 1 :options :binding)))))))
+                 (. result :value :lint :rules :module-import 1 :options :binding)))))))
 (deftest migrated-canonical-config-contract
   (testing "selector values live under applies-to and not under options"
     (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
@@ -109,17 +109,17 @@
                (vim.deep_equal ["require"] (. result :value :lint :rules :module-import 1 :applies-to :forms))
                (vim.deep_equal ["plenary.busted"] (. result :value :lint :rules :module-import 1 :applies-to :modules))
                (= nil
-                  (. result :value :lint :rules :module-import 1 :options :forms))
+                 (. result :value :lint :rules :module-import 1 :options :forms))
                (= nil
-                  (. result :value :lint :rules :module-import 1 :options :modules))))))
+                 (. result :value :lint :rules :module-import 1 :options :modules))))))
 
   (testing "the old selector option locations are rejected"
     (each [_ options (ipairs [{:forms ["if"]} {:module "module"} {:modules ["luassert"]}])]
-          (let [result (validation {:lint {:rules {:module-import [{:severity   "warning"
-                                                                    :applies-to {:modules ["module"]}
-                                                                    :options    (vim.tbl_extend "force" {:mode "forbid"} options)
-                                                                    :exclusions []}]}}})]
-            (is (not (. result :ok)))))))
+      (let [result (validation {:lint {:rules {:module-import [{:severity   "warning"
+                                                                :applies-to {:modules ["module"]}
+                                                                :options    (vim.tbl_extend "force" {:mode "forbid"} options)
+                                                                :exclusions []}]}}})]
+        (is (not (. result :ok)))))))
 
 (deftest canonical-source-keeps-rule-vectors-inline
   (testing "the canonical source keeps rule vectors inline and has no empty forbidden-form placeholder"
@@ -145,11 +145,11 @@
         rules  (. loaded :lint :rules)]
     (testing "canonical module selectors are vectors"
       (is (and (vim.deep_equal ["eca.nfnl.core"]
-                               (. rules :module-import 1 :applies-to :modules))
+                 (. rules :module-import 1 :applies-to :modules))
                (vim.deep_equal ["fennel-extras.macros.test"]
-                               (. rules :module-import 2 :applies-to :modules))
+                 (. rules :module-import 2 :applies-to :modules))
                (vim.deep_equal ["plenary.busted" "luassert"]
-                               (. rules :module-import 3 :applies-to :modules))
+                 (. rules :module-import 3 :applies-to :modules))
                true)))))
 
 (deftest canonical-module-selector-cardinality
@@ -160,7 +160,7 @@
                                                                            :binding "one"}
                                                               :exclusions []}]}}})]
       (is (= "lint.rules.module-import[1].applies-to.modules must contain at most one module"
-             (error-message result)))))
+            (error-message result)))))
 
   (testing "module-import forbid accepts multiple module selectors"
     (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
@@ -174,7 +174,7 @@
                                                               :applies-to {:modules ["one" "two"]}
                                                               :exclusions []}]}}})]
       (is (= "lint.rules.module-import[1].options must be a table"
-             (error-message result)))))
+            (error-message result)))))
 
   (testing "module-import non-map options returns a structured validation error"
     (let [result (validation {:lint {:rules {:module-import [{:severity   "error"
@@ -182,19 +182,19 @@
                                                               :options    "require"
                                                               :exclusions []}]}}})]
       (is (= "lint.rules.module-import[1].options must be a table"
-             (error-message result))))))
+            (error-message result))))))
 
 (deftest migrated-rule-names
   (testing "child-count is canonical and form-child-count remains an accepted alias"
     (each [_ rule (ipairs ["child-count" "form-child-count"])]
-          (let [rules  {}
-                _      (tset rules rule [{:severity   "error"
-                                          :applies-to {:forms ["testing"]}
-                                          :options    {:children  ["is"]
-                                                       :max-count 1}
-                                          :exclusions []}])
-                result (validation {:lint {:rules rules}})]
-            (is (. result :ok)))))
+      (let [rules  {}
+            _      (tset rules rule [{:severity   "error"
+                                      :applies-to {:forms ["testing"]}
+                                      :options    {:children  ["is"]
+                                                   :max-count 1}
+                                      :exclusions []}])
+            result (validation {:lint {:rules rules}})]
+        (is (. result :ok)))))
 
 )
 
@@ -206,9 +206,9 @@
       (is (and instance
                (vim.deep_equal {:forms ["if"]} (. instance :applies-to))
                (= 2
-                  (. instance :options :min-count))
+                 (. instance :options :min-count))
                (= 2
-                  (. instance :options :max-count))
+                 (. instance :options :max-count))
                (vim.deep_equal ["nil" "true" "false"] (. instance :options :not-counted))))))
 )
 
@@ -221,28 +221,28 @@
           when-instance (. rules :form-chain 5)]
       (is (and or-instance
                (= "Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible."
-                  (. or-instance :description))
+                 (. or-instance :description))
                (vim.deep_equal ["when" "when-let" "if" "if-let" "cond" "case"]
-                               (. or-instance :applies-to :forms))
+                 (. or-instance :applies-to :forms))
                (= nil
-                  (. or-instance :options :forms-between))
+                 (. or-instance :options :forms-between))
                (vim.deep_equal [["or" :form]
                                 ["or" :forms-between :form]]
-                               (. or-instance :options :forbidden-chains))
+                 (. or-instance :options :forbidden-chains))
                if-instance
                (= "Avoid nested `if` forms; they make control flow harder to read."
-                  (. if-instance :description))
+                 (. if-instance :description))
                (vim.deep_equal {:files ["^fennel-extras/"] :forms ["if"]}
-                               (. if-instance :applies-to))
+                 (. if-instance :applies-to))
                (vim.deep_equal [["if" :form]]
-                               (. if-instance :options :forbidden-chains))
+                 (. if-instance :options :forbidden-chains))
                when-instance
                (= "Avoid nested `when` forms; they make control flow harder to read."
-                  (. when-instance :description))
+                 (. when-instance :description))
                (vim.deep_equal {:files ["^fennel-extras/"] :forms ["when"]}
-                               (. when-instance :applies-to))
+                 (. when-instance :applies-to))
                (vim.deep_equal [["when" :form]]
-                               (. when-instance :options :forbidden-chains)))))))
+                 (. when-instance :options :forbidden-chains)))))))
 
 (deftest canonical-config-aligns-cond-clauses
   (testing "canonical formatter aligns cond pairs alongside case"
@@ -276,39 +276,39 @@
   (testing "canonical config omits every removed rule"
     (let [rules (. (config.load ".fnl-extras.fnl") :lint :rules)]
       (is (accumulate [absent true _ rule (ipairs removed-rules)]
-                      (and absent (= nil
-                                     (. rules rule))))))))
+            (and absent (= nil
+                          (. rules rule))))))))
 
 (deftest lint-validation-removed-rules
   (testing "canonical lint config rejects every removed rule name"
     (is (accumulate [valid true _ rule (ipairs removed-rules)]
-                    (let [rules  {}
-                          _      (tset rules rule [(removed-rule-instance)])
-                          result (validation {:lint {:rules rules}})]
-                      (and valid
-                           (not (. result :ok))
-                           (= (.. "unknown lint rule: " rule)
-                              (error-message result))))))))
+          (let [rules  {}
+                _      (tset rules rule [(removed-rule-instance)])
+                result (validation {:lint {:rules rules}})]
+            (and valid
+                 (not (. result :ok))
+                 (= (.. "unknown lint rule: " rule)
+                   (error-message result))))))))
 
 (deftest design-validation-removed-rules
   (testing "canonical design config rejects every removed rule name"
     (is (accumulate [valid true _ rule (ipairs removed-rules)]
-                    (let [rules  {}
-                          _      (tset rules rule [(removed-rule-instance)])
-                          result (validation {:design {:rules rules}})]
-                      (and valid
-                           (not (. result :ok))
-                           (= (.. "unknown design rule: " rule)
-                              (error-message result))))))))
+          (let [rules  {}
+                _      (tset rules rule [(removed-rule-instance)])
+                result (validation {:design {:rules rules}})]
+            (and valid
+                 (not (. result :ok))
+                 (= (.. "unknown design rule: " rule)
+                   (error-message result))))))))
 
 (deftest runtime-registry-removed-rules
   (testing "the runtime registry omits removed rules and retains supported rules"
     (let [names    (registry.rule-names)
           defaults (registry.defaults)]
       (is (and (accumulate [absent true _ rule (ipairs removed-rules)]
-                           (and absent
-                                (= nil
-                                   (. defaults rule))
-                                (not (vim.tbl_contains names rule))))
+                 (and absent
+                      (= nil
+                        (. defaults rule))
+                      (not (vim.tbl_contains names rule))))
                (accumulate [present true _ rule (ipairs retained-rules)]
-                           (and present (vim.tbl_contains names rule))))))))
+                 (and present (vim.tbl_contains names rule))))))))

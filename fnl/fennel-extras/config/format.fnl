@@ -86,7 +86,7 @@
 (defn- required
   [config key path]
   (when (= (. config key) nil)
-        (missing path)))
+    (missing path)))
 
 (defn- invalid-width?
   [width strict?]
@@ -130,7 +130,7 @@
   [value]
   (when (and (or (. value :bindings) (. value :split-bindings))
              (= (. value :binding-forms) nil))
-        (missing "alignment.binding-forms")))
+    (missing "alignment.binding-forms")))
 
 (defn- validate-alignment
   [config]
@@ -194,7 +194,7 @@
     (when (and (not= value nil)
                (not (and (= (type value) :table)
                          (every-ipairs? newline-instance? value 1))))
-          {:message "newline must be a list of instances"})))
+      {:message "newline must be a list of instances"})))
 
 (defn- validate-extensions
   [config]

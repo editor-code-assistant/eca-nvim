@@ -50,9 +50,9 @@
   [node parent result alignment]
   (let [next-result (alignment-node-result result node parent alignment)]
     (accumulate [state next-result _ child (ipairs (or node.children []))]
-                (or (and child.text state)
-                    (and child.children (collect-alignment-nodes child node state alignment))
-                    state))))
+      (or (and child.text state)
+          (and child.children (collect-alignment-nodes child node state alignment))
+          state))))
 
 (defn- single-line-name?
   [name-start name-end]
@@ -103,7 +103,7 @@
 (defn- append-pair-candidate-with-details
   [result name-start name-end details]
   (append-pair-candidate result
-                         (pair-data name-start name-end details.value-start details)))
+    (pair-data name-start name-end details.value-start details)))
 
 (defn- pair-candidate
   [children index result parent-kind]
@@ -120,9 +120,9 @@
              (= name-start.line value-start.line)
              (single-line-name? name-start name-end))
       (append-pair-candidate-with-details result
-                                          name-start
-                                          name-end
-                                          (pair-details value-start value parent-kind))
+        name-start
+        name-end
+        (pair-details value-start value parent-kind))
       result)))
 
 (defn- pair-candidates
@@ -145,17 +145,17 @@
 (defn- pair-count
   [pairs line]
   (accumulate [count 0 _ pair (ipairs pairs)]
-              (pair-count-step count pair line)))
+    (pair-count-step count pair line)))
 
 (defn- single-pair
   [pairs pair]
   (when (= (pair-count pairs pair.line) 1)
-        pair))
+    pair))
 
 (defn- single-pairs
   [pairs]
   (icollect [_ pair (ipairs pairs)]
-            (single-pair pairs pair)))
+    (single-pair pairs pair)))
 
 (defn- pair-name-width
   [pair]
@@ -170,7 +170,7 @@
 (defn- alignment-width
   [pairs]
   (accumulate [width 0 _ pair (ipairs pairs)]
-              (math.max width (pair-name-width pair))))
+    (math.max width (pair-name-width pair))))
 
 (defn- clause-start-index
   [node]
@@ -187,8 +187,8 @@
 (defn- comment-on-line?
   [node line]
   (accumulate [found false _ child (ipairs node.children)]
-              (or found
-                  (and child.text (= child.kind :comment) (= child.line line)))))
+    (or found
+        (and child.text (= child.kind :comment) (= child.line line)))))
 
 (defn- usable-pair?
   [node pair alignment]
@@ -198,12 +198,12 @@
 (defn- usable-pair-result
   [node pair alignment]
   (when (usable-pair? node pair alignment)
-        pair))
+    pair))
 
 (defn- usable-pairs
   [node pairs alignment]
   (icollect [_ pair (ipairs pairs)]
-            (usable-pair-result node pair alignment)))
+    (usable-pair-result node pair alignment)))
 
 (defn- single-line-node?
   [node]
@@ -218,17 +218,17 @@
 (defn- alignment-plan-result
   [node pairs alignment]
   (when (> (length pairs) 1)
-        (node-plan node pairs alignment)))
+    (node-plan node pairs alignment)))
 
 (defn- usable-single-line-pair
   [node pair]
   (when (not (comment-on-line? node pair.line))
-        pair))
+    pair))
 
 (defn- all-usable-pairs
   [node pairs]
   (icollect [_ pair (ipairs pairs)]
-            (usable-single-line-pair node pair)))
+    (usable-single-line-pair node pair)))
 
 (defn- candidate-pairs
   [node pairs alignment]
@@ -260,7 +260,7 @@
 (defn- alignment-plans
   [nodes alignment]
   (icollect [_ node (ipairs nodes)]
-            (alignment-plan node alignment)))
+    (alignment-plan node alignment)))
 
 (defn- edit-spaces
   [plan pair name-end-column]
@@ -282,7 +282,7 @@
 (defn- append-plan-pairs
   [edits plan]
   (each [_ pair (ipairs plan.pairs)]
-        (append-alignment-edit edits plan pair))
+    (append-alignment-edit edits plan pair))
   edits)
 
 (defn- append-plan-edits
@@ -294,7 +294,7 @@
 (defn- alignment-edits
   [plans]
   (accumulate [edits [] _ plan (ipairs plans)]
-              (append-plan-edits edits plan)))
+    (append-plan-edits edits plan)))
 
 (defn- replace-edit
   [line start finish spaces]
@@ -312,12 +312,12 @@
 (defn- line-edit
   [line-number edit]
   (when (= edit.line line-number)
-        edit))
+    edit))
 
 (defn- line-edits
   [edits line-number]
   (icollect [_ edit (ipairs edits)]
-            (line-edit line-number edit)))
+    (line-edit line-number edit)))
 
 (defn- apply-edits
   [line edits]
@@ -326,7 +326,7 @@
                       (> left.start right.start)))
 
   (accumulate [result line _ edit (ipairs edits)]
-              (apply-edit result edit)))
+    (apply-edit result edit)))
 
 (defn- collect-argument-nodes
   [node result alignment]
@@ -339,46 +339,46 @@
                    (do (table.insert result node) result)
                    result)]
     (accumulate [state result _ child (ipairs (or node.children []))]
-                (if child.children
-                  (collect-argument-nodes child state alignment)
-                  state))))
+      (if child.children
+        (collect-argument-nodes child state alignment)
+        state))))
 
 (defn- argument-edits-for-node
   [node alignment]
-  (let [children (helpers.nontrivia-children node)
-        head     (. children 1)
-        first    (. children 2)
-        target   (and head first (= head.line first.line) (helpers.child-start first))
+  (let [children   (helpers.nontrivia-children node)
+        head       (. children 1)
+        first      (. children 2)
+        target     (and head first (= head.line first.line) (helpers.child-start first))
         composite? (accumulate [found false index child (ipairs children)]
-                      (or found (and (> index 1) child.children)))]
+                     (or found (and (> index 1) child.children)))]
     (if (and target (not composite?))
       (accumulate [edits [] index child (ipairs children)]
-                  (if (and (> index 2)
-                           child.line
-                           head.line
-                           (not child.children)
-                           (or (= child.kind :symbol)
-                               (= child.kind :string)
-                               (= child.kind :keyword)
-                               (= child.kind :number))
-                           (> child.line head.line))
-                    (let [start (helpers.child-start child)]
-                      (if (and start start.out-col target.out-col)
-                        (do (table.insert edits {:line child.line
-                                                 :start 1
-                                                 :finish (+ start.out-col 1)
-                                                 :spaces target.out-col})
-                            edits)
-                        edits))
-                    edits))
+        (if (and (> index 2)
+                 child.line
+                 head.line
+                 (not child.children)
+                 (or (= child.kind :symbol)
+                     (= child.kind :string)
+                     (= child.kind :keyword)
+                     (= child.kind :number))
+                 (> child.line head.line))
+          (let [start (helpers.child-start child)]
+            (if (and start start.out-col target.out-col)
+              (do (table.insert edits {:line   child.line
+                                       :start  1
+                                       :finish (+ start.out-col 1)
+                                       :spaces target.out-col})
+                edits)
+              edits))
+          edits))
       [])))
 
 (defn- argument-edits
   [nodes alignment]
   (accumulate [edits [] _ node (ipairs nodes)]
-              (let [next (argument-edits-for-node node alignment)]
-                (each [_ edit (ipairs next)] (table.insert edits edit))
-                edits)))
+    (let [next (argument-edits-for-node node alignment)]
+      (each [_ edit (ipairs next)] (table.insert edits edit))
+      edits)))
 
 (defn- apply-alignment
   [lines plans argument-nodes alignment]
@@ -386,7 +386,7 @@
         args  (argument-edits argument-nodes alignment)]
     (each [_ edit (ipairs args)] (table.insert edits edit))
     (icollect [line-number line (ipairs lines)]
-              (apply-edits line (line-edits edits line-number)))))
+      (apply-edits line (line-edits edits line-number)))))
 
 (defn apply
   [output tree alignment]
