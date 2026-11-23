@@ -120,7 +120,7 @@
                                "fennel-extras/app.fnl"
                                policy))]
       (is (= []
-             result)))))
+            result)))))
 
 (deftest direct-child-arity
   (let [policy  {:child-count [{:severity   "warning"
