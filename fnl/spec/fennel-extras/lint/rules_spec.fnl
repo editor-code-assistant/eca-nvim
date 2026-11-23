@@ -122,6 +122,59 @@
       (is (= []
             (identities (findings "(or (and (= a 1)) (= b 2))")))))))
 
+(deftest child-count-mode-combinations
+  (testing "counts named children recursively when direct is omitted"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["target"]}
+                                 :options    {:children  ["="]
+                                              :max-count 1}
+                                 :exclusions []}]}
+          result (identities (findings-for "(target (wrapper (= a 1)) (= b 2))"
+                               "fnl/app.fnl"
+                               policy))]
+      (is (= [["child-count" "fnl/app.fnl > top#1"]]
+            result))))
+
+  (testing "counts only immediate named children when direct is true"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["target"]}
+                                 :options    {:children  ["="]
+                                              :max-count 1
+                                              :direct    true}
+                                 :exclusions []}]}
+          result (identities (findings-for "(target (wrapper (= a 1)) (= b 2))"
+                               "fnl/app.fnl"
+                               policy))]
+      (is (= []
+            result))))
+
+  (testing "uses direct arity bounds when children and direct are omitted"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["if"]}
+                                 :options    {:min-count 2
+                                              :max-count 2
+                                              :nil-count false}
+                                 :exclusions []}]}
+          result (identities (findings-for "(if ok value)"
+                               "fnl/app.fnl"
+                               policy))]
+      (is (= [["child-count" "fnl/app.fnl > top#1"]]
+            result))))
+
+  (testing "uses the same direct arity bounds when direct is true"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["if"]}
+                                 :options    {:min-count 2
+                                              :max-count 2
+                                              :nil-count false
+                                              :direct    true}
+                                 :exclusions []}]}
+          result (identities (findings-for "(if ok value)"
+                               "fnl/app.fnl"
+                               policy))]
+      (is (= [["child-count" "fnl/app.fnl > top#1"]]
+            result)))))
+
 (deftest direct-child-arity
   (let [policy  {:child-count [{:severity   "warning"
                                 :applies-to {:forms ["if"]}
