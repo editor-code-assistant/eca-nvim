@@ -4,58 +4,61 @@
 
 (local parse (require :fennel-extras.config.parse))
 
-(local option-names
-       {"required-form"    ["forms"]
-        "module-import"    ["mode" "modules" "module" "binding" "forms"]
-        "child-count"      ["children" "max-count" "min-count" "nil-count" "not-counted"]
-        "form-child-count" ["children" "max-count"]
-        "file-size"        ["max-code-lines"]
-        "form-chain"       ["allowed-chains" "forbidden-chains"]
-        "binding"          []})
+(defn- option-names
+  []
+  {"required-form"    ["forms"]
+   "module-import"    ["mode" "modules" "module" "binding" "forms"]
+   "child-count"      ["children" "max-count" "min-count" "nil-count" "not-counted" "direct"]
+   "form-child-count" ["children" "max-count"]
+   "file-size"        ["max-code-lines"]
+   "form-chain"       ["allowed-chains" "forbidden-chains"]
+   "binding"          []})
 
-(local required-option-names
-       {"required-form"    []
-        "module-import"    ["mode"]
-        "child-count"      []
-        "form-child-count" ["children" "max-count"]
-        "file-size"        ["max-code-lines"]
-        "form-chain"       []})
+(defn- required-option-names
+  []
+  {"required-form"    []
+   "module-import"    ["mode"]
+   "child-count"      []
+   "form-child-count" ["children" "max-count"]
+   "file-size"        ["max-code-lines"]
+   "form-chain"       []})
 
-(local option-types
-       {
-        "module"           :string
-        "exception"        :exception
-        "mode"             :string
-        "modules"          :strings
-        "forms"            :strings
-        "children"         :strings
-        "max-count"        :positive-integer
-        "min-count"        :non-negative-integer
-        "nil-count"        :boolean
-        "not-counted"      :non-empty-strings
-        "nil-else"         :boolean
-        "clauses"          :strings
-        "bindings"         :strings
-        "max-depth"        :positive-integer
-        "max-code-lines"   :positive-integer
-        "binding"          :string
-        "allowed-chains"   :chains
-        "forbidden-chains" :chains})
+(defn- option-types
+  []
+  {"module"           :string
+   "exception"        :exception
+   "mode"             :string
+   "modules"          :strings
+   "forms"            :strings
+   "children"         :strings
+   "max-count"        :positive-integer
+   "min-count"        :non-negative-integer
+   "nil-count"        :boolean
+   "direct"           :boolean
+   "not-counted"      :non-empty-strings
+   "nil-else"         :boolean
+   "clauses"          :strings
+   "bindings"         :strings
+   "max-depth"        :positive-integer
+   "max-code-lines"   :positive-integer
+   "binding"          :string
+   "allowed-chains"   :chains
+   "forbidden-chains" :chains})
 
 (defn schema
   [rule]
   (let [result {}]
-    (each [_ name (ipairs (or (. option-names rule) []))]
-          (tset result name (. option-types name)))
+    (each [_ name (ipairs (or (. (option-names) rule) []))]
+      (tset result name (. (option-types) name)))
     result))
 
 (defn names
   [rule]
-  (. option-names rule))
+  (. (option-names) rule))
 
 (defn required-names
   [rule]
-  (. required-option-names rule))
+  (. (required-option-names) rule))
 
 (defn defaults
   []
@@ -106,13 +109,13 @@
   (and (parse.sequence? value)
        (> (length value) 0)
        (accumulate [valid true _ item (ipairs value)]
-                   (and valid (chain-item? item)))))
+         (and valid (chain-item? item)))))
 
 (defn- chains?
   [value]
   (and (parse.sequence? value)
        (accumulate [valid true _ chain (ipairs value)]
-                   (and valid (chain? chain)))))
+         (and valid (chain? chain)))))
 
 (defn- exception?
   [value]
@@ -120,38 +123,38 @@
        (= (length value) 1)
        (= (. value 1) "top-level")))
 
-(local validators
-       {:string               (fn
-                                [value]
-                                (= (type value) :string))
+(defn- validators
+  []
+  {:string               (fn
+                           [value]
+                           (= (type value) :string))
+   :strings              strings?
+   :non-empty-strings    non-empty-strings?
+   :chains               chains?
+   :exception            exception?
+   :positive-integer     positive-integer?
+   :non-negative-integer non-negative-integer?
+   :boolean              boolean?})
 
-
-        :strings              strings?
-        :non-empty-strings    non-empty-strings?
-        :chains               chains?
-        :exception            exception?
-        :positive-integer     positive-integer?
-        :non-negative-integer non-negative-integer?
-        :boolean              boolean?})
-
-(local type-messages
-       {:strings              " must be a list of strings"
-        :non-empty-strings    " must be a non-empty list of strings"
-        :chains               " must be a non-empty list of non-empty chain lists"
-        :positive-integer     " must be a positive integer"
-        :non-negative-integer " must be a non-negative integer"
-        :boolean              " must be a boolean"
-        :string               " must be a string"})
+(defn- type-messages
+  []
+  {:strings              " must be a list of strings"
+   :non-empty-strings    " must be a non-empty list of strings"
+   :chains               " must be a non-empty list of non-empty chain lists"
+   :positive-integer     " must be a positive integer"
+   :non-negative-integer " must be a non-negative integer"
+   :boolean              " must be a boolean"
+   :string               " must be a string"})
 
 (defn- option-type-valid?
   [kind value]
-  (let [validator (. validators kind)]
+  (let [validator (. (validators) kind)]
     (or (and (not validator) true)
         (and validator (validator value)))))
 
 (defn- option-type-message
   [kind option]
-  (let [message (. type-messages kind)]
+  (let [message (. (type-messages) kind)]
     (.. option message)))
 
 (defn- first-option-error-step

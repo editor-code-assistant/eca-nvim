@@ -79,9 +79,36 @@ local function direct_child_valid_3f(node, options)
   local max = options["max-count"]
   return (not missing and not multi_clause and (not nil_else or options["nil-count"] or contains_3f((options["not-counted"] or {}), "nil", 1)) and (count >= min) and (count <= max))
 end
+local function named_child_count_direct(node, options, index, result)
+  local children = meaningful_children(node)
+  if (index > #children) then
+    return result
+  else
+    local _6_
+    if ((children[index].kind == "list") and contains_3f(options.children, list_head(children[index]), 1)) then
+      _6_ = 1
+    else
+      _6_ = 0
+    end
+    return named_child_count_direct(node, options, (index + 1), (result + _6_))
+  end
+end
+local function named_child_count_invalid_3f(node, options)
+  local count
+  if options.direct then
+    count = named_child_count_direct(node, options, 1, 0)
+  else
+    count = count_child_forms(node, options.children, 1, 0)
+  end
+  if options.direct then
+    return (count > options["max-count"])
+  else
+    return (count ~= options["max-count"])
+  end
+end
 local function child_count_invalid_3f(node, options)
   if options.children then
-    return (count_child_forms(node, options.children, 1, 0) ~= options["max-count"])
+    return named_child_count_invalid_3f(node, options)
   else
     return not direct_child_valid_3f(node, options)
   end
@@ -90,9 +117,10 @@ local child_count_finding
 do
   local function child_count_finding0(findings, path, form, policy, node)
     local options = rule_options(policy, "child-count")
-    local form_applies = ((#(options.forms or {}) == 0) or contains_3f(options.forms, list_head(node), 1))
+    local form_name = list_head(node)
+    local form_applies = ((#(options.forms or {}) == 0) or contains_3f(options.forms, form_name, 1))
     if (form_applies and enabled_3f(policy, "child-count") and child_count_invalid_3f(node, options)) then
-      return table.insert(findings, finding(path, form, rule_severity(policy, "child-count"), "child-count", "form has an invalid child count", node))
+      return table.insert(findings, finding(path, form, rule_severity(policy, "child-count"), "child-count", (form_name .. " has an invalid child count"), node))
     else
       return nil
     end

@@ -230,6 +230,8 @@
                  (. or-instance :options :children))
                (= 1
                  (. or-instance :options :max-count))
+               (= true
+                 (. or-instance :options :direct))
                if-instance
                (= "Avoid nested `if` forms; they make control flow harder to read."
                  (. if-instance :description))

@@ -142,7 +142,7 @@ The lint rules are:
 | --- | --- |
 | `required-form` | `:forms` |
 | `module-import` | `:mode` plus `:modules` for `:forbid`, or `:module`, `:binding`, `:forms` for `:require` |
-| `child-count` | named mode: `:children`, `:max-count`; direct mode: `:min-count`, `:max-count`, and exactly one of `:nil-count` or non-empty string-list `:not-counted` |
+| `child-count` | named mode: `:children`, `:max-count`, and optional `:direct true` for direct child heads; direct mode: `:min-count`, `:max-count`, and exactly one of `:nil-count` or non-empty string-list `:not-counted` |
 | `file-size` | `:max-code-lines` |
 | `form-chain` | `:allowed-chains`, `:forbidden-chains` |
 

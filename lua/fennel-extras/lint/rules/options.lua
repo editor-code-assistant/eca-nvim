@@ -6,15 +6,21 @@ do
   _2amodule_2a = pkg_1_auto.loaded["fennel-extras.lint.rules.options"]
 end
 local parse = require("fennel-extras.config.parse")
-local option_names = {["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count", "not-counted"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {"allowed-chains", "forbidden-chains"}, binding = {}}
-local required_option_names = {["required-form"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {}}
-local option_types = {module = "string", exception = "exception", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", ["not-counted"] = "non-empty-strings", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string", ["allowed-chains"] = "chains", ["forbidden-chains"] = "chains"}
+local function option_names()
+  return {["required-form"] = {"forms"}, ["module-import"] = {"mode", "modules", "module", "binding", "forms"}, ["child-count"] = {"children", "max-count", "min-count", "nil-count", "not-counted", "direct"}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {"allowed-chains", "forbidden-chains"}, binding = {}}
+end
+local function required_option_names()
+  return {["required-form"] = {}, ["module-import"] = {"mode"}, ["child-count"] = {}, ["form-child-count"] = {"children", "max-count"}, ["file-size"] = {"max-code-lines"}, ["form-chain"] = {}}
+end
+local function option_types()
+  return {module = "string", exception = "exception", mode = "string", modules = "strings", forms = "strings", children = "strings", ["max-count"] = "positive-integer", ["min-count"] = "non-negative-integer", ["nil-count"] = "boolean", direct = "boolean", ["not-counted"] = "non-empty-strings", ["nil-else"] = "boolean", clauses = "strings", bindings = "strings", ["max-depth"] = "positive-integer", ["max-code-lines"] = "positive-integer", binding = "string", ["allowed-chains"] = "chains", ["forbidden-chains"] = "chains"}
+end
 local schema
 do
   local function schema0(rule)
     local result = {}
-    for _, name in ipairs((option_names[rule] or {})) do
-      result[name] = option_types[name]
+    for _, name in ipairs((option_names()[rule] or {})) do
+      result[name] = option_types()[name]
     end
     return result
   end
@@ -24,7 +30,7 @@ end
 local names
 do
   local function names0(rule)
-    return option_names[rule]
+    return option_names()[rule]
   end
   _2amodule_2a["names"] = names0
   names = _2amodule_2a.names
@@ -32,7 +38,7 @@ end
 local required_names
 do
   local function required_names0(rule)
-    return required_option_names[rule]
+    return required_option_names()[rule]
   end
   _2amodule_2a["required-names"] = required_names0
   required_names = _2amodule_2a["required-names"]
@@ -91,18 +97,21 @@ end
 local function exception_3f(value)
   return (parse["sequence?"](value) and (#value == 1) and (value[1] == "top-level"))
 end
-local validators
-local function _3_(value)
-  return (type(value) == "string")
+local function validators()
+  local function _3_(value)
+    return (type(value) == "string")
+  end
+  return {string = _3_, strings = strings_3f, ["non-empty-strings"] = non_empty_strings_3f, chains = chains_3f, exception = exception_3f, ["positive-integer"] = positive_integer_3f, ["non-negative-integer"] = non_negative_integer_3f, boolean = boolean_3f}
 end
-validators = {string = _3_, strings = strings_3f, ["non-empty-strings"] = non_empty_strings_3f, chains = chains_3f, exception = exception_3f, ["positive-integer"] = positive_integer_3f, ["non-negative-integer"] = non_negative_integer_3f, boolean = boolean_3f}
-local type_messages = {strings = " must be a list of strings", ["non-empty-strings"] = " must be a non-empty list of strings", chains = " must be a non-empty list of non-empty chain lists", ["positive-integer"] = " must be a positive integer", ["non-negative-integer"] = " must be a non-negative integer", boolean = " must be a boolean", string = " must be a string"}
+local function type_messages()
+  return {strings = " must be a list of strings", ["non-empty-strings"] = " must be a non-empty list of strings", chains = " must be a non-empty list of non-empty chain lists", ["positive-integer"] = " must be a positive integer", ["non-negative-integer"] = " must be a non-negative integer", boolean = " must be a boolean", string = " must be a string"}
+end
 local function option_type_valid_3f(kind, value)
-  local validator = validators[kind]
+  local validator = validators()[kind]
   return ((not validator and true) or (validator and validator(value)))
 end
 local function option_type_message(kind, option)
-  local message = type_messages[kind]
+  local message = type_messages()[kind]
   return (option .. message)
 end
 local function first_option_error_step(rule, options, keys, index)

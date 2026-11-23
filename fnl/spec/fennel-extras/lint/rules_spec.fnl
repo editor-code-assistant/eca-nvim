@@ -96,31 +96,31 @@
             result)))))
 
 (deftest canonical-or-child-count
-  (testing "canonical child-count reports or forms with more than one equality child"
-    (let [policy {:child-count [{:severity   "info"
+  (let [policy   {:child-count [{:severity   "info"
                                  :applies-to {:files ["^fennel-extras/"]
                                               :forms ["or"]}
                                  :options    {:children  ["="]
-                                              :max-count 1}
+                                              :max-count 1
+                                              :direct    true}
                                  :exclusions []}]}
-          result (identities (findings-for "(or (= a 1) (= b 2))"
-                               "fennel-extras/app.fnl"
-                               policy))]
+        findings (fn [source]
+                   (findings-for source "fennel-extras/app.fnl" policy))]
+    (testing "canonical child-count reports or forms with two direct equality children"
       (is (= [["child-count" "fennel-extras/app.fnl > top#1"]]
-            result))))
+            (identities (findings "(or (= a 1) (= b 2))")))))
 
-  (testing "canonical child-count allows one equality child"
-    (let [policy {:child-count [{:severity   "info"
-                                 :applies-to {:files ["^fennel-extras/"]
-                                              :forms ["or"]}
-                                 :options    {:children  ["="]
-                                              :max-count 1}
-                                 :exclusions []}]}
-          result (identities (findings-for "(or (= a 1) predicate)"
-                               "fennel-extras/app.fnl"
-                               policy))]
+    (testing "canonical child-count uses the form name in its message"
+      (let [result (findings "(or (= a 1) (= b 2))")]
+        (is (= "or has an invalid child count"
+              (. (. result 1) :message)))))
+
+    (testing "canonical child-count allows one direct equality child"
       (is (= []
-            result)))))
+            (identities (findings "(or (= a 1) predicate)")))))
+
+    (testing "canonical direct child-count ignores nested equality inside another child form"
+      (is (= []
+            (identities (findings "(or (and (= a 1)) (= b 2))")))))))
 
 (deftest direct-child-arity
   (let [policy  {:child-count [{:severity   "warning"
