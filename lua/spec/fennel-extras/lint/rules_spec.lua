@@ -107,113 +107,136 @@ local function _13_()
 end
 require("plenary.busted").describe("migrated-child-count", _13_)
 local function _15_()
+  local function _16_()
+    local policy = {["child-count"] = {{severity = "info", ["applies-to"] = {files = {"^fennel-extras/"}, forms = {"or"}}, options = {children = {"="}, ["max-count"] = 1}, exclusions = {}}}}
+    local result = identities(findings_for("(or (= a 1) (= b 2))", "fennel-extras/app.fnl", policy))
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"child-count", "fennel-extras/app.fnl > top#1"}}
+    local actual_7_auto = result
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("canonical child-count reports or forms with more than one equality child", _16_)
+  local function _17_()
+    local policy = {["child-count"] = {{severity = "info", ["applies-to"] = {files = {"^fennel-extras/"}, forms = {"or"}}, options = {children = {"="}, ["max-count"] = 1}, exclusions = {}}}}
+    local result = identities(findings_for("(or (= a 1) predicate)", "fennel-extras/app.fnl", policy))
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = result
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("canonical child-count allows one equality child", _17_)
+end
+require("plenary.busted").describe("canonical-or-child-count", _15_)
+local function _18_()
   local policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["nil-count"] = false}, exclusions = {}}}}
   local finding
-  local function _16_(source)
+  local function _19_(source)
     return identities(findings_for(source, "fnl/app.fnl", policy))
   end
-  finding = _16_
-  local function _17_()
+  finding = _19_
+  local function _20_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = finding("(defn run [] (if ok value))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an if with no else", _17_)
-  local function _18_()
+  require("plenary.busted").it("rejects an if with no else", _20_)
+  local function _21_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = finding("(defn run [] (if ok value nil))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an if with a literal nil else", _18_)
-  local function _19_()
+  require("plenary.busted").it("rejects an if with a literal nil else", _21_)
+  local function _22_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = finding("(defn run [] (if ok a b c d))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects an if with multiple clauses", _19_)
-  local function _20_()
+  require("plenary.busted").it("rejects an if with multiple clauses", _22_)
+  local function _23_()
     local broad_policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 0, ["max-count"] = 10, ["nil-count"] = true}, exclusions = {}}}}
     local broad_finding
-    local function _21_(source)
+    local function _24_(source)
       return identities(findings_for(source, "fnl/app.fnl", broad_policy))
     end
-    broad_finding = _21_
+    broad_finding = _24_
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = broad_finding("(defn run [] (if ok a b c d))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("rejects a multi-clause if with broad direct bounds", _20_)
-  local function _22_()
+  require("plenary.busted").it("rejects a multi-clause if with broad direct bounds", _23_)
+  local function _25_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = finding("(defn run [] (if ok value fallback))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("allows a normal two-branch if", _22_)
+  return require("plenary.busted").it("allows a normal two-branch if", _25_)
 end
-require("plenary.busted").describe("direct-child-arity", _15_)
-local function _23_()
+require("plenary.busted").describe("direct-child-arity", _18_)
+local function _26_()
   local policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["min-count"] = 2, ["max-count"] = 2, ["not-counted"] = {"nil", "true", "false"}}, exclusions = {}}}}
   local finding
-  local function _24_(source)
+  local function _27_(source)
     return identities(findings_for(source, "fnl/app.fnl", policy))
   end
-  finding = _24_
-  local function _25_()
+  finding = _27_
+  local function _28_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = finding("(defn run [] (if ok true fallback))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("excludes literal true from the direct count", _25_)
-  local function _26_()
+  require("plenary.busted").it("excludes literal true from the direct count", _28_)
+  local function _29_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = finding("(defn run [] (if ok false fallback))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("excludes literal false from the direct count", _26_)
-  local function _27_()
+  require("plenary.busted").it("excludes literal false from the direct count", _29_)
+  local function _30_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = finding("(defn run [] (if ok value nil))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("excludes literal nil from the direct count", _27_)
-  local function _28_()
+  require("plenary.busted").it("excludes literal nil from the direct count", _30_)
+  local function _31_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = finding("(defn run [] (if ok value fallback))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("preserves two counted branches", _28_)
-  local function _29_()
+  require("plenary.busted").it("preserves two counted branches", _31_)
+  local function _32_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{"child-count", "fnl/app.fnl > defn:run > if#1"}}
     local actual_7_auto = finding("(defn run [] (if ok value fallback extra))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("enforces the maximum of two counted branches", _29_)
+  return require("plenary.busted").it("enforces the maximum of two counted branches", _32_)
 end
-require("plenary.busted").describe("direct-child-arity-not-counted", _23_)
-local function _30_()
+require("plenary.busted").describe("direct-child-arity-not-counted", _26_)
+local function _33_()
   local policy = {binding = {{severity = "warning", ["applies-to"] = {forms = {"let"}}, options = {}, exclusions = {}}}}
   local finding
-  local function _31_(source)
+  local function _34_(source)
     local result = findings_for(source, "fnl/app.fnl", policy)
     local tbl_26_ = {}
     local i_27_ = 0
@@ -227,38 +250,38 @@ local function _30_()
     end
     return tbl_26_
   end
-  finding = _31_
-  local function _33_()
+  finding = _34_
+  local function _36_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {{rule = "binding", form = "fnl/app.fnl > let#1", message = "avoid introducing a local binding for a single body expression"}}
     local actual_7_auto = finding("(let [value 1] value)")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("reports a let with one binding pair and one body expression", _33_)
-  local function _34_()
+  require("plenary.busted").it("reports a let with one binding pair and one body expression", _36_)
+  local function _37_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = finding("(let [first 1 second 2] first)")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("allows a let with multiple bindings", _34_)
-  local function _35_()
+  require("plenary.busted").it("allows a let with multiple bindings", _37_)
+  local function _38_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = finding("(let [value 1] value (+ value 1))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("allows a let with multiple body expressions", _35_)
-  local function _36_()
+  require("plenary.busted").it("allows a let with multiple body expressions", _38_)
+  local function _39_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {}
     local actual_7_auto = finding("(quote (let [value 1] value))")
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  return require("plenary.busted").it("ignores a let inside an explicit quote form", _36_)
+  return require("plenary.busted").it("ignores a let inside an explicit quote form", _39_)
 end
-return require("plenary.busted").describe("generic-binding", _30_)
+return require("plenary.busted").describe("generic-binding", _33_)

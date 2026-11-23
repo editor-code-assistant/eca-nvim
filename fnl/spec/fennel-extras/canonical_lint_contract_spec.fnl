@@ -213,24 +213,23 @@
 )
 
 (deftest canonical-config-uses-separate-same-form-chains
-  (testing "canonical config keeps the combined or rule and adds separate if and when rules"
+  (testing "canonical config moves the or guidance to child-count and keeps separate if and when rules"
     (let [loaded        (config.load ".fnl-extras.fnl")
           rules         (. loaded :lint :rules)
-          or-instance   (. rules :form-chain 3)
-          if-instance   (. rules :form-chain 4)
-          when-instance (. rules :form-chain 5)]
+          or-instance   (. rules :child-count 3)
+          if-instance   (. rules :form-chain 3)
+          when-instance (. rules :form-chain 4)]
       (is (and or-instance
                (= "Prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
                  (. or-instance :description))
                (= "info"
                  (. or-instance :severity))
+               (vim.deep_equal {:files ["^fennel-extras/"] :forms ["or"]}
+                 (. or-instance :applies-to))
                (vim.deep_equal ["="]
-                 (. or-instance :applies-to :forms))
-               (= nil
-                 (. or-instance :options :forms-between))
-               (vim.deep_equal [["or" :form]
-                                ["or" :forms-between :form]]
-                 (. or-instance :options :forbidden-chains))
+                 (. or-instance :options :children))
+               (= 1
+                 (. or-instance :options :max-count))
                if-instance
                (= "Avoid nested `if` forms; they make control flow harder to read."
                  (. if-instance :description))
