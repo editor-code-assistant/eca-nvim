@@ -14,7 +14,7 @@
   [result]
   (let [error (. result :error)]
     (if (= :table
-           (type error))
+          (type error))
       (. error :message)
       error)))
 
@@ -25,7 +25,15 @@
     (let [result (validation {:lint {:spec-files ["^spec/"] :rules {}}})]
       (is (and (not (. result :ok))
                (= "unknown lint key: spec-files"
-                  (error-message result)))))))
+                 (error-message result)))))))
+
+(deftest canonical-severity
+  (testing "info is accepted as a non-failing finding severity"
+    (let [result (validation {:lint {:rules {:form-chain [{:severity   "info"
+                                                           :applies-to {:forms ["or"]}
+                                                           :options    {:forbidden-chains [["or" :form]]}
+                                                           :exclusions []}]}}})]
+      (is (and (. result :ok) (. result :value))))))
 
 (deftest canonical-applies-to
   (testing "files, forms, and modules are accepted"
@@ -44,7 +52,7 @@
                                                            :exclusions []}]}}})]
       (is (and (not (. result :ok))
                (= "unknown applies-to key: contexts"
-                  (error-message result)))))))
+                 (error-message result)))))))
 
 (deftest canonical-exclusions
   (testing "path-only exclusions are accepted"
@@ -60,16 +68,16 @@
                     :options    {:allowed-chains [[:form]]}}
           keys     [:reason :code :form]
           rejected (icollect [_ key (ipairs keys)]
-                             (let [exclusion {:path "^spec/"}]
-                               (tset exclusion key "old contract")
-                               (let [result (validation {:lint {:rules {:form-chain
-                                                                        [{:severity   base.severity
-                                                                          :applies-to base.applies-to
-                                                                          :options    base.options
-                                                                          :exclusions [exclusion]}]}}})]
-                                 (and (not (. result :ok)) (error-message result)))))]
+                     (let [exclusion {:path "^spec/"}]
+                       (tset exclusion key "old contract")
+                       (let [result (validation {:lint {:rules {:form-chain
+                                                                [{:severity   base.severity
+                                                                  :applies-to base.applies-to
+                                                                  :options    base.options
+                                                                  :exclusions [exclusion]}]}}})]
+                         (and (not (. result :ok)) (error-message result)))))]
       (is (= 3
-             (length rejected)))))
+            (length rejected)))))
 
   (testing "non-string path values are rejected"
     (let [result (validation {:lint {:rules {:form-chain [{:severity   "warning"

@@ -257,8 +257,8 @@ local function canonical_instance_error(section, name, index, instance)
     end
   end
   if not or_44_ then
-    if not ((instance.severity == "error") or (instance.severity == "warning") or (instance.severity == "off")) then
-      or_44_ = {message = (path .. ".severity must be error, warning, or off")}
+    if not ((instance.severity == "error") or (instance.severity == "warning") or (instance.severity == "info") or (instance.severity == "off")) then
+      or_44_ = {message = (path .. ".severity must be error, warning, info, or off")}
     else
       or_44_ = nil
     end

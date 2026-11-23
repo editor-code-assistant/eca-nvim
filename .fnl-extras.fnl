@@ -94,10 +94,10 @@
                                                           ["defn" "when" :form]
                                                           ["defn" "fn" :form]]}
                            :exclusions  []}
-                          {:severity    :error
-                           :description "Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible."
+                          {:severity    :info
+                           :description "Prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
                            :applies-to  {:files ["^fennel-extras/"]
-                                         :forms ["when" "when-let" "if" "if-let" "cond" "case"]}
+                                         :forms ["="]}
                            :options     {:forbidden-chains [["or" :form]
                                                             ["or" :forms-between :form]]}
                            :exclusions  []}

@@ -47,16 +47,16 @@
   [diagnostics]
   (let [signatures []]
     (each [_ diagnostic (ipairs diagnostics)]
-          (table.insert signatures
-                        (.. diagnostic.path
-                            ":"
-                            diagnostic.line
-                            ":"
-                            diagnostic.rule
-                            ":"
-                            diagnostic.form
-                            ":"
-                            diagnostic.message)))
+      (table.insert signatures
+        (.. diagnostic.path
+          ":"
+          diagnostic.line
+          ":"
+          diagnostic.rule
+          ":"
+          diagnostic.form
+          ":"
+          diagnostic.message)))
     (table.concat signatures "\n")))
 
 
@@ -74,7 +74,7 @@
               :form     "fnl/app.fnl > module:app > defn:run > if#1 > then"
               :message  "forbidden form"}]
     (each [key value (pairs overrides)]
-          (tset base key value))
+      (tset base key value))
     base))
 
 
@@ -97,7 +97,7 @@
               :form     "fnl/app.fnl > module:app > defn:run > if#1 > then"
               :message  "exclusion does not match any finding"}]
     (each [key value (pairs overrides)]
-          (tset base key value))
+      (tset base key value))
     base))
 
 
@@ -106,57 +106,70 @@
   (testing "renders an error finding and its valid copyable exclusion suggestion"
     (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
             "  exclusion: {:path \"fnl/app.fnl\"}"]
-           (text-lines [(finding {})]))))
+          (text-lines [(finding {})]))))
 
   (testing "renders a warning finding with the same text contract"
     (is (= ["fnl/lib.fnl:3:2: warning module-import: use the target-style core binding"
             "  exclusion: {:path \"fnl/lib.fnl\"}"]
-           (text-lines [(finding {:path     "fnl/lib.fnl"
-                                  :line     3
-                                  :col      2
-                                  :end-line 3
-                                  :end-col  31
-                                  :severity "warning"
-                                  :rule     "module-import"
-                                  :form     "fnl/lib.fnl > top#1"
-                                  :message  "use the target-style core binding"})]))))
+          (text-lines [(finding {:path     "fnl/lib.fnl"
+                                 :line     3
+                                 :col      2
+                                 :end-line 3
+                                 :end-col  31
+                                 :severity "warning"
+                                 :rule     "module-import"
+                                 :form     "fnl/lib.fnl > top#1"
+                                 :message  "use the target-style core binding"})]))))
+
+  (testing "renders an info finding with the same text contract"
+    (is (= ["fnl/info.fnl:4:1: info form-chain: prefer case"
+            "  exclusion: {:path \"fnl/info.fnl\"}"]
+          (text-lines [(finding {:path     "fnl/info.fnl"
+                                 :line     4
+                                 :col      1
+                                 :end-line 4
+                                 :end-col  8
+                                 :severity "info"
+                                 :rule     "form-chain"
+                                 :form     "fnl/info.fnl > top#1"
+                                 :message  "prefer case"})]))))
 
   (testing "renders a separate description line only when configured"
     (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
             "  description: explain this rule"
             "  exclusion: {:path \"fnl/app.fnl\"}"]
-           (text-lines [(finding {:description "explain this rule"})]))))
+          (text-lines [(finding {:description "explain this rule"})]))))
 
   (testing "escapes a quote and backslash in the text exclusion snippet"
     (is (= ["fnl/quote.fnl:1:1: error custom: bad form"
             "  exclusion: {:path \"fnl/quote.fnl\"}"]
-           (text-lines [(finding {:path    "fnl/quote.fnl"
-                                  :line    1
-                                  :col     1
-                                  :rule    "custom\"rule"
-                                  :form    "fnl/quote.fnl > top#1\\ > \"quoted\""
-                                  :message "bad form"})]))))
+          (text-lines [(finding {:path    "fnl/quote.fnl"
+                                 :line    1
+                                 :col     1
+                                 :rule    "custom\"rule"
+                                 :form    "fnl/quote.fnl > top#1\\ > \"quoted\""
+                                 :message "bad form"})]))))
 
   (testing "renders a stale exclusion without a snippet"
     (is (= [".fnl-extras.fnl:7:9: error forbidden-form: exclusion does not match any finding"]
-           (text-lines [(stale-exclusion {})]))))
+          (text-lines [(stale-exclusion {})]))))
 
   (testing "does not render a description for a stale exclusion"
     (is (= [".fnl-extras.fnl:7:9: error forbidden-form: exclusion does not match any finding"]
-           (text-lines [(stale-exclusion {:description "explain this rule"})])))))
+          (text-lines [(stale-exclusion {:description "explain this rule"})])))))
 
 (deftest json-output
   (testing "renders a finding as one exact ordered JSON object"
     (is (= ["{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"forbidden form\"}"]
-           (json-lines [(finding {})]))))
+          (json-lines [(finding {})]))))
 
   (testing "omits end-line and end-col from stale exclusion JSON"
     (is (= ["{\"kind\":\"stale-exclusion\",\"path\":\".fnl-extras.fnl\",\"line\":7,\"col\":9,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"exclusion does not match any finding\"}"]
-           (json-lines [(stale-exclusion {})]))))
+          (json-lines [(stale-exclusion {})]))))
 
   (testing "includes an optional description only when configured"
     (is (= ["{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"forbidden form\",\"description\":\"explain this rule\"}"]
-           (json-lines [(finding {:description "explain this rule"})]))))
+          (json-lines [(finding {:description "explain this rule"})]))))
 
   (testing "escapes quote backslash newline tab carriage return controls and preserves UTF-8"
     (let [slash           (string.char 92)
@@ -164,56 +177,56 @@
           control-message (.. "m\" \\ " "\n" "\t" "\r" (string.char 1) " " (string.char 31) " é 😀")
           expected        (.. "{\"kind\":\"finding\",\"path\":\"p" slash "\"" "ath" slash slash slash "n" slash "t" slash "r" slash "u0001" slash "u001Fé😀\",\"line\":1,\"col\":1,\"end-line\":1,\"end-col\":2,\"severity\":\"error\",\"rule\":\"r\",\"form\":\"f\",\"message\":\"m" slash "\"" " " slash slash " " slash "n" slash "t" slash "r" slash "u0001" " " slash "u001F é 😀\"}")]
       (is (= [expected]
-             (json-lines [(finding {:path     control-path
-                                    :line     1
-                                    :col      1
-                                    :end-line 1
-                                    :end-col  2
-                                    :rule     "r"
-                                    :form     "f"
-                                    :message  control-message})])))))
+            (json-lines [(finding {:path     control-path
+                                   :line     1
+                                   :col      1
+                                   :end-line 1
+                                   :end-col  2
+                                   :rule     "r"
+                                   :form     "f"
+                                   :message  control-message})])))))
 
   (testing "replaces an invalid UTF-8 byte with U+FFFD in JSON"
     (let [message  (.. "a" (string.char 255) "b")
           expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"a" (string.char 239) (string.char 191) (string.char 189) "b\"}")]
       (is (= [expected]
-             (json-lines [(finding {:message message})])))))
+            (json-lines [(finding {:message message})])))))
 
   (testing "replaces a truncated UTF-8 sequence with U+FFFD in JSON"
     (let [message  (string.char 195)
           expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" (string.char 239) (string.char 191) (string.char 189) "\"}")]
       (is (= [expected]
-             (json-lines [(finding {:message message})])))))
+            (json-lines [(finding {:message message})])))))
 
   (testing "preserves DEL as a raw byte in JSON"
     (let [message  (string.char 127)
           expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" (string.char 127) "\"}")]
       (is (= [expected]
-             (json-lines [(finding {:message message})])))))
+            (json-lines [(finding {:message message})])))))
 
   (testing "preserves valid UTF-8 in JSON"
     (let [message  "é😀"
           expected "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"é😀\"}"]
       (is (= [expected]
-             (json-lines [(finding {:message message})])))))
+            (json-lines [(finding {:message message})])))))
 
   (testing "preserves U+E000 bytes in JSON"
     (let [message  (.. (string.char 238) (string.char 128) (string.char 128))
           expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
       (is (= [expected]
-             (json-lines [(finding {:message message})])))))
+            (json-lines [(finding {:message message})])))))
 
   (testing "preserves U+FFFD bytes in JSON"
     (let [message  (.. (string.char 239) (string.char 191) (string.char 189))
           expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
       (is (= [expected]
-             (json-lines [(finding {:message message})])))))
+            (json-lines [(finding {:message message})])))))
 
   (testing "preserves U+FFFF bytes in JSON"
     (let [message  (.. (string.char 239) (string.char 191) (string.char 191))
           expected (.. "{\"kind\":\"finding\",\"path\":\"fnl/app.fnl\",\"line\":12,\"col\":5,\"end-line\":12,\"end-col\":18,\"severity\":\"error\",\"rule\":\"forbidden-form\",\"form\":\"fnl/app.fnl > module:app > defn:run > if#1 > then\",\"message\":\"" message "\"}")]
       (is (= [expected]
-             (json-lines [(finding {:message message})])))))
+            (json-lines [(finding {:message message})])))))
 
   (testing "handles UTF-8 boundary bytes and invalid sequences in JSON"
     (let [replacement (.. (string.char 239) (string.char 191) (string.char 189))
@@ -243,28 +256,30 @@
                        :overlong-two   {:message (. cases :overlong-two) :json [(.. prefix replacement replacement suffix)]}
                        :overlong-three {:message (. cases :overlong-three) :json [(.. prefix replacement replacement replacement suffix)]}}]
       (each [key message (pairs cases)]
-            (tset actual key (json-case message)))
+        (tset actual key (json-case message)))
       (is (= expected
-             actual))))
+            actual))))
 
   (testing "preserves invalid UTF-8 bytes in text output"
     (let [message (.. "a" (string.char 255) "b")]
       (is (= [(.. "fnl/app.fnl:12:5: error forbidden-form: " message)
               "  exclusion: {:path \"fnl/app.fnl\"}"]
-             (text-lines [(finding {:message message})])))))
+            (text-lines [(finding {:message message})])))))
 
   (testing "returns one JSON object per diagnostic without embedded newlines"
     (is (= 2
-           (length (json-lines [(finding {}) (stale-exclusion {})]))))))
+          (length (json-lines [(finding {}) (stale-exclusion {})]))))))
 
 (deftest ordering-and-purity
-  (testing "sorts by path line column severity rule form and message"
+  (testing "sorts by path line column severity rule and message with error warning info order"
     (is (= [(finding {:path "a.fnl" :line 1 :col 1 :severity "error" :rule "a" :form "a" :message "z"})
             (finding {:path "a.fnl" :line 1 :col 1 :severity "warning" :rule "a" :form "a" :message "a"})
+            (finding {:path "a.fnl" :line 1 :col 1 :severity "info" :rule "a" :form "a" :message "b"})
             (finding {:path "b.fnl" :line 1 :col 1 :severity "error" :rule "a" :form "a" :message "a"})]
-           (sorted [(finding {:path "b.fnl" :line 1 :col 1 :severity "error" :rule "a" :form "a" :message "a"})
-                    (finding {:path "a.fnl" :line 1 :col 1 :severity "warning" :rule "a" :form "a" :message "a"})
-                    (finding {:path "a.fnl" :line 1 :col 1 :severity "error" :rule "a" :form "a" :message "z"})]))))
+          (sorted [(finding {:path "b.fnl" :line 1 :col 1 :severity "error" :rule "a" :form "a" :message "a"})
+                   (finding {:path "a.fnl" :line 1 :col 1 :severity "info" :rule "a" :form "a" :message "b"})
+                   (finding {:path "a.fnl" :line 1 :col 1 :severity "warning" :rule "a" :form "a" :message "a"})
+                   (finding {:path "a.fnl" :line 1 :col 1 :severity "error" :rule "a" :form "a" :message "z"})]))))
 
   (testing "does not mutate its input and is deterministic across repeated calls"
     (let [input  [(finding {:path "b.fnl"}) (finding {:path "a.fnl"})]
@@ -272,12 +287,12 @@
           first  (sorted input)
           second (sorted input)]
       (is (and (= before
-                  (diagnostic-signatures input))
+                 (diagnostic-signatures input))
                (= (diagnostic-signatures first)
-                  (diagnostic-signatures second))
+                 (diagnostic-signatures second))
                (not (= input
-                       first))))))
+                      first))))))
 
   (testing "returns an empty list for empty input"
     (is (= []
-           (sorted [])))))
+          (sorted [])))))

@@ -25,33 +25,44 @@ end
 require("plenary.busted").describe("canonical-rule-shape", _2_)
 local function _4_()
   local function _5_()
+    local result = validation({lint = {rules = {["form-chain"] = {{severity = "info", ["applies-to"] = {forms = {"or"}}, options = {["forbidden-chains"] = {{"or", "form"}}}, exclusions = {}}}}}})
+    local assert_28_auto = require("luassert")
+    local value_29_auto = (result.ok and result.value)
+    assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
+    return true
+  end
+  return require("plenary.busted").it("info is accepted as a non-failing finding severity", _5_)
+end
+require("plenary.busted").describe("canonical-severity", _4_)
+local function _6_()
+  local function _7_()
     local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {files = {"^fnl/"}, forms = {"require"}, modules = {"plenary.busted"}}, options = {["allowed-chains"] = {{"form"}}}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
     return true
   end
-  require("plenary.busted").it("files, forms, and modules are accepted", _5_)
-  local function _6_()
+  require("plenary.busted").it("files, forms, and modules are accepted", _7_)
+  local function _8_()
     local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {contexts = {"all"}}, options = {module = "require"}, exclusions = {}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (not result.ok and ("unknown applies-to key: contexts" == error_message(result)))
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. result \"ok\")) (= \"unknown applies-to key: contexts\" (error-message result)))")
     return true
   end
-  return require("plenary.busted").it("contexts is rejected", _6_)
+  return require("plenary.busted").it("contexts is rejected", _8_)
 end
-require("plenary.busted").describe("canonical-applies-to", _4_)
-local function _7_()
-  local function _8_()
+require("plenary.busted").describe("canonical-applies-to", _6_)
+local function _9_()
+  local function _10_()
     local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"form"}}}, exclusions = {{path = "^spec/"}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = (result.ok and result.value)
     assert_28_auto.is_truthy(value_29_auto, "(and (. result \"ok\") (. result \"value\"))")
     return true
   end
-  require("plenary.busted").it("path-only exclusions are accepted", _8_)
-  local function _9_()
+  require("plenary.busted").it("path-only exclusions are accepted", _10_)
+  local function _11_()
     local base = {severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"form"}}}}
     local keys = {"reason", "code", "form"}
     local rejected
@@ -80,16 +91,16 @@ local function _7_()
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("old exclusion keys are rejected", _9_)
-  local function _11_()
+  require("plenary.busted").it("old exclusion keys are rejected", _11_)
+  local function _13_()
     local result = validation({lint = {rules = {["form-chain"] = {{severity = "warning", ["applies-to"] = {forms = {"if"}}, options = {["allowed-chains"] = {{"form"}}}, exclusions = {{path = {"^spec/"}}}}}}}})
     local assert_28_auto = require("luassert")
     local value_29_auto = not result.ok
     assert_28_auto.is_truthy(value_29_auto, "(not (. result \"ok\"))")
     return true
   end
-  require("plenary.busted").it("non-string path values are rejected", _11_)
-  local function _12_()
+  require("plenary.busted").it("non-string path values are rejected", _13_)
+  local function _14_()
     local old_result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"fennel-extras.macros.test"}}, options = {mode = "require", binding = "macros", ["exempt-files"] = {"^spec/"}}, exclusions = {}}}}}})
     local new_result = validation({lint = {rules = {["module-import"] = {{severity = "error", ["applies-to"] = {modules = {"fennel-extras.macros.test"}}, options = {mode = "require", binding = "macros"}, exclusions = {{path = "^fennel-extras/macros/test[.]fnlm$"}}}}}}})
     local assert_28_auto = require("luassert")
@@ -97,6 +108,6 @@ local function _7_()
     assert_28_auto.is_truthy(value_29_auto, "(and (not (. old-result \"ok\")) (. new-result \"ok\") (. new-result \"value\"))")
     return true
   end
-  return require("plenary.busted").it("module-import rejects exempt-files and accepts a path-only exclusion", _12_)
+  return require("plenary.busted").it("module-import rejects exempt-files and accepts a path-only exclusion", _14_)
 end
-return require("plenary.busted").describe("canonical-exclusions", _7_)
+return require("plenary.busted").describe("canonical-exclusions", _9_)

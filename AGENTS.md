@@ -3,7 +3,8 @@ Read docs/CONTRIBUTING.md first; its rules apply to you.
 - TDD always: write or change a spec first. Run `make compile && make test` and confirm it fails for the expected reason; quote that reason in your report. Then make the smallest change that makes it pass, and run the full suite again.
 - For behavior-preserving refactors, run `make test` before and after. Existing specs are the safety net. Do not edit them during the refactor.
 - Only touch files in the task's scope. The working tree may contain uncommitted user work: never stash, reset, checkout, or revert it. Do not commit or push unless asked.
-- After any Fennel change, run `make compile`, `make test`, `make lint`, and `make style`; run `make fmt` (or check with `make fmt-check`) too. Keep generated Lua in sync and report lint findings. Never hand-edit `lua/`. Pre-existing findings in untouched files are not your task unless asked, but do not add new ones.
+- After any Fennel change, run `make compile`, `make check-compiled`, `make test`, `make lint`, and `make style`; run `make fmt` (or check with `make fmt-check`) too. Changed-file style and info checks must be clean before completion. Keep generated Lua in sync and report lint findings. Never hand-edit `lua/`. Pre-existing findings in untouched files are not your task unless asked, but do not add new ones.
+- Do not add exclusions for `:info` findings without explicit user approval.
 - The `formatter split-bindings` rule (warning) requires multi-pair `let`/`when-let`/`if-let`/`with-open` bindings to put each pair on its own line.
 - The canonical `form-chain` policy (warning, source files only) flags `var`, `set`, and `while`; prefer returning new values instead.
 - The `file-size` rule (warning) limits source files to its explicit `:max-code-lines` option.

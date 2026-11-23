@@ -12,11 +12,7 @@ local tab = string.char(9)
 local carriage_return = string.char(13)
 local replacement = (string.char(239) .. string.char(191) .. string.char(189))
 local function severity_rank(severity)
-  if (severity == "error") then
-    return 1
-  else
-    return 2
-  end
+  return (({error = 1, warning = 2})[severity] or 3)
 end
 local function finding_less_3f(a, b)
   return ((a.path < b.path) or ((a.path == b.path) and ((a.line < b.line) or ((a.line == b.line) and ((a.col < b.col) or ((a.col == b.col) and ((severity_rank(a.severity) < severity_rank(b.severity)) or ((severity_rank(a.severity) == severity_rank(b.severity)) and ((a.rule < b.rule) or ((a.rule == b.rule) and ((a.form < b.form) or ((a.form == b.form) and (a.message < b.message)))))))))))))

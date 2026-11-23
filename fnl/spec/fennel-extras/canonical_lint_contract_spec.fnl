@@ -220,9 +220,11 @@
           if-instance   (. rules :form-chain 4)
           when-instance (. rules :form-chain 5)]
       (is (and or-instance
-               (= "Keep `or` operands simple; extract conditional logic into private functions. Use `cond` and `case` when possible."
+               (= "Prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
                  (. or-instance :description))
-               (vim.deep_equal ["when" "when-let" "if" "if-let" "cond" "case"]
+               (= "info"
+                 (. or-instance :severity))
+               (vim.deep_equal ["="]
                  (. or-instance :applies-to :forms))
                (= nil
                  (. or-instance :options :forms-between))
