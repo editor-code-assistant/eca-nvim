@@ -50,8 +50,10 @@
                            :exclusions  []}]
           :child-count   [{:severity    :error
                            :description "keep each test focused on one assertion"
-                           :applies-to  {:files [:^spec/] :forms [:testing]}
-                           :options     {:children ["is"] :max-count 1}
+                           :applies-to  {:files ["^spec/"]
+                                         :forms ["testing"]}
+                           :options     {:children  ["is"]
+                                         :max-count 1}
                            :exclusions  []}
                           {:severity    :error
                            :description "keep multi-branch if forms simple by extracting complex logic into private functions"
@@ -59,7 +61,15 @@
                            :options     {:min-count   2
                                          :max-count   2
                                          :not-counted ["nil" "true" "false"]}
-                           :exclusions  [{:path "^fennel-extras/macros"}]}]
+                           :exclusions  [{:path "^fennel-extras/macros"}]}
+                          {:severity    :info
+                           :description "Prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["or"]}
+                           :options     {:children  ["="]
+                                         :max-count 2
+                                         :direct    true}
+                           :exclusions  []}]
           :module-import [{:severity    :error
                            :description "standardize shared core access through the conventional core binding"
                            :applies-to  {:modules ["eca.nfnl.core"]}
@@ -94,21 +104,16 @@
                                                           ["defn" "when" :form]
                                                           ["defn" "fn" :form]]}
                            :exclusions  []}
-                          {:severity    :info
-                           :description "Prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
-                           :applies-to  {:files ["^fennel-extras/"]
-                                         :forms ["="]}
-                           :options     {:forbidden-chains [["or" :form]
-                                                            ["or" :forms-between :form]]}
-                           :exclusions  []}
                           {:severity    :error
                            :description "Avoid nested `if` forms; they make control flow harder to read."
-                           :applies-to  {:files ["^fennel-extras/"] :forms ["if"]}
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["if"]}
                            :options     {:forbidden-chains [["if" :form]]}
                            :exclusions  []}
                           {:severity    :error
                            :description "Avoid nested `when` forms; they make control flow harder to read."
-                           :applies-to  {:files ["^fennel-extras/"] :forms ["when"]}
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["when"]}
                            :options     {:forbidden-chains [["when" :form]]}
                            :exclusions  []}
                           {:severity    :error

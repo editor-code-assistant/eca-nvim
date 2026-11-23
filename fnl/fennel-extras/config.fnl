@@ -61,9 +61,9 @@
   [value prefix name]
   (let [(next-name rule) (next value name)]
     (when next-name
-          (if (valid-rule-list? rule)
-            (rule-map-error-step value prefix next-name)
-            {:message (.. prefix next-name ": invalid indentation rule")}))))
+      (if (valid-rule-list? rule)
+        (rule-map-error-step value prefix next-name)
+        {:message (.. prefix next-name ": invalid indentation rule")}))))
 
 (defn- rule-map-error
   [value prefix]
@@ -101,17 +101,17 @@
   [workspace]
   (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}]
     (accumulate [candidate nil name _ (pairs workspace)]
-                (if (and (not (. allowed name))
-                         (or (= candidate nil)
-                             (< (tostring name) (tostring candidate))))
-                  name
-                  candidate))))
+      (if (and (not (. allowed name))
+               (or (= candidate nil)
+                   (< (tostring name) (tostring candidate))))
+        name
+        candidate))))
 
 (defn- workspace-key-error-result
   [workspace]
   (let [key (workspace-key workspace)]
     (when key
-          {:message (.. "unknown workspace key: " key)})))
+      {:message (.. "unknown workspace key: " key)})))
 
 (defn- workspace-key-error
   [workspace]
@@ -217,17 +217,17 @@
   [tbl]
   (let [allowed {:workspace true :format true :lint true :design true}]
     (accumulate [candidate nil key _ (pairs tbl)]
-                (if (and (not (. allowed key))
-                         (or (= candidate nil)
-                             (< (tostring key) (tostring candidate))))
-                  key
-                  candidate))))
+      (if (and (not (. allowed key))
+               (or (= candidate nil)
+                   (< (tostring key) (tostring candidate))))
+        key
+        candidate))))
 
 (defn- unknown-config-error
   [tbl]
   (let [key (unknown-config-key tbl)]
     (when key
-          {:message (.. "unknown configuration key: " key)})))
+      {:message (.. "unknown configuration key: " key)})))
 
 (defn- format-fragment-key?
   [key]
@@ -242,11 +242,11 @@
 (defn- unknown-format-fragment-key
   [tbl]
   (accumulate [candidate nil key _ (pairs tbl)]
-              (if (and (not (format-fragment-key? key))
-                       (or (= candidate nil)
-                           (< (tostring key) (tostring candidate))))
-                key
-                candidate)))
+    (if (and (not (format-fragment-key? key))
+             (or (= candidate nil)
+                 (< (tostring key) (tostring candidate))))
+      key
+      candidate)))
 
 (defn- format-fragment-error
   [tbl]
@@ -286,27 +286,27 @@
   [result rule index exclusion]
   (let [copy {}]
     (each [key value (pairs exclusion)]
-          (tset copy key value))
+      (tset copy key value))
     (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index)))
   result)
 
 (defn- append-canonical-instance-exclusions
   [result rule index instance]
   (each [_ exclusion (ipairs (or instance.exclusions []))]
-        (append-canonical-exclusion result rule index exclusion))
+    (append-canonical-exclusion result rule index exclusion))
   result)
 
 (defn- append-canonical-rule-exclusions
   [result rule instances]
   (each [index instance (ipairs (or instances []))]
-        (append-canonical-instance-exclusions result rule index instance))
+    (append-canonical-instance-exclusions result rule index instance))
   result)
 
 (defn- canonical-exclusions
   [rules]
   (let [result []]
     (each [rule instances (pairs rules)]
-          (append-canonical-rule-exclusions result rule instances))
+      (append-canonical-rule-exclusions result rule instances))
     result))
 
 (defn- normalize-lint-rules
@@ -329,8 +329,8 @@
   (let [rules  (core.merge (or (and cfg.lint cfg.lint.rules) {}))
         design (and cfg.design cfg.design.rules)]
     (each [rule instances (pairs (or design {}))]
-          (when (= (. rules rule) nil)
-                (tset rules rule instances)))
+      (when (= (. rules rule) nil)
+        (tset rules rule instances)))
     (valid-lint-policy-result cfg rules design)))
 
 (defn- lint-policy-valid
