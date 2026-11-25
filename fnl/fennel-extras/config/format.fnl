@@ -233,3 +233,31 @@
   (if (= (type config) :table)
     (validate-table config require-paths? require-scan? strict?)
     {:message "configuration must be a table"}))
+
+(defn- format-key?
+  [key]
+  (case key
+    :indent-width true
+    :parser       true
+    :indents      true
+    :format-as    true
+    :alignment    true
+    :newline      true
+    :extensions   true
+    _             false))
+
+(defn- unknown-format-key
+  [config]
+  (accumulate [candidate nil key _ (pairs config)]
+    (if (and (not (format-key? key))
+             (or (= candidate nil)
+                 (< (tostring key) (tostring candidate))))
+      key
+      candidate)))
+
+(defn validate-fragment
+  [config]
+  (let [key (unknown-format-key config)]
+    (if key
+      {:message (.. "unknown configuration key: " key)}
+      (validate config false false false))))

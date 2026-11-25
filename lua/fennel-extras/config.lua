@@ -222,28 +222,6 @@ local function unknown_config_error(tbl)
     return nil
   end
 end
-local function format_fragment_key_3f(key)
-  return ((key == "indent-width") or (key == "parser") or (key == "indents") or (key == "format-as") or (key == "alignment") or (key == "newline") or (key == "extensions"))
-end
-local function unknown_format_fragment_key(tbl)
-  local candidate = nil
-  for key, _ in pairs(tbl) do
-    if (not format_fragment_key_3f(key) and ((candidate == nil) or (tostring(key) < tostring(candidate)))) then
-      candidate = key
-    else
-      candidate = candidate
-    end
-  end
-  return candidate
-end
-local function format_fragment_error(tbl)
-  local key = unknown_format_fragment_key(tbl)
-  if key then
-    return {message = ("unknown configuration key: " .. key)}
-  else
-    return format_config.validate(tbl, false, false, false)
-  end
-end
 local function validate_table_result(tbl, failure)
   if failure then
     return nil, failure
@@ -255,7 +233,7 @@ local function validate_canonical_table(tbl)
   return validate_table_result(tbl, unknown_config_error(tbl))
 end
 local function validate_format_fragment(tbl)
-  local failure = format_fragment_error(tbl)
+  local failure = format_config["validate-fragment"](tbl)
   return validation_result(tbl, failure)
 end
 local validate
@@ -357,10 +335,10 @@ do
 end
 local function parse_loaded_text(text)
   local ok, parsed_or_error
-  local function _36_()
+  local function _34_()
     return parse_string(text)
   end
-  ok, parsed_or_error = pcall(_36_)
+  ok, parsed_or_error = pcall(_34_)
   if not ok then
     return nil, parsed_or_error
   else

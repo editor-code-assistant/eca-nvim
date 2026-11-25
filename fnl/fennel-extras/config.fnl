@@ -229,32 +229,6 @@
     (when key
       {:message (.. "unknown configuration key: " key)})))
 
-(defn- format-fragment-key?
-  [key]
-  (or (= key :indent-width)
-      (= key :parser)
-      (= key :indents)
-      (= key :format-as)
-      (= key :alignment)
-      (= key :newline)
-      (= key :extensions)))
-
-(defn- unknown-format-fragment-key
-  [tbl]
-  (accumulate [candidate nil key _ (pairs tbl)]
-    (if (and (not (format-fragment-key? key))
-             (or (= candidate nil)
-                 (< (tostring key) (tostring candidate))))
-      key
-      candidate)))
-
-(defn- format-fragment-error
-  [tbl]
-  (let [key (unknown-format-fragment-key tbl)]
-    (if key
-      {:message (.. "unknown configuration key: " key)}
-      (format-config.validate tbl false false false))))
-
 (defn- validate-table-result
   [tbl failure]
   (if failure
@@ -267,7 +241,7 @@
 
 (defn- validate-format-fragment
   [tbl]
-  (let [failure (format-fragment-error tbl)]
+  (let [failure (format-config.validate-fragment tbl)]
     (validation-result tbl failure)))
 
 (defn validate

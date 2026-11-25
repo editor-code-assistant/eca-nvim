@@ -136,4 +136,48 @@ do
   _2amodule_2a["validate"] = validate0
   validate = _2amodule_2a.validate
 end
+local function format_key_3f(key)
+  if (key == "indent-width") then
+    return true
+  elseif (key == "parser") then
+    return true
+  elseif (key == "indents") then
+    return true
+  elseif (key == "format-as") then
+    return true
+  elseif (key == "alignment") then
+    return true
+  elseif (key == "newline") then
+    return true
+  elseif (key == "extensions") then
+    return true
+  else
+    local _ = key
+    return false
+  end
+end
+local function unknown_format_key(config)
+  local candidate = nil
+  for key, _ in pairs(config) do
+    if (not format_key_3f(key) and ((candidate == nil) or (tostring(key) < tostring(candidate)))) then
+      candidate = key
+    else
+      candidate = candidate
+    end
+  end
+  return candidate
+end
+local validate_fragment
+do
+  local function validate_fragment0(config)
+    local key = unknown_format_key(config)
+    if key then
+      return {message = ("unknown configuration key: " .. key)}
+    else
+      return validate(config, false, false, false)
+    end
+  end
+  _2amodule_2a["validate-fragment"] = validate_fragment0
+  validate_fragment = _2amodule_2a["validate-fragment"]
+end
 return nil
