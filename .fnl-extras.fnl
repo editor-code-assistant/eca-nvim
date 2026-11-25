@@ -63,7 +63,7 @@
                                          :not-counted ["nil" "true" "false"]}
                            :exclusions  [{:path "^fennel-extras/macros"}]}
                           {:severity    :info
-                           :description "Prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
+                           :description "prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["or"]}
                            :options     {:children  ["="]
@@ -96,7 +96,21 @@
                            :options     {:allowed-chains []}
                            :exclusions  []}
                           {:severity    :error
-                           :description "Keep bindings at the start of the body so functions gather required data before executing logic."
+                           :description "keep `or` operands simple; prefer `cond` or extract conditional logic into private functions."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["and" "when" "when-let" "if" "if-let" "cond" "case"]}
+                           :options     {:forbidden-chains [["or" :form]
+                                                            ["or" :forms-between :form]]}
+                           :exclusions  []}
+                          {:severity    :error
+                           :description "keep `and` operands simple; extract conditional logic into private functions."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["or" "when" "when-let" "if" "if-let" "cond" "case"]}
+                           :options     {:forbidden-chains [["and" :form]
+                                                            ["and" :forms-between :form]]}
+                           :exclusions  []}
+                          {:severity    :error
+                           :description "keep bindings at the start of the body so functions gather required data before executing logic."
                            :applies-to  {:files ["^fennel-extras/"] :forms ["let"]}
                            :options     {:allowed-chains [["def" :form]
                                                           ["defn" :form]
@@ -105,13 +119,13 @@
                                                           ["defn" "fn" :form]]}
                            :exclusions  []}
                           {:severity    :error
-                           :description "Avoid nested `if` forms; they make control flow harder to read."
+                           :description "avoid nested `if` forms; they make control flow harder to read."
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["if"]}
                            :options     {:forbidden-chains [["if" :form]]}
                            :exclusions  []}
                           {:severity    :error
-                           :description "Avoid nested `when` forms; they make control flow harder to read."
+                           :description "avoid nested `when` forms; they make control flow harder to read."
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["when"]}
                            :options     {:forbidden-chains [["when" :form]]}
