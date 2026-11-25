@@ -171,16 +171,16 @@
       key-error
       key-error
 
-      (and require-paths? (= workspace.paths nil))
+      (and table? require-paths? (= workspace.paths nil))
       (workspace-error-message "missing workspace.paths")
 
-      (and workspace.paths (not (array-of-strings? workspace.paths)))
+      (and table? workspace.paths (not (array-of-strings? workspace.paths)))
       (workspace-error-message "workspace.paths must be an array of strings")
 
-      (and workspace.exclude (not (array-of-strings? workspace.exclude)))
+      (and table? workspace.exclude (not (array-of-strings? workspace.exclude)))
       (workspace-error-message "workspace.exclude must be an array of strings")
 
-      (and workspace.extensions (not (extensions? workspace.extensions)))
+      (and table? workspace.extensions (not (extensions? workspace.extensions)))
       (workspace-error-message "workspace.extensions must be a non-empty list of strings starting with \".\"")
 
       (and (not= workspace.dotfiles nil)
@@ -250,7 +250,7 @@
     (not= (type tbl) :table)
     (values nil {:message "configuration must be a table"})
 
-    (or (. tbl :workspace) (. tbl :format) (. tbl :lint) (. tbl :design))
+    (or (not= (rawget tbl :workspace) nil) (not= (rawget tbl :format) nil) (not= (rawget tbl :lint) nil) (not= (rawget tbl :design) nil))
     (validate-canonical-table tbl)
 
     :else
