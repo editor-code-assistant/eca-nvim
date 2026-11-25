@@ -196,7 +196,7 @@
 (defn- validate-workspace-value
   [workspace require-workspace? require-paths?]
   (let [table?             (= (type workspace) :table)
-        workspace-required (or require-workspace? workspace)
+        workspace-required (or require-workspace? (not= workspace nil))
         key-error          (and table? (workspace-key-error workspace))]
     (cond
       (and workspace-required (not table?))
