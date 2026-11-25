@@ -16,34 +16,60 @@
 
 (defn- array-of-strings-step
   [value index]
-  (cond (= (. value index) nil) true
-        (= (type (. value index)) :string) (array-of-strings-step value (+ index 1))
-        :else false))
+  (cond
+    (= (. value index) nil)
+    true
+
+    (= (type (. value index)) :string)
+    (array-of-strings-step value (+ index 1))
+
+    :else
+    false))
 
 (defn- array-of-strings?
   [value]
-  (cond (= (type value) :table) (array-of-strings-step value 1)
-        :else false))
+  (cond
+    (= (type value) :table)
+    (array-of-strings-step value 1)
+
+    :else
+    false))
 
 (defn- integer?
   [value]
-  (cond (= (type value) :number) (= value (math.floor value))
-        :else false))
+  (cond
+    (= (type value) :number)
+    (= value (math.floor value))
+
+    :else
+    false))
 
 (defn- valid-index?
   [index]
-  (cond (= index nil) true
-        (integer? index) (>= index 0)
-        :else false))
+  (cond
+    (= index nil)
+    true
+
+    (integer? index)
+    (>= index 0)
+
+    :else
+    false))
 
 (defn- valid-rule-values?
   [rule]
   (let [kind  (. rule 1)
         value (. rule 2)
         index (. rule 3)]
-    (cond (= kind :block) (and (integer? value) (>= value 0) (= index nil))
-          (= kind :inner) (and (= value 0) (valid-index? index))
-          :else false)))
+    (cond
+      (= kind :block)
+      (and (integer? value) (>= value 0) (= index nil))
+
+      (= kind :inner)
+      (and (= value 0) (valid-index? index))
+
+      :else
+      false)))
 
 (defn- valid-rule?
   [rule]
@@ -52,14 +78,24 @@
 
 (defn- valid-rule-list-step
   [value index]
-  (cond (> index (length value)) true
-        (valid-rule? (. value index)) (valid-rule-list-step value (+ index 1))
-        :else false))
+  (cond
+    (> index (length value))
+    true
+
+    (valid-rule? (. value index))
+    (valid-rule-list-step value (+ index 1))
+
+    :else
+    false))
 
 (defn- valid-rule-list?
   [value]
-  (cond (= (type value) :table) (valid-rule-list-step value 1)
-        :else false))
+  (cond
+    (= (type value) :table)
+    (valid-rule-list-step value 1)
+
+    :else
+    false))
 
 (defn- rule-map-error-step
   [value prefix name]
@@ -77,10 +113,16 @@
 
 (defn- extensions-step
   [value index]
-  (cond (> index (length value)) true
-        (and (= (type (. value index)) :string)
-             (= (string.sub (. value index) 1 1) ".")) (extensions-step value (+ index 1))
-        :else false))
+  (cond
+    (> index (length value))
+    true
+
+    (and (= (type (. value index)) :string)
+         (= (string.sub (. value index) 1 1) "."))
+    (extensions-step value (+ index 1))
+
+    :else
+    false))
 
 (defn- extensions?
   [value]
@@ -90,24 +132,42 @@
 
 (defn- configuration-error-with-lint
   [failure lint]
-  (cond failure failure
-        lint (lint-config.lint-error lint)
-        :else nil))
+  (cond
+    failure
+    failure
+
+    lint
+    (lint-config.lint-error lint)
+
+    :else
+    nil))
 
 (defn- configuration-error
   [tbl]
   (let [format-error (and (. tbl :format)
                           (format-config.validate (. tbl :format) false false false))
-        lint-error (configuration-error-with-lint format-error (. tbl :lint))]
-    (cond lint-error lint-error
-          (. tbl :design) (lint-config.design-error (. tbl :design))
-          :else nil)))
+        lint-error   (configuration-error-with-lint format-error (. tbl :lint))]
+    (cond
+      lint-error
+      lint-error
+
+      (. tbl :design)
+      (lint-config.design-error (. tbl :design))
+
+      :else
+      nil)))
 
 (defn- workspace-key-candidate?
   [allowed candidate name]
-  (cond (. allowed name) false
-        (= candidate nil) true
-        :else (< (tostring name) (tostring candidate))))
+  (cond
+    (. allowed name)
+    false
+
+    (= candidate nil)
+    true
+
+    :else
+    (< (tostring name) (tostring candidate))))
 
 (defn- workspace-key
   [workspace]
@@ -115,16 +175,11 @@
     (accumulate [candidate nil name _ (pairs workspace)]
       (if (workspace-key-candidate? allowed candidate name) name candidate))))
 
-(defn- workspace-key-error-result
-  [workspace]
-  (let [key (workspace-key workspace)]
-    (when key
-      {:message (.. "unknown workspace key: " key)})))
-
 (defn- workspace-key-error
   [workspace]
-  (and (= (type workspace) :table)
-       (workspace-key-error-result workspace)))
+  (let [key (and (= (type workspace) :table) (workspace-key workspace))]
+    (when key
+      {:message (.. "unknown workspace key: " key)})))
 
 (defn- workspace-error-message
   [message]
@@ -138,48 +193,13 @@
   [workspace key]
   (and workspace (not= (. workspace key) nil) (not (boolean? (. workspace key)))))
 
-(defn- workspace-error
-  [tbl]
-  (let [workspace (. tbl :workspace)
-        key-error (workspace-key-error workspace)]
+(defn- validate-workspace-value
+  [workspace require-workspace? require-paths?]
+  (let [table?             (= (type workspace) :table)
+        workspace-required (or require-workspace? workspace)
+        key-error          (and table? (workspace-key-error workspace))]
     (cond
-      (and workspace (not= (type workspace) :table))
-      (workspace-error-message "workspace must be a table")
-
-      key-error
-      key-error
-
-      (and workspace workspace.paths (not (array-of-strings? workspace.paths)))
-      (workspace-error-message "workspace.paths must be an array of strings")
-
-      (and workspace workspace.exclude (not (array-of-strings? workspace.exclude)))
-      (workspace-error-message "workspace.exclude must be an array of strings")
-
-      (and workspace workspace.extensions (not (extensions? workspace.extensions)))
-      (workspace-error-message "workspace.extensions must be a non-empty list of strings starting with \".\"")
-
-      (invalid-optional-boolean? workspace :dotfiles)
-      (workspace-error-message "workspace.dotfiles must be a boolean")
-
-      (invalid-optional-boolean? workspace :symlinks)
-      (workspace-error-message "workspace.symlinks must be a boolean")
-
-      (invalid-optional-boolean? workspace :config)
-      (workspace-error-message "workspace.config must be a boolean")
-
-      :else
-      nil)))
-
-(defn- content-error
-  [tbl]
-  (workspace-error tbl))
-
-(defn validate-workspace
-  [workspace require-paths?]
-  (let [key-error (and (= (type workspace) :table)
-                       (workspace-key-error workspace))]
-    (cond
-      (not= (type workspace) :table)
+      (and workspace-required (not table?))
       (workspace-error-message "workspace must be a table")
 
       key-error
@@ -209,6 +229,14 @@
       :else
       nil)))
 
+(defn- workspace-error
+  [tbl]
+  (validate-workspace-value (. tbl :workspace) false false))
+
+(defn validate-workspace
+  [workspace require-paths?]
+  (validate-workspace-value workspace true require-paths?))
+
 (defn- validation-result
   [tbl failure]
   (if failure
@@ -218,7 +246,7 @@
 (defn- validation-failure
   [tbl]
   (or (configuration-error tbl)
-      (content-error tbl)))
+      (workspace-error tbl)))
 
 (defn- valid-table
   [tbl]
