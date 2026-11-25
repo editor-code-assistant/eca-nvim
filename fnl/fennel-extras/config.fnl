@@ -16,30 +16,34 @@
 
 (defn- array-of-strings-step
   [value index]
-  (or (= (. value index) nil)
-      (and (= (type (. value index)) :string)
-           (array-of-strings-step value (+ index 1)))))
+  (cond (= (. value index) nil) true
+        (= (type (. value index)) :string) (array-of-strings-step value (+ index 1))
+        :else false))
 
 (defn- array-of-strings?
   [value]
-  (and (= (type value) :table)
-       (array-of-strings-step value 1)))
+  (cond (= (type value) :table) (array-of-strings-step value 1)
+        :else false))
 
 (defn- integer?
   [value]
-  (and (= (type value) :number)
-       (= value (math.floor value))))
+  (cond (= (type value) :number) (= value (math.floor value))
+        :else false))
+
+(defn- valid-index?
+  [index]
+  (cond (= index nil) true
+        (integer? index) (>= index 0)
+        :else false))
 
 (defn- valid-rule-values?
   [rule]
   (let [kind  (. rule 1)
         value (. rule 2)
         index (. rule 3)]
-    (if (= kind :block)
-      (and (integer? value) (>= value 0) (= index nil))
-      (and (= kind :inner)
-           (and (= value 0)
-                (or (= index nil) (and (integer? index) (>= index 0))))))))
+    (cond (= kind :block) (and (integer? value) (>= value 0) (= index nil))
+          (= kind :inner) (and (= value 0) (valid-index? index))
+          :else false)))
 
 (defn- valid-rule?
   [rule]
@@ -48,14 +52,14 @@
 
 (defn- valid-rule-list-step
   [value index]
-  (or (> index (length value))
-      (and (valid-rule? (. value index))
-           (valid-rule-list-step value (+ index 1)))))
+  (cond (> index (length value)) true
+        (valid-rule? (. value index)) (valid-rule-list-step value (+ index 1))
+        :else false))
 
 (defn- valid-rule-list?
   [value]
-  (and (= (type value) :table)
-       (valid-rule-list-step value 1)))
+  (cond (= (type value) :table) (valid-rule-list-step value 1)
+        :else false))
 
 (defn- rule-map-error-step
   [value prefix name]
@@ -73,10 +77,10 @@
 
 (defn- extensions-step
   [value index]
-  (or (> index (length value))
-      (and (= (type (. value index)) :string)
-           (= (string.sub (. value index) 1 1) ".")
-           (extensions-step value (+ index 1)))))
+  (cond (> index (length value)) true
+        (and (= (type (. value index)) :string)
+             (= (string.sub (. value index) 1 1) ".")) (extensions-step value (+ index 1))
+        :else false))
 
 (defn- extensions?
   [value]
@@ -86,26 +90,30 @@
 
 (defn- configuration-error-with-lint
   [failure lint]
-  (or failure
-      (and lint (lint-config.lint-error lint))))
+  (cond failure failure
+        lint (lint-config.lint-error lint)
+        :else nil))
 
 (defn- configuration-error
   [tbl]
-  (or (and (. tbl :format)
-           (format-config.validate (. tbl :format) false false false))
-      (configuration-error-with-lint nil (. tbl :lint))
-      (and (. tbl :design)
-           (lint-config.design-error (. tbl :design)))))
+  (let [format-error (and (. tbl :format)
+                          (format-config.validate (. tbl :format) false false false))
+        lint-error (configuration-error-with-lint format-error (. tbl :lint))]
+    (cond lint-error lint-error
+          (. tbl :design) (lint-config.design-error (. tbl :design))
+          :else nil)))
+
+(defn- workspace-key-candidate?
+  [allowed candidate name]
+  (cond (. allowed name) false
+        (= candidate nil) true
+        :else (< (tostring name) (tostring candidate))))
 
 (defn- workspace-key
   [workspace]
   (let [allowed {:paths true :exclude true :extensions true :dotfiles true :symlinks true :config true}]
     (accumulate [candidate nil name _ (pairs workspace)]
-      (if (and (not (. allowed name))
-               (or (= candidate nil)
-                   (< (tostring name) (tostring candidate))))
-        name
-        candidate))))
+      (if (workspace-key-candidate? allowed candidate name) name candidate))))
 
 (defn- workspace-key-error-result
   [workspace]
@@ -121,6 +129,14 @@
 (defn- workspace-error-message
   [message]
   {:message message})
+
+(defn- boolean?
+  [value]
+  (or (= value true) (= value false)))
+
+(defn- invalid-optional-boolean?
+  [workspace key]
+  (and workspace (not= (. workspace key) nil) (not (boolean? (. workspace key)))))
 
 (defn- workspace-error
   [tbl]
@@ -142,15 +158,13 @@
       (and workspace workspace.extensions (not (extensions? workspace.extensions)))
       (workspace-error-message "workspace.extensions must be a non-empty list of strings starting with \".\"")
 
-      (and workspace (not= workspace.dotfiles nil) (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
+      (invalid-optional-boolean? workspace :dotfiles)
       (workspace-error-message "workspace.dotfiles must be a boolean")
 
-      (and workspace (not= workspace.symlinks nil) (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
+      (invalid-optional-boolean? workspace :symlinks)
       (workspace-error-message "workspace.symlinks must be a boolean")
 
-      (and workspace
-           (not= workspace.config nil)
-           (not (or (= workspace.config true) (= workspace.config false))))
+      (invalid-optional-boolean? workspace :config)
       (workspace-error-message "workspace.config must be a boolean")
 
       :else
@@ -183,16 +197,13 @@
       (and table? workspace.extensions (not (extensions? workspace.extensions)))
       (workspace-error-message "workspace.extensions must be a non-empty list of strings starting with \".\"")
 
-      (and (not= workspace.dotfiles nil)
-           (not (or (= workspace.dotfiles true) (= workspace.dotfiles false))))
+      (invalid-optional-boolean? workspace :dotfiles)
       (workspace-error-message "workspace.dotfiles must be a boolean")
 
-      (and (not= workspace.symlinks nil)
-           (not (or (= workspace.symlinks true) (= workspace.symlinks false))))
+      (invalid-optional-boolean? workspace :symlinks)
       (workspace-error-message "workspace.symlinks must be a boolean")
 
-      (and (not= workspace.config nil)
-           (not (or (= workspace.config true) (= workspace.config false))))
+      (invalid-optional-boolean? workspace :config)
       (workspace-error-message "workspace.config must be a boolean")
 
       :else
@@ -217,11 +228,7 @@
   [tbl]
   (let [allowed {:workspace true :format true :lint true :design true}]
     (accumulate [candidate nil key _ (pairs tbl)]
-      (if (and (not (. allowed key))
-               (or (= candidate nil)
-                   (< (tostring key) (tostring candidate))))
-        key
-        candidate))))
+      (if (workspace-key-candidate? allowed candidate key) key candidate))))
 
 (defn- unknown-config-error
   [tbl]
@@ -258,28 +265,25 @@
 
 (defn- append-canonical-exclusion
   [result rule index exclusion]
-  (let [copy {}]
-    (each [key value (pairs exclusion)]
-      (tset copy key value))
-    (table.insert result (core.assoc (core.assoc copy :rule rule) :instance index)))
+  (table.insert result (core.assoc (core.assoc exclusion :rule rule) :instance index))
   result)
 
 (defn- append-canonical-instance-exclusions
   [result rule index instance]
-  (each [_ exclusion (ipairs (or instance.exclusions []))]
+  (icollect [_ exclusion (ipairs (or instance.exclusions []))]
     (append-canonical-exclusion result rule index exclusion))
   result)
 
 (defn- append-canonical-rule-exclusions
   [result rule instances]
-  (each [index instance (ipairs (or instances []))]
+  (icollect [index instance (ipairs (or instances []))]
     (append-canonical-instance-exclusions result rule index instance))
   result)
 
 (defn- canonical-exclusions
   [rules]
   (let [result []]
-    (each [rule instances (pairs rules)]
+    (icollect [rule instances (pairs rules)]
       (append-canonical-rule-exclusions result rule instances))
     result))
 
@@ -298,14 +302,16 @@
      :design     (and cfg.design {:rules design})
      :exclusions (canonical-exclusions normalized)}))
 
+(defn- merge-design-rules
+  [rules design]
+  (accumulate [result (core.merge rules) rule instances (pairs (or design {}))]
+    (if (= (. result rule) nil) (core.assoc result rule instances) result)))
+
 (defn- valid-lint-policy
   [cfg]
   (let [rules  (core.merge (or (and cfg.lint cfg.lint.rules) {}))
         design (and cfg.design cfg.design.rules)]
-    (each [rule instances (pairs (or design {}))]
-      (when (= (. rules rule) nil)
-        (tset rules rule instances)))
-    (valid-lint-policy-result cfg rules design)))
+    (valid-lint-policy-result cfg (merge-design-rules rules design) design)))
 
 (defn- lint-policy-valid
   [valid]
