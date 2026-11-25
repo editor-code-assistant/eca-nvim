@@ -136,6 +136,18 @@
                                          :forms ["local"]}
                            :options     {:allowed-chains [[:root :form "require"]
                                                           [:root :form "import"]]}
+                           :exclusions  []}
+                          {:severity    :info
+                           :description "prefer core.assoc, core.assoc-in, or core.merge over tset for immutable data updates"
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["tset"]}
+                           :options     {:forbidden-chains [[:form]]}
+                           :exclusions  []}
+                          {:severity    :info
+                           :description "prefer icollect, core.map, core.mapcat, or core.reduce over each for collection transformations"
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["each"]}
+                           :options     {:forbidden-chains [[:form]]}
                            :exclusions  []}]
           :required-form [{:severity    :error
                            :description "give each source file a stable module identity for imports and diagnostics"
