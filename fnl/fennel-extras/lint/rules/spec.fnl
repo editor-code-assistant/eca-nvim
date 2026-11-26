@@ -69,13 +69,15 @@
                           (= (length children) 4)
                           (nil-literal? (. children 4)))
         count        (direct-count node options)
-        min          options.min-count
-        max          options.max-count]
+        min          (or options.min-count 0)
+        max          (or options.max-count count)]
     (and (not missing)
          (not multi-clause)
          (or (not nil-else)
              options.nil-count
-             (contains? (or options.not-counted []) "nil" 1))
+             (contains? (or options.not-counted []) "nil" 1)
+             (and (= options.nil-count nil)
+                  (= options.not-counted nil)))
          (>= count min)
          (<= count max))))
 
@@ -96,9 +98,8 @@
   (let [count (if options.direct
                 (named-child-count-direct node options 1 0)
                 (count-child-forms node options.children 1 0))]
-    (if options.direct
-      (> count options.max-count)
-      (not= count options.max-count))))
+    (or (and options.min-count (< count options.min-count))
+        (and options.max-count (> count options.max-count)))))
 
 (defn- child-count-invalid?
   [node options]

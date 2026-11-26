@@ -75,9 +75,9 @@ local function direct_child_valid_3f(node, options)
   local multi_clause = ((head == "if") and (#children > 4))
   local nil_else = ((head == "if") and (#children == 4) and nil_literal_3f(children[4]))
   local count = direct_count(node, options)
-  local min = options["min-count"]
-  local max = options["max-count"]
-  return (not missing and not multi_clause and (not nil_else or options["nil-count"] or contains_3f((options["not-counted"] or {}), "nil", 1)) and (count >= min) and (count <= max))
+  local min = (options["min-count"] or 0)
+  local max = (options["max-count"] or count)
+  return (not missing and not multi_clause and (not nil_else or options["nil-count"] or contains_3f((options["not-counted"] or {}), "nil", 1) or ((options["nil-count"] == nil) and (options["not-counted"] == nil))) and (count >= min) and (count <= max))
 end
 local function named_child_count_direct(node, options, index, result)
   local children = meaningful_children(node)
@@ -100,11 +100,7 @@ local function named_child_count_invalid_3f(node, options)
   else
     count = count_child_forms(node, options.children, 1, 0)
   end
-  if options.direct then
-    return (count > options["max-count"])
-  else
-    return (count ~= options["max-count"])
-  end
+  return ((options["min-count"] and (count < options["min-count"])) or (options["max-count"] and (count > options["max-count"])))
 end
 local function child_count_invalid_3f(node, options)
   if options.children then
