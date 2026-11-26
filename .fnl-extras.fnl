@@ -69,6 +69,22 @@
                            :options     {:children  ["="]
                                          :max-count 1
                                          :direct    true}
+                           :exclusions  []}
+                          {:severity    :info
+                           :description "prefer an else branch for cond forms."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["cond"]}
+                           :options     {:children  ["else"]
+                                         :min-count 1
+                                         :direct     true}
+                           :exclusions  []}
+                          ;; three predicate/body clauses, two children each
+                          {:severity    :info
+                           :description "prefer if over cond with fewer than three predicate/body clauses."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["cond"]}
+                           :options     {:min-count 6
+                                         :direct    true}
                            :exclusions  []}]
           :module-import [{:severity    :error
                            :description "standardize shared core access through the conventional core binding"
