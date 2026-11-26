@@ -634,7 +634,21 @@
 (deftest lint-policy
   (testing "lint policy preserves explicit rule options"
     (let [policy (lint-policy-value {:lint {                                            :rules      {}}})]
-      (is (and (not (. policy :error)) (. policy :rules))))))
+      (is (and (not (. policy :error)) (. policy :rules)))))
+
+  (testing "canonical exclusions do not mutate the caller-owned exclusion"
+    (let [config    (load-config)
+          exclusion {:path "^spec/"}
+          value     {:lint {:rules {:form-chain [{:severity   :warning
+                                                   :applies-to {}
+                                                   :options    {:allowed-chains [[:form]]}
+                                                   :exclusions [exclusion]}]}}}
+          first     (lint-policy-value value)
+          second    (lint-policy-value value)]
+      (is (or (. config :module-missing)
+              (and (not (. first :error))
+                   (not (. second :error))
+                   (vim.deep_equal {:path "^spec/"} exclusion)))))))
 
 (deftest formatter-isolation
   (testing "lint configuration does not change formatter output"
