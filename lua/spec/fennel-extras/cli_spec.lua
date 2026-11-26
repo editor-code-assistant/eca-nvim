@@ -1405,7 +1405,7 @@ local function _132_()
     local function _147_()
       local result = lint_config_discovery_scenario("mixed")
       local assert_5_auto = require("luassert")
-      local expected_6_auto = {code = 1, lines = {"a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules", "  exclusion: {:path \"a.fnl\"}"}, ["mentions-config"] = false}
+      local expected_6_auto = {code = 1, lines = {"a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules"}, ["mentions-config"] = false}
       local actual_7_auto = {code = result.code, lines = result.lines, ["mentions-config"] = result["mentions-config"]}
       assert_5_auto.same(expected_6_auto, actual_7_auto)
       return true

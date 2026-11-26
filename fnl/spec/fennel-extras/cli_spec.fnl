@@ -1622,8 +1622,7 @@
     (testing "excludes the config file from mixed explicit inputs when inclusion is enabled"
       (let [result (lint-config-discovery-scenario :mixed)]
         (is (= {:code            1
-                :lines           ["a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules"
-                                  "  exclusion: {:path \"a.fnl\"}"]
+                :lines           ["a.fnl:1:1: error file-size: file has 2 code lines (max 1); split it by responsibility into smaller modules"]
                 :mentions-config false}
               {:code            (. result :code)
                :lines           (. result :lines)

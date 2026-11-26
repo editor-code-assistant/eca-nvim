@@ -103,14 +103,12 @@
 
 
 (deftest text-output
-  (testing "renders an error finding and its valid copyable exclusion suggestion"
-    (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
-            "  exclusion: {:path \"fnl/app.fnl\"}"]
+  (testing "renders an error finding as normal human output"
+    (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"]
           (text-lines [(finding {})]))))
 
   (testing "renders a warning finding with the same text contract"
-    (is (= ["fnl/lib.fnl:3:2: warning module-import: use the target-style core binding"
-            "  exclusion: {:path \"fnl/lib.fnl\"}"]
+    (is (= ["fnl/lib.fnl:3:2: warning module-import: use the target-style core binding"]
           (text-lines [(finding {:path     "fnl/lib.fnl"
                                  :line     3
                                  :col      2
@@ -122,8 +120,7 @@
                                  :message  "use the target-style core binding"})]))))
 
   (testing "renders an info finding with the same text contract"
-    (is (= ["fnl/info.fnl:4:1: info form-chain: prefer case"
-            "  exclusion: {:path \"fnl/info.fnl\"}"]
+    (is (= ["fnl/info.fnl:4:1: info form-chain: prefer case"]
           (text-lines [(finding {:path     "fnl/info.fnl"
                                  :line     4
                                  :col      1
@@ -136,13 +133,11 @@
 
   (testing "renders a separate description line only when configured"
     (is (= ["fnl/app.fnl:12:5: error forbidden-form: forbidden form"
-            "  description: explain this rule"
-            "  exclusion: {:path \"fnl/app.fnl\"}"]
+            "  description: explain this rule"]
           (text-lines [(finding {:description "explain this rule"})]))))
 
-  (testing "escapes a quote and backslash in the text exclusion snippet"
-    (is (= ["fnl/quote.fnl:1:1: error custom: bad form"
-            "  exclusion: {:path \"fnl/quote.fnl\"}"]
+  (testing "renders normal human output for quotes and backslashes"
+    (is (= ["fnl/quote.fnl:1:1: error custom: bad form"]
           (text-lines [(finding {:path    "fnl/quote.fnl"
                                  :line    1
                                  :col     1
@@ -262,8 +257,7 @@
 
   (testing "preserves invalid UTF-8 bytes in text output"
     (let [message (.. "a" (string.char 255) "b")]
-      (is (= [(.. "fnl/app.fnl:12:5: error forbidden-form: " message)
-              "  exclusion: {:path \"fnl/app.fnl\"}"]
+      (is (= [(.. "fnl/app.fnl:12:5: error forbidden-form: " message)]
             (text-lines [(finding {:message message})])))))
 
   (testing "returns one JSON object per diagnostic without embedded newlines"

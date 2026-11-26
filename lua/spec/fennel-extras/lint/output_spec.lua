@@ -58,15 +58,15 @@ end
 local function _5_()
   local function _6_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"fnl/app.fnl:12:5: error forbidden-form: forbidden form", "  exclusion: {:path \"fnl/app.fnl\"}"}
+    local expected_6_auto = {"fnl/app.fnl:12:5: error forbidden-form: forbidden form"}
     local actual_7_auto = text_lines({finding({})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("renders an error finding and its valid copyable exclusion suggestion", _6_)
+  require("plenary.busted").it("renders an error finding as normal human output", _6_)
   local function _7_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"fnl/lib.fnl:3:2: warning module-import: use the target-style core binding", "  exclusion: {:path \"fnl/lib.fnl\"}"}
+    local expected_6_auto = {"fnl/lib.fnl:3:2: warning module-import: use the target-style core binding"}
     local actual_7_auto = text_lines({finding({path = "fnl/lib.fnl", line = 3, col = 2, ["end-line"] = 3, ["end-col"] = 31, severity = "warning", rule = "module-import", form = "fnl/lib.fnl > top#1", message = "use the target-style core binding"})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -74,7 +74,7 @@ local function _5_()
   require("plenary.busted").it("renders a warning finding with the same text contract", _7_)
   local function _8_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"fnl/info.fnl:4:1: info form-chain: prefer case", "  exclusion: {:path \"fnl/info.fnl\"}"}
+    local expected_6_auto = {"fnl/info.fnl:4:1: info form-chain: prefer case"}
     local actual_7_auto = text_lines({finding({path = "fnl/info.fnl", line = 4, col = 1, ["end-line"] = 4, ["end-col"] = 8, severity = "info", rule = "form-chain", form = "fnl/info.fnl > top#1", message = "prefer case"})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -82,7 +82,7 @@ local function _5_()
   require("plenary.busted").it("renders an info finding with the same text contract", _8_)
   local function _9_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"fnl/app.fnl:12:5: error forbidden-form: forbidden form", "  description: explain this rule", "  exclusion: {:path \"fnl/app.fnl\"}"}
+    local expected_6_auto = {"fnl/app.fnl:12:5: error forbidden-form: forbidden form", "  description: explain this rule"}
     local actual_7_auto = text_lines({finding({description = "explain this rule"})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
@@ -90,12 +90,12 @@ local function _5_()
   require("plenary.busted").it("renders a separate description line only when configured", _9_)
   local function _10_()
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {"fnl/quote.fnl:1:1: error custom: bad form", "  exclusion: {:path \"fnl/quote.fnl\"}"}
+    local expected_6_auto = {"fnl/quote.fnl:1:1: error custom: bad form"}
     local actual_7_auto = text_lines({finding({path = "fnl/quote.fnl", line = 1, col = 1, rule = "custom\"rule", form = "fnl/quote.fnl > top#1\\ > \"quoted\"", message = "bad form"})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
   end
-  require("plenary.busted").it("escapes a quote and backslash in the text exclusion snippet", _10_)
+  require("plenary.busted").it("renders normal human output for quotes and backslashes", _10_)
   local function _11_()
     local assert_5_auto = require("luassert")
     local expected_6_auto = {".fnl-extras.fnl:7:9: error forbidden-form: exclusion does not match any finding"}
@@ -241,7 +241,7 @@ local function _13_()
   local function _26_()
     local message = ("a" .. string.char(255) .. "b")
     local assert_5_auto = require("luassert")
-    local expected_6_auto = {("fnl/app.fnl:12:5: error forbidden-form: " .. message), "  exclusion: {:path \"fnl/app.fnl\"}"}
+    local expected_6_auto = {("fnl/app.fnl:12:5: error forbidden-form: " .. message)}
     local actual_7_auto = text_lines({finding({message = message})})
     assert_5_auto.same(expected_6_auto, actual_7_auto)
     return true
