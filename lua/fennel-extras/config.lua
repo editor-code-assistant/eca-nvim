@@ -304,7 +304,7 @@ do
   validate = _2amodule_2a.validate
 end
 local function append_canonical_exclusion(result, rule, index, exclusion)
-  table.insert(result, core.assoc(core.assoc(exclusion, "rule", rule), "instance", index))
+  table.insert(result, core.merge(exclusion, {rule = rule, instance = index}))
   return result
 end
 local function append_canonical_instance_exclusions(result, rule, index, instance)

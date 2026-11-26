@@ -293,7 +293,7 @@
 
 (defn- append-canonical-exclusion
   [result rule index exclusion]
-  (table.insert result (core.assoc (core.assoc exclusion :rule rule) :instance index))
+  (table.insert result (core.merge exclusion {:rule rule :instance index}))
   result)
 
 (defn- append-canonical-instance-exclusions
