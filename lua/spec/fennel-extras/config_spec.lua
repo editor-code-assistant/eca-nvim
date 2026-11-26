@@ -882,8 +882,8 @@ local function _119_()
     local first = lint_policy_value(value)
     local second = lint_policy_value(value)
     local assert_28_auto = require("luassert")
-    local value_29_auto = (config["module-missing"] or (not first.error and not second.error and vim.deep_equal({path = "^spec/"}, exclusion)))
-    assert_28_auto.is_truthy(value_29_auto, "(or (. config \"module-missing\") (and (not (. first \"error\")) (not (. second \"error\")) (vim.deep_equal {:path \"^spec/\"} exclusion)))")
+    local value_29_auto = (config["module-missing"] or (not first.error and not second.error and ("^spec/" == first.exclusions[1].path) and ("form-chain" == first.exclusions[1].rule) and (1 == first.exclusions[1].instance) and vim.deep_equal({path = "^spec/"}, exclusion)))
+    assert_28_auto.is_truthy(value_29_auto, "(or (. config \"module-missing\") (and (not (. first \"error\")) (not (. second \"error\")) (= \"^spec/\" (. first \"exclusions\" 1 \"path\")) (= \"form-chain\" (. first \"exclusions\" 1 \"rule\")) (= 1 (. first \"exclusions\" 1 \"instance\")) (vim.deep_equal {:path \"^spec/\"} exclusion)))")
     return true
   end
   return require("plenary.busted").it("canonical exclusions do not mutate the caller-owned exclusion", _121_)

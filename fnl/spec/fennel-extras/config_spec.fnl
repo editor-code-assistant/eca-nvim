@@ -640,14 +640,20 @@
     (let [config    (load-config)
           exclusion {:path "^spec/"}
           value     {:lint {:rules {:form-chain [{:severity   :warning
-                                                   :applies-to {}
-                                                   :options    {:allowed-chains [[:form]]}
-                                                   :exclusions [exclusion]}]}}}
+                                                  :applies-to {}
+                                                  :options    {:allowed-chains [[:form]]}
+                                                  :exclusions [exclusion]}]}}}
           first     (lint-policy-value value)
           second    (lint-policy-value value)]
       (is (or (. config :module-missing)
               (and (not (. first :error))
                    (not (. second :error))
+                   (= "^spec/"
+                     (. first :exclusions 1 :path))
+                   (= "form-chain"
+                     (. first :exclusions 1 :rule))
+                   (= 1
+                     (. first :exclusions 1 :instance))
                    (vim.deep_equal {:path "^spec/"} exclusion)))))))
 
 (deftest formatter-isolation
