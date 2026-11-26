@@ -1041,6 +1041,17 @@
                               :forbidden-chains [["or" :form]]}
                  :exclusions []}]})
 
+(deftest canonical-config-cond-child-count
+  (testing "the nested cond forms in config.fnl produce a child-count finding"
+    (let [source (read-source "fnl/fennel-extras/config.fnl")
+          rules  (. (config.load ".fnl-extras.fnl") :lint :rules)
+          result (check-source source "fennel-extras/config.fnl" rules)]
+      (is (> (length (icollect [_ finding (ipairs result)]
+                       (when (= "child-count"
+                               (. finding :rule))
+                         finding)))
+            0)))))
+
 (deftest form-chain-semantics
   (testing "an unrooted forbidden chain matches a selected conditional under or"
     (is (= 1
@@ -1048,6 +1059,16 @@
                     "fnl/app.fnl"
                     "form-chain"
                     or-forbidden-rules)))))
+
+  (testing "a form-chain finding names the evaluated target head"
+    (let [result (check-source "(or (cond condition value) fallback)"
+                   "fnl/app.fnl"
+                   {:form-chain [{:severity   "error"
+                                  :applies-to {:forms ["cond"]}
+                                  :options    {:forbidden-chains [["or" :form]]}
+                                  :exclusions []}]})]
+      (is (= "cond is outside the allowed form chain"
+            (. result 1 :message)))))
 
   (testing ":root does not match the nested target under or"
     (is (= 0

@@ -152,6 +152,30 @@
                  (. rules :module-import 3 :applies-to :modules))
                true)))))
 
+(deftest canonical-cond-child-count-instances
+  (testing "canonical config contains direct cond child-count instances"
+    (let [rules   (. (config.load ".fnl-extras.fnl") :lint :rules)
+          entries (. rules :child-count)
+          first   (. entries 4)
+          second  (. entries 5)]
+      (is (and (= 5
+                 (length entries))
+               (= "info"
+                 first.severity)
+               (vim.deep_equal ["cond"] first.applies-to.forms)
+               (= true
+                 first.options.direct)
+               (vim.deep_equal ["else"] first.options.children)
+               (= 1
+                 first.options.min-count)
+               (= "info"
+                 second.severity)
+               (vim.deep_equal ["cond"] second.applies-to.forms)
+               (= 6
+                 second.options.min-count)
+               (= "prefer if over cond with fewer than three predicate/body clauses."
+                 second.description))))))
+
 (deftest canonical-module-selector-cardinality
   (testing "module-import require rejects multiple semantic singleton modules"
     (let [result (validation {:lint {:rules {:module-import [{:severity   "error"

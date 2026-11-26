@@ -163,7 +163,7 @@ end
 local function append_finding(result, path, forms, node, policy, rule)
   local existing = node_form(forms, node, 1)
   local form = (existing or {line = node.open.line, col = node.open.col, ["end-line"] = node.close.line, ["end-col"] = (node.close.col + 1), form = (path .. " > " .. (ast["list-head"](node) or "form")), node = node})
-  table.insert(result, registry.finding(path, form, registry["rule-severity"](policy, rule), rule, "form is outside the allowed form chain", node))
+  table.insert(result, registry.finding(path, form, registry["rule-severity"](policy, rule), rule, ((((node.kind == "list") and ast["list-head"](node)) or "form") .. " is outside the allowed form chain"), node))
   return result
 end
 local function walk_first_body(node, mode, chain, path, forms, policy, rule, result)
