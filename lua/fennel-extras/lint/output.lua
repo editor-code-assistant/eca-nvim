@@ -120,9 +120,6 @@ end
 local function json_string(value)
   return (double_quote .. string.gsub(normalize_utf8(value), "[%z\1-\31\\\"]", escape_control) .. double_quote)
 end
-local function exclusion_line(finding)
-  return ("  exclusion: {:path " .. json_string(finding.path) .. "}")
-end
 local function text_rule(finding)
   return string.match(finding.rule, "^[^\\\"]+")
 end
@@ -133,10 +130,6 @@ local function append_text(lines, finding)
   table.insert(lines, text_line(finding))
   if ((finding.kind == "finding") and finding.description) then
     table.insert(lines, ("  description: " .. finding.description))
-  else
-  end
-  if (finding.kind == "finding") then
-    table.insert(lines, exclusion_line(finding))
   else
   end
   return lines

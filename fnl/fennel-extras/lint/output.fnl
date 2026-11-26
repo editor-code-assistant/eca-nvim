@@ -156,10 +156,6 @@
   [value]
   (.. double-quote (string.gsub (normalize-utf8 value) "[%z\1-\31\\\"]" escape-control) double-quote))
 
-(defn- exclusion-line
-  [finding]
-  (.. "  exclusion: {:path " (json-string finding.path) "}"))
-
 (defn- text-rule
   [finding]
   (string.match finding.rule "^[^\\\"]+"))
@@ -173,8 +169,6 @@
   (table.insert lines (text-line finding))
   (when (and (= finding.kind "finding") finding.description)
     (table.insert lines (.. "  description: " finding.description)))
-  (when (= finding.kind "finding")
-    (table.insert lines (exclusion-line finding)))
   lines)
 
 (defn- append-text-lines
