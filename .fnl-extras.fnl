@@ -63,11 +63,11 @@
                                          :not-counted ["nil" "true" "false"]}
                            :exclusions  [{:path "^fennel-extras/macros"}]}
                           {:severity    :info
-                           :description "prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
+                           :description "Prefer `case` for fixed-value dispatch; use `or` only when `case` cannot express the predicates."
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["or"]}
                            :options     {:children  ["="]
-                                         :max-count 2
+                                         :max-count 1
                                          :direct    true}
                            :exclusions  []}]
           :module-import [{:severity    :error
@@ -103,6 +103,18 @@
                                                             ["or" :forms-between :form]]}
                            :exclusions  []}
                           {:severity    :error
+                           :description "Avoid nested `if` forms; they make control flow harder to read."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["if"]}
+                           :options     {:forbidden-chains [["if" :form]]}
+                           :exclusions  []}
+                          {:severity    :error
+                           :description "Avoid nested `when` forms; they make control flow harder to read."
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["when"]}
+                           :options     {:forbidden-chains [["when" :form]]}
+                           :exclusions  []}
+                          {:severity    :error
                            :description "keep `and` operands simple; extract conditional logic into private functions."
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["or" "when" "when-let" "if" "if-let" "cond" "case"]}
@@ -119,18 +131,6 @@
                                                           ["defn" "fn" :form]]}
                            :exclusions  []}
                           {:severity    :error
-                           :description "avoid nested `if` forms; they make control flow harder to read."
-                           :applies-to  {:files ["^fennel-extras/"]
-                                         :forms ["if"]}
-                           :options     {:forbidden-chains [["if" :form]]}
-                           :exclusions  []}
-                          {:severity    :error
-                           :description "avoid nested `when` forms; they make control flow harder to read."
-                           :applies-to  {:files ["^fennel-extras/"]
-                                         :forms ["when"]}
-                           :options     {:forbidden-chains [["when" :form]]}
-                           :exclusions  []}
-                          {:severity    :error
                            :description "keep top-level locals limited to explicit require/import dependencies"
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["local"]}
@@ -144,9 +144,27 @@
                            :options     {:forbidden-chains [[:form]]}
                            :exclusions  []}
                           {:severity    :info
-                           :description "prefer icollect, core.map, core.mapcat, or core.reduce over each for collection transformations"
+                           :description "prefer core.map, core.mapcat, or core.reduce over each for collection transformations"
                            :applies-to  {:files ["^fennel-extras/"]
                                          :forms ["each"]}
+                           :options     {:forbidden-chains [[:form]]}
+                           :exclusions  []}
+                          {:severity    :info
+                           :description "prefer core.map, core.mapcat, or core.reduce over icollect for collection transformations"
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["icollect"]}
+                           :options     {:forbidden-chains [[:form]]}
+                           :exclusions  []}
+                          {:severity    :info
+                           :description "prefer core.assoc, core.assoc-in, or core.merge over table.insert for immutable data updates"
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["table.insert"]}
+                           :options     {:forbidden-chains [[:form]]}
+                           :exclusions  []}
+                          {:severity    :info
+                           :description "prefer core.map, core.mapcat, or core.reduce over ipairs for collection transformations"
+                           :applies-to  {:files ["^fennel-extras/"]
+                                         :forms ["ipairs"]}
                            :options     {:forbidden-chains [[:form]]}
                            :exclusions  []}]
           :required-form [{:severity    :error

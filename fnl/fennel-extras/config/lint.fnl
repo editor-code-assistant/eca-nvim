@@ -125,19 +125,12 @@
              (not= instance.severity "off"))
         (do (local options instance.options)
             (local prefix (.. "missing " section ".rules." name "[" index "].options."))
-            (if options.children
-              (when (= options.max-count nil)
-                    {:message (.. prefix "max-count")})
-              (or (when (= options.min-count nil)
-                        {:message (.. prefix "min-count")})
-                  (when (= options.max-count nil)
-                        {:message (.. prefix "max-count")})
-                  (when (and (not= options.nil-count nil)
-                             (not= options.not-counted nil))
-                        {:message (.. prefix "nil-count and not-counted cannot both be set")})
-                  (when (and (= options.nil-count nil)
-                             (= options.not-counted nil))
-                        {:message (.. prefix "nil-count or not-counted")}))))))
+            (or (when (and (= options.min-count nil)
+                           (= options.max-count nil))
+                  {:message (.. prefix "min-count or max-count")})
+                (when (and (not= options.nil-count nil)
+                           (not= options.not-counted nil))
+                  {:message (.. prefix "nil-count and not-counted cannot both be set")})))))
 
 (defn- canonical-missing-option-error
   [section name index instance]

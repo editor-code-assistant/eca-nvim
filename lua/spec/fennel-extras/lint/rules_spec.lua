@@ -346,4 +346,66 @@ local function _41_()
   end
   return require("plenary.busted").it("ignores a let inside an explicit quote form", _47_)
 end
-return require("plenary.busted").describe("generic-binding", _41_)
+require("plenary.busted").describe("generic-binding", _41_)
+local function _48_()
+  local function _49_()
+    local policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"target"}}, options = {["min-count"] = 2}, exclusions = {}}}}
+    local result = identities(findings_for("(target one two three)", "fnl/app.fnl", policy))
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = result
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("accepts a direct minimum-only bound", _49_)
+  local function _50_()
+    local policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"target"}}, options = {["max-count"] = 2}, exclusions = {}}}}
+    local result = identities(findings_for("(target one two three)", "fnl/app.fnl", policy))
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"child-count", "fnl/app.fnl > top#1"}}
+    local actual_7_auto = result
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("accepts a direct maximum-only bound", _50_)
+  local function _51_()
+    local policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"target"}}, options = {children = {"item"}, ["min-count"] = 2}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {}
+    local actual_7_auto = identities(findings_for("(target (item) (item))", "fnl/app.fnl", policy))
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  require("plenary.busted").it("accepts named minimum-only bound", _51_)
+  local function _52_()
+    local policy = {["child-count"] = {{severity = "warning", ["applies-to"] = {forms = {"target"}}, options = {children = {"item"}, ["max-count"] = 1}, exclusions = {}}}}
+    local assert_5_auto = require("luassert")
+    local expected_6_auto = {{"child-count", "fnl/app.fnl > top#1"}}
+    local actual_7_auto = identities(findings_for("(target (item) (item))", "fnl/app.fnl", policy))
+    assert_5_auto.same(expected_6_auto, actual_7_auto)
+    return true
+  end
+  return require("plenary.busted").it("accepts named maximum-only bound", _52_)
+end
+require("plenary.busted").describe("child-count-bound-combinations", _48_)
+local function _53_()
+  local assert_5_auto = require("luassert")
+  local expected_6_auto = {"fnl/app.fnl > top#1", "fnl/app.fnl > top#1 > cond#1"}
+  local actual_7_auto
+  do
+    local tbl_26_ = {}
+    local i_27_ = 0
+    for _, item in ipairs(identity.forms("(target (cond ok value))", "fnl/app.fnl")) do
+      local val_28_ = item.form
+      if (nil ~= val_28_) then
+        i_27_ = (i_27_ + 1)
+        tbl_26_[i_27_] = val_28_
+      else
+      end
+    end
+    actual_7_auto = tbl_26_
+  end
+  assert_5_auto.same(expected_6_auto, actual_7_auto)
+  return true
+end
+return require("plenary.busted").describe("nested-cond-identities", _53_)

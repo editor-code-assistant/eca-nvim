@@ -270,3 +270,45 @@
     (testing "ignores a let inside an explicit quote form"
       (is (= []
             (finding "(quote (let [value 1] value))"))))))
+
+(deftest child-count-bound-combinations
+  (testing "accepts a direct minimum-only bound"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["target"]}
+                                 :options    {:min-count 2}
+                                 :exclusions []}]}
+          result (identities (findings-for "(target one two three)" "fnl/app.fnl" policy))]
+      (is (= []
+            result))))
+
+  (testing "accepts a direct maximum-only bound"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["target"]}
+                                 :options    {:max-count 2}
+                                 :exclusions []}]}
+          result (identities (findings-for "(target one two three)" "fnl/app.fnl" policy))]
+      (is (= [["child-count" "fnl/app.fnl > top#1"]]
+            result))))
+
+  (testing "accepts named minimum-only bound"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["target"]}
+                                 :options    {:children ["item"] :min-count 2}
+                                 :exclusions []}]}]
+      (is (= []
+            (identities (findings-for "(target (item) (item))" "fnl/app.fnl" policy))))))
+  (testing "accepts named maximum-only bound"
+    (let [policy {:child-count [{:severity   "warning"
+                                 :applies-to {:forms ["target"]}
+                                 :options    {:children ["item"] :max-count 1}
+                                 :exclusions []}]}]
+      (is (= [["child-count" "fnl/app.fnl > top#1"]]
+            (identities (findings-for "(target (item) (item))" "fnl/app.fnl" policy))))))
+
+)
+
+(deftest nested-cond-identities
+  (is (= ["fnl/app.fnl > top#1"
+          "fnl/app.fnl > top#1 > cond#1"]
+        (icollect [_ item (ipairs (identity.forms "(target (cond ok value))" "fnl/app.fnl"))]
+          item.form))))
