@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+exec nvim --clean --headless -l "$(dirname "$0")/fennel-extras.lua" "$@"
